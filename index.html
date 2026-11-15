@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kemetra Mission Control Prototype</title>
+<meta name="description" content="Interactive review prototype of the Kemetra Mission Control interface. All data is demo data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app"></div>
+<div id="overlay"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="sprite"></div>
+<!-- Load order matters: later files deliberately override earlier definitions (see README). -->
+<script src="js/data.js"></script>
+<script src="js/data2.js"></script>
+<script src="js/core.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/home.js"></script>
+<script src="js/portfolio.js"></script>
+<script src="js/investigation.js"></script>
+<script src="js/decisions.js"></script>
+<script src="js/agents.js"></script>
+<script src="js/design.js"></script>
+<script src="js/network.js"></script>
+<script src="js/war.js"></script>
+<script src="js/v3.js"></script>
+<script src="js/v4.js"></script>
+<script src="js/v5.js"></script>
+<script src="js/boot.js"></script>
+</body>
+</html>

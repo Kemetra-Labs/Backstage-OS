@@ -1,0 +1,19 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Local caches, logs, scratch
+*.log
+*.tmp
+*.swp
+.cache/
+.claude/
+
+# Secrets and local environment (none are used by this prototype)
+.env
+.env.*
+*.pem
+*.key
