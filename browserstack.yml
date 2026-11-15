@@ -1,0 +1,15 @@
+# BACK-4 bounded smoke. No credentials here: the SDK reads BROWSERSTACK_USERNAME / BROWSERSTACK_ACCESS_KEY from the environment.
+projectName: backstage-os
+buildName: BACK-4 smoke
+platforms:
+  - os: OS X
+    osVersion: Sequoia
+    browserName: playwright-webkit
+    browserVersion: 27.2
+  - deviceName: Samsung Galaxy S23
+    osVersion: "13.0"
+    browserName: chrome
+parallelsPerPlatform: 1
+browserstackLocal: true
+debug: true
+testObservability: false
