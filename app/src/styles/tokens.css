@@ -1,0 +1,41 @@
+/* Token subset copied from the prototype's css/app.css (Backstage-OS 8b8db83) so C2 keeps the existing identity.
+   Added for v4: --cor (Correlated, blue) and --pro (Proposed, violet) as distinct truth colours. */
+:root {
+  color-scheme: dark;
+  --bg: #060B13;
+  --bg-2: #0A121E;
+  --surface: #0C1622;
+  --surface-2: #132134;
+  --surface-3: #1A2B44;
+  --line: rgba(255, 255, 255, .10);
+  --line-2: rgba(255, 255, 255, .06);
+  --line-3: rgba(255, 255, 255, .18);
+  --ink: #EAF0F8;
+  --ink-2: #B9C5D5;
+  --muted: #8E9CB0;
+  --gold: #DDAA57;
+  --gold-hi: #EDBE6F;
+  --gold-ink: #1B1306;
+  --gold-soft: rgba(221, 170, 87, .13);
+  --gold-line: rgba(221, 170, 87, .42);
+  --green: #24C98B;
+  --amber: #F4B64B;
+  --coral: #EF6572;
+  --coral-line: rgba(239, 101, 114, .42);
+  --violet-ink: #B7AAE8;
+  --blue: #5B9BF0;
+  --unk: #9AA7B8;
+  --unk-line: rgba(154, 167, 184, .40);
+  --obs: var(--green);
+  --cor: var(--blue);
+  --hyp: var(--amber);
+  --pro: var(--violet-ink);
+  --apr: var(--ink-2);
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --f-ui: "Inter", "Cairo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-ar: "Cairo", "Inter", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+}
