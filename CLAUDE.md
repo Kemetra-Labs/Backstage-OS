@@ -18,6 +18,7 @@ npx playwright test                            # chromium + webkit (Firefox opt-
 - Tests live in `tests/`: `smoke.spec.js` (all screens, viewports 320–1440, personas × EN/AR, source states, search) and `findings.spec.js` (regression for F1–F6). They run against the real HTTP origin, not `set_content`. Google Fonts is aborted so runs are offline.
 - Run with `workers: 1`; parallel workers against `python -m http.server` produced false load timeouts on Windows.
 - `?s={"persona":"tech","lang":"ar","src":"down","tab":{"inv":"evidence"}}` seeds state; `#route` selects a screen. Globals `S`, `go()`, `renderApp()` are available in `page.evaluate`.
+- CI: `.github/workflows/ci.yml` runs the Playwright suite (chromium + webkit) on every PR and push to `main`; failure traces are uploaded as the `playwright-results` artifact. BrowserStack is not in CI.
 - When a fix lands, add or extend a test in `findings.spec.js` and confirm it fails against the old behavior.
 
 ## Browser QA tooling
