@@ -8,7 +8,7 @@ set -uo pipefail
 BASE="${1:-}"
 HEAD="${2:-HEAD}"
 
-if [ -z "$BASE" ] || echo "$BASE" | grep -qE '^0+$'; then
+if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]]; then
   echo "docs_only=false"; exit 0
 fi
 
@@ -16,7 +16,7 @@ if ! CHANGED=$(git diff --name-only "$BASE" "$HEAD" 2>/dev/null); then
   echo "docs_only=false"; exit 0
 fi
 
-if [ -z "$CHANGED" ]; then
+if [[ -z "$CHANGED" ]]; then
   echo "docs_only=false"; exit 0
 fi
 
@@ -25,7 +25,7 @@ NON_DOCS=$(printf '%s\n' "$CHANGED" | grep -vE '(\.md$|^docs/)' || true)
 echo "Changed files:" >&2
 printf '  %s\n' $CHANGED >&2
 
-if [ -z "$NON_DOCS" ]; then
+if [[ -z "$NON_DOCS" ]]; then
   echo "docs_only=true"
 else
   echo "docs_only=false"
