@@ -21,29 +21,58 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # needed to diff against the base commit
+
+      # This check is required on main, so the job must always run and report.
+      # Docs-only changes (*.md, docs/**) skip the browser steps but still pass.
+      # Manual runs and anything ambiguous run the full suite.
+      - name: Detect docs-only change
+        id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          case "$EVENT" in
+            pull_request) BASE="$PR_BASE" ;;
+            push) BASE="$PUSH_BEFORE" ;;
+            *) BASE="" ;;
+          esac
+          bash .github/scripts/docs-only.sh "$BASE" HEAD >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      - name: Docs-only change, skipping browser tests
+        if: steps.changes.outputs.docs_only == 'true'
+        run: echo "Only *.md or docs/ files changed; Playwright suite skipped."
 
       - uses: actions/setup-node@v4
+        if: steps.changes.outputs.docs_only != 'true'
         with:
           node-version: 22
           cache: npm
 
       # playwright.config.js starts `python -m http.server` as its webServer.
       - uses: actions/setup-python@v5
+        if: steps.changes.outputs.docs_only != 'true'
         with:
           python-version: '3.12'
 
       # No dependency needs lifecycle scripts; skip them (supply-chain hardening).
       - name: Install dependencies
+        if: steps.changes.outputs.docs_only != 'true'
         run: npm ci --ignore-scripts
 
       # Call the lockfile-pinned binary directly instead of npx, which can
       # fetch and run unpinned packages on demand.
       - name: Install Playwright browsers
+        if: steps.changes.outputs.docs_only != 'true'
         run: ./node_modules/.bin/playwright install --with-deps chromium webkit
 
       # BrowserStack (npm run test:browserstack) stays manual: it needs secrets
       # and shares the account's limited parallel sessions.
       - name: Run Playwright tests
+        if: steps.changes.outputs.docs_only != 'true'
         run: ./node_modules/.bin/playwright test
 
       - name: Upload test results on failure
