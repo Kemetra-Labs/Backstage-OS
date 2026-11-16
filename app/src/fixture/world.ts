@@ -265,7 +265,7 @@ const decisions: readonly Decision[] = [
     title: same(l('Pause further {Khepri} staging deploys until the error rise is explained?', 'إيقاف عمليات نشر {Khepri} الإضافية في التجهيز حتى يُفسَّر ارتفاع الأخطاء؟')),
     context: l('Checks pass, but staging errors rose after a deploy. The linked work item could not be read.', 'الفحوص ناجحة، لكن الأخطاء ارتفعت بعد عملية نشر. تعذرت قراءة عنصر العمل المرتبط.'),
     observed: [X.khCiGreen, X.khErrorsRising],
-    hypotheses: [l('The deploy {DEMO-311} introduced the errors. Linked by timing only.', 'النشر {DEMO-311} سبب الأخطاء. الربط بالتوقيت فقط.')],
+    hypotheses: [l('The most recent staging deploy introduced the errors. Linked by timing only.', 'آخر نشر في بيئة التجهيز سبب الأخطاء. الربط بالتوقيت فقط.')],
     unknowns: [
       l('Work item status: {Jira} unavailable.', 'حالة عنصر العمل: {Jira} غير متاح.'),
       l('Whether production is affected: no production source.', 'هل الإنتاج متأثر: لا يوجد مصدر للإنتاج.'),

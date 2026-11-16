@@ -8,7 +8,14 @@ import { EvidenceDrawer } from '../components/EvidenceDrawer';
 import { EvidenceList } from '../components/EvidenceList';
 import { Ledger } from '../components/Ledger';
 import { StageMap } from '../components/StageMap';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Text } from '../components/Text';
+import { WORLD } from '../fixture/world';
+import { INVESTIGATION } from '../i18n/screens/investigation';
+import { hrefFor } from '../nav/routes';
+import { crumbTrail } from '../view/investigationView';
+import { investigationById } from '../view/world';
+import { RoomExtras } from './investigation/RoomExtras';
 
 interface Props {
   readonly persona: Persona;
@@ -53,6 +60,14 @@ export function InvestigationRoom({ persona, lang, copy }: Props) {
   };
 
   const { meta } = view;
+  const summary = investigationById(WORLD, meta.id);
+  const explorerText = INVESTIGATION[lang].openExplorer;
+  // Portfolio and the product are links; the case itself is the current page.
+  const crumbHrefs = [
+    hrefFor({ name: 'portfolio' }),
+    summary ? hrefFor({ name: 'project', projectId: summary.projectId, componentId: summary.componentId }) : undefined,
+    undefined,
+  ];
   const stage = <StageMap nodes={view.nodes} persona={persona} copy={copy} lang={lang} />;
   const ledger = <Ledger view={view} copy={copy} lang={lang} />;
   const item = view.evidence.find((e) => e.id === openId);
@@ -60,13 +75,7 @@ export function InvestigationRoom({ persona, lang, copy }: Props) {
 
   return (
     <>
-      <nav aria-label={copy.breadcrumb} className="crumbs">
-        <ol>
-          {copy.crumbs.map((c, i) => (
-            <li key={i}><Text s={c} /></li>
-          ))}
-        </ol>
-      </nav>
+      <Breadcrumbs items={crumbTrail(copy.crumbs, crumbHrefs)} />
       <h1>{copy.h1}</h1>
       <div className="case">
         <p className="case-title"><Text s={copy.caseTitle[persona]} /></p>
@@ -107,7 +116,19 @@ export function InvestigationRoom({ persona, lang, copy }: Props) {
         </div>
       </section>
 
-      {item && <EvidenceDrawer item={item} persona={persona} labelStyle={view.labelStyle} copy={copy} lang={lang} onClose={close} />}
+      <RoomExtras id={meta.id} />
+
+      {item && (
+        <EvidenceDrawer
+          item={item}
+          persona={persona}
+          labelStyle={view.labelStyle}
+          copy={copy}
+          lang={lang}
+          onClose={close}
+          explorer={{ href: hrefFor({ name: 'evidence', id: item.id, from: meta.id }), label: explorerText }}
+        />
+      )}
     </>
   );
 }

@@ -15,6 +15,8 @@ interface Props {
   readonly copy: Copy;
   readonly lang: Lang;
   readonly onClose: () => void;
+  /** Neutral link to the Evidence Explorer. Following it navigates away, which unmounts and so closes the drawer. */
+  readonly explorer?: { readonly href: string; readonly label: string };
 }
 
 const FOCUSABLE = 'button, [href], [tabindex]:not([tabindex="-1"])';
@@ -25,7 +27,7 @@ const BACKGROUND = '#root';
  * Evidence detail as a modal dialog: focus moves in, Tab and Shift+Tab stay inside (also when focus has drifted to the
  * page body), the page behind is inert, and Esc or Close return focus to the opener (handled by the caller).
  */
-export function EvidenceDrawer({ item, persona, labelStyle, copy, lang, onClose }: Props) {
+export function EvidenceDrawer({ item, persona, labelStyle, copy, lang, onClose, explorer }: Props) {
   const panel = useRef<HTMLDivElement>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
   const d = copy.drawer;
@@ -41,10 +43,13 @@ export function EvidenceDrawer({ item, persona, labelStyle, copy, lang, onClose 
       const first = els[0];
       const last = els[els.length - 1];
       if (!first || !last) return;
-      const active = document.activeElement;
-      if (!panel.current.contains(active)) { e.preventDefault(); (e.shiftKey ? last : first).focus(); return; }
-      if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+      // Move focus ourselves on every Tab: Safari skips links in its native Tab order by default, which would let
+      // focus leave the dialog from the last button.
+      e.preventDefault();
+      const at = els.indexOf(document.activeElement as HTMLElement);
+      if (at === -1) { (e.shiftKey ? last : first).focus(); return; }
+      const next = els[(at + (e.shiftKey ? -1 : 1) + els.length) % els.length];
+      next?.focus();
     };
     document.addEventListener('keydown', onKey);
     return () => {
@@ -89,6 +94,7 @@ export function EvidenceDrawer({ item, persona, labelStyle, copy, lang, onClose 
             ? <><bdi dir="ltr" className="ltr inert-link">{item.url}</bdi> <span className="note">({d.inertNote})</span></>
             : <a href={item.url} target="_blank" rel="noopener noreferrer"><bdi dir="ltr" className="ltr">{item.url}</bdi></a>)}
         </dl>
+        {explorer && <a className="btn btn-quiet btn-link" href={explorer.href}>{explorer.label}</a>}
         {item.rawOutput && (
           <>
             <h3 className="raw-title">{d.raw}</h3>

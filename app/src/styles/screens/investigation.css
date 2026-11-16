@@ -1,0 +1,20 @@
+/* Investigation Room additions (BACK-11): timeline, missing evidence, decision link, summary room. Logical properties only. */
+.link-row { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+
+/* timeline: status and the inspect link sit together under the title */
+[data-testid="evidence-timeline"] .tl-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.untimed { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.untimed-title { font-size: 14px; color: var(--ink-2); }
+.untimed-item { justify-items: start; }
+
+.decision-title { font-size: 15.5px; font-weight: 600; }
+
+/* summary room */
+.summary-note { max-width: 78ch; padding-inline-start: 12px; border-inline-start: 2px solid var(--gold-line); }
+.signal-pair { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) { .signal-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.signal { display: grid; gap: 8px; align-content: start; min-width: 0; padding-inline-start: 12px; border-inline-start: 2px solid var(--line-3); }
+.signal-title { font-size: 14px; color: var(--ink-2); }
+.signal .row-item { justify-items: start; }
+.conflict-explain { max-width: 78ch; font-size: 15px; }
+.conflict-health { display: grid; gap: 6px; }

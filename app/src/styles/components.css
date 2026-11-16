@@ -31,7 +31,7 @@
 .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 0; font-size: 13.5px; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; overflow-wrap: anywhere; }
-.btn-link { display: inline-flex; align-items: center; text-decoration: none; }
+.btn-link { display: inline-flex; align-items: center; gap: .3em; text-decoration: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* severity: shape and colour */

@@ -116,6 +116,17 @@ describe('synthetic world integrity', () => {
     ];
     for (const t of personaText) for (const b of banned) { expect(t.en.includes(b), t.en).toBe(false); expect(t.ar.includes(b), t.ar).toBe(false); }
   });
+
+  it('text shown to every persona never names run, deploy or PR ids', () => {
+    const banned = ['integration-tests', '#DEMO-4471', 'PR #DEMO-88', 'DEMO-4468', 'DEMO-5120', 'DEMO-311'];
+    const shared = [
+      ...WORLD.decisions.flatMap((d) => [d.context, ...d.hypotheses, ...d.unknowns, ...d.options.flatMap((o) => [o.title, o.benefit, o.risk, ...o.unknowns])]),
+      ...WORLD.investigations.flatMap((i) => i.missing),
+      ...WORLD.projects.map((p) => p.summary),
+      ...WORLD.activity.map((a) => a.text),
+    ];
+    for (const t of shared) for (const b of banned) { expect(t.en.includes(b), t.en).toBe(false); expect(t.ar.includes(b), t.ar).toBe(false); }
+  });
 });
 
 describe('shell copy', () => {

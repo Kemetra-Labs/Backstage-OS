@@ -3,6 +3,7 @@ import { useApp } from '../app/AppContext';
 import { resolveLabel } from '../contract/rules';
 import type { EvidenceReference } from '../contract/types';
 import type { EdgeKind } from '../contract/world';
+import { Text } from './Text';
 import { TruthChip } from './TruthChip';
 import type { Triad } from '../view/world';
 
@@ -49,12 +50,12 @@ export function DepGraph({ nodes, edges, selectedId, onSelect, label }: Props) {
 
   return (
     <div className="depgraph-wrap">
-      <div className="depgraph-scroll">
+      <div className="depgraph-scroll" dir="ltr">
         <div
           className="depgraph"
           dir="ltr"
           data-testid="dep-graph"
-          style={{ gridTemplateColumns: `repeat(${cols}, minmax(132px, 1fr))`, gridTemplateRows: `repeat(${rows}, 104px)`, minWidth: cols * 140 }}
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(132px, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(112px, 1fr))`, minWidth: cols * 140 }}
         >
           <svg className="depgraph-edges" viewBox={`0 0 ${cols * CELL} ${rows * CELL}`} preserveAspectRatio="none" aria-hidden="true">
             {edges.map((e) => {
@@ -76,7 +77,7 @@ export function DepGraph({ nodes, edges, selectedId, onSelect, label }: Props) {
             const body = (
               <span className="dg-box" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
                 <bdi dir="ltr" className="dg-name">{n.name}</bdi>
-                {n.checkFailing && <span className="dg-check">{copy.checkFailing[persona]}</span>}
+                {n.checkFailing && <span className="dg-check"><Text s={copy.checkFailing[persona]} /></span>}
                 <span className="dg-health" data-health={n.triad.health}>{copy.health[n.triad.health]}</span>
                 {n.sub && <span className="dg-sub">{n.sub}</span>}
               </span>

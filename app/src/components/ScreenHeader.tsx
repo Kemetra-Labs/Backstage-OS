@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { Breadcrumbs, type Crumb } from './Breadcrumbs';
+import { Text } from './Text';
 
 interface Props {
-  readonly title: string;
+  /** Copy with {braces} for left-to-right tokens (rendered through Text), or ready-made content. */
+  readonly title: string | ReactNode;
   readonly crumbs?: readonly Crumb[];
   /** One short line under the title. */
   readonly lede?: ReactNode;
@@ -15,7 +17,7 @@ export function ScreenHeader({ title, crumbs, lede, meta }: Props) {
   return (
     <div className="screen-head">
       {crumbs && crumbs.length > 0 && <Breadcrumbs items={crumbs} />}
-      <h1>{title}</h1>
+      <h1>{typeof title === 'string' ? <Text s={title} /> : title}</h1>
       {lede && <p className="lede">{lede}</p>}
       {meta && <ul className="meta">{meta}</ul>}
     </div>

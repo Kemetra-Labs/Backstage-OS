@@ -1,0 +1,34 @@
+/* Agent activity (demo only). Layout and state treatment; shared tokens and classes come from the app styles. */
+.oversight { border-inline-start: 4px solid var(--gold); }
+.oversight-intro { font-size: 16px; font-weight: 600; max-width: 70ch; }
+.oversight-points { display: grid; gap: 8px; padding-inline-start: 20px; margin: 0; list-style: disc; max-width: 76ch; }
+.oversight-points li { font-size: 14.5px; color: var(--ink-2); }
+
+.agent-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 1100px) { .agent-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; } }
+.agent { display: grid; gap: 8px; padding: 14px 0; border-top: 1px solid var(--line); min-width: 0; align-content: start; }
+.agent:first-child { border-top: 0; padding-top: 0; }
+@media (min-width: 1100px) { .agent:nth-child(2) { border-top: 0; padding-top: 0; } }
+.agent-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.agent-name { font: 600 15px/1.3 var(--f-mono); margin: 0; }
+.agent-purpose { font-size: 14px; max-width: 60ch; }
+.agent-project { padding: 2px 8px; border: 1px solid var(--line-3); border-radius: var(--r-sm); font-size: 12.5px; }
+
+/* State: words first, then border style and colour. Nothing here uses green. */
+.agent-state { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 10px; border-radius: 4px; font-size: 12.5px; font-weight: 600; border: 1px solid currentColor; }
+.agent-state[data-agent-state="watching"] { color: var(--blue); border-style: dashed; }
+.agent-state[data-agent-state="idle"] { color: var(--ink-2); border-style: solid; }
+.agent-state[data-agent-state="paused"] { color: var(--amber); border-style: double; border-width: 3px; }
+.agent-state[data-agent-state="not_enabled"] { color: var(--unk); border-style: dotted; }
+.agent[data-state="not_enabled"] .agent-name, .agent[data-state="not_enabled"] .agent-purpose { color: var(--muted); }
+.agent[data-state="paused"] { border-inline-start: 3px double var(--amber); padding-inline-start: 12px; }
+
+.agent-cap-title { margin: 0 0 4px; }
+.agent-caps { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 13.5px; }
+.agent-caps li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.cap-status { font-size: 12.5px; font-weight: 600; }
+.cap-simulated { color: var(--blue); }
+.cap-not_available { color: var(--unk); }
+
+.agent-timeline .tl-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.agent-timeline .btn { min-height: 44px; font-size: 13px; }

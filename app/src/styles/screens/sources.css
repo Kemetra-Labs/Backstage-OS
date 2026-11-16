@@ -1,0 +1,27 @@
+/* Source health (demo only). Connectivity and freshness are shown in words and shape; there is no health verdict here. */
+.dim-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.dim-list li { display: grid; gap: 2px; padding-inline-start: 14px; border-inline-start: 3px solid var(--line-3); }
+.dim-list li:nth-child(1) { border-inline-start-color: var(--blue); }
+.dim-list li:nth-child(2) { border-inline-start-color: var(--amber); }
+.dim-list li.dim-off { border-inline-start-style: dotted; border-inline-start-color: var(--unk-line); }
+.dim-list strong { font-size: 14.5px; }
+.sources-plain { font-size: 15px; font-weight: 600; }
+.oversight-intro { font-size: 15px; font-weight: 600; max-width: 70ch; }
+
+.source-table th[scope="row"] { color: var(--ink); font-size: 13.5px; }
+.source-table td, .source-table th { white-space: nowrap; }
+.source-table tfoot td, .source-table tfoot th { white-space: normal; border-top: 1px solid var(--line-3); color: var(--ink-2); }
+.src-conn-reachable { color: var(--ink); }
+.src-conn-unavailable { color: var(--coral); font-weight: 600; }
+.src-conn-not_configured { color: var(--unk); font-weight: 600; }
+.src-fresh-current { color: var(--ink); }
+.src-fresh-stale { color: var(--amber); font-weight: 600; }
+.src-fresh-unknown { color: var(--unk); font-weight: 600; }
+.src-marker { font: 600 12px/1 var(--f-mono); color: var(--gold); padding: 3px 6px; border: 1px dashed var(--gold-line); border-radius: var(--r-sm); }
+html[lang="ar"] .src-marker { font-family: var(--f-ar); }
+
+.state-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 960px) { .state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.integration-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.integration { display: grid; grid-template-columns: minmax(96px, max-content) minmax(0, 1fr); gap: 4px 14px; font-size: 14px; }
+@media (max-width: 420px) { .integration { grid-template-columns: minmax(0, 1fr); } }
