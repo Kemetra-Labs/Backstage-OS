@@ -1,9 +1,9 @@
 // Persona selector (Blueprint v4 §5, D-5). Builds each view from an allowlist per persona, so a Nontechnical or Owner
 // component never receives raw output, job names, run ids or links. In a real build the server applies the same rule.
 import {
-  confidenceDisplay, effectiveFreshness, freshnessOf, isInertLink, needsDemoMarker, resolveHealth, resolveLabel,
-  worstFreshness,
+  confidenceDisplay, effectiveFreshness, freshnessOf, needsDemoMarker, resolveHealth, resolveLabel, worstFreshness,
 } from '../contract/rules';
+import { evidenceViewFor } from './evidence';
 import type { ConfidenceView } from '../contract/rules';
 import type {
   DisplayLabel, Environment, EvidenceReference, FactKey, FactRef, Freshness, Health, InvestigationData, MapNode, NodeId,
@@ -72,37 +72,7 @@ export interface PersonaView {
 }
 
 function evidenceFor(persona: Persona, ref: EvidenceReference, inv: InvestigationData): EvidenceView {
-  const o = ref.observation;
-  const src = o?.source;
-  const inert = isInertLink(o?.sourceUrl, src?.synthetic ?? true);
-
-  // Restricted evidence: only that it exists, with no title source, target, age or label.
-  if (ref.visibility === 'technical' && persona !== 'technical') {
-    return { id: ref.id, label: 'unknown', freshness: 'unknown', ageMinutes: null, inert: true, restricted: true };
-  }
-
-  const base: EvidenceView = {
-    id: ref.id,
-    label: resolveLabel(ref),
-    freshness: effectiveFreshness(ref),
-    ageMinutes: src?.ageMinutes ?? null,
-    inert,
-    ...(src ? { provider: src.provider } : {}),
-    ...(ref.notReadReason ? { notReadReason: ref.notReadReason } : {}),
-  };
-  if (persona === 'nontechnical') return base;
-
-  const ownerView: EvidenceView = { ...base, ...(o ? { observedAt: o.observedAt, environment: o.environment } : {}) };
-  if (persona === 'owner') return ownerView;
-
-  return {
-    ...ownerView,
-    ...(o ? { targetLabel: o.target.label, ingestedAt: o.ingestedAt } : {}),
-    ...(o?.target.externalId ? { externalId: o.target.externalId } : {}),
-    ...(o?.sourceUrl ? { url: o.sourceUrl } : {}),
-    ...(ref.rule ? { rule: ref.rule } : {}),
-    ...(inv.rawOutput.evidenceId === ref.id ? { rawOutput: inv.rawOutput.text } : {}),
-  };
+  return evidenceViewFor(persona, ref, inv.rawOutput.evidenceId === ref.id ? inv.rawOutput.text : undefined);
 }
 
 /** A fact with evidence takes its label from the contract. Without evidence, only facts that need none keep theirs. */

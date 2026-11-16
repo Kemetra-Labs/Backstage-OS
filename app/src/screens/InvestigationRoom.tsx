@@ -59,7 +59,7 @@ export function InvestigationRoom({ persona, lang, copy }: Props) {
   const label = (k: 'unknown' | 'proposed') => (view.labelStyle === 'plain' ? copy.plainLabel[k] : copy.label[k]);
 
   return (
-    <main id="main" tabIndex={-1}>
+    <>
       <nav aria-label={copy.breadcrumb} className="crumbs">
         <ol>
           {copy.crumbs.map((c, i) => (
@@ -108,6 +108,6 @@ export function InvestigationRoom({ persona, lang, copy }: Props) {
       </section>
 
       {item && <EvidenceDrawer item={item} persona={persona} labelStyle={view.labelStyle} copy={copy} lang={lang} onClose={close} />}
-    </main>
+    </>
   );
 }

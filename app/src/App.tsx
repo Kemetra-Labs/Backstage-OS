@@ -1,11 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AppContext, type AppState } from './app/AppContext';
 import type { Lang, Persona } from './contract/types';
-import { needsDemoMarker } from './contract/rules';
-import { INV_DEMO_7 } from './fixture/inv-demo-7';
 import { COPY } from './i18n/strings';
-import { SourceChip } from './components/SourceChip';
-import { Segmented } from './components/Segmented';
-import { InvestigationRoom } from './screens/InvestigationRoom';
+import { SHELL } from './i18n/shell';
+import type { Route } from './nav/routes';
+import { useRoute } from './nav/useRoute';
+import { AppShell } from './shell/AppShell';
+import { Agents } from './screens/Agents';
+import { DecisionDetail } from './screens/DecisionDetail';
+import { Decisions } from './screens/Decisions';
+import { Evidence } from './screens/Evidence';
+import { Home } from './screens/Home';
+import { InvestigationRoute } from './screens/InvestigationRoute';
+import { NotFound } from './screens/NotFound';
+import { Portfolio } from './screens/Portfolio';
+import { Project } from './screens/Project';
+import { Sources } from './screens/Sources';
 
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];
 
@@ -20,45 +30,58 @@ function initial(): { persona: Persona; lang: Lang } {
   };
 }
 
+function screenFor(route: Route) {
+  switch (route.name) {
+    case 'home': return <Home />;
+    case 'portfolio': return <Portfolio />;
+    case 'project': return <Project projectId={route.projectId} {...(route.componentId ? { componentId: route.componentId } : {})} />;
+    case 'investigation': return <InvestigationRoute id={route.id} />;
+    case 'evidence': return <Evidence id={route.id} {...(route.from ? { from: route.from } : {})} />;
+    case 'decisions': return <Decisions />;
+    case 'decision': return <DecisionDetail id={route.id} />;
+    case 'agents': return <Agents />;
+    case 'sources': return <Sources />;
+    case 'notFound': return <NotFound />;
+  }
+}
+
 export function App() {
   const [{ persona, lang }, setState] = useState(initial);
+  const route = useRoute();
   const copy = COPY[lang];
+  const shell = SHELL[lang];
+
+  const setPersona = useCallback((p: Persona) => setState((s) => ({ ...s, persona: p })), []);
+  const setLang = useCallback((l: Lang) => setState((s) => ({ ...s, lang: l })), []);
+
+  // Keep the demo switches in the URL so a reload or a shared review link shows the same view.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    q.set('persona', persona);
+    q.set('lang', lang);
+    window.history.replaceState(null, '', `?${q.toString()}${window.location.hash}`);
+  }, [persona, lang]);
+
+  const title = route.name === 'investigation' ? copy.h1
+    : route.name === 'evidence' ? copy.evidenceTitle
+    : route.name === 'decision' ? shell.nav.decisions
+    : route.name === 'notFound' ? shell.notFound.title
+    : shell.nav[route.name];
 
   useEffect(() => {
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    document.title = `Kawalys · ${copy.h1}`;
-  }, [lang, copy.h1]);
+    document.title = `Kawalys · ${title}`;
+  }, [lang, title]);
+
+  const value = useMemo<AppState>(
+    () => ({ persona, lang, copy, shell, route, setPersona, setLang }),
+    [persona, lang, copy, shell, route, setPersona, setLang],
+  );
 
   return (
-    <>
-      <a className="skip" href="#main">{copy.skip}</a>
-      <header className="topbar">
-        <div className="brand-row">
-          <bdi dir="ltr" className="brand">Kawalys</bdi>
-          {needsDemoMarker(INV_DEMO_7.sources) && <span className="demo">{copy.demo}</span>}
-        </div>
-        <div className="controls">
-          <Segmented
-            label={copy.viewAs}
-            value={persona}
-            options={PERSONAS.map((p) => ({ value: p, label: copy.persona[p] }))}
-            onChange={(p) => setState((s) => ({ ...s, persona: p }))}
-          />
-          <Segmented
-            label={copy.language}
-            value={lang}
-            options={[{ value: 'en', label: 'EN', lang: 'en' }, { value: 'ar', label: 'عربي', lang: 'ar' }]}
-            onChange={(l) => setState((s) => ({ ...s, lang: l }))}
-          />
-        </div>
-        <section className="sources" aria-label={copy.sources}>
-          <ul>
-            {INV_DEMO_7.sources.map((s) => <SourceChip key={s.provider} source={s} copy={copy} lang={lang} />)}
-          </ul>
-        </section>
-      </header>
-      <InvestigationRoom persona={persona} lang={lang} copy={copy} />
-    </>
+    <AppContext.Provider value={value}>
+      <AppShell>{screenFor(route)}</AppShell>
+    </AppContext.Provider>
   );
 }
