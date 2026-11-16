@@ -2,6 +2,7 @@
 // component never receives raw output, job names, run ids or links. In a real build the server applies the same rule.
 import {
   confidenceDisplay, effectiveFreshness, freshnessOf, isInertLink, needsDemoMarker, resolveHealth, resolveLabel,
+  worstFreshness,
 } from '../contract/rules';
 import type { ConfidenceView } from '../contract/rules';
 import type {
@@ -119,9 +120,7 @@ function factFor({ key, evidence }: FactRef): FactView {
 
 function nodeFor(n: MapNode): NodeView {
   const read = n.state.basis.filter((r) => r.observation !== null);
-  const freshness = read.length
-    ? read.map(effectiveFreshness).reduce((a, b) => (a === 'unknown' || b === 'unknown' ? 'unknown' : a === 'stale' || b === 'stale' ? 'stale' : 'current'))
-    : 'unknown';
+  const freshness = worstFreshness(read.map(effectiveFreshness));
   const ages = read.map((r) => r.observation?.source.ageMinutes).filter((a): a is number => typeof a === 'number');
   return {
     id: n.id,

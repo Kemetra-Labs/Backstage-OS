@@ -21,11 +21,16 @@ export function freshnessOf(s: SourceAuthority): Freshness {
 
 const RANK: Readonly<Record<Freshness, number>> = { current: 0, stale: 1, unknown: 2 };
 
+/** The worst freshness in a list: unknown over stale over current. An empty list is unknown, never current. */
+export function worstFreshness(list: readonly Freshness[]): Freshness {
+  if (list.length === 0) return 'unknown';
+  return list.reduce<Freshness>((worst, f) => (RANK[f] > RANK[worst] ? f : worst), 'current');
+}
+
 /** Evidence freshness: the worse of what the evidence claims and what its source's TTL says. Unread is unknown. */
 export function effectiveFreshness(ref: EvidenceReference): Freshness {
   if (!ref.observation) return 'unknown';
-  const computed = freshnessOf(ref.observation.source);
-  return RANK[computed] > RANK[ref.freshness] ? computed : ref.freshness;
+  return worstFreshness([ref.freshness, freshnessOf(ref.observation.source)]);
 }
 
 /**

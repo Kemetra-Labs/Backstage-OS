@@ -57,7 +57,9 @@ export function EvidenceDrawer({ item, persona, labelStyle, copy, lang, onClose 
   const readable = !item.restricted && !item.notReadReason;
 
   return createPortal(
-    <div className="scrim" onClick={onClose}>
+    // The backdrop is not clickable: a click handler on a non-interactive element is unreachable by keyboard
+    // (Sonar S6848). Esc and the Close button close the drawer.
+    <div className="scrim">
       <div
         ref={panel}
         className="drawer"
@@ -66,7 +68,6 @@ export function EvidenceDrawer({ item, persona, labelStyle, copy, lang, onClose 
         aria-labelledby="drawer-title"
         lang={lang}
         dir={lang === 'ar' ? 'rtl' : 'ltr'}
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="drawer-head">
           <h2 id="drawer-title"><Text s={d.title(item.id)} /></h2>

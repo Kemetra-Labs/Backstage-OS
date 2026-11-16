@@ -10,6 +10,7 @@ import {
   needsDemoMarker,
   resolveHealth,
   resolveLabel,
+  worstFreshness,
 } from './rules';
 
 const github: SourceAuthority = {
@@ -152,6 +153,17 @@ describe('review fixes: freshness is computed, not trusted (M3)', () => {
   });
   it('does not keep healthy when the claimed-current source is past its TTL', () => {
     expect(resolveHealth({ connectivity: 'reachable', freshness: 'current', health: 'healthy', basis: [ref({ observation: pastTtl })] })).toBe('unknown');
+  });
+});
+
+describe('worstFreshness', () => {
+  it('returns the worst of a list, unknown over stale over current', () => {
+    expect(worstFreshness(['current', 'stale', 'current'])).toBe('stale');
+    expect(worstFreshness(['stale', 'unknown'])).toBe('unknown');
+    expect(worstFreshness(['current'])).toBe('current');
+  });
+  it('treats an empty list as unknown, never current', () => {
+    expect(worstFreshness([])).toBe('unknown');
   });
 });
 
