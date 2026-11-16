@@ -32,16 +32,19 @@ jobs:
         with:
           python-version: '3.12'
 
+      # No dependency needs lifecycle scripts; skip them (supply-chain hardening).
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
+      # Call the lockfile-pinned binary directly instead of npx, which can
+      # fetch and run unpinned packages on demand.
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium webkit
+        run: ./node_modules/.bin/playwright install --with-deps chromium webkit
 
       # BrowserStack (npm run test:browserstack) stays manual: it needs secrets
       # and shares the account's limited parallel sessions.
       - name: Run Playwright tests
-        run: npx playwright test
+        run: ./node_modules/.bin/playwright test
 
       - name: Upload test results on failure
         if: failure()
