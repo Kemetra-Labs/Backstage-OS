@@ -136,3 +136,16 @@ test.describe('F6 Reset demo', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// CI (Linux) found Agents overflowing 5px @320: a nowrap mode badge ("Proposes, human approves")
+// was wider than the agent card's text column once the fallback font was wider than Windows'.
+test.describe('Agents cards fit 320px with a wide fallback font', () => {
+  for (const lang of ['en', 'ar']) {
+    test(`agents @ 320px, wide font, ${lang}`, async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 640 });
+      await openApp(page, { lang }, '#agents');
+      await page.addStyleTag({ content: '*{font-family:Verdana,"DejaVu Sans",sans-serif !important}' });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    });
+  }
+});
