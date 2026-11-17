@@ -11,7 +11,10 @@
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "check": "tsc --noEmit && vitest run --coverage",
-    "e2e": "vite build && playwright test -c playwright.config.ts"
+    "e2e": "vite build && playwright test -c playwright.config.ts",
+    "dev:v2": "vite --config vite.v2.config.ts --open /v2.html",
+    "build:v2": "tsc --noEmit && vite build --config vite.v2.config.ts",
+    "e2e:v2": "vite build --config vite.v2.config.ts && playwright test -c playwright.v2.config.ts"
   },
   "dependencies": {
     "react": "18.3.1",
