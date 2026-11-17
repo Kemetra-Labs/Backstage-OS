@@ -68,7 +68,7 @@ for (const route of ROUTES) {
 for (const route of ROUTES) {
   test(`touch targets ≥ 44 px @375 ${route}`, async ({ page }) => {
     await open(page, route, { width: 375 });
-    const small = await page.locator('main button, main a.btn, header button').evaluateAll((els) =>
+    const small = await page.locator('main button, main a.btn, main .crumbs a, header button').evaluateAll((els) =>
       els.map((e) => ({ r: e.getBoundingClientRect(), t: (e.textContent ?? '').trim() }))
         .filter(({ r }) => r.width > 0 && (r.height < 44 || r.width < 44)).map(({ t }) => t));
     expect(small).toEqual([]);
@@ -168,4 +168,21 @@ test('unknown is never healthy anywhere: every healthy mark has current observed
       els.map((e) => e.closest('[data-node]')?.getAttribute('data-node') ?? e.closest('[data-component]')?.getAttribute('data-component') ?? `unattributed on ${location.hash}`));
     for (const h of healthy) expect(['api-gateway', 'khepri-web'], `healthy mark: ${h}`).toContain(h);
   }
+});
+
+test('selecting a component on the map keeps focus and scroll in place', async ({ page }) => {
+  await open(page, '#/project/RT', { width: 1280 });
+  const node = page.locator('[data-testid="dep-graph"] [data-node="stock-sync"]');
+  await node.scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, 200));
+  const before = await page.evaluate(() => window.scrollY);
+  await node.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#\/project\/RT\/stock-sync$/);
+  await expect(page.locator('main')).not.toBeFocused();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  expect(before).toBeGreaterThan(0);
+  // A different screen still moves focus to main.
+  await page.locator('main a[href="#/investigation/INV-DEMO-7"]').first().click();
+  await expect(page.locator('main')).toBeFocused();
 });

@@ -61,3 +61,24 @@ html[lang="ar"] .side-group { letter-spacing: 0; text-transform: none; font-size
 
 /* footer */
 .foot { padding: 18px max(16px, env(safe-area-inset-right)) 28px max(16px, env(safe-area-inset-left)); border-top: 1px solid var(--line); }
+
+/* Phones: keep the header short so content starts in the first screen. The switch groups keep their aria-label;
+   the source chips stay visible in one row that scrolls on its own, never the page. */
+@media (max-width: 640px) {
+  .topbar { gap: 8px; }
+  .seg-label { display: none; }
+  .controls { gap: 8px 12px; }
+  .sources { min-width: 0; }
+  .sources ul { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .sources .source { flex: 0 0 auto; }
+}
+
+/* Wide screens: the navigation column runs the full height of the layout, not just its own content. */
+@media (min-width: 1024px) {
+  .layout { position: relative; min-height: calc(100vh - 160px); }
+  .layout::before {
+    content: ""; position: absolute; inset-block: 0; inset-inline-start: 0; width: 236px; z-index: -1;
+    background: var(--bg-2); border-inline-end: 1px solid var(--line);
+  }
+  .side { background: transparent; border-inline-end: 0; min-height: 0; }
+}

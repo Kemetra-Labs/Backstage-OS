@@ -2,24 +2,36 @@ import { useEffect, useRef, useState } from 'react';
 import { parseHash, type Route } from './routes';
 
 /**
- * Current hash route. After a navigation (not the first render) focus moves to <main> and the page scrolls to the
- * top, so keyboard and screen-reader users land on the new screen instead of the old link.
+ * The screen a route shows. Selecting something inside a screen (a component on the project map) changes the hash but
+ * not the screen, so it must not steal focus or scroll.
+ */
+export function screenKey(r: Route): string {
+  switch (r.name) {
+    case 'project': return `project:${r.projectId}`;
+    case 'investigation': case 'evidence': case 'decision': return `${r.name}:${r.id}`;
+    case 'notFound': return `notFound:${r.path}`;
+    default: return r.name;
+  }
+}
+
+/**
+ * Current hash route. When navigation reaches a different screen (not the first render, not an in-screen selection),
+ * focus moves to <main> and the page scrolls to the top, so keyboard and screen-reader users land on the new screen.
  */
 export function useRoute(): Route {
   const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
-  const navigated = useRef(false);
+  const lastScreen = useRef(screenKey(route));
 
   useEffect(() => {
-    const onHash = () => {
-      navigated.current = true;
-      setRoute(parseHash(window.location.hash));
-    };
+    const onHash = () => setRoute(parseHash(window.location.hash));
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
   useEffect(() => {
-    if (!navigated.current) return;
+    const key = screenKey(route);
+    if (key === lastScreen.current) return;
+    lastScreen.current = key;
     window.scrollTo(0, 0);
     document.getElementById('main')?.focus({ preventScroll: true });
   }, [route]);

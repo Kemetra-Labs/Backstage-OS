@@ -121,3 +121,16 @@ button.dg-node[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0
 .tl-body { display: grid; gap: 4px; min-width: 0; }
 .tl-title { font-size: 14px; }
 @media (max-width: 420px) { .tl-item { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
+/* Breadcrumb links are navigation targets: 44 px tall on touch-sized screens. */
+@media (max-width: 1023px) {
+  .crumbs a { min-height: 44px; min-width: 44px; }
+}
+
+/* Navigation links read as links, not a wall of outlined buttons (Impeccable critique, 2026-11-17). They keep the
+   44 px target; only a deliberate primary link (.btn-link without .btn-quiet) keeps the outline. */
+a.btn.btn-quiet.btn-link {
+  border-color: transparent; padding-inline: 4px; color: var(--gold-hi); font-weight: 500;
+}
+a.btn.btn-quiet.btn-link:hover { background: transparent; text-decoration: underline; }
+.home-att-lead .home-links a.btn.btn-quiet.btn-link:first-child { border-color: var(--gold-line); padding-inline: 14px; }

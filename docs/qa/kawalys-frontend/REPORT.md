@@ -57,18 +57,19 @@ Other states: `#/project/KH` and `#/investigation/INV-DEMO-9` show conflicting s
 
 | Skill | Status |
 | --- | --- |
-| Anthropic `frontend-design` | Project-installed in `.claude/skills/frontend-design` from anthropics/skills @ `e4bb5d9`, Apache-2.0. Briefed to all five screen agents |
-| Impeccable v4.9.2 | Project-installed in `.claude/skills/impeccable` from pbakaus/impeccable @ `d41d986`, Apache-2.0. Its markdown references only; `scripts/` (a binary launcher) was deliberately not vendored |
-| Hallmark | Available at user level; offered to the agents as an anti-pattern check. Not vendored |
+| Anthropic `frontend-design` | Project-installed in `.claude/skills/frontend-design` from anthropics/skills @ `e4bb5d9`, Apache-2.0. Briefed to all five screen agents; **their use of it is not confirmed** (no agent report mentions it) |
+| Impeccable v4.9.2 | Project-installed in `.claude/skills/impeccable` from pbakaus/impeccable @ `d41d986`, Apache-2.0. Its markdown references only; `scripts/` (a binary launcher) was deliberately not vendored. **Used:** a critique run against `critique.md` + `critique-rubric.md` on 9 screenshots, rubric-only because the detector needs the launcher. It scored 26/40, "Acceptable". Fixes applied: navigation links restyled from outlined buttons to quiet links, sidebar background running full height, mobile header compacted. Deferred: see §8 |
+| Hallmark | Available at user level; offered to the agents as an anti-pattern check. Use not confirmed. Not vendored |
+| `design:design-critique`, `design:accessibility-review`, code-reviewer agent | **Not run.** An advisor review (fresh lens) and the Impeccable critique took their place |
 | Playwright | Used: per-screen specs, a cross-route rules spec and screenshot capture |
 
 ## 5. Test results (Windows 11, local, 2026-11-17)
 
 | Command (from `app/`) | Result |
 | --- | --- |
-| `npm run check` (tsc + Vitest + coverage) | **PASS**: 20 files, 322 tests; coverage 99.95% lines, 97.18% branches |
+| `npm run check` (tsc + Vitest + coverage) | **PASS**: 21 files, 323 tests; coverage 99.95% lines, 97.18% branches |
 | `npm run build` | **PASS** |
-| `npm run e2e` (chromium + webkit engines) | **PASS**: 1094 passed, 0 failed, 66 skipped |
+| `npm run e2e` (chromium + webkit engines) | **PASS**. The last full run gave 1092 passed and 4 failed: the new breadcrumb touch-target check caught the "Khepri" crumb at under 44 px wide. After the fix, all 52 touch-target tests pass. The earlier full run, before the critique fixes, gave 1094 passed and 0 failed |
 
 The skipped tests are:
 - 64 capture tests, which only run with `CAPTURE=1`
@@ -107,7 +108,11 @@ Issues found and fixed during validation:
 - `mobile-en-nontechnical/` (4)
 - `mobile-ar-owner/` (4)
 
-The lead reviewed Home, Project (EN and AR), Decision detail, INV-DEMO-9, Agents and Sources at desktop size, plus one mobile Arabic room.
+What the lead actually looked at:
+- At 1440: Home, Project RT (EN and AR), Decision detail, INV-DEMO-9, Agents and Sources.
+- At 375, in the browser pane: Nontechnical Home in EN and AR, and Nontechnical INV-DEMO-9. These are viewport views, not full-page.
+
+The full-page mobile PNGs are too tall to judge as single images. Review them by scrolling, or in the app at 375 px.
 
 ## 7. Changed files
 
@@ -130,9 +135,18 @@ No new npm dependencies. The static prototype, CI workflow and root tests are un
 | `app/` in CI | **NOT COVERED**: the required CI job runs only the root prototype suite (BACK-9) |
 | Persona redaction | Presentation only; real redaction must be server-side (ADR-03) |
 
+| Touch targets | Buttons, `.btn` links and breadcrumbs are tested at ≥ 44 px at 375 px; breadcrumbs are 44 px below 1024 px wide. Inline text links inside sentences are **not** held to 44 px |
+
+Deferred critique findings, for owner review:
+- The Investigation Room is long (about 3700 px on desktop). Evidence appears three times: the ledger, the evidence list and the timeline. Candidate fix: collapse the timeline by default.
+- Seshat-BI says "not set up" in three places.
+- Portfolio's attention list repeats Home's.
+- Muted 12 px meta text and mono chip labels sit near the floor for size and contrast.
+
 Minor visual notes:
 - Sources "What the states mean" uses bordered boxes inside a panel.
-- At narrow widths the map scrolls horizontally inside its panel. The table is the fallback.
+- At narrow widths the map scrolls horizontally inside its panel; the table is the fallback.
+- Both "Project Intelligence" and "Retail Tower OS" can show as current in the sidebar.
 
 ## 9. Readiness
 
