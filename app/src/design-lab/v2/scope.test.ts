@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 // Vitest blanks CSS modules (even with ?raw), so stylesheets are read from disk. The app tsconfig has no node types.
 // @ts-ignore node builtin, available at test time
-const { readFileSync } = await import('node:fs');
+const { readFileSync, existsSync, statSync } = await import('node:fs');
 const read = (rel: string): string => readFileSync(new URL(rel, import.meta.url), 'utf8') as string;
-const NAMES = ['tokens', 'base', 'map', 'observatory', 'replay', 'deck'] as const;
+const NAMES = ['fonts', 'tokens', 'base', 'map', 'observatory', 'replay', 'deck'] as const;
 const css: Record<string, string> = Object.fromEntries(NAMES.map((n) => [`./styles/${n}.css`, read(`./styles/${n}.css`)]));
 const src = import.meta.glob(['./**/*.ts', './**/*.tsx', '!./**/*.test.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const v1css: Record<string, string> = Object.fromEntries(['tokens', 'app'].map((n) => [n, read(`../../styles/${n}.css`)]));
@@ -56,6 +56,37 @@ describe('V2 stylesheets', () => {
     for (const [f, text] of Object.entries(src)) expect(text, f).not.toMatch(/import\s+['"](\.\.\/)+styles\//);
     expect(Object.keys(v1css).length).toBeGreaterThan(0);
     expect(Object.values(v1main)[0]!).not.toMatch(/design-lab/);
+  });
+});
+
+describe('V2 self-hosted assets (BACK-18)', () => {
+  const exists = (rel: string): boolean => existsSync(new URL(rel, import.meta.url)) as boolean;
+  const urls = (text: string): string[] => [...text.matchAll(/url\(\s*["']?([^"')]+)/g)].map((m) => m[1]!);
+
+  it('reference no hosted URL from any stylesheet or the HTML entry', () => {
+    for (const [f, text] of Object.entries(css)) expect(text.replace(/\/\*[\s\S]*?\*\//g, ''), f).not.toMatch(/https?:\/\/|\/\/fonts\.|@import/);
+    expect(read('../../../v2.html')).not.toMatch(/<link[^>]+href=["']https?:|<script[^>]+src=["']https?:/);
+  });
+
+  it('declare each face from a local woff2 only (no local() lookup), and every file and its licence ship', () => {
+    const fonts = css['./styles/fonts.css']!.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(fonts).not.toMatch(/local\(/);
+    const files = urls(fonts);
+    expect(files.length).toBe(2);
+    for (const rel of files) {
+      expect(rel.startsWith('../assets/fonts/') && rel.endsWith('.woff2'), rel).toBe(true);
+      expect(exists(rel.replace('../', './')), rel).toBe(true);
+    }
+    for (const lic of ['OFL-Manrope.txt', 'OFL-Cairo.txt']) expect(read(`./assets/fonts/${lic}`)).toMatch(/SIL Open Font License, Version 1\.1/);
+    expect(read('./assets/fonts/SOURCE.md')).toMatch(/@fontsource-variable\/manrope@5\.3\.0[\s\S]*@fontsource-variable\/cairo@5\.3\.0/);
+    expect(fonts).toMatch(/font-display:\s*swap/);
+  });
+
+  it('serve the horizon from a local webp under 100 KB, laid over the CSS fallback', () => {
+    const base = css['./styles/base.css']!;
+    expect(urls(base)).toEqual(['../assets/horizon.webp']);
+    expect(statSync(new URL('./assets/horizon.webp', import.meta.url)).size).toBeLessThan(100_000);
+    expect(base).toMatch(/\.kv2-horizon\s*\{[^}]*radial-gradient/); // the fallback stays when the image is missing
   });
 });
 

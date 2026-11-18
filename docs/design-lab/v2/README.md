@@ -51,7 +51,7 @@ Browser setup is the repo's own (`npx playwright install chromium`; the V2 suite
 | `app/e2e-v2/` | V2 browser tests |
 | `docs/design-lab/v2/reference/` | The four owner reference images under the owner's names |
 | `docs/design-lab/v2/screenshots/` | `v2/` (renders), `v1/` (current frontend), `side-by-side/` (reference left, V2 right), `wip/` (working captures) |
-| `docs/design-lab/v2/tools/` | `capture.mjs`, `capture-v1.mjs`, `compare.py` (the measurements below) |
+| `docs/design-lab/v2/tools/` | `capture.mjs`, `capture-v1.mjs`, `compare.py` (the measurements below), `horizon.py` (renders `assets/horizon.webp`, BACK-18) |
 | `docs/design-lab/v2/comparison.md` | The owner-reviewable V1 vs V2 vs reference comparison |
 | `.claude/skills/` (untracked) | Local copies of the impeccable, hallmark and frontend-design skills, so Claude Code in this worktree finds them |
 

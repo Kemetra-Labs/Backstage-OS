@@ -1,6 +1,6 @@
 // Captures the V2 screens at the reference size (and other widths) with real Chromium, for visual comparison.
 // Usage: node docs/design-lab/v2/tools/capture.mjs [--base http://127.0.0.1:4279] [--out <dir>] [--widths 1448,1440,768,375,320] [--screens a,b] [--lang en] [--persona owner]
-// Reads nothing but the local lab URL. Google Fonts hosts are never contacted (the lab uses local fonts).
+// Reads nothing but the local lab URL. No third-party host is contacted (the lab self-hosts its fonts).
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -36,6 +36,7 @@ for (const width of widths) {
     await page.goto(`${base}/v2.html#/${s}?${q}`);
     await page.reload();
     await page.waitForSelector('h1');
+    await page.evaluate(() => document.fonts.ready); // self-hosted faces (BACK-18) must be in before the shot
     await page.waitForTimeout(350);
     const file = path.join(out, `${s}-${lang}-${persona}-${width}.jpg`);
     await page.screenshot({ path: file, fullPage: full });

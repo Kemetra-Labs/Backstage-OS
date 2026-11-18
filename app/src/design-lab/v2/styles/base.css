@@ -60,7 +60,7 @@ a { color: inherit; text-decoration: none; }
 .kv2-ws strong { display: block; font-size: 14px; }
 .kv2-ws small { display: block; color: var(--kv2-muted); font-size: 11.5px; }
 .kv2-side nav ul { display: grid; gap: 4px; }
-.kv2-side nav a { display: flex; align-items: center; gap: 12px; min-block-size: 44px; padding: 8px 14px; border: 1px solid transparent; border-radius: 12px; color: var(--kv2-ink-2); font-size: 14.5px; transition: background var(--kv2-dur-micro) var(--kv2-ease), color var(--kv2-dur-micro) var(--kv2-ease); }
+.kv2-side nav a { display: flex; align-items: center; gap: 12px; min-block-size: 44px; padding: 8px 14px; border: 1px solid transparent; border-radius: 12px; color: var(--kv2-ink-2); font-size: 14px; transition: background var(--kv2-dur-micro) var(--kv2-ease), color var(--kv2-dur-micro) var(--kv2-ease); }
 .kv2-side nav a:hover { background: var(--kv2-cyan-soft); color: var(--kv2-ink); }
 .kv2-side nav a[aria-current="page"] { color: var(--kv2-ink); border-color: var(--kv2-line-hi); background: var(--kv2-cyan-soft); box-shadow: var(--kv2-shadow-sel); }
 .kv2-side nav a[aria-current="page"] .kv2-icon { color: var(--kv2-cyan); }
@@ -205,6 +205,13 @@ button.kv2-ev[aria-pressed="true"] { border-color: var(--kv2-line-hi); backgroun
     radial-gradient(120% 150% at 50% 0%, color-mix(in srgb, var(--kv2-cyan) 58%, transparent) 0%, color-mix(in srgb, var(--kv2-cyan-2) 30%, transparent) 26%, transparent 64%),
     linear-gradient(180deg, color-mix(in srgb, var(--kv2-cyan-2) 14%, transparent), transparent);
   box-shadow: 0 -2px 0 var(--kv2-cyan), 0 -14px 46px color-mix(in srgb, var(--kv2-cyan) 62%, transparent);
+}
+/* Pre-rendered planet (docs/design-lab/v2/tools/horizon.py) over the gradient above, which stays as the fallback if the
+   image fails. Static: no animation, so reduced motion needs nothing extra. The -28 % headroom is part of the image's
+   geometry contract: its limb lands on this element's elliptical top edge. */
+.kv2-horizon::before {
+  content: ""; position: absolute; inset-inline: 0; inset-block: -28% 0; pointer-events: none;
+  background: url("../assets/horizon.webp") center bottom / 100% 100% no-repeat;
 }
 .kv2-horizon i {
   position: absolute; inset: 0; border-radius: inherit; opacity: 0.5;

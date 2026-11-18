@@ -60,6 +60,11 @@
   --kv2-unk-line: color-mix(in srgb, var(--kv2-unk) 45%, transparent);
   --kv2-shade: color-mix(in srgb, var(--kv2-bg) 70%, transparent);
 
+  /* Luminosity (BACK-18 stage 1). Bloom marks selection, the current step or an observed link, never a node at rest. */
+  --kv2-cyan-bloom: color-mix(in srgb, var(--kv2-cyan) 74%, transparent);
+  --kv2-cyan-haze: color-mix(in srgb, var(--kv2-cyan) 17%, transparent);
+  --kv2-bloom-sel: 0 0 0 5px var(--kv2-cyan-soft), 0 0 14px var(--kv2-cyan-bloom), 0 0 42px var(--kv2-cyan-glow);
+
   /* Panels and ground */
   --kv2-grad-panel: linear-gradient(180deg, color-mix(in srgb, var(--kv2-panel-hi) 78%, transparent), color-mix(in srgb, var(--kv2-panel) 90%, transparent));
   --kv2-grad-ground: radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--kv2-cyan-2) 14%, transparent), transparent 60%), radial-gradient(90% 60% at 0% 100%, color-mix(in srgb, var(--kv2-cyan-2) 10%, transparent), transparent 62%);
@@ -70,8 +75,9 @@
   --kv2-r-sm: 6px;
   --kv2-r-md: 10px;
   --kv2-r-lg: 14px;
-  --kv2-f-ui: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Cairo", sans-serif;
-  --kv2-f-ar: "Cairo", "Segoe UI", "Tahoma", system-ui, sans-serif;
+  /* Manrope and Cairo are self-hosted (fonts.css); the rest is the local fallback while they load or if they fail. */
+  --kv2-f-ui: "Manrope", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Cairo", sans-serif;
+  --kv2-f-ar: "Cairo", "Manrope", "Segoe UI", "Tahoma", system-ui, sans-serif;
   --kv2-f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   --kv2-t-xs: 11px;
   --kv2-t-sm: 12px;
