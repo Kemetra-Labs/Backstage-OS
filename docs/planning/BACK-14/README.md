@@ -17,7 +17,7 @@ The audit was first published on Confluence as
 
 | Source | Confluence v2 pin | This doc's pin |
 | --- | --- | --- |
-| Retail-Tower-Erp `main` | `162e53c6053a90add24ded2d678dd194b4d7b8ad` (2026-11-16) | `b9ba5276304f0da9d0525e569ae0be581b005855` (2026-11-18, 36 commits later) |
+| Retail-Tower-Erp `main` | `162e53c6053a90add24ded2d678dd194b4d7b8ad` (2026-11-16) | `b9ba5276304f0da9d0525e569ae0be581b005855` (2026-11-18, 45 commits later) |
 | Backstage-OS `main` | `288d6a8` (BACK-7 docs) | `ebb3585` (adds the synthetic frontend #7, CI timeout #11) |
 
 **RT permalink base:** `https://github.com/Kemetra-Labs/Retail-Tower-Erp/blob/b9ba5276304f0da9d0525e569ae0be581b005855/<path>`.
@@ -29,14 +29,16 @@ file at that pin, for history only.
 | File | Change | Effect on this audit |
 | --- | --- | --- |
 | `services/backend-core/apps/api/src/auth/external-credential.port.ts` | RT-1439 (`831588367`) adds `verifyPassword` and `endSession`, with a `VerifyPasswordResult` union `ok` / `refused` / `unavailable` | Class stays **D now / C later** (I7). It adds one more example of the result-kind discipline (§2.1) |
+| `services/backend-core/apps/api/src/auth/descope-auth.client.ts` | RT-1439 (`831588367`, +57/-10): the Descope client behind the two new port methods | I7 stays **D now / C later**. Diff reviewed only; the file is still not inspected in depth |
+| `services/backend-core/apps/api/src/pos-pilot-releases/promotion-oidc.verifier.ts` | RT-1459 (`73e2ef4f9`): the GitHub OIDC pin check now also requires the immutable numeric `repository_id` and `repository_owner_id` claims (as strings) | S7 stays **C**. If Kawalys ever accepts GitHub OIDC, pin the numeric IDs too, not only the repo name |
 | `services/backend-core/apps/api/src/idempotency/canonical-json.ts` | Comment-only path fix (`fca942060`) | None |
-| All other cited source files (I1–I9, S2, S5, M1–M2, O1–O4, `users.ts`, `LICENSE`) | `git diff 162e53c b9ba527` is empty | Findings carry over unchanged |
+| The other cited source files (I1–I6, I8, I9, S2, S5, M1–M2, O1–O4, `users.ts`, `LICENSE`) | `git diff 162e53c b9ba527` is empty | Findings carry over unchanged |
 
 ### Method and evidence labels
 
 - RT was read only with `git show <sha>:<path>`, `git ls-tree`, `git log` and `git diff` against
-  `C:\Users\user\Documents\GitHub\Retail-Tower-Erp` (one `git fetch` of `origin/main`, no checkout, branch or edit).
-- **Tests:** "N cases" is a count of lines matching `it(` / `test(` (including `.each`) in the spec file at the pin.
+  a local clone of Retail-Tower-Erp. One `git fetch` moved only its remote-tracking ref; no checkout, branch or edit.
+- **Tests:** "N cases" is a count of `it(` / `test(` declarations (including `.each`) in the spec file at the pin.
   **No test was run.** Counts differ slightly from Confluence v2 (for example 30 vs 26 for the Descope verifier spec,
   13 vs 12 for selection) because the grep pattern differs; neither number is a pass count.
 - **Unverified label:** anything marked *(carried from Confluence v2, not re-verified)* was taken from the
@@ -65,7 +67,7 @@ file at that pin, for history only.
 | --- | --- | --- | --- |
 | Identity port | `verifyIdentityToken` and `linkExternalIdentity` wired live | The 6 lifecycle methods (`getIdentityProfile`, `createIdentity`, `inviteUser`, `disableIdentity`, `enableIdentity`, `sendPasswordReset`) **reject with "not wired in D3"**; the 3 optional ones are not implemented | `services/backend-core/apps/api/src/auth/linking-identity-provider.adapter.ts:55,86` |
 | Provider selection | Descope only; unknown values (including `clerk`) throw at boot | — | `.../auth/identity-provider-kind.ts`, `.../auth/identity-provider.factory.ts` |
-| Clerk removal | Runtime path Descope-only, RT-800 Done | **RT-798 (OpenAPI wording) and RT-799 (drop `users.clerk_user_id`) are To Do.** The column is still mapped and still referenced by tests and the bootstrap CLI | `services/backend-core/packages/db/src/schema/users.ts:27`; `git grep clerk_user_id` hits e.g. `apps/api/test/_helpers/identity-links.ts`, `packages/db/src/cli/bootstrap-pilot.ts` *(CLI read/write carried from Confluence v2)* |
+| Clerk removal | Runtime path Descope-only, RT-800 Done | **RT-798 (OpenAPI wording) and RT-799 (drop `users.clerk_user_id`) are To Do.** The column is still mapped and still referenced by tests and the bootstrap CLI | `services/backend-core/packages/db/src/schema/users.ts:27`; `git grep clerk_user_id` hits e.g. `services/backend-core/apps/api/test/_helpers/identity-links.ts`, `services/backend-core/packages/db/src/cli/bootstrap-pilot.ts:227` |
 | Credentials | `ExternalCredentialPort` password sign-in, reset, invite, logout-all, and (new) `verifyPassword` / `endSession` | — | `.../auth/external-credential.port.ts` |
 | AI | `ModelProviderPort`, disabled / fake / recorded adapters, result guard, token estimate, conformance suite, gateway | Vendor adapter, residency, SDK-vs-fetch left open (RT-643) | `.../ai/ports/model-provider.port.ts`, `apps/api/test/_helpers/model-provider-conformance.ts` |
 | Observability | Sentry `beforeSend` scrubbers (Node backend, Node POS main, browser console, Python connector); OTel `RedactingSpanExporter`; shared golden vectors kept identical by `tools/contracts-check` | OBS-1 and AD-AI-PROV-001 are cited in code and docs only *(carried from Confluence v2)* | `packages/shared/src/observability/{sentry,span-redaction}.ts`, `apps/admin-console/src/observability/scrub.ts`, `tools/contracts-check/contracts_check/identical.py` |
@@ -95,7 +97,9 @@ fixtures. BACK-7 ADR-01, ADR-03 and ADR-04 are **Proposed, not accepted**
 Ownership is the same for every row: RT owners own RT source; Kawalys owns any copy or adaptation. **No upstream
 obligation in either direction.**
 
-Paths below use `api/` for `services/backend-core/apps/api/` and `shared/` for `services/backend-core/packages/shared/`.
+Paths below use `api/` for `services/backend-core/apps/api/`, `shared/` for `services/backend-core/packages/shared/`
+and `core/` for `services/backend-core/`. Paths starting `apps/admin-console/`, `integrations/` or `tools/` are from the
+repo root.
 
 ### 2.1 Identity
 
@@ -104,11 +108,11 @@ Paths below use `api/` for `services/backend-core/apps/api/` and `shared/` for `
 | I1 | `api/src/auth/identity-provider.port.ts`: **only** `VerifiedSubject {providerKey, issuer, subject}` + `verifyIdentityToken` | b3a7495fe | Live | Via selection / adapter specs | Pure TS types | Subject joined to a local user via a link table; no provider claim crosses the port | **B** | ~15-line contract. Rename to `IdentityVerificationPort.verify(rawToken) → VerifyResult` (§4) |
 | I2 | Same file: 6 lifecycle + 3 optional methods | b3a7495fe | **Unimplemented** (reject "not wired") | — | — | POS / Console user-admin flows | **D** | Adopting it creates a mega-interface. Add an operation only when a Kawalys feature needs it |
 | I3 | `api/src/auth/identity-provider-kind.ts` + `identity-provider.factory.ts` | 0c5fd7bf2 / f8b222abc | Live | `api/test/auth/identity-provider-selection.unit.spec.ts` (13 cases) | Factory imports pg `Pool` and Descope modules | Unknown provider fails closed at boot; `never` exhaustiveness | **C** | Re-derive the fail-closed parse as a ~20-line pattern. No factory family before a second provider exists |
-| I4 | `api/src/auth/linking-identity-provider.adapter.ts` + `packages/db/drizzle/0025_external_identity_links.sql` + `api/src/auth/identity-link-lookup.ts` | b3a7495fe / f79b618e3 / b8b0681c1 | Live | Adapter unit / integration specs, `0025` migration spec *(carried from Confluence v2)* | PostgreSQL, FK to RT `users` | One active link per user; unique `(provider_key, issuer, subject)`. **The runtime lookup matches only `(provider_key, subject)` and ignores issuer, on purpose** (`identity-link-lookup.ts:21-23, 60-62, 74-75`) | **C** | The data model is the value (neutral local user ID + external linked subject). Kawalys has no DB choice yet (ADR-02 open). **Kawalys must look up the full verified triple including issuer**; do not port the issuer-omitting query |
+| I4 | `api/src/auth/linking-identity-provider.adapter.ts` + `core/packages/db/drizzle/0025_external_identity_links.sql` + `api/src/auth/identity-link-lookup.ts` | b3a7495fe / f79b618e3 / b8b0681c1 | Live | Adapter unit / integration specs, `0025` migration spec *(carried from Confluence v2)* | PostgreSQL, FK to RT `users` | One active link per user; unique `(provider_key, issuer, subject)`. **The runtime lookup matches only `(provider_key, subject)` and ignores issuer, on purpose** (`identity-link-lookup.ts:21-23, 60-62, 74-75`) | **C** | The data model is the value (neutral local user ID + external linked subject). Kawalys has no DB choice yet (ADR-02 open). **Kawalys must look up the full verified triple including issuer**; do not port the issuer-omitting query |
 | I5 | `api/src/pos-operators/descope-verifier.ts` (jose JWKS verifier) | 9b68e33aa | Live | `api/test/pos-operators/descope-verifier.unit.spec.ts` (30 cases) | `jose` 5.10.0 MIT *(licence carried)*, NestJS decorator only | RS256 allow-list, pinned `iss` / `aud`, `exp` / `sub` required, `maxTokenAge`, refresh tokens refused, causes dropped | **B** | Highest-value identity piece. Adapt the verifier and its refusal tests to Kawalys's own issuer / audience / JWKS, without RT's 8-hour POS policy. Unlike RT, distinguish JWKS outage (`unavailable`) from invalid token (`refused`) using safe error codes only |
 | I6 | `api/src/auth/descope-identity-provider.adapter.ts` | 77c0a4436 | Live | `descope-identity-provider.adapter.unit.spec.ts` *(carried)* | Extends the pg-coupled linking base | Maps `sub` to a neutral subject | **C** | ~15 lines once I5 and the link store are separate. Rewrite |
 | I7 | `api/src/auth/external-credential.port.ts` (+ `descope-auth.client.ts`) | 831588367 | Live; RT-1439 added `verifyPassword` / `endSession` | `descope-auth.client.unit.spec.ts` *(carried; not inspected in depth)* | Descope management / auth HTTP | Kawalys would hold passwords and management keys | **D now, C later** | Kawalys should use hosted IdP sign-in, not proxy passwords. Reuse only the result-kind discipline (`refused` / `unavailable` / `unconfigured`; an outage is never a wrong password) |
-| I8 | `services/backend-core/packages/auth/src/types.ts` (branded IDs, `RawToken` vs `TokenHash`) | b6ddc755f | Live | — | Pure types | Tenant / store IDs, POS scope | **C** | Reuse the branded-ID technique for `UserId` / `ProjectId` / `RawToken`. Drop `TenantId`, `StoreId`, `pos` scope |
+| I8 | `core/packages/auth/src/types.ts` (branded IDs, `RawToken` vs `TokenHash`) | b6ddc755f | Live | — | Pure types | Tenant / store IDs, POS scope | **C** | Reuse the branded-ID technique for `UserId` / `ProjectId` / `RawToken`. Drop `TenantId`, `StoreId`, `pos` scope |
 | I9 | Operator context resolver, fail-closed auth guard, RT grants, identity-link cutover CLI | various | Live | various | NestJS, pg, tenant context | POS / tenant / store semantics | **D** | Domain-bound. Kawalys keeps its own deny-by-default scope ([ADR-03 §2](../BACK-7/adr-03-permissions-security.md)) |
 
 ### 2.2 Source evidence and connectors
@@ -120,8 +124,8 @@ Paths below use `api/` for `services/backend-core/apps/api/` and `shared/` for `
 | S3 | `integrations/erpnext-connector/retail_tower_erpnext_connector/connector/{http_transport,auth_circuit}.py` | cd35b444b | Live | `tests/test_http_transport.py`, `tests/test_auth_circuit.py` (pytest; not counted) | Python / Frappe | **C** | ADR-01 recommends a TS BFF. References: plain HTTP refused, unset token refused, 401/403 circuit with capped backoff, reset on credential rotation *(behaviour carried)* |
 | S4 | `api/src/idempotency/canonical-json.ts` | fca942060 | Live | `payload-canonical-json.golden.unit.spec.ts` *(carried)* | Pure | **D for G2** | G2 is read-only. Revisit only if write-back appears (G4) |
 | S5 | `api/src/health/health.service.ts` (per-check timeout, single in-flight run, fixed-value report) | ba33bee6a | Live | `api/test/health/health.http.integration.spec.ts` (5 cases) + unit spec | NestJS + pg | **C** | Good readiness shape for the BFF; rewrite on the chosen framework |
-| S6 | `services/backend-core/apps/worker/src/email/{email,ses-email}.adapter.ts` | 085170d5b / cdecd769c | Live | `email.*.spec.ts` *(carried)* | NestJS; `@aws-sdk/client-sesv2` | **C** | No notification need in G2. Do not create a `NotificationPort` yet |
-| S7 | `api/src/pos-pilot-releases/promotion-oidc.verifier.ts` (GitHub OIDC via jose, verdict not throw) | 73e2ef4f9 | Live | *(not inspected)* | jose | **C** | Possible reference if Kawalys ever accepts GitHub Actions OIDC. Not needed for G2 |
+| S6 | `core/apps/worker/src/email/{email,ses-email}.adapter.ts` | 085170d5b / cdecd769c | Live | `email.*.spec.ts` *(carried)* | NestJS; `@aws-sdk/client-sesv2` | **C** | No notification need in G2. Do not create a `NotificationPort` yet |
+| S7 | `api/src/pos-pilot-releases/promotion-oidc.verifier.ts` (GitHub OIDC via jose, verdict not throw) | 73e2ef4f9 | Live | *(not inspected in depth; RT-1459 diff reviewed, §0)* | jose | **C** | Possible reference if Kawalys ever accepts GitHub Actions OIDC, including the numeric repo / owner ID pins. Not needed for G2 |
 | S8 | Outbox, BullMQ consumers, device health, ERPNext posting idempotency | various | Live | many | pg, BullMQ, Frappe | **D** | Retail domain flows |
 | S9 | MCP connector code | — | **Does not exist** (first-party; see §1 MCP note) | — | — | **D** | Kawalys's MCP evaluation is original work (§5) |
 
@@ -138,11 +142,11 @@ Paths below use `api/` for `services/backend-core/apps/api/` and `shared/` for `
 
 | # | Candidate | Last change | Status | Tests (not run) | Runtime / deps | Class | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| O1 | `shared/src/observability/span-redaction.ts` (`RedactingSpanExporter`) | 7616ae6d5 | Live | `shared/__tests__/observability/span-redaction.spec.ts` (32 cases) | Node; type-only OTel imports (Apache-2.0, *carried*) | **B, only if OTel is chosen** | Drops `gen_ai.*` content (lines 58-68) and URL query, but keeps `scheme//host/pathname` (line 103) and unconstrained attributes. Paths can carry repo / project / investigation IDs. Kawalys needs route templates and an attribute allowlist plus leak tests |
+| O1 | `shared/src/observability/span-redaction.ts` (`RedactingSpanExporter`) | 7616ae6d5 | Live | `shared/__tests__/observability/span-redaction.spec.ts` (34 cases) | Node; type-only OTel imports (Apache-2.0, *carried*) | **B, only if OTel is chosen** | Drops `gen_ai.*`, `ai.prompt*` and `ai.evidence_pack*` content (lines 61-72) and URL query, but keeps `scheme//host/pathname` (line 103) and unconstrained attributes. Paths can carry repo / project / investigation IDs. Kawalys needs route templates and an attribute allowlist plus leak tests |
 | O2 | `shared/src/observability/sentry.ts` (allowlist rebuild `scrubSentryEvent`, DSN gating, default-inert) | 67be171b3 | Live | `shared/__tests__/observability/sentry.spec.ts` *(carried)* | Imports RT `logger/pino`, `correlation`, release version; `@sentry/node` *(carried)* | **B** | Extract the scrub core; replace the tag allowlist. **Also exclude project, source, repo, user and investigation IDs**; RT's list excludes tenant / store but allows `route` values that may embed IDs |
-| O3 | `apps/admin-console/src/observability/scrub.ts` (browser scrubber: JWT / URL / email / phone / bearer masking, scan cap) | f3665a71f | Live | `apps/admin-console/tests/unit/observability-scrub.test.ts` (20), `observability-scrub-vectors.test.ts` (3) | Browser code, `@sentry/react` *(carried)*; **tests run in Node (vitest)** | **B** | Best match for Kawalys's React UI. **Real-browser behaviour unverified.** Arabic-numeral phone masking unverified |
+| O3 | `apps/admin-console/src/observability/scrub.ts` (browser scrubber: JWT / URL / email / phone / bearer masking, scan cap) | f3665a71f | Live | `apps/admin-console/tests/unit/observability-scrub.test.ts` (20), `observability-scrub-vectors.test.ts` (6) | Browser code, `@sentry/react` *(carried)*; **tests run in Node (vitest)** | **B** | Best match for Kawalys's React UI. **Real-browser behaviour unverified.** Arabic-numeral phone masking unverified |
 | O4 | `shared/__tests__/observability/rt879-redaction-vectors.json`, `obs1-golden-vectors.json` | f3665a71f / 910744a27 | Live; copies kept identical by `tools/contracts-check` | Used by the scrubbers | Data | **A (test data)** | Copy without comments inside JSON; provenance in an adjacent README / manifest with pinned sha and path. Extend with GitHub path, MCP / agent / prompt and Arabic vectors. Do not tie Kawalys CI to RT's identical-copy contract |
-| O5 | `shared/src/logger/pino.ts`, `shared/src/observability/{correlation,otel}.ts`, `.specify/memory/redaction-matrix.md` | b2fd939bf / d8f9e8ef8 / 1eea4bd85 / b2fd939bf | Live | `shared/__tests__/logger/pino*.spec.ts` *(carried)* | pino, OTel SDK *(licences carried)* | **C** | The redaction matrix is a good reference; labels and instrumentation are RT-specific |
+| O5 | `shared/src/logger/pino.ts`, `shared/src/observability/{correlation,otel}.ts`, `core/.specify/memory/redaction-matrix.md` | b2fd939bf / d8f9e8ef8 / 1eea4bd85 / b2fd939bf | Live | `shared/__tests__/logger/pino*.spec.ts` *(carried)* | pino, OTel SDK *(licences carried)* | **C** | The redaction matrix is a good reference; labels and instrumentation are RT-specific |
 | O6 | `.gitleaks.toml` (triage allowlist: rule **and** file **and** value must match) | 2c485c45a | Live | CI `secrets.yml` *(not opened)* | gitleaks | **C** | Adopt the triage rule when Kawalys adds secret scanning |
 
 ## 3. Source separation and threat model
@@ -257,9 +261,9 @@ release, compatibility and rollback design. Never import RT application internal
 
 - Nothing was executed. Test numbers are grep counts, not results.
 - Real-browser behaviour of O3 is unverified (its tests run in Node).
-- npm licences, the RT-791 comment history and files Confluence marked "not inspected in depth"
-  (`descope-auth.client.ts`, `promotion-oidc.verifier.ts`, `tools/agent-broker`) are carried from Confluence v2, not
-  re-verified.
+- npm licences, the RT-791 comment history and `tools/agent-broker` are carried from Confluence v2, not re-verified.
+  `descope-auth.client.ts` and `promotion-oidc.verifier.ts` changed after `162e53c`; only their diffs were reviewed
+  (§0), not the whole files.
 - Descope plan, overage and renewal need owner input.
 - **Nothing was migrated or tested in Kawalys.**
 
