@@ -15,7 +15,9 @@ h3 { font-size: 15px; }
 ul, ol { margin: 0; padding: 0; list-style: none; }
 .ltr { font-family: var(--f-mono); font-size: .92em; }
 /* Ids, versions and product names are unbreakable units (Blueprint v4 §7). Long URLs may still wrap. */
-bdi.ltr:not(.inert-link) { white-space: nowrap; }
+/* Each token is one inline box: it moves whole to the next line, and only a token longer than a full line (a long
+   job name at 320 px) wraps inside its own box instead of pushing the page sideways. */
+bdi.ltr:not(.inert-link) { display: inline-block; max-width: 100%; overflow-wrap: anywhere; vertical-align: bottom; }
 :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
 
 .skip {

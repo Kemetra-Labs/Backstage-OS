@@ -15,7 +15,7 @@ async function load(page: Page, q: { lang?: string; persona?: string; width?: nu
   const params = new URLSearchParams();
   if (q.lang) params.set('lang', q.lang);
   if (q.persona) params.set('persona', q.persona);
-  await page.goto(`/?${params.toString()}`);
+  await page.goto(`/?${params.toString()}#/investigation/INV-DEMO-7`);
   await expect(page.locator('h1')).toBeVisible();
   return errors;
 }

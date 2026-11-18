@@ -1,0 +1,22 @@
+/* Portfolio. Product entries are stacked ledger rows (not a card grid); the attention list sits below. */
+.pf-products { display: grid; gap: 12px; min-width: 0; }
+.pf-entry-body { display: grid; gap: 14px 28px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 900px) { .pf-entry-body { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); } }
+.pf-entry-lead { display: grid; gap: 10px; min-width: 0; }
+.pf-summary { max-width: 60ch; color: var(--ink-2); }
+.pf-status { font-size: 14px; }
+.pf-status[data-status="attention"] { color: var(--amber); }
+.pf-status[data-status="notSetUp"] { color: var(--unk); }
+.pf-kv { align-self: start; }
+.pf-links { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.pf-att-list { display: grid; }
+.pf-att { display: grid; gap: 10px; padding: 16px 0; border-top: 1px solid var(--line); min-width: 0; }
+.pf-att:first-child { border-top: 0; padding-top: 0; }
+.pf-att-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.pf-att-title { font-size: 16px; font-weight: 600; max-width: 70ch; }
+.pf-ev-list { display: grid; gap: 0; }
+.pf-ev { display: grid; gap: 6px 12px; padding: 10px 0; border-top: 1px dashed var(--line); grid-template-columns: minmax(0, 1fr); align-items: center; }
+.pf-ev:first-child { border-top: 0; }
+.pf-ev-text { display: grid; gap: 2px; min-width: 0; }
+@media (min-width: 760px) { .pf-ev { grid-template-columns: max-content minmax(0, 1fr) auto; } }

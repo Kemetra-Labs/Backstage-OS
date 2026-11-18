@@ -1,0 +1,84 @@
+/* App shell (BACK-10): top bar, navigation, layout, search, footer. Logical properties only, so RTL mirrors. */
+.vh {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+a { color: var(--gold-hi); text-underline-offset: 3px; }
+a:hover { color: var(--gold); }
+
+.top-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
+.brand { color: var(--ink); text-decoration: none; }
+.brand:hover { color: var(--gold-hi); }
+.menu-btn { margin-inline-start: auto; }
+@media (min-width: 1024px) { .menu-btn { display: none; } }
+
+/* layout */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1024px) { .layout { grid-template-columns: 236px minmax(0, 1fr); } }
+.layout > main { width: 100%; }
+
+/* navigation */
+.side { display: none; padding: 10px 16px 14px; background: var(--bg-2); border-bottom: 1px solid var(--line); }
+.side.open { display: block; }
+@media (min-width: 1024px) {
+  .side {
+    display: block; position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto;
+    padding: 18px 12px 24px; border-bottom: 0; border-inline-end: 1px solid var(--line); min-height: calc(100vh - 140px);
+  }
+}
+.side-list { display: grid; gap: 2px; }
+.side a {
+  display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: var(--r-md);
+  color: var(--ink-2); text-decoration: none; font-size: 14px; border-inline-start: 3px solid transparent;
+}
+.side a:hover { background: var(--surface); color: var(--ink); }
+.side a[aria-current="page"] { background: var(--gold-soft); color: var(--gold-hi); border-inline-start-color: var(--gold); font-weight: 600; }
+.side-group {
+  margin: 16px 0 4px; padding: 0 15px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+html[lang="ar"] .side-group { letter-spacing: 0; text-transform: none; font-size: 12.5px; }
+.side-demo { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+/* search */
+.search { position: relative; flex: 1 1 260px; max-width: 440px; min-width: 0; }
+.search input {
+  width: 100%; min-height: 44px; padding: 0 12px; border-radius: var(--r-md); border: 1px solid var(--line-3);
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 14px;
+}
+.search input::placeholder { color: var(--muted); }
+.search-pop {
+  position: absolute; z-index: 15; inset-inline: 0; top: calc(100% + 6px); padding: 6px;
+  background: var(--surface-2); border: 1px solid var(--line-3); border-radius: var(--r-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+}
+.search-pop .note { padding: 8px 10px; }
+.search-pop a {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: var(--r-sm);
+  color: var(--ink); text-decoration: none; font-size: 14px;
+}
+.search-pop a:hover, .search-pop a:focus-visible { background: var(--surface-3); }
+.search-kind { font-size: 12px; color: var(--muted); min-width: 84px; }
+
+/* footer */
+.foot { padding: 18px max(16px, env(safe-area-inset-right)) 28px max(16px, env(safe-area-inset-left)); border-top: 1px solid var(--line); }
+
+/* Phones: keep the header short so content starts in the first screen. The switch groups keep their aria-label;
+   the source chips stay visible in one row that scrolls on its own, never the page. */
+@media (max-width: 640px) {
+  .topbar { gap: 8px; }
+  .seg-label { display: none; }
+  .controls { gap: 8px 12px; }
+  .sources { min-width: 0; }
+  .sources ul { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .sources .source { flex: 0 0 auto; }
+}
+
+/* Wide screens: the navigation column runs the full height of the layout, not just its own content. */
+@media (min-width: 1024px) {
+  .layout { position: relative; min-height: calc(100vh - 160px); }
+  .layout::before {
+    content: ""; position: absolute; inset-block: 0; inset-inline-start: 0; width: 236px; z-index: -1;
+    background: var(--bg-2); border-inline-end: 1px solid var(--line);
+  }
+  .side { background: transparent; border-inline-end: 0; min-height: 0; }
+}

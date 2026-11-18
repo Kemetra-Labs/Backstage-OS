@@ -1,0 +1,40 @@
+/* Decision Inbox and detail (BACK-13). Display only: no control styling beyond the shared link buttons. */
+.dec-screen { display: grid; gap: 16px; min-width: 0; }
+
+.dec-notice {
+  display: grid; gap: 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md);
+  border-inline-start: 3px solid var(--pro); background: var(--bg-2); font-size: 14px; color: var(--ink-2); max-width: 78ch;
+}
+.dec-notice p { margin: 0; }
+.dec-notice-title { font-weight: 600; color: var(--ink); }
+
+.dec-list { gap: 0; }
+.dec-row { display: grid; gap: 8px; padding: 14px 0; border-top: 1px solid var(--line); min-width: 0; justify-items: start; }
+.dec-row:first-child { border-top: 0; padding-top: 0; }
+.dec-row-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.dec-id { font: 600 13px/1.3 var(--f-mono); color: var(--ink-2); }
+.dec-title { margin: 0; font-size: 16px; font-weight: 600; max-width: 70ch; }
+.dec-row .note { margin: 0; }
+.dec-historical { border-style: dashed; }
+
+.dec-headline { display: block; font-size: 18px; font-weight: 600; color: var(--ink); max-width: 70ch; }
+.dec-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-block-start: 8px; }
+.dec-statements { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.dec-statements li { display: grid; gap: 4px; justify-items: start; }
+.dec-next-text { margin: 0; font-size: 15.5px; max-width: 70ch; }
+
+/* Options: columns separated by rules, not nested cards. Side by side from 760 px, stacked below. */
+.dec-options { display: grid; gap: 20px; margin: 0; padding: 0; list-style: none; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) { .dec-options { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); } }
+.dec-option { display: grid; gap: 8px; align-content: start; min-width: 0; padding-block-start: 12px; border-block-start: 2px solid var(--line-3); }
+.dec-option[data-suggested="true"] { border-block-start-color: var(--pro); }
+.dec-option h3 { margin: 0; font-size: 15px; }
+.dec-suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; color: var(--ink-2); }
+.dec-fields { display: grid; gap: 2px; margin: 0; font-size: 13.5px; }
+.dec-fields dt { margin-block-start: 8px; font-size: 12px; color: var(--muted); }
+.dec-fields dd { margin: 0; overflow-wrap: anywhere; }
+.dec-fields ul { margin: 0; padding-inline-start: 18px; }
+
+.dec-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.dec-future { border-style: dashed; }
+.dec-needs { display: grid; gap: 6px; margin: 0; padding-inline-start: 20px; }

@@ -1,0 +1,31 @@
+/* Project Intelligence (BACK-12). Layout only; logical properties; shared classes do the rest. */
+.proj-controls { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; }
+.proj-sub { font-size: 14px; font-weight: 600; color: var(--ink-2); margin-block-start: 4px; }
+.proj-links { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 8px; }
+.proj-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+
+.proj-details { border-block-start: 1px solid var(--line); padding-block-start: 8px; }
+.proj-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-size: 13.5px; color: var(--ink-2); }
+.proj-details[open] summary { margin-block-end: 8px; }
+
+/* components list (Table view and narrow screens): the accessible way to select */
+.proj-table-view { display: grid; gap: 14px; min-width: 0; }
+.proj-list { display: grid; }
+.proj-list li, .rows li > .proj-comp-link { min-width: 0; }
+.proj-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; border-block-start: 1px solid var(--line); }
+.proj-list li:first-child { border-block-start: 0; }
+.proj-comp-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold-hi); font-weight: 600; }
+.proj-comp-link[aria-current="true"] { color: var(--ink); text-decoration: underline; }
+.proj-comp-meta { font-size: 13px; color: var(--ink-2); }
+
+/* selected component */
+.proj-comp-name { font: 600 18px/1.3 var(--f-mono); overflow-wrap: anywhere; }
+.proj-check { color: var(--coral); font-weight: 600; font-size: 14px; }
+
+/* delivery status in words: shape differs per state, not only colour */
+.proj-state { display: inline-flex; align-items: center; min-height: 22px; padding: 2px 8px; border-radius: 4px; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line-3); color: var(--ink); }
+.proj-state-failing { color: var(--coral); border-color: var(--coral-line); }
+.proj-state-unknown { color: var(--unk); border-style: dotted; border-color: var(--unk-line); }
+.proj-state-planned, .proj-state-in_progress { border-style: dashed; }
+
+.rows > li .proj-comp-link { justify-self: start; }

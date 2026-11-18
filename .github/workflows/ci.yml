@@ -51,6 +51,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
 
       # playwright.config.js starts `python -m http.server` as its webServer.
       - uses: actions/setup-python@v5
@@ -75,10 +78,32 @@ jobs:
         if: steps.changes.outputs.docs_only != 'true'
         run: ./node_modules/.bin/playwright test
 
+      # The Kawalys React app in app/ has its own package.json, lockfile and
+      # Playwright config (testDir ./e2e). The root suite above never runs it, so
+      # without these steps nothing under app/ gates a merge. They live in this
+      # job on purpose: it is the required check, and it keeps the docs-only skip.
+      - name: Install app dependencies
+        if: steps.changes.outputs.docs_only != 'true'
+        working-directory: app
+        run: npm ci --ignore-scripts
+
+      - name: App typecheck and unit tests
+        if: steps.changes.outputs.docs_only != 'true'
+        working-directory: app
+        run: npm run check
+
+      # Builds the app, then runs app/e2e against `vite preview` on chromium + webkit.
+      - name: Run app Playwright tests
+        if: steps.changes.outputs.docs_only != 'true'
+        working-directory: app
+        run: npm run e2e
+
       - name: Upload test results on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-results
-          path: test-results/
+          path: |
+            test-results/
+            app/test-results/
           retention-days: 7

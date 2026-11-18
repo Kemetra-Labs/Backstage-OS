@@ -1,0 +1,47 @@
+/* Command Home. Layout and emphasis only: shared classes carry the rest. Logical properties, so RTL mirrors. */
+
+/* Signal strip: one ruled band, not five cards. */
+.home-signals {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 0;
+  border-block: 1px solid var(--line-3);
+}
+.home-signal { display: grid; gap: 4px; padding: 12px 16px; min-width: 0; border-inline-start: 1px solid var(--line); align-content: start; }
+.home-signal:first-child { border-inline-start: 0; padding-inline-start: 0; }
+.home-signal dt { font-size: 12.5px; color: var(--ink-2); order: 2; }
+.home-signal dd { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; order: 1; }
+.home-signal { grid-template-rows: auto auto; }
+.home-signal-value { font: 600 30px/1.1 var(--f-mono); color: var(--ink); }
+.home-signal-hot .home-signal-value { color: var(--coral); }
+.home-signal-warn .home-signal-value { color: var(--amber); }
+.home-signal-note { font-size: 12.5px; color: var(--muted); }
+@media (max-width: 520px) {
+  .home-signal { padding-inline: 12px; }
+  .home-signal:first-child { padding-inline-start: 12px; }
+}
+
+/* Main band: attention leads, the rest stands beside it. */
+.home-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1100px) { .home-grid { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); } }
+.home-side { display: grid; gap: 16px; min-width: 0; }
+
+.home-att-list { display: grid; }
+.home-att { display: grid; gap: 8px; padding: 14px 0; border-top: 1px solid var(--line); min-width: 0; }
+.home-att:first-child { border-top: 0; padding-top: 0; }
+.home-att-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.home-product { font: 600 13px/1.3 var(--f-mono); color: var(--ink-2); }
+.home-att-title { font-size: 15px; max-width: 70ch; }
+.home-att-lead {
+  padding-block: 4px 18px; padding-inline: 16px 0; margin-bottom: 2px; border-top: 0; border-inline-start: 4px solid var(--coral);
+}
+.home-att-lead .home-att-title { font-size: 19px; font-weight: 600; line-height: 1.35; }
+.ev-chips { align-items: center; }
+.ev-chip { display: inline-flex; align-items: center; gap: 6px; }
+.ev-id { font: 12px/1.2 var(--f-mono); color: var(--muted); }
+.home-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.home-row-title { font-size: 14.5px; }
+
+.home-src { gap: 8px; }
+.home-src-name { font: 600 14px/1.3 var(--f-mono); }
+
+/* Links inside a timeline entry keep the 44 px target without bloating the row. */
+.tl-meta .btn-link { margin-inline-start: 4px; }

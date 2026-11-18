@@ -1,0 +1,14 @@
+/* Evidence Explorer (BACK-11). Logical properties only; wide values scroll or wrap inside their own cell. */
+.link-row { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+.explorer-lead { justify-items: start; }
+.explorer-main, .explorer-side { display: grid; gap: 16px; min-width: 0; align-content: start; }
+.explorer-fields dd { min-width: 0; }
+.support-group { display: grid; gap: 6px; }
+.support-group + .support-group { padding-top: 10px; border-top: 1px solid var(--line); }
+.support-title { font-size: 13px; font-weight: 600; color: var(--muted); }
+.explorer-side .row-item { justify-items: start; }
+/* Narrow screens: label above value, so an unbreakable id or time always has the full panel width. */
+@media (max-width: 520px) {
+  .explorer-fields { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .explorer-fields dd { margin-block-end: 10px; }
+}

@@ -1,7 +1,20 @@
-# Kawalys S1 — Investigation Room mock slice (BACK-6)
+# Kawalys — synthetic frontend (BACK-6, BACK-10..13)
 
-First React + TypeScript slice of Kawalys. One synthetic case (`INV-DEMO-7`, the simulated Retail Tower CI
-failure) rendered in the Investigation Room, built against the accepted UX Blueprint v4 (BACK-5).
+React + TypeScript frontend of Kawalys (Kemetra Mission Control), built against the accepted UX Blueprint v4 (BACK-5).
+It started as the S1 Investigation Room (`INV-DEMO-7`, the simulated Retail Tower CI failure). It now has a shared
+shell and every screen, all reading **one** synthetic world:
+
+| Route | Screen |
+| --- | --- |
+| `#/` | Command Home |
+| `#/portfolio` | Portfolio / Mission Overview (BACK-11) |
+| `#/project/RT[/stock-sync]` | Project Intelligence with dependency map and table (BACK-12) |
+| `#/investigation/INV-DEMO-7` | Investigation Room (BACK-6), plus the `INV-DEMO-9` summary case |
+| `#/evidence/E-1?from=INV-DEMO-7` | Evidence Explorer |
+| `#/decisions[/DEC-DEMO-3]` | Decision Inbox and detail, display only (BACK-13) |
+| `#/agents`, `#/sources` | Agent activity and Source health, demo only |
+
+Review seed: `?persona=owner|technical|nontechnical&lang=en|ar`, kept in the URL across navigation.
 
 **Demo data only.** No backend, auth, real API, credentials, AI calls or agents. Every link is inert.
 
@@ -46,16 +59,25 @@ npm run e2e       # Playwright smoke (builds, then serves on 127.0.0.1:4178)
 ## Structure
 
 ```
-src/contract/   display contract types and pure rules (blueprint §8), with unit tests
-src/fixture/    synthetic INV-DEMO-7 case
-src/view/       persona selector: returns only the fields a persona may see (blueprint §5)
-src/i18n/       EN/AR copy; {braces} mark left-to-right tokens rendered in <bdi dir="ltr">
-src/components/ truth and source chips, bands, hypothesis, drawer, stage map
-src/screens/    Investigation Room
-e2e/            Playwright smoke
+src/contract/   display contract types and pure rules (blueprint §8); world.ts types the shared synthetic world
+src/fixture/    the one synthetic world (world.ts) and the INV-DEMO-7 case, with an integrity test
+src/view/       pure persona views; evidence.ts is the single redaction allowlist for evidence on every screen
+src/nav/        hash routes (no router library), route hook, demo search index
+src/app/        AppContext: persona, language, copy, route
+src/shell/      top bar, sidebar, demo search, AppShell (the one <main>)
+src/i18n/       EN/AR copy; shell.ts, strings.ts (S1) and screens/*; {braces} mark left-to-right tokens
+src/components/ shared building blocks: truth/source chips, HealthTriad, StateBlock, Panel, DepGraph/DepTable,
+                Timeline, Breadcrumbs, ScreenHeader, drawer, stage map
+src/screens/    one module per screen, sub-parts in screens/<screen>/
+src/styles/     tokens, app, shell, components; screens/*.css per screen
+e2e/            Playwright: per-screen specs, flow.spec.ts (every route × persona × language), capture.spec.ts
 ```
 
-## Not in this slice
+Screenshots for owner review: `CAPTURE=1 ../node_modules/.bin/playwright test -c playwright.config.ts
+e2e/capture.spec.ts --project=chromium` (after `npm run build`) writes to `docs/qa/kawalys-frontend/screens/`.
 
-Portfolio, Project Intelligence and Decision Inbox (S2–S4), hash routes for the evidence drawer, any real data source
-(S5 / G2), and fixes to the static prototype.
+## Not in this build
+
+Any real data source, backend/BFF, identity or approvals (G2, BACK-7 gate). Server-side redaction: persona views are
+presentation only. Comparison against the owner's five reference images (not in the repo). The static prototype is
+unchanged.

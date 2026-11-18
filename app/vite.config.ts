@@ -13,8 +13,8 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/contract/**/*.ts', 'src/view/**/*.ts', 'src/i18n/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/contract/types.ts'],
+      include: ['src/contract/**/*.ts', 'src/view/**/*.ts', 'src/i18n/**/*.ts', 'src/nav/routes.ts', 'src/nav/search.ts'],
+      exclude: ['src/**/*.test.ts', 'src/contract/types.ts', 'src/contract/world.ts'],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
     },
   },
