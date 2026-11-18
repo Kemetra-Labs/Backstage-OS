@@ -118,6 +118,11 @@ The six rows are exactly `Provider` in `app/src/contract/types.ts`. "Would read"
 `app/src/i18n/screens/sources.ts` (`integrations.provider`). Fixture TTLs are the values the synthetic world uses
 (`app/src/fixture/world.ts`, `inv-demo-7.ts`). They are **synthetic FACTs, not proposed production values**.
 
+Per-source `observedAt` field and production TTL (PROPOSAL; field names **UNVERIFIED** except GitHub, confirm per
+§2.3): GitHub job `completed_at` else run `updated_at` (BACK-7 03 §6); Jira issue `updated`; Confluence page version
+time; Sentry issue last-seen time; Datadog monitor last state change or query window end; Port entity update time.
+Production TTLs are **open** and set per slice; the fixture TTLs below are a starting point only.
+
 | Provider | Authority (what it is master of) | Would read (Sources copy) | Minimum fields (PROPOSAL) | Becomes | Fixture TTL |
 | --- | --- | --- | --- | --- | --- |
 | GitHub | **Master** for CI results, commits, PRs | Workflow runs and jobs | run / job id, name, `head_sha`, status, conclusion, started / completed, `html_url` (= BACK-7 `RawCheck`) | `Observation` target `check`; health contribution per BACK-7 03 §6 | 1800 s |
@@ -125,7 +130,7 @@ The six rows are exactly `Provider` in `app/src/contract/types.ts`. "Would read"
 | Confluence | **Master** for durable written decisions | Decision records | page id, title, version number, last-modified time, URL, a label or status marking it a decision record | `EvidenceReference` used as the `record` of an `approved` decision (rule: `approved` without a source link → `proposed`, `resolveLabel`) | 86400 s |
 | Sentry | Authority for error events it captured, **not** for component health | Error counts | issue id, project, environment, event count over a stated window, first / last seen, release, URL. **No event payloads, stack frames, user data** | `Observation` target `component` with `environment` from the event, never assumed | 900 s |
 | Datadog | Authority for the metrics / monitors it holds, **not** for component health | Runtime metrics | monitor id, state, environment / service tags, last state change, URL; or a named metric query result with window | `Observation` target `component` | 900 s |
-| Port | **Optional context only.** Never master of ownership, topology or permissions (BACK-7 ADR-03 §1; ADR-05 open) | Catalog ownership | entity id, owner team, declared relations, last update, URL | `EvidenceReference` that can *enrich* a component; cannot alone make a map edge `authored` (§4.2) | 86400 s |
+| Port | **Optional context only.** Never a permission source (BACK-7 ADR-03 §1); PROPOSAL: never master of ownership or topology either (§4.2, D-16.3; ADR-05 open) | Catalog ownership | entity id, owner team, declared relations, last update, URL | `EvidenceReference` that can *enrich* a component; cannot alone make a map edge `authored` (§4.2) | 86400 s |
 
 ### 2.2 Transport, scope, identity and limits per source
 
@@ -136,17 +141,18 @@ checked by calling a provider.
 | Provider | Least-privilege scope (target) | Identity / secret owner | MCP coverage vs REST parity | Pagination | Rate limits | Cost / egress |
 | --- | --- | --- | --- | --- | --- | --- |
 | GitHub | One repo, Actions: read (+ Metadata: read, auto-add **UNVERIFIED**) via GitHub App or time-boxed fine-grained PAT (ADR-04 §4) | Owner creates; BFF secret store (ADR-08 open); never an agent (BACK-7 07 §8 item 5) | MCP `actions_list` / `actions_get` cover runs and jobs; field parity of compact projections **UNVERIFIED** (ADR-04 §5) | REST `per_page` ≤ 100 + `page`; MCP paging **UNVERIFIED** | REST 5,000/h per token, secondary 900 points/min; MCP header pass-through **UNVERIFIED** | API free; ~120–180 calls/h at 60 s TTL (BACK-7 07 §6, estimate) |
-| Jira | One Jira project, browse / read only | Owner; separate Kawalys credential; not the owner's personal token in production | Atlassian remote MCP exists (FACT: this session's tool list shows it) but it also exposes **write** tools (`editJiraIssue`, `transitionJiraIssue`). Field parity vs REST search **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** |
-| Confluence | One space, read only | Same as Jira (one Atlassian site) — whether one credential may cover both is an owner decision (§10 D-16.5) | Same Atlassian MCP; write tools exist (`updateConfluenceContent`). Parity **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** |
-| Sentry | One org, read on named projects only; no admin, no event payload access if a narrower scope exists (**UNVERIFIED**) | Owner; separate Kawalys token | Sentry MCP exists (FACT: tool list) with **write** tools (`update_issue`, `create_alert_rule`). Parity **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | Data region of the org **UNVERIFIED**; egress of error data to the BFF host needs ADR-08 |
-| Datadog | Read-only API + application key scoped to monitors / metrics read (**UNVERIFIED** that this split exists) | Owner | Datadog MCP exists (FACT: tool list, EU site); this session's server reports writes disabled for the org. Parity **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | Query cost and site / region **UNVERIFIED** |
+| Jira | One Jira project, browse / read only | Owner; separate Kawalys credential; not the owner's personal token in production | An Atlassian MCP connector with **write** tools (`editJiraIssue`, `transitionJiraIssue`) was observed in one Claude Code session's connector list, 2026-11-18; the official server's surface is **UNVERIFIED**. Field parity vs REST search **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** |
+| Confluence | One space, read only | Same as Jira (one Atlassian site) — whether one credential may cover both is an owner decision (§10 D-16.5) | Same Atlassian connector; write tool `updateConfluenceContent` observed (same caveat). Parity **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** |
+| Sentry | One org, read on named projects only; no admin, no event payload access if a narrower scope exists (**UNVERIFIED**) | Owner; separate Kawalys token | A Sentry MCP connector with **write** tools (`update_issue`, `create_alert_rule`) observed (same caveat). Parity **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | Data region of the org **UNVERIFIED**; egress of error data to the BFF host needs ADR-08 |
+| Datadog | Read-only API + application key scoped to monitors / metrics read (**UNVERIFIED** that this split exists) | Owner | A Datadog MCP connector (EU site) observed (same caveat); it reported write access disabled by an org setting. Parity **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | Query cost and site / region **UNVERIFIED** |
 | Port | Read-only catalog token | Owner | **UNVERIFIED** whether an official MCP exists | **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED**; only if ADR-05 keeps Port at all |
 
-**FACT that shapes the design:** three of the four MCP servers visible to this session (Atlassian, Sentry, Datadog)
-offer write tools, and Datadog's server reports that writes are disabled only by an org setting. Read-only therefore
-has to come from **the credential's scope**, plus a tool allowlist in the adapter as a second layer. An adapter that
-merely "doesn't call" write tools is not read-only. This is also why BACK-7 ADR-04 §5 lists read-only mode flags for
-the GitHub MCP server.
+**Observation that shapes the design:** every MCP surface in view offers write tools. GitHub's MCP server has write
+tools unless read-only mode is set (BACK-7 ADR-04 §5, cited). The Atlassian, Sentry and Datadog connectors observed in
+one Claude Code session on 2026-11-18 expose write tools too, and Datadog's reported writes as disabled only by an
+org setting (connector surface, not the official servers' docs: **UNVERIFIED**, §2.3). Read-only therefore has to come
+from **the credential's scope**, plus a tool allowlist in the adapter as a second layer. An adapter that merely
+"doesn't call" write tools is not read-only.
 
 **MCP-first, not MCP-only (acceptance 3).** Follow BACK-14 §5 exactly: evaluate the MCP adapter first against offline
 fixtures of the `Raw*` shape (fields, paging, rate-limit visibility, failure behaviour, provenance, no raw logs); use
@@ -182,8 +188,10 @@ The states already exist in the contract and need no new types:
 | Read OK, zero items | `reachable` | `current` | no observation | `unknown` ("no checks / issues / errors found"; never healthy, never zero health) |
 | One item unmappable | `reachable` | per source | that item `notReadReason: 'unavailable'`; rest kept (BACK-7 03 §7) | from the rest |
 
-The reason code (`auth_rejected`, `rate_limited`, …) is BFF-internal (`ReadResult.reason`) and goes to the owner
-alert path, not to the browser.
+BACK-7 03 §2 and §4 send `unavailable` with a reason code to the client. **PROPOSAL (would change 03 §2 / §4, owner
+decides):** send only a coarse, safe reason to the browser (`unavailable` / `rate_limited`) and keep the detailed
+`ReadResult.reason` (`auth_rejected`, `not_found`, …) for the BFF log and owner alert path, so a client cannot learn
+that a credential failed.
 
 ### 2.5 Redaction per source (PROPOSAL; extends BACK-7 ADR-03 §5 and BACK-14 O1–O4)
 
@@ -221,7 +229,7 @@ alert path, not to the browser.
   **PROPOSAL:** every provider gets a configured host allowlist on the server (the project's own Atlassian site,
   Sentry org host, Datadog site, Port host). An unknown host drops the URL and the link renders inert. Test N-16.4.
 - `Observation` has **no project field** (`types.ts`). Isolation therefore cannot be checked from the display types;
-  it must come from the scope tuple, cache keys and the wire envelope (BACK-7 03 §3 `scope`). Test N-16.1.
+  it must come from the scope tuple, cache keys and the wire contract (BACK-7 03 §1 adds `scope` to `InvestigationData`). Test N-16.1.
 
 ### 3.3 Rule behaviour to keep in view (FACT, with a PROPOSAL each)
 
@@ -249,7 +257,7 @@ This is the BACK-15 §2.5 core flow, annotated with authority and truth at each 
 | 3. Supporting change | E-2, PR `#DEMO-88` merged | `observed` | GitHub | PR URL | — |
 | 4. Component → Jira issue `RT-DEMO-112` | E-3 | `correlated`, rule "Jira key in the commit message of the merged PR" | Jira for the issue; the link is Kawalys's rule | Rule text + both URLs | E-3 sits in the hypothesis's **contradicting** list, so the link does not prove the cause |
 | 5. Release context | E-4, same issue, fixVersion | `observed` | Jira | Browse URL | Jira for RT is `reachable` in INV-DEMO-7's source set but `unavailable` in the KH set: per-project state, never global |
-| 6. Investigation | INV-DEMO-7, hypothesis H-1, confidence `medium` (words only unless a full `ConfidenceBasis` exists) | `hypothesis` | Kawalys (derived) | Lists supporting E-1, E-2 and contradicting E-3 | Missing: E-6 runtime (`not_configured`), E-7 catalog (`unavailable`), E-5 Sentry (staging, stale) |
+| 6. Investigation | INV-DEMO-7, hypothesis H-1, confidence `medium` (words only unless a full `ConfidenceBasis` exists) | `hypothesis` | Kawalys (derived) | Lists supporting E-1, E-2 and contradicting E-3 | Missing: E-6 runtime (`not_configured`), E-7 catalog (`unavailable`). Weak: E-5 Sentry (read, but staging and stale) |
 | 7. Human decision | DEC-DEMO-3, `classification: 'proposed'`, `decidedIn: 'RT-DEMO-112'` | `proposed` | **Jira**, where a human decides | `decidedIn` key | Kawalys never decides or writes. It becomes `approved` only with a link to the owning record (`resolveLabel`) |
 
 With real data (G2b + G2c), hops 1, 3 and 5 come from reads, hop 2 from configuration, hop 4 from a written rule,
@@ -273,7 +281,9 @@ So in the demo, "authored" topology depends on an optional, unread source. If Po
 - `provisional` only with a written mapping rule. Otherwise `hypothesis`.
 - An edge whose only basis is Port is `provisional` at best, labelled "catalog says".
 
-Which source is the topology authority is an owner decision under ADR-05 (D-16.3). This is a rule-and-fixture change
+This contradicts the current doc comment on `EdgeKind` (`app/src/contract/world.ts`: "authored = declared in a
+catalog"), so T3 must change that comment too. Which source is the topology authority is an owner decision under
+ADR-05 (D-16.3). This is a rule-and-fixture change
 for a later approved UI slice; nothing is changed here.
 
 ---
@@ -293,13 +303,13 @@ for a later approved UI slice; nothing is changed here.
 
 | Case | Policy to evaluate |
 | --- | --- |
-| Same item read twice (poll overlap, retry, poll + webhook) | Idempotent upsert keyed by `(project, provider, externalId, sourceVersion)`. `sourceVersion` is the provider's own version or update time (**UNVERIFIED** per provider which field) |
+| Same item read twice (poll overlap, retry, poll + webhook) | Idempotent upsert keyed by `(project, provider, externalId)`; `sourceVersion` (the provider's own version or update time, **UNVERIFIED** per provider which field) and `observedAt` are the conflict guard: the newer one wins |
 | Older event arrives after a newer one | Keep the item with the later `observedAt` (source time), not the later `ingestedAt`. Never let a late "success" overwrite a newer "failure" |
 | Poll and webhook disagree | One record per item; webhook only marks it "changed, re-read". The read is the fact (ADR-04 §7 keeps polling for G2) |
 | Item disappears upstream (deleted, permission removed) | Stop showing it after the next complete read; never show it as resolved |
 | Partial page | `complete: false` → counts become "at least" (`countDisplay`) |
 | Clock skew | Server sends `asOf`; client computes age (BACK-7 03 §1) |
-| Retention | Short-lived observations; references, not copies. Period is an owner decision tied to ADR-02 / ADR-03 §7 |
+| Retention | Short-lived observations; references, not copies. Period is an owner decision tied to ADR-02 (ADR-03 §7 covers audit retention only) |
 
 ### 5.3 No guessed customer impact (PROPOSAL)
 
@@ -318,9 +328,9 @@ real source or credential. Slices from BACK-14 §7 are named where they are the 
 | --- | --- | --- | --- | --- | --- |
 | **G2a** BFF + identity + scope | BFF skeleton, `IdentityVerificationPort` + fake, local user / project / role, deny-by-default, audit | ADR-01, ADR-03 accepted; BACK-14 K-ID-0 approved | Negative permission tests pass with a fake verifier; no source access | N-16.1–N-16.3 and BACK-7 N6–N8 green | BACK-14 K-ID-0, then K-ID-1a |
 | **G2b** GitHub read-only | One repo, one workflow, `SourceEvidencePort` checks; MCP-first evaluation then the chosen adapter | G2a done; ADR-04 resolved; full 07 §8 gate | One real observed failing check, linked, with timestamps and environment | BACK-7 P1–P5, N1–N17 | BACK-7 07 ticket; BACK-14 K-SRC-0 |
-| **G2c** Jira read-only | One Jira project; status, fixVersion, links; correlation rule check → issue | G2b passing; Jira credential owner-created; D-16.5 | One `correlated` link with its rule shown, separate from authored links | N-16.7–N-16.9 | Hop 4–5 of §4.1 |
-| **G2d** Telemetry | Sentry and Datadog, **two independent adapters, two tickets** | G2c passing; redaction (§2.5) and region / egress decided; environment rule (§3.3) | Error and runtime observations, gaps shown unknown | N-16.5, N-16.6, N-16.10 | BACK-14 K-OBS-0 for the BFF's own telemetry |
-| **G2e** Context | Confluence decision records; Port only if ADR-05 keeps it | G2c passing; ADR-05 for Port | A decision linked to its durable record; Port enrichment never authoritative | N-16.11, N-16.12 | — |
+| **G2c** Jira read-only | One Jira project; status, fixVersion, links; correlation rule check → issue | G2b passing; Jira credential owner-created; D-16.5; the per-provider host allowlist from T3 (§3.2) in place | One `correlated` link with its rule shown, separate from authored links | N1–N17 per source + N-16.4, N-16.7–N-16.9, N-16.13–17 | Hop 4–5 of §4.1 |
+| **G2d** Telemetry | Sentry and Datadog, **two independent adapters, two tickets**, reading only `ci` / `lab` environments unless D-16.9 widens it | G2c passing; redaction (§2.5) and region / egress decided; environment rule (§3.3); **D-16.9**: any environment beyond `ci` / `lab` first needs ADR-03 §2 ("G2 reads only `ci`") and 07 §8 item 6 ("no production or tenant data") revised by the owner | Error and runtime observations, gaps shown unknown | N1–N17 per source + N-16.4, N-16.5, N-16.6, N-16.10, N-16.13–17 | BACK-14 K-OBS-0 for the BFF's own telemetry |
+| **G2e** Context | Confluence decision records; Port only if ADR-05 keeps it | G2c passing; ADR-05 for Port | A decision linked to its durable record; Port enrichment never authoritative | N1–N17 per source + N-16.4, N-16.11, N-16.12, N-16.13–17 | — |
 | **G3** AI evidence summaries | Model port, conformance suite, disabled / fake first | ADR-06; separate approval | Summaries citing `EvidenceReference` ids; hypotheses separated | BACK-14 K-AI-0 proof | BACK-14 K-AI-0 |
 | **G4** Agent actions | Bounded, per-capability, human-approved writes | ADR-07; separate approval **per capability** | None in this plan | — | — |
 
@@ -381,7 +391,7 @@ T3 has no source dependency and can run before T2 if the owner wants the rules f
 
 | # | Risk | Likelihood | Effect | Mitigation |
 | --- | --- | --- | --- | --- |
-| R1 | An MCP server's write tools are reachable through a broadly scoped credential | Medium (FACT: write tools exist on three servers) | Source writes from Kawalys | Read-only credential, adapter tool allowlist, N-16.13 / N-16.14, STOP |
+| R1 | An MCP server's write tools are reachable through a broadly scoped credential | Medium (write tools exist on all four MCP surfaces in view, §2.2) | Source writes from Kawalys | Read-only credential, adapter tool allowlist, N-16.13 / N-16.14, STOP |
 | R2 | Real data turns links live while only GitHub has a host allowlist | High once G2c starts | Unsafe or foreign links | Per-provider allowlist (§3.2), N-16.4 |
 | R3 | Port becomes de-facto topology authority because the demo already draws `authored` edges from it | Medium | Authority moved from GitHub / Confluence by accident (acceptance 2) | `resolveEdgeKind` (§4.2), ADR-05, N-16.12 |
 | R4 | Cross-environment evidence supports health | Medium | False healthy in production from staging data | Environment rule (§3.3), N-16.6 |
@@ -407,14 +417,15 @@ T3 has no source dependency and can run before T2 if the owner wants the rules f
 | D-16.6 | Which people fields (assignee, catalog owner) nontechnical roles see | Names / team only / none | Team only | T4, T6 |
 | D-16.7 | A stale failure still shows "down (stale)" | Keep / downgrade to unknown | Keep, with the stale label | T3 |
 | D-16.8 | Approve each ticket T1–T6 separately (acceptance 5) | Per ticket | — | Each slice |
+| D-16.9 | Which environments G2d (Sentry, Datadog) may read | (a) `ci` / `lab` only, within ADR-03 §2 and 07 §8 item 6 as written; (b) staging or production, which first needs those two revised | (a) for the first G2d slice; (b) only as a separate owner revision of ADR-03 | T5a, T5b |
 
-### 10.2 ADRs still open (FACT: none accepted as of 2026-11-18)
+### 10.2 ADRs still open (FACT: none of ADR-01…08 accepted as of 2026-11-18; only the provider ADR 80085048 is approved)
 
 | ADR | Topic | Status | Needed before |
 | --- | --- | --- | --- |
 | ADR-01 | Backend / BFF option | Proposed (BACK-7); TS / Node preferred, not approved (BACK-7 comment 17336) | G2a |
 | ADR-02 | Database / graph | Open | Persistent observations, §5.2 retention |
-| ADR-03 | Permissions, identity provider | Proposed; IdP open (Descope first candidate, ADR 80085048) | G2a |
+| ADR-03 | Permissions, identity provider | Proposed; IdP open (Descope first candidate, ADR 80085048). §2 limits G2 to `ci`; must be revised before G2d reads any other environment (D-16.9) | G2a; G2d if beyond `ci` / `lab` |
 | ADR-04 | Connectors, MCP vs REST | Proposed; unverified items listed (BACK-7 ADR-04 §7) | G2b |
 | ADR-05 | Port overlap | Open | G2e, D-16.3 |
 | ADR-06 | AI model abstraction | Open | G3 |
