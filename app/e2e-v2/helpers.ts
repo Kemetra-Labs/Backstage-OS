@@ -32,6 +32,8 @@ export async function load(page: Page, o: Opts = {}): Promise<Probe> {
   const extra = o.extra ? `&${o.extra}` : '';
   await page.goto(`/v2.html#/${o.screen ?? 'mission-map'}?${q.toString()}${extra}`);
   await expect(page.locator('h1')).toBeVisible();
+  // Self-hosted faces (BACK-18) swap in after first paint; layout and overflow checks must see the real metrics.
+  await page.evaluate(() => document.fonts.ready);
   return probe;
 }
 

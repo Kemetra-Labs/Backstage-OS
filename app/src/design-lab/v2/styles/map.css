@@ -5,7 +5,7 @@
 .kv2-bottom { grid-area: bottom; display: grid; grid-template-columns: 1.28fr 1fr 1.09fr; gap: 16px; }
 
 .kv2-canvas-panel { padding: 0; overflow: hidden; border-color: transparent; background: transparent; box-shadow: none; }
-.kv2-canvas-panel .kv2-canvas { background: radial-gradient(70% 60% at 50% 55%, color-mix(in srgb, var(--kv2-cyan) 9%, transparent), transparent 70%); }
+.kv2-canvas-panel .kv2-canvas { background: radial-gradient(30% 34% at 50% 52%, var(--kv2-cyan-haze), transparent 72%), radial-gradient(70% 60% at 50% 55%, color-mix(in srgb, var(--kv2-cyan) 9%, transparent), transparent 70%); }
 .kv2-canvas { position: relative; direction: ltr; aspect-ratio: 1000 / 560; min-block-size: 360px; container-type: inline-size; overflow: hidden; border-radius: inherit; cursor: grab; touch-action: none; outline: none; }
 .kv2-canvas:active { cursor: grabbing; }
 .kv2-canvas-svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
@@ -17,7 +17,7 @@
 .kv2-edge circle { fill: var(--kv2-bg); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .kv2-edge[data-cls="group"] path { stroke: var(--kv2-line-hi); stroke-width: 1; opacity: 0.5; }
 .kv2-edge[data-truth="observed"] path, .kv2-edge[data-truth="observed"] circle { stroke: var(--kv2-cyan); }
-.kv2-edge[data-truth="observed"] path { stroke-width: 2.6; filter: drop-shadow(0 0 5px var(--kv2-cyan)); }
+.kv2-edge[data-truth="observed"] path { stroke-width: 2.6; filter: drop-shadow(0 0 2px var(--kv2-cyan)) drop-shadow(0 0 9px var(--kv2-cyan-bloom)); }
 .kv2-edge[data-truth="correlated"] path { stroke-width: 2.2; filter: drop-shadow(0 0 4px var(--kv2-blue)); }
 .kv2-edge[data-truth="hypothesis"] path { stroke-width: 2.2; filter: drop-shadow(0 0 4px var(--kv2-amber)); }
 .kv2-edge[data-truth="correlated"] path, .kv2-edge[data-truth="correlated"] circle { stroke: var(--kv2-blue); }
@@ -34,7 +34,9 @@
   --orb: 50px; position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 7px; min-inline-size: 44px; padding: 0; border: 0; background: none;
   transform: translate(-50%, calc(var(--orb) * -0.5)); color: var(--kv2-ink); transition: opacity var(--kv2-dur-short) var(--kv2-ease);
 }
-.kv2-node[data-hub] { --orb: 124px; z-index: 3; }
+/* The hub sits under the other nodes (still over the edge layer) so its bloom never washes over a neighbour's card. */
+.kv2-node[data-hub] { --orb: 124px; z-index: 1; }
+.kv2-node[data-hub]:focus-visible { z-index: 6; } /* a focused hub is never hidden under a neighbour */
 .kv2-node[data-dim] { opacity: 0.3; }
 .kv2-orb {
   display: grid; place-items: center; inline-size: var(--orb); block-size: var(--orb); border-radius: 50%; color: var(--kv2-cyan);
@@ -47,20 +49,21 @@
 .kv2-node[data-tone="unk"] .kv2-orb { color: var(--kv2-ink-2); border-color: var(--kv2-line); box-shadow: 0 0 0 5px var(--kv2-line-2); }
 .kv2-node-card {
   display: grid; justify-items: center; gap: 3px; min-inline-size: 112px; max-inline-size: 150px; padding: 7px 10px 8px; border: 1px solid var(--kv2-line); border-radius: 10px; text-align: center;
-  background: color-mix(in srgb, var(--kv2-bg-2) 86%, transparent); box-shadow: 0 10px 20px -12px var(--kv2-shade); direction: var(--kv2-dir, ltr);
+  background: color-mix(in srgb, var(--kv2-bg-2) 94%, transparent); box-shadow: 0 10px 20px -12px var(--kv2-shade); direction: var(--kv2-dir, ltr);
 }
 .kv2-node-card b { font-size: 13.5px; font-weight: 600; line-height: 1.2; }
 .kv2-node-card small { color: var(--kv2-ink-2); font-size: 11.5px; line-height: 1.25; }
 .kv2-node-card .kv2-chip { margin-block-start: 2px; }
 .kv2-node[data-selected] .kv2-node-card { border-color: var(--kv2-line-hi); box-shadow: var(--kv2-shadow-sel); }
-.kv2-node[data-selected] .kv2-orb { box-shadow: 0 0 0 5px var(--kv2-cyan-soft), 0 0 28px var(--kv2-cyan-glow); }
+.kv2-node[data-selected] .kv2-orb { box-shadow: var(--kv2-bloom-sel); }
+.kv2-node[data-hub][data-selected] .kv2-orb { box-shadow: 0 0 0 10px var(--kv2-cyan-soft), 0 0 0 24px color-mix(in srgb, var(--kv2-cyan) 7%, transparent), 0 0 26px var(--kv2-cyan-bloom), 0 0 110px var(--kv2-cyan-glow), inset 0 0 30px var(--kv2-cyan-soft); }
 .kv2-node:hover .kv2-node-card { border-color: var(--kv2-line-hi); }
 .kv2-node:focus-visible { outline: none; }
 .kv2-node:focus-visible .kv2-orb, .kv2-node:focus-visible .kv2-node-card { outline: 2px solid var(--kv2-cyan); outline-offset: 3px; }
 
 .kv2-callout {
   position: absolute; z-index: 2; display: flex; align-items: center; gap: 9px; padding: 8px 13px; border: 1px solid var(--kv2-amber-line); border-radius: 9px;
-  background: color-mix(in srgb, var(--kv2-bg-2) 90%, transparent); box-shadow: 0 10px 22px -10px var(--kv2-amber-line); direction: var(--kv2-dir, ltr);
+  background: color-mix(in srgb, var(--kv2-bg-2) 96%, transparent); box-shadow: 0 10px 22px -10px var(--kv2-amber-line); direction: var(--kv2-dir, ltr);
   transform: translate(calc(-100% - 78px), -22px); pointer-events: none; color: var(--kv2-amber);
 }
 .kv2-callout strong { display: block; color: var(--kv2-ink); font-size: 13px; }

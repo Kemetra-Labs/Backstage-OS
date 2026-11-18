@@ -22,20 +22,23 @@
 .kv2-fleet-count li[data-tone="unk"] i { background: var(--kv2-unk); }
 .kv2-fleet-count li b { min-inline-size: 16px; font-weight: 600; }
 .kv2-fleet-orbit { position: relative; min-block-size: 250px; direction: ltr; }
-.kv2-ring-a, .kv2-ring-b { position: absolute; inset-inline: 6%; inset-block: 8%; border: 1.5px solid var(--kv2-line-hi); box-shadow: 0 0 18px var(--kv2-cyan-soft); border-radius: 50%; }
+.kv2-ring-a, .kv2-ring-b { position: absolute; inset-inline: 6%; inset-block: 8%; border: 1.5px solid var(--kv2-line-hi); box-shadow: 0 0 14px var(--kv2-cyan-haze), inset 0 0 18px var(--kv2-cyan-soft); border-radius: 50%; }
 .kv2-ring-b { inset-inline: 22%; inset-block: 24%; border-color: var(--kv2-line); }
-.kv2-core { position: absolute; inset-inline-start: 50%; inset-block-start: 50%; translate: -50% -50%; display: grid; justify-items: center; gap: 2px; text-align: center; direction: var(--kv2-dir, ltr); }
-.kv2-core > span { display: grid; place-items: center; inline-size: 94px; block-size: 94px; border-radius: 50%; color: var(--kv2-cyan); border: 2px solid var(--kv2-cyan); background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--kv2-cyan) 30%, transparent), color-mix(in srgb, var(--kv2-bg) 84%, transparent) 72%); box-shadow: 0 0 0 10px var(--kv2-cyan-soft), 0 0 72px var(--kv2-cyan-glow); }
+/* The orbit keeps left-to-right geometry in Arabic (like the map canvas), so core and satellites are placed with physical
+   left: inset-inline-start would resolve against their own right-to-left text direction and push them off the ring. */
+.kv2-core { position: absolute; left: 50%; inset-block-start: 50%; translate: -50% -50%; display: grid; justify-items: center; gap: 2px; text-align: center; direction: var(--kv2-dir, ltr); }
+.kv2-core > span { display: grid; place-items: center; inline-size: 94px; block-size: 94px; border-radius: 50%; color: var(--kv2-cyan); border: 2px solid var(--kv2-cyan); background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--kv2-cyan) 30%, transparent), color-mix(in srgb, var(--kv2-bg) 84%, transparent) 72%); box-shadow: 0 0 0 10px var(--kv2-cyan-soft), 0 0 22px var(--kv2-cyan-bloom), 0 0 90px var(--kv2-cyan-glow); }
 .kv2-core b { margin-block-start: 6px; font-size: 17px; font-weight: 600; }
 .kv2-core small { color: var(--kv2-ink-2); font-size: 12px; }
 .kv2-sat { position: absolute; display: grid; justify-items: center; gap: 4px; translate: -50% -50%; direction: var(--kv2-dir, ltr); text-align: center; }
 .kv2-sat b { font-size: 13px; font-weight: 600; }
 .kv2-sat-orb { display: grid; place-items: center; inline-size: 56px; block-size: 56px; border-radius: 50%; color: var(--kv2-cyan); border: 2px solid var(--kv2-cyan); background: color-mix(in srgb, var(--kv2-bg) 88%, transparent); box-shadow: 0 0 0 5px var(--kv2-cyan-soft), 0 0 20px var(--kv2-cyan-glow); }
+.kv2-sat[data-tone="unk"] .kv2-sat-orb { color: var(--kv2-ink-2); border-color: var(--kv2-unk-line); border-style: dashed; box-shadow: 0 0 0 5px var(--kv2-line-2); }
 .kv2-sat[data-tone="warn"] .kv2-sat-orb { color: var(--kv2-amber); border-color: var(--kv2-amber); box-shadow: 0 0 0 5px var(--kv2-amber-soft), 0 0 20px var(--kv2-amber-line); }
-.kv2-sat[data-sat="correlate"] { inset-inline-start: 24%; inset-block-start: 22%; }
-.kv2-sat[data-sat="hypothesis"] { inset-inline-start: 76%; inset-block-start: 22%; }
-.kv2-sat[data-sat="sense"] { inset-inline-start: 22%; inset-block-start: 78%; }
-.kv2-sat[data-sat="proposal"] { inset-inline-start: 78%; inset-block-start: 78%; }
+.kv2-sat[data-sat="correlate"] { left: 24%; inset-block-start: 22%; }
+.kv2-sat[data-sat="hypothesis"] { left: 76%; inset-block-start: 22%; }
+.kv2-sat[data-sat="sense"] { left: 22%; inset-block-start: 78%; }
+.kv2-sat[data-sat="proposal"] { left: 78%; inset-block-start: 78%; }
 
 /* Activity table */
 .kv2-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-block-end: 12px; }
@@ -104,10 +107,10 @@
   .kv2-deck-side { grid-template-columns: minmax(0, 1fr); }
   .kv2-fleet-orbit { min-block-size: 330px; }
   .kv2-ring-a { inset-inline: 0; }
-  .kv2-sat[data-sat="correlate"] { inset-inline-start: 18%; }
-  .kv2-sat[data-sat="hypothesis"] { inset-inline-start: 82%; }
-  .kv2-sat[data-sat="sense"] { inset-inline-start: 18%; }
-  .kv2-sat[data-sat="proposal"] { inset-inline-start: 82%; }
+  .kv2-sat[data-sat="correlate"] { left: 18%; }
+  .kv2-sat[data-sat="hypothesis"] { left: 82%; }
+  .kv2-sat[data-sat="sense"] { left: 18%; }
+  .kv2-sat[data-sat="proposal"] { left: 82%; }
   .kv2-core > span { inline-size: 70px; block-size: 70px; }
   .kv2-core small { display: none; }
   .kv2-md-grid { grid-template-columns: minmax(0, 1fr); }

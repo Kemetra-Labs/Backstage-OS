@@ -56,7 +56,7 @@ export const MAP = {
   'map.m.inv.sub': ['Customer impact unknown', 'أثر العملاء غير معروف'],
   'map.m.dec': ['Proposals waiting', 'اقتراحات بالانتظار'],
   'map.m.dec.sub': ['Display only, nothing is decided here', 'للعرض فقط، لا يُتخذ قرار هنا'],
-  'map.m.chg': ['Observed changes, 24 h', 'تغييرات مرصودة، 24 ساعة'],
+  'map.m.chg': ['Observed changes, 24 h', 'تغييرات مرصودة، 24 ساعة'],
   'map.m.chg.sub': ['From $n sources', 'من $n مصادر'],
   'map.feed': ['Evidence feed', 'سجل الأدلة'],
   'map.feed.sub': ['Latest reads, newest first', 'أحدث القراءات أولًا'],

@@ -16,18 +16,19 @@
 .kv2-stage-panel > .kv2-stages, .kv2-stage-panel > .kv2-scrub { position: relative; z-index: 1; }
 .kv2-orbits { position: absolute; inset: 0; pointer-events: none; }
 .kv2-orbits i { position: absolute; border: 1px solid var(--kv2-line); border-radius: 50%; }
-.kv2-orbits i:nth-child(1) { inset-inline: -6%; inset-block-start: 8%; block-size: 150%; border-color: var(--kv2-line-hi); box-shadow: inset 0 14px 40px -26px var(--kv2-cyan-glow); }
+.kv2-orbits i:nth-child(1) { inset-inline: -6%; inset-block-start: 8%; block-size: 150%; border-color: var(--kv2-line-hi); box-shadow: inset 0 14px 40px -26px var(--kv2-cyan-glow), 0 -8px 30px -18px var(--kv2-cyan-bloom); }
 .kv2-orbits i:nth-child(2) { inset-inline: 6%; inset-block-start: 22%; block-size: 125%; }
 .kv2-orbits i:nth-child(3) { inset-inline: 20%; inset-block-start: 34%; block-size: 100%; opacity: 0.7; }
 .kv2-stages { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding-block: 34px 8px; }
-.kv2-stages::before { content: ""; position: absolute; inset-inline: 8%; inset-block-start: 74px; block-size: 2px; background: linear-gradient(90deg, var(--kv2-line-hi), var(--kv2-cyan), var(--kv2-line-hi)); box-shadow: 0 0 12px var(--kv2-cyan-glow); }
+.kv2-stages::before { content: ""; position: absolute; inset-inline: 8%; inset-block-start: 74px; block-size: 2px; background: linear-gradient(90deg, var(--kv2-line-hi), var(--kv2-cyan), var(--kv2-line-hi)); box-shadow: 0 0 4px var(--kv2-cyan), 0 0 16px var(--kv2-cyan-glow); }
 .kv2-stage { display: grid; justify-items: center; gap: 4px; inline-size: 100%; padding: 4px; border: 0; background: none; color: var(--kv2-ink); }
 .kv2-stage b { font-size: 14.5px; font-weight: 600; }
 .kv2-stage small { color: var(--kv2-ink-2); font-size: 12.5px; }
 .kv2-stage-orb { display: grid; place-items: center; inline-size: 78px; block-size: 78px; border-radius: 50%; color: var(--kv2-ink-2); background: radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--kv2-cyan) 14%, transparent), color-mix(in srgb, var(--kv2-bg) 88%, transparent) 72%); border: 1.5px solid var(--kv2-line); transition: box-shadow var(--kv2-dur-short) var(--kv2-ease), border-color var(--kv2-dur-short) var(--kv2-ease); }
-.kv2-stages li:not([data-reached]) { opacity: 0.55; }
-.kv2-stages li[data-reached] .kv2-stage-orb { color: var(--kv2-cyan); border-color: var(--kv2-cyan); box-shadow: 0 0 0 6px var(--kv2-cyan-soft), 0 0 22px var(--kv2-cyan-glow); }
-.kv2-stages li[data-current] .kv2-stage-orb { box-shadow: 0 0 0 8px var(--kv2-cyan-soft), 0 0 48px var(--kv2-cyan-glow); }
+/* Not reached yet: the orb dims, the words stay readable (opacity on the whole item put its text under 4.5:1). */
+.kv2-stages li:not([data-reached]) .kv2-stage-orb { opacity: 0.5; }
+.kv2-stages li[data-reached] .kv2-stage-orb { color: var(--kv2-cyan); border-color: var(--kv2-cyan); box-shadow: 0 0 0 6px var(--kv2-cyan-soft), 0 0 10px var(--kv2-cyan-bloom), 0 0 28px var(--kv2-cyan-glow); }
+.kv2-stages li[data-current] .kv2-stage-orb { box-shadow: 0 0 0 8px var(--kv2-cyan-soft), 0 0 18px var(--kv2-cyan-bloom), 0 0 56px var(--kv2-cyan-glow); }
 .kv2-stages li[data-stage="hypothesis"][data-reached] .kv2-stage-orb { color: var(--kv2-amber); border-color: var(--kv2-amber-line); box-shadow: 0 0 0 6px var(--kv2-amber-soft); }
 .kv2-stages li[data-stage="hypothesis"][data-current] .kv2-stage-orb { border-color: var(--kv2-amber); box-shadow: 0 0 0 8px var(--kv2-amber-soft), 0 0 48px var(--kv2-amber-line); }
 .kv2-stages li[data-stage="proposed"][data-reached] .kv2-stage-orb { color: var(--kv2-violet); border-color: var(--kv2-violet-line); box-shadow: 0 0 0 6px var(--kv2-violet-soft); }

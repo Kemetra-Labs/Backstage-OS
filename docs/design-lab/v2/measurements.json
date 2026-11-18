@@ -1,11 +1,11 @@
 {
   "mission-map": {
-    "grid_lum_corr": 0.469,
-    "grid_edge_corr": 0.286,
+    "grid_lum_corr": 0.414,
+    "grid_edge_corr": 0.261,
     "cyan_share_ref": 0.0166,
-    "cyan_share_v2": 0.0042,
+    "cyan_share_v2": 0.0102,
     "amber_share_ref": 0.0019,
-    "amber_share_v2": 0.0002,
+    "amber_share_v2": 0.0001,
     "mean_rgb_ref": [
       16.3,
       35.4,
@@ -14,53 +14,53 @@
     "mean_rgb_v2": [
       15.9,
       34.5,
-      44.3
+      44.5
     ],
     "mean_rgb_dist": 1.1
   },
   "source-observatory": {
-    "grid_lum_corr": 0.27,
-    "grid_edge_corr": 0.133,
+    "grid_lum_corr": 0.426,
+    "grid_edge_corr": 0.358,
     "cyan_share_ref": 0.0093,
-    "cyan_share_v2": 0.0059,
+    "cyan_share_v2": 0.0079,
     "amber_share_ref": 0.0004,
-    "amber_share_v2": 0.0006,
+    "amber_share_v2": 0.0005,
     "mean_rgb_ref": [
       14.8,
       34.5,
       44.5
     ],
     "mean_rgb_v2": [
-      16.9,
-      36.1,
-      47.0
+      16.5,
+      35.5,
+      46.9
     ],
-    "mean_rgb_dist": 3.7
+    "mean_rgb_dist": 3.1
   },
   "mission-replay": {
-    "grid_lum_corr": 0.524,
-    "grid_edge_corr": 0.551,
+    "grid_lum_corr": 0.373,
+    "grid_edge_corr": 0.469,
     "cyan_share_ref": 0.0109,
-    "cyan_share_v2": 0.002,
+    "cyan_share_v2": 0.0027,
     "amber_share_ref": 0.001,
-    "amber_share_v2": 0.0001,
+    "amber_share_v2": 0.0,
     "mean_rgb_ref": [
       15.9,
       35.1,
       43.6
     ],
     "mean_rgb_v2": [
-      16.1,
-      32.0,
-      42.0
+      16.3,
+      32.5,
+      42.5
     ],
-    "mean_rgb_dist": 3.4
+    "mean_rgb_dist": 2.8
   },
   "agent-flight-deck": {
-    "grid_lum_corr": 0.302,
-    "grid_edge_corr": 0.19,
+    "grid_lum_corr": 0.384,
+    "grid_edge_corr": 0.199,
     "cyan_share_ref": 0.0111,
-    "cyan_share_v2": 0.0012,
+    "cyan_share_v2": 0.0015,
     "amber_share_ref": 0.0006,
     "amber_share_v2": 0.0001,
     "mean_rgb_ref": [
@@ -69,10 +69,10 @@
       44.6
     ],
     "mean_rgb_v2": [
-      16.5,
-      32.2,
-      42.5
+      16.1,
+      32.1,
+      42.4
     ],
-    "mean_rgb_dist": 4.2
+    "mean_rgb_dist": 3.9
   }
 }

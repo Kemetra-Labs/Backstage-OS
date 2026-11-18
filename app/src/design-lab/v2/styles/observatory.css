@@ -6,7 +6,10 @@
 .kv2-scope-note { color: var(--kv2-ink-2); font-size: 13px; padding-inline: 4px; }
 
 /* Posture: the signature object. No composite figure on purpose. */
-.kv2-posture { overflow: hidden; padding-block-end: 8px; }
+.kv2-posture { overflow: hidden; padding-block-end: 76px; }
+/* The pins stand on the planet: the horizon lives in a band under the readings, never behind them (text keeps AA on
+   rendered pixels, e2e-v2/fidelity.spec.ts). Fixed px so the band holds when the pins stack on narrow screens. */
+.kv2-posture .kv2-horizon { inset-inline: -12%; inset-block-end: -100px; block-size: 150px; }
 .kv2-posture > :not(.kv2-cosmos) { position: relative; z-index: 1; }
 .kv2-pins { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding-block: 4px 6px; }
 .kv2-pin { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; }
