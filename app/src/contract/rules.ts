@@ -51,6 +51,7 @@ const isCurrentObserved = (r: EvidenceReference): boolean =>
 /**
  * Edge kind as displayed. "Declared" (authored) needs a read Observed record behind it, such as a catalog entry that
  * was actually fetched; an authored claim whose basis was never read shows as provisional. Hypotheses stay hypotheses.
+ * Unlike resolveHealth, a stale read still counts: a dependency declaration ages far slower than a health reading.
  */
 export function resolveEdgeKind(edge: { readonly kind: EdgeKind; readonly basis: readonly EvidenceReference[] }): EdgeKind {
   if (edge.kind !== 'authored') return edge.kind;

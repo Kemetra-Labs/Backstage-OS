@@ -39,7 +39,7 @@ export interface ShellCopy {
   readonly notFound: { readonly title: string; readonly body: string; readonly home: string };
   readonly footer: string;
   /** Label for the top-bar source strip, which shows one product's sources (the S1 investigation's), not the whole workspace. */
-  readonly workspaceSources: string;
+  readonly sourcesFor: (product: string) => string;
 }
 
 const en: ShellCopy = {
@@ -94,7 +94,7 @@ const en: ShellCopy = {
   back: 'Back',
   notFound: { title: 'Page not found', body: 'This address is not part of the demo.', home: 'Open Command Home' },
   footer: 'Kawalys review build. Synthetic data only: nothing here is live, and no action is taken.',
-  workspaceSources: 'Sources for {Retail Tower OS}',
+  sourcesFor: (product) => `Sources for {${product}}`,
 };
 
 const ar: ShellCopy = {
@@ -149,7 +149,7 @@ const ar: ShellCopy = {
   back: 'رجوع',
   notFound: { title: 'الصفحة غير موجودة', body: 'هذا العنوان ليس جزءًا من العرض التجريبي.', home: 'فتح مركز القيادة' },
   footer: 'نسخة مراجعة من {Kawalys}. بيانات اصطناعية فقط: لا شيء هنا حي، ولا يُتخذ أي إجراء.',
-  workspaceSources: 'مصادر {Retail Tower OS}',
+  sourcesFor: (product) => `مصادر {${product}}`,
 };
 
 export const SHELL: Readonly<Record<Lang, ShellCopy>> = { en, ar };

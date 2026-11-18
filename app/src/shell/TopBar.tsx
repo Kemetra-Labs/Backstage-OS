@@ -2,13 +2,16 @@ import { useApp } from '../app/AppContext';
 import { needsDemoMarker } from '../contract/rules';
 import type { Persona } from '../contract/types';
 import { SOURCES } from '../fixture/inv-demo-7';
+import { WORLD } from '../fixture/world';
 import { SourceChip } from '../components/SourceChip';
 import { Segmented } from '../components/Segmented';
 import { Text } from '../components/Text';
 import { DemoSearch } from './DemoSearch';
 
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];
-const WORKSPACE_SOURCES = Object.values(SOURCES);
+const STRIP_SOURCES = Object.values(SOURCES);
+/** The product these sources belong to, read from the data so the label cannot name the wrong one. */
+const STRIP_PRODUCT = WORLD.projects.find((p) => STRIP_SOURCES.every((s) => p.sources.includes(s)))?.name;
 
 interface Props {
   readonly menuOpen: boolean;
@@ -23,7 +26,7 @@ export function TopBar({ menuOpen, onMenu }: Props) {
       <div className="top-row">
         <div className="brand-row">
           <a className="brand" href="#/"><bdi dir="ltr">Kawalys</bdi></a>
-          {needsDemoMarker(WORKSPACE_SOURCES) && <span className="demo">{copy.demo}</span>}
+          {needsDemoMarker(STRIP_SOURCES) && <span className="demo">{copy.demo}</span>}
           <button type="button" className="btn btn-quiet menu-btn" aria-expanded={menuOpen} aria-controls="sidenav" onClick={onMenu}>
             {shell.menu}
           </button>
@@ -44,11 +47,11 @@ export function TopBar({ menuOpen, onMenu }: Props) {
           onChange={setLang}
         />
       </div>
-      {/* These chips are Retail Tower OS's sources only; the label says so, so they never read as the whole workspace. */}
+      {/* These chips are one product's sources only; the label names it, so they never read as the whole workspace. */}
       <section className="sources" aria-labelledby="topbar-sources-label">
-        <p id="topbar-sources-label" className="sources-label"><Text s={shell.workspaceSources} /></p>
+        {STRIP_PRODUCT && <p id="topbar-sources-label" className="sources-label"><Text s={shell.sourcesFor(STRIP_PRODUCT)} /></p>}
         <ul>
-          {WORKSPACE_SOURCES.map((s) => <SourceChip key={s.provider} source={s} copy={copy} lang={lang} />)}
+          {STRIP_SOURCES.map((s) => <SourceChip key={s.provider} source={s} copy={copy} lang={lang} />)}
         </ul>
       </section>
     </header>
