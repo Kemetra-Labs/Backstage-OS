@@ -1,0 +1,86 @@
+/* Hallmark · v2.0.0 · built: 2026-11-17 · shape: app screen · genre: atmospheric (dark ops console) · theme: custom, derived from the owner reference images 01-04
+ * critique: dense dark operations screens; the horizon/orbit/pin objects are the signature, controls stay standard
+ * waive 9, 54, 67: the owner reference images use a tracked-caps eyebrow on every screen; kept for fidelity, limited to .kv2-eyebrow (chips are caps with light tracking)
+ * waive 24b: dense operations spacing follows the reference density (9, 10, 14 px steps); every value is a token-free layout constant, not decoration
+ * waive 10: status dots are never decorative here; each dot sits beside a text state word (Online, Stale, Unavailable)
+ * waive 12, 13: app-screen scope (flow.md § App screens) drops the hero/fold and word-budget gates
+ * waive 48: SVG gradient stops and radial glows use color-mix over token colours only
+ */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces: a deep teal-navy ground with panels one step lighter */
+  --kv2-bg: #050c14;
+  --kv2-bg-2: #07121d;
+  --kv2-side: #061320;
+  --kv2-panel: #0a1824;
+  --kv2-panel-hi: #0e2131;
+  --kv2-well: #07111b;
+
+  /* Ink */
+  --kv2-ink: #e8f3f9;
+  --kv2-ink-2: #adc2cf;
+  --kv2-muted: #86a0b0;
+
+  /* Accent discipline: cyan = selection, focus, structure. Amber = attention. Others only carry truth or state. */
+  --kv2-cyan: #2de2ec;
+  --kv2-cyan-2: #18b4c6;
+  --kv2-cyan-ink: #021a22;
+  --kv2-amber: #f5a524;
+  --kv2-amber-ink: #1d1203;
+  --kv2-green: #3ddc97;
+  --kv2-red: #f0626e;
+  --kv2-blue: #6aa7f5;
+  --kv2-violet: #b9aaf0;
+  --kv2-unk: #9fb0bf;
+
+  /* Truth labels (same meaning as V1: observed green, correlated blue, hypothesis amber, proposed violet) */
+  --kv2-obs: var(--kv2-green);
+  --kv2-cor: var(--kv2-blue);
+  --kv2-hyp: var(--kv2-amber);
+  --kv2-pro: var(--kv2-violet);
+
+  /* Alpha steps, all mixed from the tokens above */
+  --kv2-line: color-mix(in srgb, var(--kv2-cyan) 22%, transparent);
+  --kv2-line-2: color-mix(in srgb, var(--kv2-ink) 8%, transparent);
+  --kv2-line-hi: color-mix(in srgb, var(--kv2-cyan) 62%, transparent);
+  --kv2-cyan-soft: color-mix(in srgb, var(--kv2-cyan) 11%, transparent);
+  --kv2-cyan-glow: color-mix(in srgb, var(--kv2-cyan) 46%, transparent);
+  --kv2-amber-soft: color-mix(in srgb, var(--kv2-amber) 13%, transparent);
+  --kv2-amber-line: color-mix(in srgb, var(--kv2-amber) 68%, transparent);
+  --kv2-red-soft: color-mix(in srgb, var(--kv2-red) 13%, transparent);
+  --kv2-red-line: color-mix(in srgb, var(--kv2-red) 55%, transparent);
+  --kv2-green-soft: color-mix(in srgb, var(--kv2-green) 12%, transparent);
+  --kv2-green-line: color-mix(in srgb, var(--kv2-green) 50%, transparent);
+  --kv2-blue-soft: color-mix(in srgb, var(--kv2-blue) 14%, transparent);
+  --kv2-blue-line: color-mix(in srgb, var(--kv2-blue) 50%, transparent);
+  --kv2-violet-soft: color-mix(in srgb, var(--kv2-violet) 14%, transparent);
+  --kv2-violet-line: color-mix(in srgb, var(--kv2-violet) 50%, transparent);
+  --kv2-unk-soft: color-mix(in srgb, var(--kv2-unk) 12%, transparent);
+  --kv2-unk-line: color-mix(in srgb, var(--kv2-unk) 45%, transparent);
+  --kv2-shade: color-mix(in srgb, var(--kv2-bg) 70%, transparent);
+
+  /* Panels and ground */
+  --kv2-grad-panel: linear-gradient(180deg, color-mix(in srgb, var(--kv2-panel-hi) 78%, transparent), color-mix(in srgb, var(--kv2-panel) 90%, transparent));
+  --kv2-grad-ground: radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--kv2-cyan-2) 14%, transparent), transparent 60%), radial-gradient(90% 60% at 0% 100%, color-mix(in srgb, var(--kv2-cyan-2) 10%, transparent), transparent 62%);
+  --kv2-shadow: 0 14px 30px -14px var(--kv2-shade), inset 0 1px 0 color-mix(in srgb, var(--kv2-cyan) 9%, transparent);
+  --kv2-shadow-sel: 0 10px 26px -10px var(--kv2-cyan-glow), inset 0 0 0 1px var(--kv2-line-hi);
+
+  /* Radius, type, motion */
+  --kv2-r-sm: 6px;
+  --kv2-r-md: 10px;
+  --kv2-r-lg: 14px;
+  --kv2-f-ui: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Cairo", sans-serif;
+  --kv2-f-ar: "Cairo", "Segoe UI", "Tahoma", system-ui, sans-serif;
+  --kv2-f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --kv2-t-xs: 11px;
+  --kv2-t-sm: 12px;
+  --kv2-t-md: 13.5px;
+  --kv2-t-lg: 15px;
+  --kv2-t-xl: 18px;
+  --kv2-t-2xl: 23px;
+  --kv2-t-3xl: 36px;
+  --kv2-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --kv2-dur-micro: 120ms;
+  --kv2-dur-short: 220ms;
+}
