@@ -38,8 +38,8 @@
     "mean_rgb_dist": 3.1
   },
   "mission-replay": {
-    "grid_lum_corr": 0.373,
-    "grid_edge_corr": 0.469,
+    "grid_lum_corr": 0.368,
+    "grid_edge_corr": 0.466,
     "cyan_share_ref": 0.0109,
     "cyan_share_v2": 0.0027,
     "amber_share_ref": 0.001,
@@ -52,9 +52,9 @@
     "mean_rgb_v2": [
       16.3,
       32.5,
-      42.5
+      42.6
     ],
-    "mean_rgb_dist": 2.8
+    "mean_rgb_dist": 2.7
   },
   "agent-flight-deck": {
     "grid_lum_corr": 0.384,
