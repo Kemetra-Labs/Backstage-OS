@@ -4,7 +4,8 @@ import { segments } from '../segments';
 import { AGENTS_COPY } from './agents';
 import { SOURCES_COPY } from './sources';
 
-const SUMMARY = { total: 5, current: 2, stale: 1, unknown: 2, unavailable: 1, notConfigured: 1 };
+// Exclusive buckets: 2 + 1 + 1 + 1 + 0 = 5.
+const SUMMARY = { total: 5, current: 2, stale: 1, unknown: 0, unavailable: 1, notConfigured: 1 };
 const COUNTS = { watching: 1, idle: 2, paused: 3, not_enabled: 4 };
 
 /** Every plain string in a copy object. Function members are exercised explicitly below. */
@@ -81,6 +82,8 @@ describe('sources copy', () => {
       expect(s).not.toMatch(/\bok\b|healthy|سليم/i);
     }
     expect(SOURCES_COPY.en.summary(SUMMARY)).toBe('2 of 5 sources current, 1 stale, 1 unavailable, 1 not set up');
+    expect(SOURCES_COPY.en.summary({ ...SUMMARY, stale: 0, unknown: 1 })).toBe('2 of 5 sources current, 1 unavailable, 1 not set up, 1 not read yet');
+    expect(SOURCES_COPY.ar.summary({ ...SUMMARY, stale: 0, unknown: 1 })).toBe('2 من 5 مصادر حديثة، 1 غير متاحة، 1 غير مُعدة، 1 لم تُقرأ بعد');
     expect(SOURCES_COPY.en.summary({ ...SUMMARY, stale: 0, unavailable: 0, notConfigured: 0 })).toBe('2 of 5 sources current');
     expect(SOURCES_COPY.ar.summary({ ...SUMMARY, stale: 0, unavailable: 0, notConfigured: 0 })).toBe('2 من 5 مصادر حديثة');
   });

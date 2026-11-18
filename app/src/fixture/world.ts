@@ -159,7 +159,8 @@ const KH: WorldProject = {
       state: { connectivity: 'not_configured', freshness: 'unknown', health: 'unknown', basis: [] } },
   ],
   edges: [
-    { from: 'khepri-web', to: 'khepri-api', kind: 'authored', basis: [X.khCiGreen] },
+    // A green CI run does not evidence a dependency, and there is no catalog record for Khepri, so it is provisional.
+    { from: 'khepri-web', to: 'khepri-api', kind: 'provisional', basis: [] },
     { from: 'khepri-api', to: 'khepri-worker', kind: 'provisional', basis: [] },
   ],
   attention: [

@@ -3,6 +3,8 @@ import { isForbiddenControlLabel } from '../src/contract/rules';
 import { BANNED, LANGS, openRoute, PERSONAS, WIDTHS, type LoadQuery } from './helpers';
 
 const ROUTES = ['/project/RT', '/project/RT/stock-sync', '/project/RT/inventory', '/project/KH/khepri-api', '/project/SB'] as const;
+/** Retail Tower edges declared in the catalog; their record (E-7) was never read, so they show as Provisional. */
+const CATALOG_EDGES = ['pos->api-gateway', 'api-gateway->stock-sync', 'api-gateway->payments', 'stock-sync->inventory'] as const;
 
 interface Q extends LoadQuery { route?: string }
 
@@ -216,6 +218,8 @@ test('table view lists every edge and every component, and components are links'
   await expect(page.locator('.proj-list [data-component]')).toHaveCount(6);
   await expect(page.locator('[data-edge="payments->inventory"]')).toContainText('Suspected');
   await expect(page.locator('[data-edge="inventory->reporting"]')).toContainText('Provisional');
+  // Catalog-declared edges whose catalog record (E-7) was never read are not shown as Declared.
+  for (const e of CATALOG_EDGES) await expect(page.locator(`[data-edge="${e}"]`)).toContainText('Provisional');
   await page.locator('[data-component="stock-sync"] a').click();
   await expect(page).toHaveURL(/#\/project\/RT\/stock-sync$/);
   await expect(page.locator('[data-component="stock-sync"] a')).toHaveAttribute('aria-current', 'true');
@@ -284,6 +288,16 @@ test('CI and delivery evidence: status in words with a resolved truth label; a n
   await expect(unread.locator('[data-truth="unknown"]')).toBeVisible();
 });
 
+test('top-bar source strip names the product its sources belong to, in both languages', async ({ page }) => {
+  // On a Khepri page, so the label is what tells the reader these chips are not Khepri's.
+  await load(page, { route: '/project/KH/khepri-api' });
+  await expect(page.locator('#topbar-sources-label')).toHaveText('Sources for Retail Tower OS');
+  await expect(page.locator('.topbar .sources')).toHaveAttribute('aria-labelledby', 'topbar-sources-label');
+  await load(page, { lang: 'ar', route: '/project/KH/khepri-api' });
+  await expect(page.locator('#topbar-sources-label')).toHaveText('مصادر Retail Tower OS');
+  await expect(page.locator('#topbar-sources-label bdi')).toHaveText('Retail Tower OS');
+});
+
 test('risks and unknowns: unknown components with reasons, unconfirmed links and sources not current; never green', async ({ page }) => {
   await load(page, { route: '/project/RT' });
   const risks = page.getByTestId('risks-panel');
@@ -295,6 +309,7 @@ test('risks and unknowns: unknown components with reasons, unconfirmed links and
   await expect(risks.locator('[data-risk-component="api-gateway"]')).toHaveCount(0);
   await expect(risks.locator('[data-risk-edge="payments->inventory"]')).toContainText('Suspected');
   await expect(risks.locator('[data-risk-edge="inventory->reporting"]')).toContainText('Provisional');
+  for (const e of CATALOG_EDGES) await expect(risks.locator(`[data-risk-edge="${e}"]`)).toContainText('Provisional');
   for (const p of ['datadog', 'port', 'sentry']) await expect(risks.locator(`[data-risk-source="${p}"]`)).toBeVisible();
   await expect(risks.locator('[data-health="healthy"]')).toHaveCount(0);
   await expect(risks.getByRole('link', { name: 'inventory' })).toHaveAttribute('href', '#/project/RT/inventory');

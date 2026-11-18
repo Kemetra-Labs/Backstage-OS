@@ -53,6 +53,7 @@ html[lang="ar"] .demo { font-family: var(--f-ar); }
 /* The group clips overflow, so the focus ring sits inside each button; dark ring on the gold pressed state. */
 .seg button:focus-visible { outline: 2px solid var(--gold); outline-offset: -4px; border-radius: 6px; }
 .seg button[aria-pressed="true"]:focus-visible { outline-color: var(--gold-ink); }
+.sources-label { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
 .sources ul { display: flex; flex-wrap: wrap; gap: 8px; }
 .source {
   display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 10px;

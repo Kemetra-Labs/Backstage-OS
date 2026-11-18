@@ -3,6 +3,7 @@ import type {
   AggregateCount, ConfidenceBasis, ConfidenceLevel, DisplayLabel, DisplayState, EvidenceReference, Freshness, Health,
   Hypothesis, Persona, SourceAuthority,
 } from './types';
+import type { EdgeKind } from './world';
 
 export type ConfidenceView =
   | { readonly kind: 'words'; readonly level: ConfidenceLevel }
@@ -46,6 +47,16 @@ export function resolveLabel(ref: EvidenceReference): DisplayLabel {
 
 const isCurrentObserved = (r: EvidenceReference): boolean =>
   resolveLabel(r) === 'observed' && effectiveFreshness(r) === 'current';
+
+/**
+ * Edge kind as displayed. "Declared" (authored) needs a read Observed record behind it, such as a catalog entry that
+ * was actually fetched; an authored claim whose basis was never read shows as provisional. Hypotheses stay hypotheses.
+ * Unlike resolveHealth, a stale read still counts: a dependency declaration ages far slower than a health reading.
+ */
+export function resolveEdgeKind(edge: { readonly kind: EdgeKind; readonly basis: readonly EvidenceReference[] }): EdgeKind {
+  if (edge.kind !== 'authored') return edge.kind;
+  return edge.basis.some((r) => resolveLabel(r) === 'observed') ? 'authored' : 'provisional';
+}
 
 /** Healthy only with current Observed evidence; degraded or down only with a read observation; otherwise unknown. */
 export function resolveHealth(state: DisplayState): Health {

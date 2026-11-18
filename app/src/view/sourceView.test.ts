@@ -30,6 +30,15 @@ describe('productSources', () => {
     expect(products.every((p) => p.notCurrent === p.summary.total - p.summary.current)).toBe(true);
   });
 
+  it('puts each source in exactly one bucket, so the summary adds up to the total', () => {
+    for (const p of products) {
+      const s = p.summary;
+      expect(s.current + s.stale + s.unavailable + s.notConfigured + s.unknown).toBe(s.total);
+    }
+    // Khepri Jira is unavailable: it counts as unavailable only, not also as stale.
+    expect(products.find((p) => p.id === 'KH')?.summary).toMatchObject({ stale: 0, unavailable: 1 });
+  });
+
   it('forces a null age for sources that are not set up', () => {
     const w = {
       ...WORLD,

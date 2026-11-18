@@ -2,7 +2,7 @@
 import { freshnessOf } from '../contract/rules';
 import type { Connectivity, Freshness, Provider } from '../contract/types';
 import type { World } from '../contract/world';
-import { sourceSummary, type SourceSummary } from './world';
+import { sourceBuckets, type SourceBuckets } from './portfolioView';
 
 export interface SourceRow {
   readonly provider: Provider;
@@ -19,7 +19,8 @@ export interface ProductSources {
   readonly id: string;
   readonly name: string;
   readonly rows: readonly SourceRow[];
-  readonly summary: SourceSummary;
+  /** Exclusive buckets (the same ones Home uses), so the words add up to the total. */
+  readonly summary: SourceBuckets;
   /** Sources that are not current: stale, unknown, unavailable or not set up. Never counted as OK. */
   readonly notCurrent: number;
 }
@@ -39,7 +40,7 @@ export function productSources(world: World): readonly ProductSources[] {
         synthetic: s.synthetic,
       }))
       .sort((a, b) => PROVIDER_ORDER.indexOf(a.provider) - PROVIDER_ORDER.indexOf(b.provider));
-    const summary = sourceSummary(p.sources);
+    const summary = sourceBuckets(p.sources);
     return { id: p.id, name: p.name, rows, summary, notCurrent: summary.total - summary.current };
   });
 }

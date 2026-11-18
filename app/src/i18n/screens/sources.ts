@@ -1,6 +1,6 @@
 // Source health copy (demo only). {braces} mark left-to-right tokens; Latin digits in both languages.
 import type { Lang, Provider } from '../../contract/types';
-import type { SourceSummary } from '../../view/world';
+import type { SourceBuckets } from '../../view/portfolioView';
 
 export interface IntegrationCopy {
   /** What Kawalys would read (read-only). */
@@ -32,7 +32,7 @@ export interface SourcesCopy {
     readonly summaryRow: string;
     readonly ttlSeconds: (s: number) => string;
   };
-  readonly summary: (s: SourceSummary) => string;
+  readonly summary: (s: SourceBuckets) => string;
   readonly stateHeading: string;
   readonly stateBlock: {
     readonly unavailable: (affected: string) => string;
@@ -76,6 +76,7 @@ const en: SourcesCopy = {
     if (s.stale > 0) parts.push(`${s.stale} stale`);
     if (s.unavailable > 0) parts.push(`${s.unavailable} unavailable`);
     if (s.notConfigured > 0) parts.push(`${s.notConfigured} not set up`);
+    if (s.unknown > 0) parts.push(`${s.unknown} not read yet`);
     return parts.join(', ');
   },
   stateHeading: 'What the states mean',
@@ -128,6 +129,7 @@ const ar: SourcesCopy = {
     if (s.stale > 0) parts.push(`${s.stale} قديمة`);
     if (s.unavailable > 0) parts.push(`${s.unavailable} غير متاحة`);
     if (s.notConfigured > 0) parts.push(`${s.notConfigured} غير مُعدة`);
+    if (s.unknown > 0) parts.push(`${s.unknown} لم تُقرأ بعد`);
     return parts.join('، ');
   },
   stateHeading: 'ماذا تعني الحالات',
