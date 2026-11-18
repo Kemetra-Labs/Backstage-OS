@@ -60,13 +60,13 @@ They are the gaps between those builds and BACK-17's acceptance list.
 
 | # | Finding | Evidence (FACT) | Which concept fixes it |
 | --- | --- | --- | --- |
-| F-1 | **Replay mixes its time axes and shows cause after effect.** The replay clock puts "PR merged" at 14:03, one minute *after* the check failed at 14:02. The evidence says the PR merged at 13:27 and the check failed at 14:02 (the copy itself says "35 min before the failure"). The clock is the order Kawalys handled the events, but the strip does not say so | `world.ts` lines 105–106 (R-1 `14:02`, R-2 `14:03`); `fixture/inv-demo-7.ts` lines 38 and 42 (E-1 `14:02`, E-2 `13:27`); `i18n/replay.ts` line 111 | B (§4.4) |
-| F-2 | **Replay times with no source.** R-3 (ingested), R-6 (hypothesis) and R-7 (proposed) have `evidence: null` and a made-up clock value, so three marks on the strip have no provenance and no "demo time" mark | `world.ts` lines 107, 110, 111 | B (§4.4) |
+| F-1 | **Replay mixes its time axes and shows cause after effect.** The replay clock puts "PR merged" at 14:03, one minute *after* the check failed at 14:02. The evidence says the PR merged at 13:27 and the check failed at 14:02 (the copy itself says "35 min before the failure"). The clock is the order Kawalys handled the events, but the strip does not say so | `world.ts` lines 105–106 (R-1 `14:02`, R-2 `14:03`); `fixture/inv-demo-7.ts` lines 38 and 42 (E-1 `14:02`, E-2 `13:27`); `i18n/replay.ts` line 111 | B (§4.3) |
+| F-2 | **Replay times with no source.** R-3 (ingested), R-6 (hypothesis) and R-7 (proposed) have `evidence: null` and a made-up clock value, so three marks on the strip have no provenance and no "demo time" mark | `world.ts` lines 107, 110, 111 | B (§4.3) |
 | F-3 | **Replay keeps a second copy of the investigation.** `REPLAY` is its own event script, so the replay and the Investigation Room can drift apart. BACK-17 forbids "duplicating their underlying entity models" | `world.ts` lines 104–112 vs `fixture/inv-demo-7.ts` | B (§4.6) |
-| F-4 | **The contract has two time fields, and BACK-17 asks for four.** `Observation` has `observedAt` and `ingestedAt` only. BACK-7 defines `observedAt` as the source's own event time (GitHub `completed_at`) and `ingestedAt` as the BFF read time. Every fixture `ingestedAt` is the same value (`14:03`), so no ingestion lag can be shown. There is no correlation time | `contract/types.ts` lines 31–36; `docs/planning/BACK-7/03-api-evidence-contracts.md` lines 29 and 83; `inv-demo-7.ts` line 32 | B (§4.4), §8 |
-| F-5 | **"Health" on the Observatory means the provider, not the target.** V2's health reading is the provider's own health (GitHub reads Healthy because of probe E-8). V1 deliberately left target health to the product pages. BACK-17 asks that "a connector outage must never paint its target system Healthy", which needs both readings, labelled apart | `world.ts` lines 18–22, 39–60; `screens/Sources.tsx` line 13 | A (§3.4) |
-| F-6 | **The freshness ring measures age against a placeholder.** The ring's target ("30 min or less") is a synthetic TTL. BACK-5 D-4 says real TTLs are set only at the read-only integration gate, but the ring does not say it is a placeholder | `SourceObservatory.tsx` lines 23–40, 291; `i18n/observatory.ts` line 56 | A (§3.4) |
-| F-7 | **Flight Deck counts and statuses read as live.** "Active missions", "Observing", "Analyzing" and "Need review" are present-tense. `startedMinutesAgo` and `events` are invented numbers with no evidence or demo mark. "Need review" can read as a pending approval, which BACK-17 forbids ("no fake active approvals") | `i18n/deck.ts` lines 12–13, 27–31, 54–56; `world.ts` lines 123–127 | C (§5.4) |
+| F-4 | **The contract has two time fields, and BACK-17 asks for four.** `Observation` has `observedAt` and `ingestedAt` only. BACK-7 defines `observedAt` as the source's own event time (GitHub `completed_at`) and `ingestedAt` as the BFF read time. Every V1 fixture `ingestedAt` is the same value (`14:03`), and V2's added records set `ingestedAt` equal to `observedAt`, so no real ingestion lag can be shown. There is no correlation time | `contract/types.ts` lines 31–36; `docs/planning/BACK-7/03-api-evidence-contracts.md` lines 29 and 83; `inv-demo-7.ts` line 32; V2 `world.ts` line 15 | B (§4.2, §4.3), §8 |
+| F-5 | **"Target health" on the Observatory is the provider's own health.** V2 labels the reading "Target health" (`صحة الهدف`), but the target it reads is the provider's API (GitHub reads Healthy because of probe E-8), not the product or component that relies on it. V1 deliberately left product health to the product pages. BACK-17 asks that "a connector outage must never paint its target system Healthy", which needs both readings, labelled apart | `world.ts` lines 18–22, 39–60; `i18n/observatory.ts` line 50; `screens/Sources.tsx` line 13 | A (§3.3) |
+| F-6 | **The freshness ring measures age against a placeholder.** The ring's target ("30 min or less") is a synthetic TTL. BACK-5 D-4 says real TTLs are set only at the read-only integration gate, but the ring does not say it is a placeholder | `SourceObservatory.tsx` lines 23–40, 291; `i18n/observatory.ts` line 56 | A (§3.3) |
+| F-7 | **Flight Deck counts and statuses read as live.** "Active missions", "Observing", "Analyzing" and "Need review" are present-tense. `startedMinutesAgo` and `events` are invented numbers with no evidence or demo mark. "Need review" can read as a pending approval, which BACK-17 forbids ("no fake active approvals") | `i18n/deck.ts` lines 12–13, 27–31, 54–56; `world.ts` lines 123–127 | C (§5.3) |
 
 ---
 
@@ -88,12 +88,15 @@ only adds what is specific to it.
   its reason (`notReadReason`: unavailable, not configured, restricted).
 - **Counts come with their base:** "3 of 6", via `countDisplay`. A count is never shown without what it counts.
 
-### 2.2 Display only (FACT: `isForbiddenControlLabel`, V2 `PRODUCT.md`)
+### 2.2 Display only
 
-- No approve, reject, defer, go, release, retry, run, start, stop, pause, connect, reconnect, sync or configure
-  control, in EN or AR, on any of the three surfaces.
-- Allowed controls: select, filter, sort, switch view (scene or table), open evidence, copy text, play or step a
-  replay (view state only), and links to other Kawalys screens.
+- **Enforced today (FACT, `app/src/contract/rules.ts` lines 99–104, `isForbiddenControlLabel`):** no control label
+  containing approve, reject, defer, go / no-go, release, retry or run, or their Arabic forms.
+- **Added by these concepts (PROPOSAL):** no control that acts on a source, connector or agent: start, stop, connect,
+  reconnect, sync, configure, or pause/resume an agent. These words come from the V1 `Agents.tsx` header rule, not
+  from the enforced list. A later slice may add them to the list.
+- Allowed controls: select, filter, sort, switch view (scene or table), open evidence, copy text, play, pause or step
+  a replay (view state only, as V2 `rp.pause` already does), and links to other Kawalys screens.
 - A "next human step" is a sentence that names where a person acts (for example "in `RT-DEMO-112`"). It is never a
   button. Links into source systems point at `example.invalid` and are inert.
 
@@ -183,8 +186,8 @@ Scene: the three V2 pins stay (they are the strongest existing object and alread
 │ Scene (dark): three pins on the horizon, never combined                      │
 │   ┃ Connectivity          ┃ Freshness              ┃ Health (provider)       │
 │   ┃ 3 of 6 reachable      ┃ 2 of 6 within demo TTL ┃ 1 of 6 confirmed        │
-│   ┃ 1 unavailable,        ┃ 2 stale, 2 never read  ┃ 5 unknown               │
-│   ┃ 2 not set up          ┃ (Sentry, Port)         ┃                         │
+│   ┃ 1 unavailable,        ┃ 2 stale (Sentry, Port) ┃ 5 unknown               │
+│   ┃ 2 not set up          ┃ 2 never read           ┃                         │
 ├ Connectors (ledger) ─────────────────────────────────────────────────────────┤
 │ GitHub   reachable · read 6 min ago · provider healthy (E-8, observed)       │
 │ Jira     reachable · read 12 min ago · provider health unknown (no probe)    │
@@ -194,9 +197,10 @@ Scene: the three V2 pins stay (they are the strongest existing object and alread
 │ Datadog  not set up        Confluence  not set up                            │
 ├ Coverage (ledger): targets × sources ────────────────────────────────────────┤
 │                  GitHub     Jira       Sentry      Datadog     Port          │
-│ stock-sync       read       read       —           not set up  unavailable   │
-│ inventory        —          —          stale (E-5, restricted for Owner)     │
-│ runtime impact   —          —          stale       not set up  —             │
+│ stock-sync CI    read       read       —           —           unavailable   │
+│ inventory errors —          —          stale (E-5, restricted for Owner)     │
+│ stock-sync       —          —          —           not set up  —             │
+│   runtime          (E-6 not read)                                            │
 │   → Target health: unknown. Blind spot: runtime (no current source)          │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -206,7 +210,8 @@ Scene: the three V2 pins stay (they are the strongest existing object and alread
   being healthy says nothing about a target, and a provider being down makes every target that relies only on it read
   "unknown, source unavailable", never Healthy.
 - **Blind spots** are first-class rows: a target with no current source for an aspect (for example `stock-sync`
-  runtime: Sentry stale, Datadog not set up, E-6 not read) reads "Blind spot" with the reasons listed.
+  runtime: Datadog not set up, E-6 not read, and Sentry's only record is stale and about `inventory`) reads "Blind
+  spot" with the reasons listed.
 - **Freshness ring (fixes F-6):** keep it as a measurement of age, and label its target "demo TTL (placeholder,
   BACK-5 D-4)". An unread source shows "no read", not an empty or full ring.
 - **Unavailable reasons:** show the BACK-7 reason code in words ("connector credential refused", "rate limited",
@@ -321,7 +326,7 @@ Scene: **time lanes** on one left-to-right axis. Ledger: the Investigation Room'
 │ Read by      ............................  ○ 14:03 (E-1, E-2 read together) │
 │ Kawalys      ░░ blind: Sentry stale since 05:24 · Datadog not set up ░░░░   │
 │ Linked       ◆ RT-DEMO-112 linked by rule "Jira key in commit" (E-3)        │
-│              time: demo time (no source)                                    │
+│              Jira record 13:51 (E-3); link time: demo time (no source)      │
 │ Reasoning    ◇ hypothesis written · ◇ proposal DEC-DEMO-3 drafted           │
 │              demo time · demo time                                          │
 │ [◀ step] [▶ play demo] [step ▶]    cursor: E-1 · "Replaying demo events"    │
@@ -350,7 +355,7 @@ Scene: **time lanes** on one left-to-right axis. Ledger: the Investigation Room'
 | --- | --- |
 | All sources current | Lanes with marks; no gap spans |
 | Stale source | A hatched span on the "Read by Kawalys" lane from the last good read, with the source name |
-| Unavailable source | A hatched span plus "last good read 1 day ago (E-9)"; events from it after that point are absent and the span says so |
+| Unavailable source | A hatched span plus "last good read 25 h ago (E-9)"; events from it after that point are absent and the span says so |
 | Not set up | A labelled gap for the aspect it would cover ("runtime: not set up") on the whole axis |
 | Restricted (E-5 for Owner/Nontechnical) | A "restricted" mark with no time and no content, listed apart (the V1 `TimelinePanel` rule) |
 | Untimed evidence | Listed apart under the axis, "no time recorded", never placed on the axis |
@@ -448,7 +453,7 @@ agent avatars. Ledger: one row per agent output, labelled by what kind of claim 
 │   (cites E-1, E-2, E-5, E-9) (E-3)   (no evidence of its own) (DEC-DEMO-3)   │
 ├ Output ledger ───────────────────────────────────────────────────────────────┤
 │ COLLECTED   CI collector read #DEMO-4471, PR #DEMO-88    GitHub · E-1, E-2   │
-│ COLLECTED   Freshness watcher noted Sentry stale         Sentry · E-5, E-9   │
+│ COLLECTED   Freshness watcher noted stale sources   Sentry E-5 · Port E-9    │
 │ CORRELATED  Correlator linked RT-DEMO-112 by commit key  rule · E-3          │
 │ HYPOTHESIS  Analyst: timezone change may explain failure. Not confirmed.     │
 │ PROPOSED    Drafter wrote DEC-DEMO-3. A person decides in RT-DEMO-112.       │
@@ -631,7 +636,7 @@ by itself: it allows drafting one mock-only slice, which then needs its own appr
 | # | Decision | Options | Recommendation |
 | --- | --- | --- | --- |
 | D-17.1 | Rank A, B, C (above) | Each: build mock now / keep for later / reject | As §11.1 |
-| D-17.2 | Observatory health wording | (a) two readings, "Provider health" and "Target health"; (b) drop provider health; (c) keep V2's single "health" | (a) |
+| D-17.2 | Observatory health wording | (a) two readings, "Provider health" and "Target health"; (b) drop provider health; (c) keep V2's single reading, labelled "Target health" but measuring the provider (F-5) | (a) |
 | D-17.3 | Observatory primary ledger | (a) coverage matrix with blind spots; (b) keep six cards | (a), cards become the connector ledger |
 | D-17.4 | Replay placement | (a) panel in the Investigation Room; (b) separate route | (a), as BACK-15 D-15.4 |
 | D-17.5 | Time fields in the display contract | (a) add optional `occurredAt`, `correlatedAt` and authored times on hypothesis/proposal; (b) keep two fields and show "demo time" for the rest | (a), to be reflected in the BACK-7 contract before the Replay slice |
@@ -667,7 +672,7 @@ Read on 2026-11-18:
 - Confluence: KMC page 80052229 (Experience Atlas & Integration Journey v0).
 - Repo at `96c2d7e`:
   - `CLAUDE.md`, `README.md`
-  - `docs/planning/BACK-15/README.md`, `docs/planning/BACK-14/README.md` (header and method), 
+  - `docs/planning/BACK-15/README.md`, `docs/planning/BACK-14/README.md` (header and method),
     `docs/planning/BACK-7/03-api-evidence-contracts.md` (§3, §4, §5)
   - `docs/design-lab/v2/comparison.md`
   - `app/src/contract/types.ts`, `app/src/fixture/inv-demo-7.ts` (evidence times)
