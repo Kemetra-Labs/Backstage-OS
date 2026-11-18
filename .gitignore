@@ -10,8 +10,7 @@ desktop.ini
 *.tmp
 *.swp
 .cache/
-.claude/*
-!.claude/skills/
+.claude/
 
 # Secrets and local environment (none are used by this prototype)
 .env

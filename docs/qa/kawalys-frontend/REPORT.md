@@ -57,8 +57,8 @@ Other states: `#/project/KH` and `#/investigation/INV-DEMO-9` show conflicting s
 
 | Skill | Status |
 | --- | --- |
-| Anthropic `frontend-design` | Project-installed in `.claude/skills/frontend-design` from anthropics/skills @ `e4bb5d9`, Apache-2.0. Briefed to all five screen agents; **their use of it is not confirmed** (no agent report mentions it) |
-| Impeccable v4.9.2 | Project-installed in `.claude/skills/impeccable` from pbakaus/impeccable @ `d41d986`, Apache-2.0. Its markdown references only; `scripts/` (a binary launcher) was deliberately not vendored. **Used:** a critique run against `critique.md` + `critique-rubric.md` on 9 screenshots, rubric-only because the detector needs the launcher. It scored 26/40, "Acceptable". Fixes applied: navigation links restyled from outlined buttons to quiet links, sidebar background running full height, mobile header compacted. Deferred: see §8 |
+| Anthropic `frontend-design` | Was project-installed in `.claude/skills/frontend-design` from anthropics/skills @ `e4bb5d9`, Apache-2.0. The vendored copy now lives in a separate chore PR and is not part of this PR. Briefed to all five screen agents; **their use of it is not confirmed** (no agent report mentions it) |
+| Impeccable v4.9.2 | Was project-installed in `.claude/skills/impeccable` from pbakaus/impeccable @ `d41d986`, Apache-2.0; the vendored copy now lives in a separate chore PR and is not part of this PR. Its markdown references only; `scripts/` (a binary launcher) was deliberately not vendored. **Used:** a critique run against `critique.md` + `critique-rubric.md` on 9 screenshots, rubric-only because the detector needs the launcher. It scored 26/40, "Acceptable". Fixes applied: navigation links restyled from outlined buttons to quiet links, sidebar background running full height, mobile header compacted. Deferred: see §8 |
 | Hallmark | Available at user level; offered to the agents as an anti-pattern check. Use not confirmed. Not vendored |
 | `design:design-critique`, `design:accessibility-review`, code-reviewer agent | **Not run.** An advisor review (fresh lens) and the Impeccable critique took their place |
 | Playwright | Used: per-screen specs, a cross-route rules spec and screenshot capture |
@@ -117,11 +117,12 @@ The full-page mobile PNGs are too tall to judge as single images. Review them by
 ## 7. Changed files
 
 - Everything under `app/` (screens, view, i18n, components, styles, e2e, README)
-- `.claude/skills/` (vendored skills)
-- `.gitignore`: `.claude/` became `.claude/*` + `!.claude/skills/`
+- `.github/workflows/ci.yml`: the existing required `Playwright (chromium + webkit)` job now also typechecks, unit-tests and runs the `app/` Playwright suite
 - this report and its screenshots
 
-No new npm dependencies. The static prototype, CI workflow and root tests are unchanged.
+The vendored skills (`.claude/skills/`) and the matching `.gitignore` change were split out into a separate chore PR.
+
+No new npm dependencies. The static prototype and root tests are unchanged.
 
 ## 8. Gaps and checks not verified
 
