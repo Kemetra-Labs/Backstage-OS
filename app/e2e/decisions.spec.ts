@@ -1,29 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
+import { BANNED, LANGS, openRoute as load, PERSONAS, WIDTHS } from './helpers';
 
-const WIDTHS = [320, 375, 768, 1440] as const;
-const LANGS = ['en', 'ar'] as const;
-const PERSONAS = ['owner', 'technical', 'nontechnical'] as const;
 const LAY = ['owner', 'nontechnical'] as const;
 const DETAIL_IDS = ['DEC-DEMO-3', 'DEC-DEMO-5', 'DEC-DEMO-1'] as const;
 const INBOX = '/decisions';
 const detail = (id: string) => `/decisions/${id}`;
-const BANNED = ['integration-tests', '#DEMO-4471', 'PR #DEMO-88', 'AssertionError', 'example.invalid', 'DEMO-4468', 'DEMO-5120', 'DEMO-311'];
-
-async function load(page: Page, route: string, q: { lang?: string; persona?: string; width?: number } = {}) {
-  const errors: string[] = [];
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  page.on('pageerror', (e) => errors.push(String(e)));
-  // Offline runs: answer Google Fonts with empty CSS.
-  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
-  await page.setViewportSize({ width: q.width ?? 1280, height: 900 });
-  const params = new URLSearchParams();
-  if (q.lang) params.set('lang', q.lang);
-  if (q.persona) params.set('persona', q.persona);
-  await page.goto(`/?${params.toString()}#${route}`);
-  await expect(page.locator('h1')).toBeVisible();
-  return errors;
-}
 
 const seg = (page: Page, name: string) => page.locator('main .seg').getByRole('button', { name, exact: true });
 const overflowOf = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

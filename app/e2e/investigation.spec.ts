@@ -1,24 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
+import { LANGS, openRoute, PERSONAS, WIDTHS, type LoadQuery } from './helpers';
 
-const WIDTHS = [320, 375, 768, 1440] as const;
-const LANGS = ['en', 'ar'] as const;
-const PERSONAS = ['owner', 'technical', 'nontechnical'] as const;
-
-async function load(page: Page, q: { lang?: string; persona?: string; width?: number } = {}) {
-  const errors: string[] = [];
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  page.on('pageerror', (e) => errors.push(String(e)));
-  // Offline runs: answer Google Fonts with empty CSS. Aborting instead makes Chromium log ERR_FAILED to the console.
-  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
-  await page.setViewportSize({ width: q.width ?? 1280, height: 900 });
-  const params = new URLSearchParams();
-  if (q.lang) params.set('lang', q.lang);
-  if (q.persona) params.set('persona', q.persona);
-  await page.goto(`/?${params.toString()}#/investigation/INV-DEMO-7`);
-  await expect(page.locator('h1')).toBeVisible();
-  return errors;
-}
+const load = (page: Page, q: LoadQuery = {}) => openRoute(page, '/investigation/INV-DEMO-7', q);
 
 for (const lang of LANGS) {
   for (const width of WIDTHS) {

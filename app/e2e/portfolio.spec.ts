@@ -1,25 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
+import { BANNED, LANGS, openRoute, PERSONAS, WIDTHS, type LoadQuery } from './helpers';
 
-const WIDTHS = [320, 375, 768, 1440] as const;
-const LANGS = ['en', 'ar'] as const;
-const PERSONAS = ['owner', 'technical', 'nontechnical'] as const;
-const BANNED = ['integration-tests', '#DEMO-4471', 'PR #DEMO-88', 'AssertionError', 'example.invalid', 'DEMO-4468', 'DEMO-5120', 'DEMO-311'];
-
-async function load(page: Page, q: { lang?: string; persona?: string; width?: number } = {}) {
-  const errors: string[] = [];
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  page.on('pageerror', (e) => errors.push(String(e)));
-  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
-  await page.setViewportSize({ width: q.width ?? 1280, height: 900 });
-  const params = new URLSearchParams();
-  if (q.lang) params.set('lang', q.lang);
-  if (q.persona) params.set('persona', q.persona);
-  await page.goto(`/?${params.toString()}#/portfolio`);
-  await expect(page.locator('h1')).toBeVisible();
+const load = async (page: Page, q: LoadQuery = {}) => {
+  const errors = await openRoute(page, '/portfolio', q);
   await expect(page.getByTestId('product-RT')).toBeVisible();
   return errors;
-}
+};
 
 for (const lang of LANGS) {
   for (const width of WIDTHS) {
