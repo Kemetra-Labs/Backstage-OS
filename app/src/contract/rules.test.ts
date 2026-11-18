@@ -8,6 +8,7 @@ import {
   isForbiddenControlLabel,
   isInertLink,
   needsDemoMarker,
+  resolveEdgeKind,
   resolveHealth,
   resolveLabel,
   worstFreshness,
@@ -173,6 +174,23 @@ describe('review fixes: counts never show a misleading exact number (M2)', () =>
   });
   it('reads at least N when some sources were not read, even if atLeast is false', () => {
     expect(countDisplay({ value: 2, sourcesRead: 1, sourcesTotal: 3, atLeast: false, basis: [] }).kind).toBe('atLeast');
+  });
+});
+
+describe('resolveEdgeKind: "Declared" needs a read record', () => {
+  it('keeps an authored edge authored when an Observed record behind it was read', () => {
+    expect(resolveEdgeKind({ kind: 'authored', basis: [ref()] })).toBe('authored');
+  });
+  it('shows an authored edge as provisional when its basis was never read or is empty', () => {
+    expect(resolveEdgeKind({ kind: 'authored', basis: [ref({ observation: null })] })).toBe('provisional');
+    expect(resolveEdgeKind({ kind: 'authored', basis: [] })).toBe('provisional');
+  });
+  it('does not accept a hypothesis as the basis of a declared edge', () => {
+    expect(resolveEdgeKind({ kind: 'authored', basis: [ref({ classification: 'hypothesis' })] })).toBe('provisional');
+  });
+  it('never promotes provisional or hypothesis edges', () => {
+    expect(resolveEdgeKind({ kind: 'provisional', basis: [ref()] })).toBe('provisional');
+    expect(resolveEdgeKind({ kind: 'hypothesis', basis: [ref()] })).toBe('hypothesis');
   });
 });
 

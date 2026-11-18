@@ -1,5 +1,5 @@
 // Pure derivations for Project Intelligence (BACK-12). Health always comes from triadOf/resolveHealth, never from here.
-import { freshnessOf } from '../contract/rules';
+import { freshnessOf, resolveEdgeKind } from '../contract/rules';
 import type { Connectivity, DisplayLabel, Environment, Freshness, Lang, Persona, Provider } from '../contract/types';
 import type {
   Attention, ComponentLayer, DeliveryItem, EdgeKind, World, WorldComponent, WorldProject,
@@ -69,7 +69,7 @@ export function mapFor(p: WorldProject, f: Filters): MapModel {
     ...(c.investigationId ? { investigationId: c.investigationId } : {}),
   }));
   const ids = new Set(nodes.map((n) => n.id));
-  const edges = p.edges.filter((e) => ids.has(e.from) && ids.has(e.to)).map((e) => ({ from: e.from, to: e.to, kind: e.kind, basis: e.basis }));
+  const edges = p.edges.filter((e) => ids.has(e.from) && ids.has(e.to)).map((e) => ({ from: e.from, to: e.to, kind: resolveEdgeKind(e), basis: e.basis }));
   return { nodes, edges };
 }
 
@@ -123,8 +123,10 @@ export function risksFor(p: WorldProject): Risks {
     unknown: p.components
       .filter((c) => triadOf(c.state).health === 'unknown')
       .map((c) => ({ id: c.id, name: c.name, reason: unknownReason(c) })),
-    edges: p.edges.flatMap((e) =>
-      e.kind === 'authored' ? [] : [{ from: e.from, to: e.to, fromName: name(e.from), toName: name(e.to), kind: e.kind }]),
+    edges: p.edges.flatMap((e) => {
+      const kind = resolveEdgeKind(e);
+      return kind === 'authored' ? [] : [{ from: e.from, to: e.to, fromName: name(e.from), toName: name(e.to), kind }];
+    }),
     sources: sourceRows(p).filter((s) => !s.current),
   };
 }

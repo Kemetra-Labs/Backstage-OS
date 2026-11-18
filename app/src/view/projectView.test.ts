@@ -89,7 +89,8 @@ describe('sources and risks', () => {
     const r = risksFor(RT);
     expect(r.unknown.map((u) => u.id).sort()).toEqual(['inventory', 'pos', 'reporting', 'stock-sync']);
     expect(r.unknown.find((u) => u.id === 'inventory')?.reason).toBe('stale');
-    expect(r.edges.map((e) => e.kind).sort()).toEqual(['hypothesis', 'provisional']);
+    // The four catalog-declared edges rest on E-7, which was never read (Port unavailable), so they count as provisional.
+    expect(r.edges.map((e) => e.kind).sort()).toEqual(['hypothesis', 'provisional', 'provisional', 'provisional', 'provisional', 'provisional']);
     expect(r.edges.find((e) => e.kind === 'hypothesis')).toMatchObject({ fromName: 'payments', toName: 'inventory' });
     expect(r.sources.map((s) => s.provider).sort()).toEqual(['datadog', 'port', 'sentry']);
   });

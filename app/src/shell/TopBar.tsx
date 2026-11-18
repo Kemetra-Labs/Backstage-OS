@@ -4,6 +4,7 @@ import type { Persona } from '../contract/types';
 import { SOURCES } from '../fixture/inv-demo-7';
 import { SourceChip } from '../components/SourceChip';
 import { Segmented } from '../components/Segmented';
+import { Text } from '../components/Text';
 import { DemoSearch } from './DemoSearch';
 
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];
@@ -43,7 +44,9 @@ export function TopBar({ menuOpen, onMenu }: Props) {
           onChange={setLang}
         />
       </div>
-      <section className="sources" aria-label={copy.sources}>
+      {/* These chips are Retail Tower OS's sources only; the label says so, so they never read as the whole workspace. */}
+      <section className="sources" aria-labelledby="topbar-sources-label">
+        <p id="topbar-sources-label" className="sources-label"><Text s={shell.workspaceSources} /></p>
         <ul>
           {WORKSPACE_SOURCES.map((s) => <SourceChip key={s.provider} source={s} copy={copy} lang={lang} />)}
         </ul>
