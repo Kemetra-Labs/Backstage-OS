@@ -1,28 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
+import { BANNED, LANGS, openRoute, PERSONAS, WIDTHS, type LoadQuery } from './helpers';
 
-const WIDTHS = [320, 375, 768, 1440] as const;
-const LANGS = ['en', 'ar'] as const;
-const PERSONAS = ['owner', 'technical', 'nontechnical'] as const;
 const ROUTES = ['/project/RT', '/project/RT/stock-sync', '/project/RT/inventory', '/project/KH/khepri-api', '/project/SB'] as const;
-const BANNED = ['integration-tests', '#DEMO-4471', 'PR #DEMO-88', 'AssertionError', 'example.invalid', 'DEMO-4468', 'DEMO-5120', 'DEMO-311'];
 
-interface Q { lang?: string; persona?: string; width?: number; route?: string }
+interface Q extends LoadQuery { route?: string }
 
-async function load(page: Page, q: Q = {}) {
-  const errors: string[] = [];
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  page.on('pageerror', (e) => errors.push(String(e)));
-  // Offline runs: answer Google Fonts with empty CSS. Aborting instead makes Chromium log ERR_FAILED to the console.
-  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
-  await page.setViewportSize({ width: q.width ?? 1280, height: 900 });
-  const params = new URLSearchParams();
-  if (q.lang) params.set('lang', q.lang);
-  if (q.persona) params.set('persona', q.persona);
-  await page.goto(`/?${params.toString()}#${q.route ?? '/project/RT'}`);
-  await expect(page.locator('h1')).toBeVisible();
-  return errors;
-}
+const load = (page: Page, q: Q = {}) => openRoute(page, q.route ?? '/project/RT', q);
 
 const overflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 const hashOf = (page: Page) => page.evaluate(() => window.location.hash);

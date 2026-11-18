@@ -2,29 +2,10 @@
 // room. investigation.spec.ts keeps asserting the S1 contract on #/investigation/INV-DEMO-7 and is not touched.
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
+import { BANNED, LANGS, openRoute as load, PERSONAS, WIDTHS } from './helpers';
 
-const WIDTHS = [320, 375, 768, 1440] as const;
-const LANGS = ['en', 'ar'] as const;
-const PERSONAS = ['owner', 'technical', 'nontechnical'] as const;
-const BANNED = ['integration-tests', '#DEMO-4471', 'PR #DEMO-88', 'AssertionError', 'example.invalid', 'DEMO-4468', 'DEMO-5120', 'DEMO-311'];
 const R7 = '/investigation/INV-DEMO-7';
 const R9 = '/investigation/INV-DEMO-9';
-
-interface Q { lang?: string; persona?: string; width?: number }
-
-async function load(page: Page, route: string, q: Q = {}) {
-  const errors: string[] = [];
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  page.on('pageerror', (e) => errors.push(String(e)));
-  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
-  await page.setViewportSize({ width: q.width ?? 1280, height: 900 });
-  const params = new URLSearchParams();
-  if (q.lang) params.set('lang', q.lang);
-  if (q.persona) params.set('persona', q.persona);
-  await page.goto(`/?${params.toString()}#${route}`);
-  await expect(page.locator('h1')).toBeVisible();
-  return errors;
-}
 
 const latinOutsideIsolates = (page: Page) =>
   page.evaluate(() => {
