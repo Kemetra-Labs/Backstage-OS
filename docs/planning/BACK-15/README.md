@@ -61,7 +61,7 @@ That does not move them into v1 scope. The owner still ranks them (section 9, D-
 | Source Observatory / Trust Center | `#/sources` ("Source health, demo only") | `source-observatory` | yes (Sources) | **Candidate P1** | BACK-17 A |
 | Mission Replay / Timeline | — (a Timeline panel inside the Investigation Room) | `mission-replay` | — | **Candidate P1** | BACK-17 B |
 | Agent Flight Deck | `#/agents` ("Agent activity, demo only") | `agent-flight-deck` | yes (Agents) | **Candidate P2** | BACK-17 C |
-| Cross-product Mission Map (constellation) | — | `mission-map` | — | **Candidate** (PROPOSAL: treat it as the spatial view of Portfolio, see §3.A) | BACK-18 |
+| Cross-product Mission Map (constellation) | — | `mission-map` | — | **Candidate**. PROPOSAL: not a new route. At scope `all` it is the spatial view of Portfolio (COMMAND); at a product scope it is Project Intelligence's map (EXPLORE, §3.A) | BACK-18 |
 | Commercial Operations Lens | — | — | — | **Future** (BACK-3; needs contracts and permissions) | BACK-3 |
 | Settings, workspace management, customers | — | — | partly | **Out of scope**. No approved requirement (QA report §1) | — |
 
@@ -124,7 +124,7 @@ One owner per kind of information. Other screens show a summary and link to the 
 
 | Context | V1 today | V2 lab today | Gap | PROPOSAL |
 | --- | --- | --- | --- | --- |
-| Persona | `?persona=` in the search part (`App.tsx` `initial()`), kept across navigation | `persona` in the hash query (`navigation/route.ts`) | The two schemes do not read each other. The V2→V1 link drops it | One scheme: keep V1's `?persona=&lang=` in the search part for both, since it already survives hash navigation |
+| Persona | `?persona=` in the search part (`App.tsx` `initial()`), kept across navigation | `persona` in the hash query (`navigation/route.ts`); `parseRoute` also seeds it from `?persona=` in the search part, and the hash wins | V2 reads V1's search-part seed, but V1 does not read V2's hash query, and the V2→V1 link (`v1Links()`) is a bare `/` that drops it | One scheme: keep V1's `?persona=&lang=` in the search part for both, since it already survives hash navigation |
 | Language | `?lang=` in the search part | `lang` in the hash query | Same as persona | Same as persona |
 | Selected project | In the path (`#/project/RT`) only. Not carried to Investigation, Evidence or Decisions | `scope` in the hash | V1 forgets the project when you leave Project Intelligence. The breadcrumb rebuilds it from the case's `projectId` | Derive the project from the case, as V1 already does, and add `?project=` only on list screens that filter by it |
 | Selected component or node | Path segment (`#/project/RT/stock-sync`) | `node` in the hash | Both persist it on their own screen only | Keep it local to the map. It is not cross-screen context |
@@ -168,12 +168,24 @@ links in the app point to `example.invalid` and are inert.
 | Home | "Retail Tower: one check failing, impact unknown." Opens the case | Same item, plus check and run ids | Plain-language item, with no run, job or PR ids |
 | Project | Component state only | Edge classification and evidence ids on `stock-sync` | Summary card. The map is optional, with the table first |
 | Investigation | Words-only confidence (D-6) | Full ledger, raw output (E-1) | Summarized read-only room with redaction (D-5) |
-| Evidence | Restricted records show "restricted" (E-12) | All records the persona may see | Same restriction rules as Owner |
+| Evidence | E-5 (Sentry errors on inventory, `visibility: 'technical'`) reads "restricted" | E-5 shown, marked stale | Same restriction rules as Owner |
 | Decision | "Hold release RT 2.14-rc …?" | "Hold RT 2.14-rc pending integration-tests (stock-sync) with fixture reverted?" | "Should the planned release wait for a re-check?" |
 
-Arabic: the same frames with `dir="rtl"`. Ids, versions and times stay in `<bdi dir="ltr">`, and digits are Latin
+Arabic: the same frames with `dir="rtl"`, using the Arabic copy that already exists in the fixture. For example, the
+Decision step reads, per persona (`world.ts`, `DEC-DEMO-3`):
+
+| Persona | Arabic title (FACT, from the fixture) |
+| --- | --- |
+| Owner | تعليق الإصدار ‎RT 2.14-rc‎ حتى يُعاد التحقق من الفحص الفاشل؟ |
+| Technical | تعليق ‎RT 2.14-rc‎ بانتظار ‎integration-tests (stock-sync)‎ مع إرجاع بيانات الاختبار؟ |
+| Nontechnical | هل ينتظر الإصدار المخطط إعادة فحص؟ |
+
+Ids, versions and times stay in `<bdi dir="ltr">` (the fixture marks them with `{braces}`), and digits are Latin
 0–9 (D-3). The V1 rule is enforced by `e2e/flow.spec.ts` ("no Latin text outside an LTR isolate in Arabic"). The
 dependency map keeps left-to-right geometry in Arabic, and the text inside nodes follows the language (BACK-12).
+Keyboard in that map (PROPOSAL): because the geometry is not mirrored, Left and Right arrows move by screen
+direction in both languages. They do not swap in Arabic. Tabs and option columns, which do mirror, swap Left and
+Right in Arabic, as V2 tabs already do (`comparison.md` A2). Current map behaviour in Arabic is **NOT VERIFIED**.
 
 Screenshots that already show this story (FACT, files exist):
 
@@ -206,12 +218,14 @@ Job: show **where** the failure sits and what touches it before saying why.
 ```
 ┌ Mission Map · scope: Retail Tower OS ───────────────────────────── [Demo data] ┐
 │                                                                                 │
-│   pos-client ── api-gateway ══ stock-sync ⚠ ── inventory ── reporting           │
-│                    (observed)   CI check failing   (stale)    (not configured)  │
-│                               ╲                                                 │
-│                                payments (degraded, stale)                       │
+│   pos-client ── api-gateway ── stock-sync ⚠ ── inventory ·· reporting           │
+│   (not config.)  (healthy,     CI check failing  (stale)   (not configured)     │
+│                   current)  ╲                    ┆                              │
+│                              payments ┄┄┄┄┄┄┄┄┄┄┘                               │
+│                              (degraded, stale)                                  │
 │                                                                                 │
-│  Legend: ══ observed  ── correlated  ┄┄ hypothesis  ·· unknown                  │
+│  Legend: ── authored (basis E-7, Port catalog, not read)                        │
+│          ·· provisional (no basis)   ┄┄ hypothesis (no basis)                   │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │ Inspector (ledger): stock-sync                                                  │
 │  Connectivity: not configured · Freshness: unknown · Health: unknown            │
@@ -222,6 +236,11 @@ Job: show **where** the failure sits and what touches it before saying why.
 
 - The scene is the map. The ledger is the inspector. Selecting a node fills the ledger, and nothing else on the page
   moves.
+- Nodes and edges are drawn from the V1 fixture (`world.ts`, RT edges): four authored edges whose basis (E-7, the
+  Port catalog) is unavailable, one provisional edge and one hypothesis edge. The map uses V1's edge vocabulary
+  (authored, provisional, hypothesis; `DepGraph.tsx`). It never promotes an authored link to "observed". The V2 lab's
+  map uses a different vocabulary (observed, correlated, hypothesis, unknown) and a smaller node set. Choosing one
+  vocabulary is part of D-15.5.
 - Health is shown on a node only when evidence backs it (`resolveHealth`). Most nodes read "unknown" or "stale", and
   that is correct.
 - Accessible alternative: the existing `DepTable`. Under 640 px the table is the default (V2 already does this).
@@ -310,9 +329,10 @@ V1's gold-on-navy set in `app/src/styles/tokens.css` (copied from `css/app.css`)
 cyan on teal-navy, in `app/src/design-lab/v2/styles/tokens.css`. BACK-18's "adopt V2 as the visual base" is labelled
 "assistant's judgement, to be confirmed".
 
-So this document does **not** pick a token set. It defines the signature as **semantic roles** that either set can
-fill, shows how each set fills them today, and leaves the choice to the owner (D-15.1). BACK-18 cannot start until
-that choice is made.
+So this document does **not** reopen the token-set choice. Until the owner rules otherwise, C2 means the V1 tokens.
+The proposal to move to V2 lives in BACK-18, and BACK-18 cannot start stage 1 until the owner rules on it there. This
+section defines the signature as **semantic roles** that either set can fill, and shows how each set fills them today,
+so the signature holds whichever way BACK-18 goes.
 
 ### 4.2 Semantic roles (PROPOSAL)
 
@@ -322,30 +342,36 @@ that choice is made.
 | Ink | Three levels, each at least 4.5:1 on the panel | `--ink`, `--ink-2`, `--muted` | `--kv2-ink`, `--kv2-ink-2`, `--kv2-muted` |
 | **Structure accent** | Selection, focus, current page. Never a state | Gold `--gold #DDAA57` | Cyan `--kv2-cyan #2de2ec` |
 | **Attention** | A state that needs a human: failing, stale, degraded, evidence gap | Amber `--amber` | Amber `--kv2-amber` |
-| **Truth hues** | Observed, Correlated, Hypothesis, Proposed; each also carries a shape or icon | green, blue, amber (dashed), violet | green, blue, amber (bulb icon), violet |
-| Unknown | Neutral grey, never green | `--unk #9AA7B8` | muted ink plus a question-mark icon |
+| **Truth hues** | Observed, Correlated, Hypothesis, Proposed; each also carries a shape or icon | green, blue (dashed), amber (dashed + 3 px start border), violet | green, blue, amber (dashed + bulb icon), violet (dotted) |
+| Unknown | Neutral grey, never green | `--unk #9AA7B8` | `--kv2-unk` plus a question-mark icon |
 | Unavailable | Red, for a connector that cannot be read | coral `--coral` | red |
 
 ### 4.3 A rule to settle: amber means two things
 
 FACT: in both sets the hypothesis hue is the same amber as the attention states.
 
-- V1 sets `--hyp: var(--amber)`. It also uses `--amber` for stale freshness and degraded health
-  (`components.css` lines 58, 61, 99). V1 separates them by shape only: hypothesis is a dashed border
-  (`app.css` line 133).
-- V2 styles a hypothesis chip and a warning chip with the **same rule**
-  (`design-lab/v2/styles/base.css` line 135). They differ only by icon.
+- V1 sets `--hyp: var(--amber)`. It also uses `--amber` for stale freshness, degraded health and the medium-severity
+  chip (`components.css` lines 40, 58, 61, 99).
+  - The hypothesis chip is dashed with a 3 px start border (`app.css` line 133).
+  - But dashed is not unique to it: the correlated chip is dashed too (`app.css` line 132), and the medium-severity
+    chip is **amber and dashed** (`components.css` line 40).
+  - Only the 3 px start border, and the word, tell a hypothesis from a medium-severity mark.
+- V2 gives the hypothesis chip and the warning chip the same colour rule (`design-lab/v2/styles/base.css` line 135).
+  The hypothesis chip adds a dashed border (line 136) and a bulb icon.
 
-Risk: a hypothesis label (a normal, expected part of an investigation) can read as an alarm. A stale source can read
-as a guess.
+Risk: a hypothesis label (a normal, expected part of an investigation) can read as an alarm. A stale source or a
+medium-severity item can read as a guess.
 
 PROPOSAL (D-15.2), any of:
 
 - (a) Keep amber for attention only and give hypothesis its own hue.
-- (b) Keep the shared hue, but require the dashed shape and the word on every hypothesis mark, and test it.
+- (b) Keep the shared hue, and make one cue unique to hypothesis in both sets: for example the 3 px start border plus
+  the word, with dashed removed from medium severity. Test it.
 - (c) Accept the overlap as is.
 
-Recommendation: **(b)**. It changes no token, and V1 already does most of it.
+Recommendation: **(a)**. Shape cues are already overloaded (dashed means three things in V1), and a distinct hue is
+the only cue that survives a small chip at a glance. It is one new semantic token per set, and it needs its own
+contrast check.
 
 ### 4.4 Scene and ledger (PROPOSAL, builds on Blueprint v4 §6b)
 
@@ -358,8 +384,8 @@ Recommendation: **(b)**. It changes no token, and V1 already does most of it.
 
 ### 4.5 Typography (FACT for today, PROPOSAL for the rule)
 
-- Both sets use a local stack: Inter, then Cairo for Arabic, then system fonts. Ids use a monospaced face (V1
-  `--f-mono`). There are no third-party font requests.
+- Both sets use a local stack with Inter first for English and a Cairo-first stack for Arabic (V1 `--f-ar`, V2
+  `--kv2-f-ar`). Ids use a monospaced face (V1 `--f-mono`). There are no third-party font requests.
 - BACK-18 stage 1 proposes self-hosting a geometric sans. PROPOSAL rule: whatever face is chosen, it is self-hosted,
   has an Arabic pair with matching x-height (Cairo today), uses tabular numerals for times and counts, and keeps ids
   in mono.
@@ -397,7 +423,7 @@ Acceptance item 1 asks the proposals to separate four things. For each, the rule
 | **Demo data** | Nothing may be presented as live (`CLAUDE.md`) | A "Demo data" marker on every V1 route (checked by `flow.spec.ts`). V2 has `.kv2-demo`. Inert `example.invalid` links | The marker sits in the scene header of every treatment, so a cropped screenshot still shows it |
 | **Observed evidence** | Truth labels from `src/contract/rules.ts` (`resolveLabel`) | Label chips with shape and colour; source, time and evidence id on each row | Scene marks are tied to ledger rows (§4.4), so no scene mark exists without a labelled row |
 | **Unknown** | Unknown is never Healthy (`resolveHealth`); three independent axes; no composite score | `HealthTriad` (V1), source rows and pins (V2). "Health unknown", "Stale", "Not configured" | Gaps are drawn as gaps (§3.B). Impact reads "Unknown, not evidenced" until evidence exists |
-| **Actual permissions** | Persona switching is **presentation only**. Real redaction must be server-side (ADR-03, a G2 item, BACK-7) | Restricted records say "restricted" (E-12 for Owner). Nontechnical sees no run, PR or job ids | Every treatment labels the persona switch "Preview as …" and says it does not grant access. No screen claims that hiding a field is a permission |
+| **Actual permissions** | Persona switching is **presentation only**. Real redaction must be server-side (ADR-03, a G2 item, BACK-7) | Restricted records say "restricted" (E-5 in the story, E-12 elsewhere, for Owner). Nontechnical sees no run, PR or job ids | Every treatment labels the persona switch "Preview as …" and says it does not grant access. No screen claims that hiding a field is a permission |
 
 ---
 
@@ -413,8 +439,8 @@ One plan for all screens and treatments. "Today" is FACT from the QA report and 
 | Focus management | Drawer traps focus and returns it to the opener | V1 trap cycles focus itself (WebKit fix, QA §5) | Same test for any new drawer or overlay |
 | 200% zoom | Content reflows with no loss at 1280 px × 200% (equivalent to 640 px) | **NOT VERIFIED.** QA report: "320 px layouts pass, which approximates 640 px at 200%" | Manual pass in Chromium at 200% on Home, Project, Investigation, Decision. Playwright `deviceScaleFactor` does not test browser zoom, so this stays manual |
 | Touch | 44 × 44 px minimum for controls | V1 buttons, `.btn` links and breadcrumbs tested at 375 px. V2 every visible control at 375 px | Keep |
-| Reduced motion | No running animation | V2 asserted; V1 has the CSS block | Add a V1 assertion like V2's |
-| Contrast | Text at least 4.5:1 | Computed from tokens (V1 min 5.23:1, V2 min 4.9:1). Not measured on rendered pixels | One rendered-pixel check per token set before BACK-18 merges |
+| Reduced motion | No running animation | Both asserted: V1 `e2e/investigation.spec.ts` (drawer), V2 every screen | Extend the V1 assertion to every route, and add it for any new scene |
+| Contrast | Text at least 4.5:1 | Computed from tokens, not measured on rendered pixels: prototype token pairs min 5.23:1 (BACK-5 comment 17281), V2 min 4.9:1 (`comparison.md` A2) | One rendered-pixel check per token set before BACK-18 merges |
 | EN/AR RTL | `dir="rtl"`, Latin digits, ids in `<bdi dir="ltr">`, topology not mirrored | Both suites check "no Latin run outside an isolate" | Keep. **NOT VERIFIED:** native-speaker review of Arabic copy (V2 comparison A3) |
 | Screen readers | Landmarks, one h1, valid heading order, labelled scenes with a text twin | Headings checked by `flow.spec.ts`. NVDA, VoiceOver and TalkBack **NOT RUN** | One NVDA pass on the five-step chain before any owner sign-off on accessibility |
 | Real browsers and devices | Chromium, WebKit, Firefox; one iOS and one Android device | Chromium and WebKit in CI (root suite plus `app/`). Firefox **NOT RUN**. BrowserStack **NOT RUN** (BACK-4, BACK-8) | `npm run test:browserstack` (small run, credentials from the environment only) |
@@ -427,9 +453,13 @@ Gaps point at existing tickets. **No new tickets are proposed.** Jira was not ch
 
 | Gap | Where it belongs | Depends on |
 | --- | --- | --- |
-| Token set that carries C2 forward (V1 gold or V2 cyan) is not chosen | BACK-18 (cannot start stage 1 without it) | Owner D-15.1 |
+| Token set that carries C2 forward (V1 gold or V2 cyan) is not chosen | BACK-18 (cannot start stage 1 without the owner's ruling there) | Owner, in BACK-18 |
 | Amber overload between hypothesis and attention | BACK-18 stage 1 (tokens) | Owner D-15.2 |
-| Persona and language URL schemes differ between V1 and V2; the V2→V1 link drops context | BACK-18 if V2 becomes the base, otherwise none | D-15.1 |
+| Persona and language URL schemes differ between V1 and V2; the V2→V1 link drops context | BACK-18 if V2 becomes the base, otherwise none | Owner, in BACK-18 |
+| Treatment 3.A changes the BACK-12 Project map: it shows edge bases and uses one edge vocabulary | BACK-12 (Done); a later approved slice | D-15.3, D-15.5 |
+| Treatment 3.B changes the BACK-6/BACK-8 Investigation Room: stage strip replaces the timeline panel, one evidence list | BACK-6, BACK-8; a later approved slice | D-15.3 |
+| Treatment 3.C changes the BACK-13 Decision detail: options as equal columns with "rests on" evidence | BACK-13 (Done); a later approved slice | D-15.3 |
+| Portfolio's attention list becomes a link to Home (§2.3) | BACK-11 (Done); a later approved slice | D-15.5 |
 | V1 does not persist the open evidence or timeline position (`?ev=`, `evt`) | Follow-up on the BACK-10 shell (Done). Raise in BACK-18 or a later approved slice | D-15.5 |
 | `from=` return path exists only on Evidence | Same as above | D-15.5 |
 | Investigation Room is about 3700 px, with evidence shown three times | Treatment 3.B; BACK-8 visual QA | D-15.3 |
@@ -454,7 +484,7 @@ The hard rules in `CLAUDE.md`, checked against what exists and what this documen
 | Unknown is never Healthy (static prototype) | BACK-5 comment 17261 recorded that some INV-418 nodes in the static prototype show "Healthy" with no evidence, and that `S.src` is a single axis with no "not configured" state | **Recorded in BACK-5, not re-verified here.** The static prototype is out of scope for this ticket |
 | Demo data never shown as live | Holds: demo marker and inert links. Risk: a "cinematic" treatment (glow, live-looking pulses, a playing replay) can look live in a cropped screenshot | Mitigated by §4.6 and §5 (marker in the scene header) |
 | No customer data, secrets, backend or MCP connection | Nothing proposed adds any | Holds |
-| No commit, push, PR or merge without explicit approval | BACK-15's own text says "No … commits/push/PR/merge". The PR for this document was authorized by the owner in chat and relayed by the parent session. That approval overrides the ticket text for this docs-only change. It is stated in the PR body | **Process conflict, resolved by owner approval** |
+| No commit, push, PR or merge without explicit approval | BACK-15's own text says "No … commits/push/PR/merge". The commit and PR for this document rest on an owner approval given in chat and relayed by the session that started this work. It is not recorded in Jira | **Process conflict.** The owner should confirm it on the PR or in BACK-15 |
 | Script order in `index.html` | Not touched | n/a |
 
 ---
@@ -466,14 +496,15 @@ Each accepted concept still needs its own approved mock-only slice (BACK-15 acce
 
 | # | Decision | Options | Recommendation | Unblocks |
 | --- | --- | --- | --- | --- |
-| D-15.1 | Which token set carries C2 forward | (a) V1 gold-on-navy; (b) V2 cyan-on-teal; (c) defer | **No recommendation from this ticket.** It is the visual-direction call BACK-15 must not reopen. BACK-18 holds the assistant's earlier view (b) | BACK-18 |
-| D-15.2 | Amber overlap between hypothesis and attention (§4.3) | (a) separate hue; (b) shared hue + mandatory dashed shape and word, tested; (c) accept | (b) | BACK-18 stage 1 |
-| D-15.3 | The three treatments (§3) | Each: accept as target / revise / reject | 3.B accept (lowest risk, fixes the long room). 3.C accept. 3.A revise: it is the Project screen's map, not a new route | BACK-17, BACK-18 |
+| D-15.1 | Storyboard sufficiency (acceptance 4) | (a) The text wireframes in §3, plus the linked screenshots of the current builds, are enough to rank concepts; (b) render the accepted treatments as static mock frames first | (a) for ranking; (b) only for treatments the owner accepts | BACK-17 |
+| D-15.2 | Amber overlap between hypothesis and attention (§4.3) | (a) separate hue; (b) shared hue + one cue unique to hypothesis, tested; (c) accept | (a) | BACK-18 stage 1 |
+| D-15.3 | The three treatments (§3) | Each: accept as target / revise / reject | 3.B accept (lowest risk, fixes the long room). 3.C accept. 3.A revise: at product scope it is the Project screen's map, not a new route; the cross-product scope stays the spatial view of Portfolio (§1.1) | BACK-17, BACK-18 |
 | D-15.4 | Candidate surfaces (§1) | Each: build mock now / keep for later / reject; and standalone route vs panel | Observatory: **build mock now**, as a route (it answers a question no approved screen answers). Replay: **panel** inside Investigation (3.B). Flight Deck: **keep for later** (no facts of its own before G3). Command Home: keep as the landing page, de-duplicated from Portfolio | BACK-17 |
-| D-15.5 | Navigation lenses and context (§2) | Accept / revise: the lens grouping in the shell, the ownership table, one URL scheme, `?ev=` and extended `from=` | Accept | A later approved shell slice |
+| D-15.5 | Navigation lenses and context (§2) | Accept / revise: the lens grouping in the shell, the ownership table, one URL scheme, `?ev=` and extended `from=`, one edge vocabulary for maps | Accept | A later approved shell slice |
 | D-15.6 | Accessibility verification before sign-off (§6) | Which NOT VERIFIED items must pass before the owner signs off a treatment | 200% zoom and one NVDA pass on the five-step chain; BrowserStack stays BACK-8 | BACK-8 |
 
-Not asked here, because they are already open elsewhere: Hallmark caps waivers, horizon asset (image vs WebGL),
+Not asked here, because they are already open elsewhere: which token set carries C2 forward (V1 gold or V2 cyan;
+BACK-18, and BACK-15 must not reopen it), Hallmark caps waivers, horizon asset (image vs WebGL),
 `e2e:v2` in CI (all BACK-18); identity provider and server-side redaction (BACK-7, BACK-16).
 
 ---
