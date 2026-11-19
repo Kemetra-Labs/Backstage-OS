@@ -96,3 +96,60 @@ cd app && npm ci --ignore-scripts && npm run dev      # http://127.0.0.1:4178
 ```
 
 In the page: the Owner / Technical / Nontechnical and EN / عربي buttons switch state. The in-page audit scripts were not saved to the repo.
+
+---
+
+## 7. Re-check at `dabf523` (2026-11-19, owner-approved QA slice)
+
+Sections 1–6 above were measured at `288d6a8`, before the shared shell (`AppShell`, `TopBar`, `Sidebar`, `DemoSearch`) and four later merges (#7, #8, #14, #17) changed `app/src` by +1,071 / −53 lines. They are **historical** for the current app. This section is the current record for the S1 room `#/investigation/INV-DEMO-7`.
+Status: **evidence record only.** No source, test, config or workflow file was changed; nothing was installed. Not the owner's visual sign-off.
+
+### 7.1 How the checks ran, and their limits
+
+- **Unit tests:** `cd app && npx vitest run --coverage` → 25 files, **380 passed**, 99.95 % lines, 97.08 % branches. `tsc` and the Playwright e2e suite were **not run** (they need root `node_modules`, which is absent and was not installed).
+- **Server:** `npx vite --host 127.0.0.1 --port 4178` from `app/`.
+- **Browser:** headless **Microsoft Edge 157.0.4341.60** (Chromium) on Windows 11, driven over the DevTools protocol by a one-off script kept outside the repo. The cached Playwright Chromium (`chromium-1255`) failed to start ("side-by-side configuration is incorrect"), so the OS-installed Edge was used with a throwaway profile. Not a real device, not Safari, not Firefox.
+- **Real key events:** keyboard checks used `Input.dispatchKeyEvent` (Tab, Shift+Tab, Enter, Escape), not `element.focus()` loops.
+- **Matrix:** EN and AR × Owner / Technical / Nontechnical × 320 / 375 / 768 / 1440 px = 24 states, `deviceScaleFactor` 1, Google Fonts blocked (V1 fonts are not self-hosted; rendering depends on locally installed fonts).
+- **Reduced motion:** emulated with `Emulation.setEmulatedMedia` (`prefers-reduced-motion: reduce`).
+- **200 % zoom:** emulated as the layout a 200 % browser zoom produces: 640 and 720 CSS px wide at device scale 2 (= 1280 / 1440 px windows at 200 %). Not the browser's own zoom control.
+- **Contrast:** computed colours, ancestor opacity multiplied, composited over the nearest opaque background. Up to 3 text nodes per state sit on a gradient and were measured against its base colour only.
+- **Visual spot-check:** the Claude desktop browser pane (skip link at 375 px AR; project-context navigation; 640 px source strip).
+- **Screenshots:** [`docs/qa/BACK-8/2026-11-19/`](BACK-8/2026-11-19/), full-page JPEG from the same Edge run.
+- **Console:** 0 errors and 0 uncaught exceptions across every load.
+
+### 7.2 Results
+
+Result values as in §2. "Re-check" rows repeat a §2 check on the new shell.
+
+| # | Check | WCAG | Result | Scope actually covered / evidence |
+| --- | --- | --- | --- | --- |
+| 7.1 | Parity with the five C2 reference images | — | **BLOCKED** | Unchanged from §3. `docs/design-lab/v2/reference/*.webp` are four V2-lab references, **not** the C2 set, and were not used |
+| 7.2 | No horizontal overflow (re-check) | 1.4.10 | **Pass** | `scrollWidth − clientWidth = 0` in all 24 states |
+| 7.3 | One `h1`, no skipped heading level, landmarks (re-check) | 1.3.1 | **Pass** | 24/24: one `h1`, 0 skips; `header` 1, `nav` 2, `main` 1, `footer` 1; 2 `aria-live` regions. The search field is named by its `<label>` ("Search demo data") |
+| 7.4 | Touch target ≥ 44 px (re-check) | 2.5.5 (AAA); BACK-8 item 3 | **Fail (finding F-1)** | All controls ≥ 44 × 44 **except the new `Kawalys` brand link, 66 × 27 px at every width** incl. 320 and 375. At 1440 px two breadcrumb links are 24 px high (desktop; meets 2.5.8 AA 24 px) |
+| 7.5 | Text contrast (re-check) | 1.4.3 | **Pass** (computed) | 0 failures in 24 states; lowest **5.71 : 1** |
+| 7.6 | Non-text contrast | 1.4.11 | **Partly (finding F-2)** | Dashed stage-map links: `2px dashed rgba(154,167,184,.4)` ≈ **2.18 : 1** on the page. They carry meaning ("Dashed lines are not verified") but are `aria-hidden`, and node text says the same thing, so whether 1.4.11 applies is a design judgement. Quiet buttons have a 1.77 : 1 border, but their text identifies them (not required by 1.4.11). Pressed segment fill and the gold focus ring are high contrast |
+| 7.7 | RTL: `dir`, isolates, digits (re-check) | 1.3.2 | **Pass** | AR 12/12 states: `dir=rtl`, 0 Latin runs outside an LTR isolate, 0 Arabic-Indic digits anywhere |
+| 7.8 | Arabic customer-impact wording (was not run) | — | **Pass (read)** | Owner/Technical: "أثر العملاء: مجهول، لا دليل عليه. فشل فحص CI على main لا يدل على أثر في التشغيل أو على العملاء." Nontechnical: "…لا شيء يدل على تأثر العملاء أو المتاجر." No "healthy" / "سليم" in any of the 24 states. Not reviewed by a native speaker |
+| 7.9 | Keyboard order and visible focus, EN + AR, 1440 + 375 (re-check incl. new shell) | 2.1.1, 2.4.3, 2.4.7 | **Pass** | Real Tab sweeps: 39 stops at 1440, 31 at 375. Every stop `:focus-visible`, has an outline, and is on screen. Fresh load: first stop is the skip link, which becomes visible at 375 px AR (pane spot-check). Order: skip → brand → search → persona (3) → language (2) → sidebar (1440 only) / menu (375) → source strip → breadcrumbs → evidence → … |
+| 7.10 | Evidence drawer, EN, 1440 + 375 (re-check) | 2.1.2, 2.4.3 | **Pass** | Enter opens `role=dialog aria-modal=true`; `#root` gets `inert`; focus on Close; 6 Tab + 3 Shift+Tab stay inside, all focus-visible; Esc closes, `inert` removed, focus returns to "Open evidence E-1". Panel fully on screen (1440: x 920–1440; 375: x 0–375) |
+| 7.11 | Evidence drawer, **AR**, 1440 + 375 (was not run) | 2.1.2, 2.4.3 | **Pass** | Same as 7.10 with `dir=rtl`, `drawer-in-rtl` animation, panel on the left (x 0–520 at 1440, 0–375 at 375); focus returns to "عرض الدليل E-1" |
+| 7.12 | Reduced motion (was Partly) | 2.3.3 (AAA) | **Pass** (emulated) | Drawer open without emulation: 1 running animation (`drawer-in` / `drawer-in-rtl`, 0.22 s). With `prefers-reduced-motion: reduce`: **0 running animations**, `animation-name: none`, EN and AR |
+| 7.13 | 200 % zoom / reflow (was Partly) | 1.4.4, 1.4.10 | **Partly (finding F-3)** | 640 and 720 CSS px at scale 2, EN + AR: page `overflowX = 0`, no clipped text. But the header **source strip** (`overflow-x: auto`) is 928 px wide in a 608 px box, so Datadog / Port status (the not-set-up / unavailable sources) is off-screen until scrolled. It is a Tab stop in Chromium (focusable scroller); not checked in Safari |
+| 7.14 | Restricted evidence display (Owner, Nontechnical) | — | **Observed; owner decision** | E-5 row shows "Restricted to Technical" twice plus the button text **"Open evidence E-5"**, and `data-evidence="E-5"`. Technical: no restricted row. Whether the id and count may be shown is the open M05-D05-B decision (preflight §D); not judged here |
+| 7.15 | Project context across navigation | — | **Observed** | Room breadcrumb links to `#/project/RT/stock-sync` (component kept); Explorer back link `#/investigation/INV-DEMO-7`; `?persona=&lang=` kept on every hash link. The Sidebar's "Project Intelligence" and "Investigation Room" are fixed to `RT` / `INV-DEMO-7`. Portfolio product filter (Khepri) resets to "All products" after Sources → Back (local state, not in the URL) |
+| 7.16 | Screen readers | 4.1.2 | **NOT VERIFIED** | No assistive technology used |
+| 7.17 | BrowserStack / real devices, Safari, Firefox | — | **NOT VERIFIED** | `browserstack.yml` targets the static prototype, not `app/` |
+| 7.18 | Playwright e2e, `tsc` | — | **NOT RUN** | Needs root `npm ci` (not approved in this slice) |
+
+### 7.3 Findings for separate approval (nothing patched)
+
+- **F-1 (BACK-8 item 3):** the brand link `a.brand` ("Kawalys", `app/src/shell/TopBar.tsx`) is 66 × 27 px at 320 and 375 px, under the 44 px mobile minimum. Introduced with the shared shell after `288d6a8`.
+- **F-2 (1.4.11, judgement):** dashed stage-map links at ≈ 2.18 : 1 (`rgba(154,167,184,.4)`). Decide whether the line style must be perceivable on its own or whether the node text is the accessible equivalent.
+- **F-3 (1.4.10 / "Unknown is never Healthy" visibility, judgement):** at 200 % zoom and narrow widths the header source strip scrolls sideways, and the unknown / not-set-up sources sit past the visible edge.
+- **Observations, not defects:** restricted id/count display (7.14) awaits the M05-D05-B decision; the Portfolio filter and the fixed sidebar targets (7.15) are local-state design choices for the owner to confirm.
+
+### 7.4 Screenshots (`docs/qa/BACK-8/2026-11-19/`)
+
+`room-en-owner-1440`, `room-ar-owner-375`, `room-ar-technical-320`, `room-en-nontechnical-375`, `drawer-en-owner-1440`, `drawer-ar-owner-375`, `zoom200-en-owner-640css`, `zoom200-ar-owner-640css` (JPEG, full page, Edge 157 headless). Full-page capture draws the fixed drawer at the top of the image.
