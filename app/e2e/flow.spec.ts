@@ -1,7 +1,10 @@
 // Cross-screen checks owned by the lead: every route × persona × language obeys the S1 rules, and the one synthetic
 // story can be walked end to end: Home → Portfolio → Project → Investigation → Evidence → Decision.
 import { expect, test, type Page } from '@playwright/test';
-import { isForbiddenControlLabel } from '../src/contract/rules';
+import { freshnessOf, isForbiddenControlLabel } from '../src/contract/rules';
+import { SOURCES } from '../src/fixture/inv-demo-7';
+import { formatAge } from '../src/i18n/segments';
+import { COPY } from '../src/i18n/strings';
 
 const ROUTES = [
   '#/', '#/portfolio', '#/project/RT', '#/project/RT/stock-sync', '#/project/KH', '#/project/SB',
@@ -73,6 +76,106 @@ for (const route of ROUTES) {
         .filter(({ r }) => r.width > 0 && (r.height < 44 || r.width < 44)).map(({ t }) => t));
     expect(small).toEqual([]);
   });
+}
+
+for (const lang of LANGS) {
+  const copy = COPY[lang];
+  const cases = [
+    ...PERSONAS.map((persona) => ({ route: '#/investigation/INV-DEMO-7', persona })),
+    { route: '#/', persona: 'owner' },
+  ];
+  for (const { route, persona } of cases) {
+    for (const width of [320, 375, 640, 720, 768, 1440]) {
+      test(`F-3 source strip ${route} ${lang}/${persona} @${width}`, async ({ page, browserName }) => {
+        await open(page, route, { lang, persona, width });
+        await expect(page.locator('html')).toHaveAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+        const strip = page.getByRole('banner').getByRole('region');
+        await expect(strip).toHaveAccessibleName(/Retail Tower/);
+        const list = strip.locator('ul');
+        const chips = list.locator('li');
+        const sources = Object.values(SOURCES);
+        await expect(chips).toHaveCount(sources.length);
+
+        for (const [index, source] of sources.entries()) {
+          const chip = chips.nth(index);
+          const name = chip.locator('.source-name');
+          await expect(chip).toHaveAttribute('data-provider', source.provider);
+          await expect(name).toHaveText(copy.provider[source.provider]);
+          await expect(name).toHaveAttribute('dir', 'ltr');
+          await expect(chip.locator('[data-dim="connectivity"]')).toHaveText(copy.connectivity[source.connectivity]);
+          const freshness = chip.locator('[data-dim="freshness"]');
+          if (source.connectivity === 'not_configured') {
+            await expect(freshness).toHaveCount(0);
+          } else {
+            const state = freshnessOf(source);
+            const age = state !== 'current' && source.ageMinutes !== null ? ` · ${formatAge(source.ageMinutes, lang)}` : '';
+            await expect(freshness).toHaveText(copy.freshness[state] + age);
+          }
+        }
+
+        await page.evaluate(() => document.fonts.ready.then(() => undefined));
+        const layout = await list.evaluate((element) => {
+          const viewport = document.documentElement;
+          const bounds = element.getBoundingClientRect();
+          const within = (inner: DOMRect, outer: DOMRect) =>
+            inner.width > 0 && inner.height > 0 && inner.left >= outer.left - 0.5 &&
+            inner.right <= outer.right + 0.5 && inner.top >= outer.top - 0.5 && inner.bottom <= outer.bottom + 0.5;
+          const items = Array.from(element.children, (chip) => {
+            const box = chip.getBoundingClientRect();
+            return {
+              name: chip.getAttribute('data-provider'),
+              left: box.left,
+              right: box.right,
+              top: box.top,
+              visible: within(box, bounds) && box.left >= 0 && box.right <= viewport.clientWidth &&
+                box.top >= 0 && box.bottom <= viewport.clientHeight && chip.checkVisibility({ visibilityProperty: true }),
+              labelsVisible: Array.from(chip.children).every((label) => {
+                const range = document.createRange();
+                range.selectNodeContents(label);
+                const lines = Array.from(range.getClientRects());
+                return label.checkVisibility({ visibilityProperty: true, opacityProperty: true }) &&
+                  lines.length > 0 && lines.every((line) => within(line, box) && within(line, label.getBoundingClientRect()));
+              }),
+            };
+          });
+          return {
+            items,
+            stripOverflow: element.scrollWidth - element.clientWidth,
+            pageOverflow: viewport.scrollWidth - viewport.clientWidth,
+          };
+        });
+        expect(layout.stripOverflow, 'source strip horizontal overflow').toBe(0);
+        expect(layout.pageOverflow, 'page horizontal overflow').toBe(0);
+        for (const [index, item] of layout.items.entries()) {
+          expect(item.visible && item.labelsVisible, `${item.name} and all its labels fit`).toBe(true);
+          const previous = layout.items[index - 1];
+          if (!previous) continue;
+          if (width === 1440) expect(item.top).toBeCloseTo(previous.top);
+          if (item.top === previous.top) {
+            const gap = lang === 'ar' ? previous.left - item.right : item.left - previous.right;
+            expect(gap, `${item.name} follows ${previous.name} in the reading direction`).toBeGreaterThan(0);
+          } else {
+            expect(item.top, `${item.name} flows to the next row`).toBeGreaterThan(previous.top);
+          }
+        }
+
+        // Chromium can put a horizontal scroller in the tab order even without a tabindex attribute.
+        await expect(strip.locator('[tabindex], a[href], button, input')).toHaveCount(0);
+        const lastSwitch = page.getByRole('banner').getByRole('button', { name: 'عربي' });
+        await lastSwitch.focus();
+        await page.keyboard.press('Shift+Tab');
+        await expect(page.getByRole('banner').getByRole('button', { name: 'EN', exact: true })).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(lastSwitch).toBeFocused();
+        if (browserName === 'chromium') {
+          expect(await lastSwitch.evaluate((button) => button.matches(':focus-visible'))).toBe(true);
+        }
+        await page.keyboard.press('Tab');
+        await expect(strip.locator(':focus, :focus-within')).toHaveCount(0);
+        expect(await strip.evaluate((section) => section.contains(document.activeElement))).toBe(false);
+      });
+    }
+  }
 }
 
 test('journey: Home → Portfolio → Retail Tower → stock-sync → INV-DEMO-7 → E-1 → back → DEC-DEMO-3 → evidence', async ({ page }) => {
