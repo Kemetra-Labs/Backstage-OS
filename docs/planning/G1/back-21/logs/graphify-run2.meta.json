@@ -1,0 +1,27 @@
+{
+ "label": "graphify-run2",
+ "cmd": [
+  "./venv-graphify/Scripts/graphify.exe",
+  "extract",
+  "fixture-copy",
+  "--code-only",
+  "--out",
+  "runs/graphify-2"
+ ],
+ "cwd": "<HOME>\\kawalys-g1-sandbox\\analyzers",
+ "exit_code": 0,
+ "wall_seconds": 1.156,
+ "peak_rss_mb_sampled_tree": 112.0,
+ "config_snapshot_diff_exit": 0,
+ "config_snapshot_diff": "[OK] 0 config entries changed",
+ "watched_home_dir_changes": [],
+ "env_overrides": [
+  "DO_NOT_TRACK",
+  "CODEGRAPH_TELEMETRY",
+  "CODEGRAPH_NO_UPDATE_CHECK",
+  "CODEGRAPH_NO_DOWNLOAD",
+  "GRAPHIFY_BACKEND",
+  "GRAPHIFY_QUERY_LOG_DISABLE",
+  "HTTP(S)/ALL_PROXY=http://127.0.0.1:9"
+ ]
+}

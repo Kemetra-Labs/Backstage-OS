@@ -1,0 +1,114 @@
+{
+  "engine_node_counts": {
+    "javascript": 4,
+    "python": 17,
+    "tsx": 2,
+    "typescript": 14
+  },
+  "extra_inferred": [],
+  "false_observed": [
+    "imports src/svc/__init__.py -> src/svc/service.py::OrderService @ src/svc/__init__.py:2 [observed]",
+    "imports src/svc/app.py -> src/svc/schema.py::validate @ src/svc/app.py:3 [observed]",
+    "imports src/svc/app.py -> src/svc/service.py::Order @ src/svc/app.py:4 [observed]",
+    "imports src/svc/app.py -> src/svc/service.py::OrderService @ src/svc/app.py:4 [observed]",
+    "imports src/svc/service.py -> src/svc/validators.py::validate @ src/svc/service.py:4 [observed]",
+    "imports src/web/OrderList.tsx -> src/web/orders.ts::buildOrder @ src/web/OrderList.tsx:4 [observed]",
+    "imports src/web/handler.ts -> src/web/orders.ts::buildOrder @ src/web/handler.ts:3 [observed]",
+    "imports src/web/orders.ts -> src/web/pricing.ts::computeTotal @ src/web/orders.ts:3 [observed]",
+    "imports src/web/orders.ts -> src/web/pricing.ts::Cart @ src/web/orders.ts:3 [observed]",
+    "imports src/web/orders.ts -> src/web/types.ts::OrderDraft @ src/web/orders.ts:4 [observed]"
+  ],
+  "ignored": {
+    "alias_resolved": 0,
+    "duplicate_ignored": 0,
+    "engine_unknown_edges": 21,
+    "external_ignored": 0,
+    "intrafile_ignored": 0,
+    "null_target_ignored": 0,
+    "unlisted_contains_ignored": 2
+  },
+  "languages_zero_nodes": [],
+  "line_provenance": {
+    "exact": 20,
+    "missing": 19,
+    "off_by_n": []
+  },
+  "missed": [
+    "E10 reexports src/web/index.ts src/web/orders.ts::buildOrder",
+    "E11 reexports src/web/index.ts src/web/pricing.ts"
+  ],
+  "negatives_hit": [],
+  "negatives_total": 12,
+  "schema_errors": [],
+  "table": {
+    "calls": {
+      "expected": 11,
+      "fn": 0,
+      "fp": 0,
+      "tp": 11
+    },
+    "contains": {
+      "expected": 19,
+      "fn": 0,
+      "fp": 0,
+      "tp": 19
+    },
+    "imports": {
+      "expected": 9,
+      "fn": 0,
+      "fp": 10,
+      "tp": 9
+    },
+    "reexports": {
+      "expected": 2,
+      "fn": 2,
+      "fp": 0,
+      "tp": 0
+    }
+  },
+  "type_mismatch": [
+    {
+      "engine": "imports src/web/index.ts -> src/web/orders.ts @ src/web/index.ts:2 [observed]",
+      "expected_type": "reexports",
+      "gt_edge": "E10"
+    },
+    {
+      "engine": "imports src/web/index.ts -> src/web/orders.ts::buildOrder @ src/web/index.ts:2 [observed]",
+      "expected_type": "reexports",
+      "gt_edge": "E10"
+    },
+    {
+      "engine": "imports src/web/index.ts -> src/web/pricing.ts @ src/web/index.ts:3 [observed]",
+      "expected_type": "reexports",
+      "gt_edge": "E11"
+    }
+  ],
+  "unknown": [
+    {
+      "edge": "E23",
+      "file": "src/web/loader.ts",
+      "line": 3,
+      "status": "silent",
+      "type": "imports"
+    },
+    {
+      "edge": "E24",
+      "file": "src/svc/gateway.py",
+      "line": 14,
+      "status": "silent",
+      "type": "imports"
+    },
+    {
+      "edge": "E25",
+      "file": "src/svc/gateway.py",
+      "line": 18,
+      "status": "marked_unknown",
+      "type": "calls"
+    }
+  ],
+  "verdict": {
+    "criterion": "no_false_observed_edges",
+    "false_observed": 10,
+    "result": "FAIL"
+  }
+}

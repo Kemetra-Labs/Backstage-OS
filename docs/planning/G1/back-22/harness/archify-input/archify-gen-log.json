@@ -1,0 +1,200 @@
+[
+ {
+  "dataset": "fixture-35",
+  "full_scope": "35 nodes, 44 edges",
+  "variants": {
+   "full": {
+    "ok": false,
+    "components": 38,
+    "connections": 44,
+    "seconds": 0.52,
+    "diagnostic_codes": {
+     "clean-flow/edge-through-node": 120,
+     "layout/constraint": 60
+    },
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": null,
+    "stderr_head": "Architecture layout validation failed: | - [clean-flow/edge-through-node] architecture connections[2] id \"e2\" \"n7\" -> \"n10\" crosses component \"n3\" (unrelated to this relationship) on segment 1 [580, 201] -> [580, 362] (2px clearance) \u00e2\u20ac\u201d adjust fromSide/toSide, set route/via, or move the component. | - "
+   },
+   "modules": {
+    "ok": true,
+    "components": 18,
+    "connections": 13,
+    "seconds": 0.33,
+    "diagnostic_codes": {},
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": 834679,
+    "stderr_head": ""
+   }
+  }
+ },
+ {
+  "dataset": "fixture-35",
+  "full_scope": "35 nodes, 44 edges",
+  "variants": {
+   "full": {
+    "ok": false,
+    "components": 38,
+    "connections": 44,
+    "seconds": 0.52,
+    "diagnostic_codes": {
+     "clean-flow/edge-through-node": 120,
+     "layout/constraint": 60
+    },
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": null,
+    "stderr_head": "Architecture layout validation failed: | - [clean-flow/edge-through-node] architecture connections[2] id \"e2\" \"n7\" -> \"n10\" crosses component \"n3\" (unrelated to this relationship) on segment 1 [580, 201] -> [580, 362] (2px clearance) \u00e2\u20ac\u201d adjust fromSide/toSide, set route/via, or move the component. | - "
+   },
+   "modules": {
+    "ok": true,
+    "components": 18,
+    "connections": 13,
+    "seconds": 0.33,
+    "diagnostic_codes": {},
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": 834679,
+    "stderr_head": ""
+   }
+  }
+ },
+ {
+  "dataset": "synthetic-60",
+  "full_scope": "60 nodes, 121 edges",
+  "variants": {
+   "full": {
+    "ok": false,
+    "components": 66,
+    "connections": 121,
+    "seconds": 1.19,
+    "diagnostic_codes": {
+     "clean-flow/edge-through-node": 578,
+     "layout/constraint": 289
+    },
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": null,
+    "stderr_head": "Architecture layout validation failed: | - [clean-flow/edge-through-node] architecture connections[0] id \"e0\" \"n0\" -> \"n28\" crosses component \"n11\" (unrelated to this relationship) on segment 0 [1307, 308] -> [1307, 404] (2px clearance) \u00e2\u20ac\u201d adjust fromSide/toSide, set route/via, or move the component."
+   },
+   "modules": {
+    "ok": false,
+    "components": 31,
+    "connections": 54,
+    "seconds": 0.58,
+    "diagnostic_codes": {
+     "clean-flow/edge-through-node": 104,
+     "layout/constraint": 52
+    },
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": null,
+    "stderr_head": "Architecture layout validation failed: | - [clean-flow/edge-through-node] architecture connections[12] id \"e44\" \"n7\" -> \"n0\" crosses component \"n1\" (unrelated to this relationship) on segment 2 [107, 236] -> [107, 140] (2px clearance) \u00e2\u20ac\u201d adjust fromSide/toSide, set route/via, or move the component. | -"
+   }
+  }
+ },
+ {
+  "dataset": "synthetic-60",
+  "full_scope": "60 nodes, 121 edges",
+  "variants": {
+   "full": {
+    "ok": false,
+    "components": 66,
+    "connections": 121,
+    "seconds": 1.19,
+    "diagnostic_codes": {
+     "clean-flow/edge-through-node": 578,
+     "layout/constraint": 289
+    },
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": null,
+    "stderr_head": "Architecture layout validation failed: | - [clean-flow/edge-through-node] architecture connections[0] id \"e0\" \"n0\" -> \"n28\" crosses component \"n11\" (unrelated to this relationship) on segment 0 [1307, 308] -> [1307, 404] (2px clearance) \u00e2\u20ac\u201d adjust fromSide/toSide, set route/via, or move the component."
+   },
+   "modules": {
+    "ok": false,
+    "components": 31,
+    "connections": 54,
+    "seconds": 0.58,
+    "diagnostic_codes": {
+     "clean-flow/edge-through-node": 104,
+     "layout/constraint": 52
+    },
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": null,
+    "stderr_head": "Architecture layout validation failed: | - [clean-flow/edge-through-node] architecture connections[12] id \"e44\" \"n7\" -> \"n0\" crosses component \"n1\" (unrelated to this relationship) on segment 2 [107, 236] -> [107, 140] (2px clearance) \u00e2\u20ac\u201d adjust fromSide/toSide, set route/via, or move the component. | -"
+   }
+  }
+ },
+ {
+  "dataset": "synthetic-250",
+  "full_scope": "250 nodes, 499 edges",
+  "variants": {
+   "full": {
+    "ok": false,
+    "components": 272,
+    "connections": 499,
+    "seconds": 12.64,
+    "diagnostic_codes": {
+     "clean-flow/edge-through-node": 7436,
+     "layout/constraint": 3718
+    },
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": null,
+    "stderr_head": "Architecture layout validation failed: | - [clean-flow/edge-through-node] architecture connections[0] id \"e0\" \"n0\" -> \"n115\" crosses component \"n20\" (unrelated to this relationship) on segment 2 [1773, 1202] -> [1773, 1508] (2px clearance) \u00e2\u20ac\u201d adjust fromSide/toSide, set route/via, or move the compone"
+   },
+   "modules": {
+    "ok": false,
+    "components": 126,
+    "connections": 242,
+    "seconds": 3.58,
+    "diagnostic_codes": {
+     "clean-flow/edge-through-node": 1908,
+     "layout/constraint": 954
+    },
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": null,
+    "stderr_head": "Architecture layout validation failed: | - [clean-flow/edge-through-node] architecture connections[0] id \"e135\" \"n0\" -> \"n46\" crosses component \"n1\" (unrelated to this relationship) on segment 0 [128, 140] -> [128, 194] (2px clearance) \u00e2\u20ac\u201d adjust fromSide/toSide, set route/via, or move the component. | "
+   }
+  }
+ },
+ {
+  "dataset": "synthetic-250",
+  "full_scope": "250 nodes, 499 edges",
+  "variants": {
+   "full": {
+    "ok": false,
+    "components": 272,
+    "connections": 499,
+    "seconds": 12.64,
+    "diagnostic_codes": {
+     "clean-flow/edge-through-node": 7436,
+     "layout/constraint": 3718
+    },
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": null,
+    "stderr_head": "Architecture layout validation failed: | - [clean-flow/edge-through-node] architecture connections[0] id \"e0\" \"n0\" -> \"n115\" crosses component \"n20\" (unrelated to this relationship) on segment 2 [1773, 1202] -> [1773, 1508] (2px clearance) \u00e2\u20ac\u201d adjust fromSide/toSide, set route/via, or move the compone"
+   },
+   "modules": {
+    "ok": false,
+    "components": 126,
+    "connections": 242,
+    "seconds": 3.58,
+    "diagnostic_codes": {
+     "clean-flow/edge-through-node": 1908,
+     "layout/constraint": 954
+    },
+    "sublabel_overflow": 0,
+    "label_overlap": 0,
+    "bytes": null,
+    "stderr_head": "Architecture layout validation failed: | - [clean-flow/edge-through-node] architecture connections[0] id \"e135\" \"n0\" -> \"n46\" crosses component \"n1\" (unrelated to this relationship) on segment 0 [128, 140] -> [128, 194] (2px clearance) \u00e2\u20ac\u201d adjust fromSide/toSide, set route/via, or move the component. | "
+   }
+  }
+ }
+]

@@ -1,0 +1,148 @@
+BACK-22 renderer checks (Playwright Python 1.62.0, Chromium 159.0.8154.6 headless shell, cached; no browser downloaded)
+run 1 started 2026-11-21T14:18:25 (with --webkit attempt), run 2 started 2026-11-21T14:19:16
+Harness: http://127.0.0.1:5190 (strict CSP: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src http://127.0.0.1:5191; object-src 'none'; base-uri 'none'; form-action 'none')
+Archify frame: http://127.0.0.1:5191 (FINAL CSP: default-src 'none'; script-src 'unsafe-inline' 'self'; style-src 'unsafe-inline' 'self'; img-src data: 'self'; font-src data:; connect-src 'none'; frame-ancestors http://127.0.0.1:5190), iframe sandbox="allow-scripts" only
+Fixture checks use fixture-35 (35 nodes, 44 edges, 3 unresolved stubs). Functional results were compared leaf by leaf between run 1 and run 2.
+Functional leaf values that differ between run 1 and run 2 (everything except perf): 0
+
+==============================================================================
+1. Click-select shows evidence
+==============================================================================
+[depgraph] run1: {"inspector_node": "n12", "inspector_has_evidence_file_line": true, "inspector_edges_listed": 4, "inspector_basis_words": ["Observed"], "selected_visual": {"borderColor": "rgb(45, 226, 236)", "ariaPressed": "true", "cls": "dg-node"}, "unresolved_stub_inspector_text": "Inspector |  | Unresolved target |  | Unresolved: the target is not known. variable pluginPath (runtime value) |  | Outgoing links ("}
+[reactflow] run1: {"inspector_node": "n12", "inspector_has_evidence_file_line": true, "inspector_edges_listed": 4, "inspector_basis_words": ["Observed"], "selected_visual": {"borderColor": "rgb(45, 226, 236)", "ariaPressed": null, "cls": "react-flow__node react-flow__node-default kw-node selected selectable"}, "unresolved_stub_inspector_text": "Inspector |  | Unresolved target |  | Unresolved: the target is not known. variable pluginPath (runtime value) |  | Outgoing links ("}
+[archify] run1: {"frame_node_aria_pressed_after_click": "true", "frame_detail_text": "module | orders.ts", "shared_inspector_node_after_click": null, "parity": "NO: selection inside the sandboxed frame cannot reach the shared inspector (no allow-same-origin, no postMessage bridge, generated HTML not patched)", "shared_inspector_via_table_row": "n12"}
+
+==============================================================================
+2. Keyboard: Tab reaches nodes, Enter selects, focus visible
+==============================================================================
+[depgraph] run1: {"tab_presses_to_first_node": 10, "first_node_focus_visible": {"matches_focus_visible": true, "outline": "solid 2px", "boxshadow": false}, "enter_selects": true, "second_tab_target": "n1"}
+[reactflow] run1: {"tab_presses_to_first_node": 54, "first_node_focus_visible": {"matches_focus_visible": true, "outline": "solid 2px", "boxshadow": true}, "enter_selects": true, "arrow_key_moves_node": {"before": "translate(0px, 0px)", "after": "translate(0px, 0px)", "moved": false}, "second_tab_target": "n1"}
+[archify] run1: {"tab_presses_to_first_node": 18, "first_node_focus_visible": {"matches_focus_visible": true, "outline": "none 3px", "boxshadow": false}, "enter_selects": "true", "enter_selects_note": "aria-pressed of the focused frame node after Enter", "shared_inspector_updated": false, "second_tab_target": "n1"}
+
+==============================================================================
+3. Edge classification (computed dash + marker per truth class)
+==============================================================================
+[depgraph] run1: {"classes": {"observed": ["none | url(#dg-arrow)"], "unknown": ["2px, 5px | url(#dg-open)"]}, "edges_drawn": 44}
+[reactflow] run1: {"classes": {"observed": ["none | marker:arrow"], "unknown": ["2px, 5px | marker:circle"]}, "edges_drawn": 44}
+[archify] run1: {"classes": {"a-default": ["none | url(#arrowhead)"], "a-dashed": ["4px, 4px | url(#arrowhead-dashed)"], "other": ["none | none"]}, "edges_drawn": 13, "note": "Archify vocabulary is default|emphasis|security|dashed; unknown mapped to dashed (no marker control, no distinct unknown marker)"}
+
+==============================================================================
+4. Zoom in/out/reset
+==============================================================================
+[depgraph] run1: {"supported": false, "note": "no zoom/pan in DepGraph (horizontal scroll only); not added"}
+[reactflow] run1: {"supported": true, "initial_scale": 0.556364, "after_zoom_in": 0.667636, "after_two_zoom_out": 0.463636, "after_fit_view": 0.556364, "in_works": true, "out_works": true, "reset_works": true, "control_button_size_px": [26, 26]}
+[archify] run1: {"supported": true, "initial": "100%", "after_zoom_in": "125%", "after_two_zoom_out": "75%", "in_works": true, "out_works": true, "reset": "label click / fit not probed (NOT RUN)"}
+
+==============================================================================
+5. Return navigation (Escape / clear)
+==============================================================================
+[depgraph] run1: {"escape_clears": {"before": "n12", "after": null, "cleared": true}, "clear_button_clears": true}
+[reactflow] run1: {"escape_clears": {"before": "n12", "after": null, "cleared": true}, "clear_button_clears": true, "pane_click_clears": true}
+[archify] run1: {"frame_escape_clears_selection": {"before": "true", "after": "false", "cleared": true}, "host_escape_clears_shared_inspector": {"before": "n12", "after": null, "cleared": true}}
+
+==============================================================================
+6. Table fallback (expected 35 node rows, 44 edge rows)
+==============================================================================
+[depgraph] run1: {"node_rows": 35, "edge_rows": 44, "edge_rows_with_evidence": 44, "unknown_rows": 3, "unknown_rows_unresolved_word": 3, "unknown_rows_basis_word": 3, "captions": ["Nodes (accessible table equivalent of the graph) (35)", "Edges (accessible table equivalent of the graph) (44)"], "th_scoped": 44, "complete": true}
+[reactflow] run1: {"node_rows": 35, "edge_rows": 44, "edge_rows_with_evidence": 44, "unknown_rows": 3, "unknown_rows_unresolved_word": 3, "unknown_rows_basis_word": 3, "captions": ["Nodes (accessible table equivalent of the graph) (35)", "Edges (accessible table equivalent of the graph) (44)"], "th_scoped": 44, "complete": true}
+[archify] run1: {"node_rows": 35, "edge_rows": 44, "edge_rows_with_evidence": 44, "unknown_rows": 3, "unknown_rows_unresolved_word": 3, "unknown_rows_basis_word": 3, "captions": ["Nodes (accessible table equivalent of the graph) (35)", "Edges (accessible table equivalent of the graph) (44)"], "th_scoped": 44, "complete": true}
+
+==============================================================================
+7. Arabic: dir=rtl on panels, canvas ltr, Latin runs isolated
+==============================================================================
+[depgraph] run1: {"html_dir": "rtl", "aside_direction": "rtl", "header_direction": "rtl", "canvas_attr_dir": "ltr", "canvas_direction": "ltr", "latin_runs": 31, "latin_runs_not_in_bdi_ltr": [], "latin_runs_not_in_bdi_ltr_count": 0, "inspector_arabic_heading": "\u0627\u0644\u0645\u0641\u062a\u0634", "side_inline_position": 16, "inspector_on_left_in_rtl": true, "node_label_bdi_ltr": true}
+[reactflow] run1: {"html_dir": "rtl", "aside_direction": "rtl", "header_direction": "rtl", "canvas_attr_dir": "ltr", "canvas_direction": "ltr", "latin_runs": 31, "latin_runs_not_in_bdi_ltr": [], "latin_runs_not_in_bdi_ltr_count": 0, "inspector_arabic_heading": "\u0627\u0644\u0645\u0641\u062a\u0634", "side_inline_position": 16, "inspector_on_left_in_rtl": true, "node_label_bdi_ltr": true}
+[archify] run1: {"html_dir": "rtl", "aside_direction": "rtl", "header_direction": "rtl", "canvas_attr_dir": "ltr", "canvas_direction": "ltr", "latin_runs": 11, "latin_runs_not_in_bdi_ltr": [], "latin_runs_not_in_bdi_ltr_count": 0, "inspector_arabic_heading": "\u0627\u0644\u0645\u0641\u062a\u0634", "side_inline_position": 16, "inspector_on_left_in_rtl": true, "frame_html_dir": " / lang=en", "frame_note": "the generated frame is English (Archify has locale support via meta.locale, not exercised: NOT RUN)"}
+
+==============================================================================
+8. Screen-reader semantics found in DOM (real screen reader = NOT RUN)
+==============================================================================
+[depgraph] run1: {"roles": {}, "node_count": 38, "nodes_with_aria_label": 0, "nodes_with_text_name": 38, "nodes_tabbable": 38, "nodes_aria_pressed": 38, "edge_count": 44, "edges_with_aria_label": 0, "edges_aria_hidden_container": true, "aria_snapshot_lines": 39, "real_screen_reader": "NOT RUN"}
+[reactflow] run1: {"roles": {"application": 1, "group": 82}, "node_count": 38, "nodes_with_aria_label": 38, "nodes_with_text_name": 38, "nodes_tabbable": 38, "nodes_aria_pressed": 0, "edge_count": 44, "edges_with_aria_label": 44, "edges_aria_hidden_container": false, "aria_snapshot_lines": 137, "real_screen_reader": "NOT RUN"}
+[archify] run1: {"roles": {"toolbar": 4, "menu": 2, "presentation": 2, "menuitemradio": 4, "group": 11, "menuitem": 10, "img": 1, "button": 52, "status": 3, "dialog": 3, "region": 3}, "node_count": 18, "nodes_with_aria_label": 18, "nodes_tabbable": 18, "edge_hit_targets": 13, "edges_with_label": 13, "svg_role_img_title": true, "real_screen_reader": "NOT RUN"}
+
+==============================================================================
+9. prefers-reduced-motion: running animations via document.getAnimations()
+==============================================================================
+[depgraph] run1: {"no-preference": {"running_animations_page": 0, "running_animations_frame": null, "after_select_page": 0}, "reduce": {"running_animations_page": 0, "running_animations_frame": null, "after_select_page": 0}}
+[reactflow] run1: {"no-preference": {"running_animations_page": 0, "running_animations_frame": null, "after_select_page": 0}, "reduce": {"running_animations_page": 0, "running_animations_frame": null, "after_select_page": 0}}
+[archify] run1: {"no-preference": {"running_animations_page": 0, "running_animations_frame": 0, "frame_state": {"motion": "still", "ambient": "paused", "motion_button": ["Resume motion"], "smil": 0}, "motion_button": "clicked", "after_motion_button_click": {"running": 98, "data_motion": "live/running"}}, "reduce": {"running_animations_page": 0, "running_animations_frame": 0, "frame_state": {"motion": "still", "ambient": "paused", "motion_button": ["Motion paused by reduced-motion preference"], "smil": 0}, "motion_button": "disabled", "after_motion_button_click": {"running": 0, "data_motion": "still/paused"}}}
+
+==============================================================================
+10. Viewports: horizontal page overflow and touch targets (<44px) at 375
+==============================================================================
+[depgraph] 320px graph: page_overflow=False (scrollWidth 320/320) offenders=[]
+[depgraph] 320px table: page_overflow=False (scrollWidth 320/320) offenders=[]
+[depgraph] 375px graph: page_overflow=False (scrollWidth 375/375) offenders=[] | host controls 47, below 44px: 0 (chrome 0, canvas 0)
+[depgraph] 375px table: page_overflow=False (scrollWidth 375/375) offenders=[] | host controls 90, below 44px: 0 (chrome 0, canvas 0)
+    samples below 44px (graph view): []
+[depgraph] 1440px graph: page_overflow=False (scrollWidth 1440/1440) offenders=[]
+[depgraph] 1440px table: page_overflow=False (scrollWidth 1440/1440) offenders=[]
+[reactflow] 320px graph: page_overflow=False (scrollWidth 320/320) offenders=[]
+[reactflow] 320px table: page_overflow=False (scrollWidth 320/320) offenders=[]
+[reactflow] 375px graph: page_overflow=False (scrollWidth 375/375) offenders=[] | host controls 89, below 44px: 74 (chrome 0, canvas 74)
+[reactflow] 375px table: page_overflow=False (scrollWidth 375/375) offenders=[] | host controls 90, below 44px: 0 (chrome 0, canvas 0)
+    samples below 44px (graph view): [{"tag": "g", "cls": "react-flow__edge react-flow__edge-defaul", "label": "imports, Observed", "w": 44, "h": 16, "canvas": true}, {"tag": "g", "cls": "react-flow__edge react-flow__edge-defaul", "label": "imports, Observed", "w": 44, "h": 31, "canvas": true}, {"tag": "g", "cls": "react-flow__edge react-flow__edge-defaul", "label": "imports, Observed", "w": 44, "h": 16, "canvas": true}, {"tag": "g", "cls": "react-flow_
+[reactflow] 1440px graph: page_overflow=False (scrollWidth 1440/1440) offenders=[]
+[reactflow] 1440px table: page_overflow=False (scrollWidth 1440/1440) offenders=[]
+[archify] 320px graph: page_overflow=False (scrollWidth 320/320) offenders=[]
+[archify] 320px table: page_overflow=False (scrollWidth 320/320) offenders=[]
+[archify] 375px graph: page_overflow=False (scrollWidth 375/375) offenders=[] | host controls 9, below 44px: 0 (chrome 0, canvas 0) | archify frame controls 44, below 44px: 25; frame overflow=False
+[archify] 375px table: page_overflow=False (scrollWidth 375/375) offenders=[] | host controls 90, below 44px: 0 (chrome 0, canvas 0)
+    samples below 44px (graph view): []
+[archify] 1440px graph: page_overflow=False (scrollWidth 1440/1440) offenders=[]
+[archify] 1440px table: page_overflow=False (scrollWidth 1440/1440) offenders=[]
+
+==============================================================================
+11. axe-core 4.14.1 violations (host page unless stated)
+==============================================================================
+[depgraph] graph_host: total 0 by impact {} rules [] (run2 identical: True)
+[depgraph] table_host: total 0 by impact {} rules [] (run2 identical: True)
+[depgraph] graph_canvas_only: total 0 by impact {} rules [] (run2 identical: True)
+[reactflow] graph_host: total 0 by impact {} rules [] (run2 identical: True)
+[reactflow] table_host: total 0 by impact {} rules [] (run2 identical: True)
+[reactflow] graph_canvas_only: total 0 by impact {} rules [] (run2 identical: True)
+[archify] graph_host: total 0 by impact {} rules [] (run2 identical: True)
+[archify] graph_frame_archify_page: total 4 by impact {'serious': 2, 'moderate': 2} rules ['label-content-name-mismatch(serious,1 nodes)', 'landmark-one-main(moderate,1 nodes)', 'nested-interactive(serious,1 nodes)', 'region(moderate,3 nodes)'] (run2 identical: True)
+[archify] table_host: total 0 by impact {} rules [] (run2 identical: True)
+
+==============================================================================
+12. Performance at three densities (Chromium headless shell, 1440x900, local; run 1 | run 2)
+graph_complete = navigation start -> all nodes+edges in DOM (+ RF viewport fitted); data_to_render = envelope parsed -> 2 rAF after mount;
+dom_canvas / svg_canvas = elements inside the canvas; longtasks via PerformanceObserver; heap = performance.memory (coarse, bucketed by Chromium).
+Archify rows: host numbers are the iframe host only; frame = generated page's own navigation timing and DOM. 60/250: NOT GENERATED (validator) -> NOT RUN.
+==============================================================================
+fixture-35 depgraph run1: complete=66ms, data_to_render=21ms, dom_canvas=246, svg_canvas=49, dom_total=305, longtasks=0 (0ms), heap=9.5MB
+fixture-35 depgraph run2: complete=52ms, data_to_render=31ms, dom_canvas=246, svg_canvas=49, dom_total=305, longtasks=0 (0ms), heap=9.5MB
+fixture-35 reactflow run1: complete=83ms, data_to_render=43ms, dom_canvas=439, svg_canvas=141, dom_total=498, longtasks=0 (0ms), heap=9.5MB
+fixture-35 reactflow run2: complete=71ms, data_to_render=30ms, dom_canvas=439, svg_canvas=141, dom_total=498, longtasks=0 (0ms), heap=9.5MB
+fixture-35 archify run1: artifact=generated (reduced scope), frame={"load_event_end_ms": 67, "dom_total": 884, "svg_elements": 405, "longtasks": 0, "longtask_total_ms": 0}, host dom_total=61
+fixture-35 archify run2: artifact=generated (reduced scope), frame={"load_event_end_ms": 67, "dom_total": 884, "svg_elements": 405, "longtasks": 1, "longtask_total_ms": 50}, host dom_total=61
+synthetic-60 depgraph run1: complete=60ms, data_to_render=22ms, dom_canvas=466, svg_canvas=126, dom_total=525, longtasks=0 (0ms), heap=9.5MB
+synthetic-60 depgraph run2: complete=32ms, data_to_render=30ms, dom_canvas=466, svg_canvas=126, dom_total=525, longtasks=0 (0ms), heap=9.5MB
+synthetic-60 reactflow run1: complete=82ms, data_to_render=41ms, dom_canvas=918, svg_canvas=372, dom_total=977, longtasks=0 (0ms), heap=9.5MB
+synthetic-60 reactflow run2: complete=84ms, data_to_render=57ms, dom_canvas=918, svg_canvas=372, dom_total=977, longtasks=0 (0ms), heap=9.5MB
+synthetic-60 archify run1: artifact=NOT GENERATED, frame metrics NOT RUN, host dom_total=63
+synthetic-60 archify run2: artifact=NOT GENERATED, frame metrics NOT RUN, host dom_total=63
+synthetic-250 depgraph run1: complete=63ms, data_to_render=26ms, dom_canvas=1890, svg_canvas=504, dom_total=1949, longtasks=0 (0ms), heap=9.5MB
+synthetic-250 depgraph run2: complete=68ms, data_to_render=27ms, dom_canvas=1890, svg_canvas=504, dom_total=1949, longtasks=0 (0ms), heap=9.5MB
+synthetic-250 reactflow run1: complete=142ms, data_to_render=113ms, dom_canvas=3682, svg_canvas=1506, dom_total=3741, longtasks=0 (0ms), heap=17.4MB
+synthetic-250 reactflow run2: complete=119ms, data_to_render=91ms, dom_canvas=3682, svg_canvas=1506, dom_total=3741, longtasks=0 (0ms), heap=17.4MB
+synthetic-250 archify run1: artifact=NOT GENERATED, frame metrics NOT RUN, host dom_total=63
+synthetic-250 archify run2: artifact=NOT GENERATED, frame metrics NOT RUN, host dom_total=63
+
+==============================================================================
+13. Network requests per page (functional fixture load + one selection), strict CSP console violations
+==============================================================================
+[depgraph] run1: {"requests": 7, "same_origin": 7, "archify_origin": 0, "data_blob": 0, "external": [], "failed": [], "csp_console": 0, "csp_samples": [], "console_other": []}
+[depgraph] run2: {"requests": 7, "same_origin": 7, "archify_origin": 0, "data_blob": 0, "external": [], "failed": [], "csp_console": 0, "csp_samples": [], "console_other": []}
+[reactflow] run1: {"requests": 7, "same_origin": 7, "archify_origin": 0, "data_blob": 0, "external": [], "failed": [], "csp_console": 0, "csp_samples": [], "console_other": []}
+[reactflow] run2: {"requests": 7, "same_origin": 7, "archify_origin": 0, "data_blob": 0, "external": [], "failed": [], "csp_console": 0, "csp_samples": [], "console_other": []}
+[archify] run1: {"requests": 8, "same_origin": 7, "archify_origin": 1, "data_blob": 0, "external": [], "failed": [], "csp_console": 0, "csp_samples": [], "console_other": []}
+[archify] run2: {"requests": 8, "same_origin": 7, "archify_origin": 1, "data_blob": 0, "external": [], "failed": [], "csp_console": 0, "csp_samples": [], "console_other": []}
+
+==============================================================================
+14. WebKit
+==============================================================================
+run 1 attempt: {"version": "26.5", "depgraph": {"ERROR": "Error: BrowserContext.new_page: Protocol error (Emulation.setAuthCredentials): Some arguments of method 'Emulation.setAuthCredentials' can't be processed"}, "reactflow": {"ERROR": "Error: BrowserContext.new_page: Protocol error (Emulation.setAuthCredentials): Some arguments of method 'Emulation.setAuthCredentials' can't be processed"}, "archify": {"ERROR": "Error: BrowserContext.new_page: Protocol error (Emulation.setAuthCredentials): Some arguments of method 'Emulation.setAuthCredentials' can't be processed"}}
+Playwright 1.62.0 expects webkit revision 2336 (browsers.json); the cached build is webkit-2388 (WebKit 26.5). Launch works, every new_page fails: NOT RUN. No browser was downloaded.

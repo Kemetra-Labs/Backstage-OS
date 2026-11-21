@@ -1,0 +1,652 @@
+{
+  "envelope_version": "kawalys.graph.v0",
+  "source": {
+    "scope": "docs/planning/G1/fixture",
+    "revision": "b359992de75f5eb96bcf84ac4830ee4a46b01a35227aba0873be696e931f0bca",
+    "fixture_version": "g1-01-v0"
+  },
+  "engine": {
+    "name": "ground-truth",
+    "version": "g1-01-v0",
+    "config_digest": "none"
+  },
+  "generated_at": "2026-11-21T00:00:00Z",
+  "nodes": [
+    {
+      "id": "src/svc/__init__.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/svc/__init__.py",
+      "line": 1
+    },
+    {
+      "id": "src/svc/app.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/svc/app.py",
+      "line": 1
+    },
+    {
+      "id": "src/svc/gateway.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/svc/gateway.py",
+      "line": 1
+    },
+    {
+      "id": "src/svc/schema.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/svc/schema.py",
+      "line": 1
+    },
+    {
+      "id": "src/svc/service.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/svc/service.py",
+      "line": 1
+    },
+    {
+      "id": "src/svc/unused.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/svc/unused.py",
+      "line": 1
+    },
+    {
+      "id": "src/svc/validators.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/svc/validators.py",
+      "line": 1
+    },
+    {
+      "id": "src/web/OrderList.tsx",
+      "kind": "module",
+      "language": "tsx",
+      "file": "src/web/OrderList.tsx",
+      "line": 1
+    },
+    {
+      "id": "src/web/format.js",
+      "kind": "module",
+      "language": "javascript",
+      "file": "src/web/format.js",
+      "line": 1
+    },
+    {
+      "id": "src/web/handler.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/handler.ts",
+      "line": 1
+    },
+    {
+      "id": "src/web/index.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/index.ts",
+      "line": 1
+    },
+    {
+      "id": "src/web/loader.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/loader.ts",
+      "line": 1
+    },
+    {
+      "id": "src/web/orders.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/orders.ts",
+      "line": 1
+    },
+    {
+      "id": "src/web/pricing.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 1
+    },
+    {
+      "id": "src/web/report.js",
+      "kind": "module",
+      "language": "javascript",
+      "file": "src/web/report.js",
+      "line": 1
+    },
+    {
+      "id": "src/web/types.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/types.ts",
+      "line": 1
+    },
+    {
+      "id": "src/web/pricing.ts::computeTotal",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 4
+    },
+    {
+      "id": "src/web/pricing.ts::Cart",
+      "kind": "class",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 12
+    },
+    {
+      "id": "src/web/pricing.ts::Cart.addItem",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 15
+    },
+    {
+      "id": "src/web/orders.ts::buildOrder",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/web/orders.ts",
+      "line": 7
+    },
+    {
+      "id": "src/web/OrderList.tsx::OrderList",
+      "kind": "component",
+      "language": "tsx",
+      "file": "src/web/OrderList.tsx",
+      "line": 8
+    },
+    {
+      "id": "src/web/format.js::formatMoney",
+      "kind": "function",
+      "language": "javascript",
+      "file": "src/web/format.js",
+      "line": 2
+    },
+    {
+      "id": "src/web/report.js::renderReport",
+      "kind": "function",
+      "language": "javascript",
+      "file": "src/web/report.js",
+      "line": 4
+    },
+    {
+      "id": "src/web/loader.ts::loadPlugin",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/web/loader.ts",
+      "line": 2
+    },
+    {
+      "id": "src/web/handler.ts::createOrderHandler",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/web/handler.ts",
+      "line": 7
+    },
+    {
+      "id": "src/svc/service.py::Order",
+      "kind": "class",
+      "language": "python",
+      "file": "src/svc/service.py",
+      "line": 8
+    },
+    {
+      "id": "src/svc/service.py::Order.total",
+      "kind": "method",
+      "language": "python",
+      "file": "src/svc/service.py",
+      "line": 12
+    },
+    {
+      "id": "src/svc/service.py::OrderService",
+      "kind": "class",
+      "language": "python",
+      "file": "src/svc/service.py",
+      "line": 16
+    },
+    {
+      "id": "src/svc/service.py::OrderService.place",
+      "kind": "method",
+      "language": "python",
+      "file": "src/svc/service.py",
+      "line": 17
+    },
+    {
+      "id": "src/svc/validators.py::validate",
+      "kind": "function",
+      "language": "python",
+      "file": "src/svc/validators.py",
+      "line": 4
+    },
+    {
+      "id": "src/svc/schema.py::validate",
+      "kind": "function",
+      "language": "python",
+      "file": "src/svc/schema.py",
+      "line": 4
+    },
+    {
+      "id": "src/svc/app.py::main",
+      "kind": "function",
+      "language": "python",
+      "file": "src/svc/app.py",
+      "line": 7
+    },
+    {
+      "id": "src/svc/gateway.py::load_handler",
+      "kind": "function",
+      "language": "python",
+      "file": "src/svc/gateway.py",
+      "line": 11
+    },
+    {
+      "id": "src/svc/gateway.py::submit_order",
+      "kind": "function",
+      "language": "python",
+      "file": "src/svc/gateway.py",
+      "line": 17
+    },
+    {
+      "id": "src/svc/unused.py::orphan_helper",
+      "kind": "function",
+      "language": "python",
+      "file": "src/svc/unused.py",
+      "line": 4
+    }
+  ],
+  "edges": [
+    {
+      "type": "imports",
+      "from": "src/web/orders.ts",
+      "to": "src/web/pricing.ts",
+      "file": "src/web/orders.ts",
+      "line": 3,
+      "basis": "observed"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/orders.ts",
+      "to": "src/web/types.ts",
+      "file": "src/web/orders.ts",
+      "line": 4,
+      "basis": "observed"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/OrderList.tsx",
+      "to": "src/web/index.ts",
+      "file": "src/web/OrderList.tsx",
+      "line": 4,
+      "basis": "observed"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/report.js",
+      "to": "src/web/format.js",
+      "file": "src/web/report.js",
+      "line": 2,
+      "basis": "observed"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/handler.ts",
+      "to": "src/web/orders.ts",
+      "file": "src/web/handler.ts",
+      "line": 3,
+      "basis": "observed"
+    },
+    {
+      "type": "imports",
+      "from": "src/svc/__init__.py",
+      "to": "src/svc/service.py",
+      "file": "src/svc/__init__.py",
+      "line": 2,
+      "basis": "observed"
+    },
+    {
+      "type": "imports",
+      "from": "src/svc/service.py",
+      "to": "src/svc/validators.py",
+      "file": "src/svc/service.py",
+      "line": 4,
+      "basis": "observed"
+    },
+    {
+      "type": "imports",
+      "from": "src/svc/app.py",
+      "to": "src/svc/schema.py",
+      "file": "src/svc/app.py",
+      "line": 3,
+      "basis": "observed"
+    },
+    {
+      "type": "imports",
+      "from": "src/svc/app.py",
+      "to": "src/svc/service.py",
+      "file": "src/svc/app.py",
+      "line": 4,
+      "basis": "observed"
+    },
+    {
+      "type": "reexports",
+      "from": "src/web/index.ts",
+      "to": "src/web/orders.ts::buildOrder",
+      "file": "src/web/index.ts",
+      "line": 2,
+      "basis": "observed"
+    },
+    {
+      "type": "reexports",
+      "from": "src/web/index.ts",
+      "to": "src/web/pricing.ts",
+      "file": "src/web/index.ts",
+      "line": 3,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::Cart",
+      "file": "src/web/orders.ts",
+      "line": 8,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::Cart.addItem",
+      "file": "src/web/orders.ts",
+      "line": 10,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/orders.ts",
+      "line": 12,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/OrderList.tsx::OrderList",
+      "to": "src/web/orders.ts::buildOrder",
+      "file": "src/web/OrderList.tsx",
+      "line": 9,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/report.js::renderReport",
+      "to": "src/web/format.js::formatMoney",
+      "file": "src/web/report.js",
+      "line": 5,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/handler.ts::createOrderHandler",
+      "to": "src/web/orders.ts::buildOrder",
+      "file": "src/web/handler.ts",
+      "line": 8,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/svc/service.py::OrderService.place",
+      "to": "src/svc/validators.py::validate",
+      "file": "src/svc/service.py",
+      "line": 18,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/svc/app.py::main",
+      "to": "src/svc/schema.py::validate",
+      "file": "src/svc/app.py",
+      "line": 8,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/svc/app.py::main",
+      "to": "src/svc/service.py::Order",
+      "file": "src/svc/app.py",
+      "line": 10,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/svc/app.py::main",
+      "to": "src/svc/service.py::OrderService",
+      "file": "src/svc/app.py",
+      "line": 11,
+      "basis": "observed"
+    },
+    {
+      "type": "calls",
+      "from": "src/svc/app.py::main",
+      "to": "src/svc/service.py::OrderService.place",
+      "file": "src/svc/app.py",
+      "line": 12,
+      "basis": "observed"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/loader.ts",
+      "to": null,
+      "target_hint": "variable pluginPath (runtime value)",
+      "file": "src/web/loader.ts",
+      "line": 3,
+      "basis": "unknown"
+    },
+    {
+      "type": "imports",
+      "from": "src/svc/gateway.py",
+      "to": null,
+      "target_hint": "name from config key handler_module (runtime value)",
+      "file": "src/svc/gateway.py",
+      "line": 14,
+      "basis": "unknown"
+    },
+    {
+      "type": "calls",
+      "from": "src/svc/gateway.py::submit_order",
+      "to": null,
+      "target_hint": "POST /orders -> candidate src/web/handler.ts::createOrderHandler",
+      "file": "src/svc/gateway.py",
+      "line": 18,
+      "basis": "unknown"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/pricing.ts",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/pricing.ts",
+      "line": 4,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/pricing.ts",
+      "to": "src/web/pricing.ts::Cart",
+      "file": "src/web/pricing.ts",
+      "line": 12,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/pricing.ts::Cart",
+      "to": "src/web/pricing.ts::Cart.addItem",
+      "file": "src/web/pricing.ts",
+      "line": 15,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/orders.ts",
+      "to": "src/web/orders.ts::buildOrder",
+      "file": "src/web/orders.ts",
+      "line": 7,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/OrderList.tsx",
+      "to": "src/web/OrderList.tsx::OrderList",
+      "file": "src/web/OrderList.tsx",
+      "line": 8,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/format.js",
+      "to": "src/web/format.js::formatMoney",
+      "file": "src/web/format.js",
+      "line": 2,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/report.js",
+      "to": "src/web/report.js::renderReport",
+      "file": "src/web/report.js",
+      "line": 4,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/loader.ts",
+      "to": "src/web/loader.ts::loadPlugin",
+      "file": "src/web/loader.ts",
+      "line": 2,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/handler.ts",
+      "to": "src/web/handler.ts::createOrderHandler",
+      "file": "src/web/handler.ts",
+      "line": 7,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/svc/service.py",
+      "to": "src/svc/service.py::Order",
+      "file": "src/svc/service.py",
+      "line": 8,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/svc/service.py::Order",
+      "to": "src/svc/service.py::Order.total",
+      "file": "src/svc/service.py",
+      "line": 12,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/svc/service.py",
+      "to": "src/svc/service.py::OrderService",
+      "file": "src/svc/service.py",
+      "line": 16,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/svc/service.py::OrderService",
+      "to": "src/svc/service.py::OrderService.place",
+      "file": "src/svc/service.py",
+      "line": 17,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/svc/validators.py",
+      "to": "src/svc/validators.py::validate",
+      "file": "src/svc/validators.py",
+      "line": 4,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/svc/schema.py",
+      "to": "src/svc/schema.py::validate",
+      "file": "src/svc/schema.py",
+      "line": 4,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/svc/app.py",
+      "to": "src/svc/app.py::main",
+      "file": "src/svc/app.py",
+      "line": 7,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/svc/gateway.py",
+      "to": "src/svc/gateway.py::load_handler",
+      "file": "src/svc/gateway.py",
+      "line": 11,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/svc/gateway.py",
+      "to": "src/svc/gateway.py::submit_order",
+      "file": "src/svc/gateway.py",
+      "line": 17,
+      "basis": "observed"
+    },
+    {
+      "type": "contains",
+      "from": "src/svc/unused.py",
+      "to": "src/svc/unused.py::orphan_helper",
+      "file": "src/svc/unused.py",
+      "line": 4,
+      "basis": "observed"
+    }
+  ],
+  "omissions": [
+    {
+      "what": "Go",
+      "reason": "NOT VERIFIED: no Go source in the fixture"
+    },
+    {
+      "what": "Java",
+      "reason": "NOT VERIFIED: no Java source in the fixture"
+    },
+    {
+      "what": "C#",
+      "reason": "NOT VERIFIED: no C# source in the fixture"
+    },
+    {
+      "what": "Rust",
+      "reason": "NOT VERIFIED: no Rust source in the fixture"
+    },
+    {
+      "what": "SQL",
+      "reason": "NOT VERIFIED: no SQL source in the fixture"
+    },
+    {
+      "what": "Jinja2",
+      "reason": "NOT VERIFIED: no template source in the fixture"
+    },
+    {
+      "what": "Terraform/HCL",
+      "reason": "NOT VERIFIED: no Terraform or HCL source in the fixture"
+    },
+    {
+      "what": "cross-runtime runtime wiring",
+      "reason": "NOT VERIFIED: HTTP, queue and RPC links between Python and TypeScript cannot be verified statically; the one fixture case is recorded as an unknown edge"
+    }
+  ]
+}
