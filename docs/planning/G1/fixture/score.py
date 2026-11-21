@@ -383,6 +383,7 @@ def apply_v1_gate(result, schema_errs, c_errs):
     v = result["verdict"]
     v["schema_errors"] = len(schema_errs)
     v["contract_errors"] = None if c_errs is None else len(c_errs)
+    v["preview"] = c_errs is None  # a v0 envelope scored with --contract v1: calibration preview, not a v1 verdict
     if schema_errs or c_errs:
         v["result"] = "FAIL"
     return result
@@ -594,7 +595,8 @@ def render_v1(result, engine, schema_errs, contract_errs):
     out.append("Languages with zero extracted nodes: " + (", ".join(result["languages_zero_nodes"]) or "(none)"))
     out.append("Ignored: " + json.dumps(result["ignored"], sort_keys=True))
     v = result["verdict"]
-    out.append(f"VERDICT {v['criterion']}: {v['result']} (false observed = {v['false_observed']}, "
+    shown = v["result"] + (" (preview: v0 envelope, schema and contract unchecked)" if v.get("preview") else "")
+    out.append(f"VERDICT {v['criterion']}: {shown} (false observed = {v['false_observed']}, "
                f"overclaimed = {v['overclaimed']}, negatives hit = {v['negatives_hit']}, "
                f"invalid claims = {v['invalid_claims']}, unknown claimed as observed = {v['unknown_claimed']}, "
                f"schema errors = {v['schema_errors']}, contract errors = "
@@ -853,6 +855,7 @@ def self_check_v1(gt, envgt, need):
     env["edges"].append(dict(barrel_import, file="src/web/handler.ts"))
     r9 = score_v1(env, gt)
     need(not r9["derived"] and len(r9["false_observed"]) == 1, "v1 S9: a barrel import written in another file must not be derived")
+    self_check_v1_cli(gt, base, need)
     # S10: an inferred edge at an unknown site claims it. Only this gate fails it (false inferred is reported only)
     env = copy.deepcopy(base)
     env["edges"].append(dict(loader_dyn, to="src/web/handler.ts", basis="inferred"))
@@ -860,6 +863,40 @@ def self_check_v1(gt, envgt, need):
     need(len(r10["false_inferred"]) == 1 and not r10["false_observed"] and not r10["invalid_claims"]
          and next(u for u in r10["unknown"] if u["edge"] == "E23")["status"] == "claimed_observed"
          and r10["verdict"]["result"] == "FAIL", "v1 S10: an inferred edge at an unknown site must claim it and FAIL on that alone")
+
+
+def self_check_v1_cli(gt, base, need):
+    """Exercise run_score end to end (file in, gated verdict and printed text out), not only the functions."""
+    import contextlib
+    import io
+    import tempfile
+    bad = copy.deepcopy(base)
+    next(e for e in bad["edges"] if e["type"] == "imports").pop("form")  # one contract error, schema stays valid
+    with tempfile.TemporaryDirectory() as tmp:
+        paths = {}
+        for name, env in (("clean", base), ("bad", bad)):
+            paths[name] = os.path.join(tmp, name + ".json")
+            with open(paths[name], "w", encoding="utf-8", newline="\n") as fh:
+                json.dump(env, fh)
+        rc = run_score(paths["clean"], GT_PATH, quiet=True)
+        need(rc["verdict"]["result"] == "PASS" and rc["verdict"]["contract_errors"] == 0 and not rc["verdict"]["preview"],
+             "v1 CLI: a clean v1 envelope must PASS with 0 contract errors")
+        rb = run_score(paths["bad"], GT_PATH, quiet=True)
+        need(rb["verdict"]["result"] == "FAIL" and len(rb["contract_errors"]) == 1 and rb["verdict"]["contract_errors"] == 1,
+             "v1 CLI: run_score must gate a v1 envelope with a contract error")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rv0 = run_score(MUTATED_PATH, GT_PATH, contract="v1")
+        out = buf.getvalue()
+        need(rv0["contract_errors"] is None and rv0["verdict"]["contract_errors"] is None and rv0["verdict"]["preview"],
+             "v1 CLI: a v0 envelope under --contract v1 must be marked unchecked, not clean")
+        need("NOT CHECKED" in out and "(preview: v0 envelope, schema and contract unchecked)" in out and "contract errors: none" not in out,
+             "v1 CLI: the printed report must say the v0 envelope was not checked and the verdict is a preview")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            run_score(paths["bad"], GT_PATH)
+        need("VERDICT" in buf.getvalue() and ": FAIL" in buf.getvalue() and "preview" not in buf.getvalue(),
+             "v1 CLI: the printed verdict of a gated v1 envelope must read FAIL and not be labelled a preview")
 
 
 def self_check():

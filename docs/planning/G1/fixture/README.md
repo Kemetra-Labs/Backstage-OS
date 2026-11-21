@@ -78,7 +78,7 @@ Tree hash: sha256 over files under `src/` sorted by relative posix path (`src/..
 
 - `score.py <envelope>` picks the contract from the envelope's `envelope_version`. `--contract v1` on a v0 envelope is a calibration preview only. A v1 envelope cannot be scored with `--contract v0`.
 - A v1 envelope adds `coverage` (files seen and total) and `external_refs`, edge `form`, `names`, `via` and `line_source`, and has no `reexports` type.
-- Hard fail: false observed edges, overclaimed inferred truths, negatives hit, invalid claims (an observed or inferred edge without a target, an unknown naming one), an unknown claimed as observed, and any schema or contract error in a v1 envelope. Duplicate keys keep the strongest label. Everything else is reported as counts. A v0 envelope scored with `--contract v1` is labelled "not checked" for schema and contract rules.
+- Hard fail: false observed edges, overclaimed inferred truths, negatives hit, invalid claims (an observed or inferred edge without a target, an unknown naming one), an unknown claimed as observed or inferred, and any schema or contract error in a v1 envelope. Duplicate keys keep the strongest label. Everything else is reported as counts. A v0 envelope scored with `--contract v1` is labelled "not checked" for schema and contract rules.
 - `--self-check` now also covers the v1 overlay, schema, `contract_errors` and one scenario per rule. The hold-out fixture, the normalizers and the v1 re-score of the stored BACK-21 envelopes are not part of this step.
 
 ## NOT VERIFIED

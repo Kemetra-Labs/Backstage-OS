@@ -17,6 +17,8 @@ Supersedes the draft semantics in `../fixture/envelope.schema.json` (`kawalys.gr
 | R7 | Provenance | `file` is the file where the relation is written. `line` is 1-based and mandatory for observed and inferred edges; unknown edges may omit it. A `contains` edge uses the child's definition line with `line_source: derived`. |
 | R8 | False claims and coverage | Counts only, never percentages. **Hard fail:** false observed edges and negatives hit. **Reported, not a gate:** false inferred, derived, understated, unknown coverage, per-language and per-type coverage. The envelope states files seen vs files total and lists omissions. External and builtin references are counted separately as `external_refs`, not as unknown claims. |
 
+Scorer implementation note (G1-C1 Step 1a/1b, added after review; the rules above are unchanged): R8's "hard fail" is implemented in `fixture/score.py` as false observed edges, negatives hit, and the direct consequences of R4/R5/R7. These are an observed edge labelled where the truth is inferred (overclaim), an observed or inferred edge without a target, an unknown edge that names a target, an unknown claimed as observed or inferred, and any schema or contract-shape error in a v1 envelope. Duplicate keys keep the strongest label. Everything else in R8 stays reported only.
+
 ## 2. Examples (fixture v0)
 
 - `orders.ts:3` `import { Cart, computeTotal } from './pricing'` is **one** edge `orders.ts -> pricing.ts`, `form: import`, `names: [Cart, computeTotal]` (R1). It is not two symbol edges.
