@@ -106,11 +106,11 @@ test.describe('map and list carry the same information', () => {
     }
   });
 
-  test('list: 10 systems, 6 sources, 11 links, 6 timeline events, and the three counters in the matrix headings', async ({ page }) => {
+  test('list: 10 systems, 6 sources, 10 links (Owner), 6 timeline events, and the three counters in the matrix headings', async ({ page }) => {
     await loadBc(page, { view: 'list' });
     await expect(page.locator('.kv2-bc-ledger tbody tr')).toHaveCount(10);
     await expect(page.locator('.kv2-bc-matrix tbody tr')).toHaveCount(6);
-    await expect(page.locator('.kv2-bc-links tbody tr')).toHaveCount(11);
+    await expect(page.locator('.kv2-bc-links tbody tr')).toHaveCount(10); // Owner: 11 links minus d4 (Technical-only basis, BACK-30)
     await expect(page.locator('.kv2-bc-tl li')).toHaveCount(6);
     const head = squash(await page.locator('.kv2-bc-matrix thead').innerText());
     for (const c of ['3 of 6 reachable', '2 of 6 within target', '1 of 6 confirmed healthy']) {
@@ -156,7 +156,7 @@ test.describe('map and list carry the same information', () => {
     await loadBc(page);
     await page.getByRole('button', { name: 'Risks' }).click();
     await expect(page.locator('.kv2-bc-node[data-dim]')).toHaveCount(7);
-    await expect(page.locator('.kv2-bc-edge[data-dim]')).toHaveCount(11); // no link joins two risk systems
+    await expect(page.locator('.kv2-bc-edge[data-dim]')).toHaveCount(10); // no link joins two risk systems (Owner: d4 is not drawn)
     await page.getByRole('button', { name: 'List' }).click();
     await expect(page.locator('.kv2-bc-ledger tbody tr')).toHaveCount(3);
     await expect(page.locator('.kv2-bc-links')).toContainText('No links match this filter.');
@@ -217,13 +217,18 @@ test.describe('truth rules', () => {
     const healthy = await page.locator('.kv2-bc-node').evaluateAll((els) => els.filter((e) => /^healthy$/i.test((e.querySelector('.kv2-chip')?.textContent ?? '').trim())).map((e) => (e as HTMLElement).dataset.node));
     expect(healthy).toEqual(['github']);
     for (const id of ['khepri', 'jira', 'seshat-bi', 'pos', 'retail-tower']) expect(await chipOf(page, id)).toMatch(/Health unknown/);
-    for (const id of ['sentry', 'inventory']) expect(await chipOf(page, id)).toMatch(/Stale/);
+    expect(await chipOf(page, 'sentry')).toMatch(/Stale/);
+    // BACK-30: Inventory's only basis is Technical-only evidence, so for Owner it is unknown (not healthy, and not stale either)
+    expect(await chipOf(page, 'inventory')).toMatch(/Health unknown/);
     expect(await chipOf(page, 'port')).toMatch(/Unavailable/);
     expect(await chipOf(page, 'stock-sync')).toMatch(/CI check failing/);
     await page.getByRole('button', { name: 'List' }).click();
     const rows = await page.locator('.kv2-bc-matrix tbody tr').evaluateAll((trs) => trs.map((r) => ({ id: (r as HTMLElement).dataset.source, health: (r.querySelectorAll('td')[2]!.textContent ?? '').trim() })));
     expect(rows.filter((r) => /^healthy$/i.test(r.health)).map((r) => r.id)).toEqual(['github']);
     expect(rows.find((r) => r.id === 'jira')!.health).toBe('Unknown');
+    await page.getByRole('button', { name: 'Map', exact: true }).click(); // same page, so the list view is still selected
+    await loadBc(page, { view: 'map', persona: 'technical' });
+    expect(await chipOf(page, 'inventory')).toMatch(/Stale/); // the permitted persona still sees the stale Technical-only read
   });
 
   test('stale, unavailable and unresolved are shown, not hidden', async ({ page }) => {
@@ -235,25 +240,28 @@ test.describe('truth rules', () => {
     expect(matrix).toContain('Offline');
     expect(matrix.match(/never read/g)).toHaveLength(2); // Datadog and Confluence
     expect(matrix.match(/Not set up/g)).toHaveLength(2);
-    await expect(page.locator('.kv2-bc-links [data-stale-chip]')).toHaveCount(1);
-    await expect(page.locator('.kv2-bc-links tr[data-link="d4"] [data-stale-chip]')).toHaveCount(1);
+    // BACK-30: the only stale link (d4) rests on Technical-only evidence, so Owner has none; Technical still sees it flagged
+    await expect(page.locator('.kv2-bc-links [data-stale-chip]')).toHaveCount(0);
+    await expect(page.locator('.kv2-bc-links tr[data-link="d4"]')).toHaveCount(0);
     await expect(page.locator('.kv2-bc-links tbody tr[data-truth="unknown"]')).toHaveCount(4);
     await expect(page.locator('.kv2-bc-links tbody tr[data-truth="group"]')).toHaveCount(3);
     // the age bars carry their numbers as text
     const label = await page.locator('.kv2-bc-matrix tr[data-source="sentry"] .kv2-bc-age').getAttribute('aria-label');
     expect(label).toBe('540 of 15 min, 36× target');
+    await loadBc(page, { view: 'list', persona: 'technical' });
+    await expect(page.locator('.kv2-bc-links [data-stale-chip]')).toHaveCount(1);
+    await expect(page.locator('.kv2-bc-links tr[data-link="d4"] [data-stale-chip]')).toHaveCount(1);
   });
 
-  test('restricted evidence: Owner sees that it exists, Technical sees the detail (persona rules as in V2)', async ({ page }) => {
+  test('restricted evidence: Owner is not told it exists, Technical sees the detail (BACK-30, M05-D05-B)', async ({ page }) => {
     await loadBc(page, { node: 'sentry', tab: 'evidence', persona: 'owner' });
     const owner = squash(await page.getByTestId('inspector').innerText());
-    expect(owner).toContain('Restricted to Technical');
-    // V2's evidence row shows the id of a restricted record (that it exists), never its title, provider or age
-    expect(owner).not.toMatch(/Recent errors|Sentry API|540 min/i);
+    // No id, no "Restricted to Technical" placeholder, no title, provider or age: the Technical-only record is simply absent
+    expect(owner).not.toMatch(/Restricted to Technical|E-5|Recent errors|Sentry API|540 min/i);
+    expect(owner).toContain('No evidence has been read for this item.');
     await page.getByRole('button', { name: 'List' }).click();
-    const d4 = squash(await page.locator('.kv2-bc-links tr[data-link="d4"]').innerText());
-    expect(d4).toContain('Based on evidence restricted to Technical');
-    expect(d4).not.toContain('Inventory errors were reported');
+    await expect(page.locator('.kv2-bc-links tr[data-link="d4"]')).toHaveCount(0);
+    expect(squash(await page.locator('.kv2-bc-links').innerText())).not.toMatch(/Inventory errors were reported|restricted to Technical/i);
     await loadBc(page, { node: 'sentry', tab: 'evidence', persona: 'technical', view: 'list' });
     expect(squash(await page.getByTestId('inspector').innerText())).toMatch(/E-5/);
     expect(squash(await page.locator('.kv2-bc-links tr[data-link="d4"]').innerText())).toContain('Inventory errors were reported in Sentry (stale read)');
@@ -352,7 +360,7 @@ test.describe('motion', () => {
     expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
     // the selection is still shown without motion: own links stay, the rest are dimmed
     await expect(page.locator('.kv2-bc-edge[data-hl]')).toHaveCount(1); // GitHub has one link of its own (d1)
-    await expect(page.locator('.kv2-bc-edge[data-dim]')).toHaveCount(10);
+    await expect(page.locator('.kv2-bc-edge[data-dim]')).toHaveCount(9); // Owner: d4 (Technical-only basis) is not drawn, so 11 - 1 own - 1
     await ctx.close();
   });
 

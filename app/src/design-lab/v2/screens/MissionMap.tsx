@@ -7,6 +7,7 @@ import { effectiveFreshness, resolveLabel } from '../../../contract/rules';
 import { Age, Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip, TruthChip, Tx } from '../components/ui';
 import { useV2 } from '../context';
 import { WORLD } from '../fixtures/world';
+import { authorizedWorld } from '../logic/authorize';
 import { evidenceOf, nodeChip, type NodeChipKind } from '../logic/evidence';
 import {
   CANVAS, MAP_FILTERS, ZOOM_MAX, ZOOM_MIN, HOME_VIEW, filterSet, focusView, kindCounts, linkCounts, neighbours, nextByDirection, scopeSet,
@@ -56,7 +57,7 @@ function useChipText() {
 
 export function MissionMap() {
   const { route, go, open, t, copy } = useV2();
-  const w = WORLD;
+  const w = authorizedWorld(WORLD, route.persona);
   const chipText = useChipText();
   const selId = route.node ?? (route.scope === 'all' ? 'retail-tower' : route.scope);
   const sel = w.nodes.find((n) => n.id === selId) ?? w.nodes[0]!;
@@ -384,8 +385,8 @@ export function MissionMap() {
 }
 
 function Neighbourhood({ node }: { readonly node: WorldNode }) {
-  const { t } = useV2();
-  const w = WORLD;
+  const { t, route } = useV2();
+  const w = authorizedWorld(WORLD, route.persona);
   const deps = w.edges.filter((e) => e.cls === 'dep');
   const out = deps.filter((e) => e.a === node.id);
   const inn = deps.filter((e) => e.b === node.id);
@@ -411,8 +412,8 @@ interface InspProps {
 }
 
 function Inspector({ node, tab, setTab, isScope, onCenter, onOpen }: InspProps) {
-  const { copy, t } = useV2();
-  const w = WORLD;
+  const { copy, t, route } = useV2();
+  const w = authorizedWorld(WORLD, route.persona);
   const chip = nodeChip(node, w.sources);
   const chipText = useChipText();
   const refs = evidenceOf(w, node.evidence);

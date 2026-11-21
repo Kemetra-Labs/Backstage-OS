@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { HUB_ID, ORBIT_ANGLE, nodePoint, nodePoints } from '../fixtures/orbit-layout';
 import { WORLD } from '../fixtures/world';
+import { authorizedWorld } from './authorize';
 import { ageGeometry, bcFigures, curve, edgeRestricted, edgeStale, formatAt, parseSeed, pipTone, ringShare } from './bc';
 import { nodeChip } from './evidence';
 import { nextByDirection } from './graph';
@@ -116,6 +117,13 @@ describe('restricted evidence (BACK-27: no silent restricted-record disclosure)'
   });
   it('restricts nothing else', () => {
     expect(w.edges.filter((e) => e.id !== 'd4').some((e) => edgeRestricted(e, 'owner', w))).toBe(false);
+  });
+  it('is defence in depth only: the world screens pass Owner and Nontechnical has no such link left to restrict (BACK-30)', () => {
+    for (const p of ['owner', 'nontechnical'] as const) {
+      const scoped = authorizedWorld(w, p);
+      expect(scoped.edges.some((e) => edgeRestricted(e, p, scoped))).toBe(false);
+      expect(scoped.edges.find((e) => e.id === 'd4')).toBeUndefined();
+    }
   });
 });
 

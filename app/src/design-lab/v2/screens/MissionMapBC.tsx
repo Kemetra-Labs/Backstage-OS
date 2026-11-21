@@ -11,6 +11,7 @@ import { Cosmos, Kpi, Panel, Seg, T } from '../components/ui';
 import { useV2 } from '../context';
 import { nodePoints } from '../fixtures/orbit-layout';
 import { WORLD } from '../fixtures/world';
+import { authorizedWorld } from '../logic/authorize';
 import type { K } from '../i18n/t';
 import { bcFigures } from '../logic/bc';
 import { filterSet, MAP_FILTERS, scopeSet, type MapFilter } from '../logic/graph';
@@ -24,7 +25,7 @@ const SCOPES = ['retail-tower', 'khepri', 'seshat-bi'] as const;
 
 export function MissionMapBC() {
   const { route, go, open, t } = useV2();
-  const w = WORLD;
+  const w = authorizedWorld(WORLD, route.persona);
   const [ui, setUi] = useBcUi();
   const nodeRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const points = useMemo(() => nodePoints(w), [w]);

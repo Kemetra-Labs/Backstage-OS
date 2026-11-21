@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WORLD } from '../fixtures/world';
+import { authorizedWorld } from './authorize';
 import { buildHash, DEFAULT_ROUTE, parseRoute } from '../navigation/route';
 import { deckCounts, filterMissions } from './deck';
 import { CANVAS, HOME_VIEW, ZOOM_MAX, ZOOM_MIN, clampZoom, filterSet, focusView, kindCounts, linkCounts, neighbours, nextByDirection, scopeSet, zoomAt } from './graph';
@@ -43,6 +44,14 @@ describe('graph', () => {
     expect(scopeSet('all', w).size).toBe(w.nodes.length);
     expect(scopeSet('does-not-exist', w).size).toBe(w.nodes.length);
     expect(scopeSet('khepri', w).has('github')).toBe(false);
+  });
+
+  it('keeps a node that lost its only link (BACK-30: Sentry for an unauthorized persona) in every scope, and still reads it as a risk', () => {
+    const owner = authorizedWorld(w, 'owner');
+    expect(neighbours('sentry', owner.edges)).toEqual([]);
+    for (const scope of ['retail-tower', 'khepri', 'seshat-bi', 'all']) expect(scopeSet(scope, owner).has('sentry'), scope).toBe(true);
+    expect(filterSet('risks', owner).has('sentry')).toBe(true);
+    expect(scopeSet('khepri', w).has('sentry')).toBe(false);
   });
 
   it('filters risks to the failing check and the two problem services, never to unknown-health nodes', () => {
