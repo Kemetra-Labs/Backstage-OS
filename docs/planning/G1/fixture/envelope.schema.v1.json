@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kawalys.graph.v1.schema.json",
+  "title": "Kawalys graph evidence envelope v1 (owner-approved semantic rules R1 to R8)",
+  "description": "Supersedes kawalys.graph.v0 (envelope.schema.json, kept unchanged so v0 results reproduce). Semantics are in ../contract-v1/CONTRACT-V1.md. Ids are relative to the analysed scope root and are never engine-native ids. Edge types are imports, calls and contains only: a re-export is an imports edge with form=reexport (R3). One imports edge per import statement, to the literal specifier's file, with imported symbols in names[] (R1). basis is observed, inferred or unknown (R4). Rules the subset validator cannot express (line mandatory for observed and inferred edges, form mandatory on imports edges, line_source=derived on contains edges, null target only for unknown) are checked by score.py contract_errors().",
+  "type": "object",
+  "required": ["envelope_version", "source", "engine", "generated_at", "nodes", "edges", "omissions", "coverage", "external_refs"],
+  "properties": {
+    "envelope_version": { "type": "string", "const": "kawalys.graph.v1" },
+    "source": {
+      "type": "object",
+      "required": ["scope", "revision", "fixture_version"],
+      "properties": {
+        "scope": { "type": "string" },
+        "revision": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "fixture_version": { "type": "string" }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "required": ["name", "version", "config_digest"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "config_digest": { "type": "string" }
+      }
+    },
+    "generated_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$" },
+    "coverage": {
+      "type": "object",
+      "required": ["files_seen", "files_total"],
+      "properties": {
+        "files_seen": { "type": "integer" },
+        "files_total": { "type": "integer" }
+      }
+    },
+    "external_refs": { "type": "integer" },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "language", "file", "line"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9_@.][A-Za-z0-9_@./-]*\\.[A-Za-z0-9]+(::[^\\s:]+)?$" },
+          "kind": { "type": "string", "enum": ["module", "function", "class", "method", "component"] },
+          "language": { "type": "string" },
+          "file": { "type": "string", "pattern": "^[A-Za-z0-9_@.][A-Za-z0-9_@./-]*\\.[A-Za-z0-9]+$" },
+          "line": { "type": "integer" }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "from", "to", "file", "basis"],
+        "properties": {
+          "type": { "type": "string", "enum": ["imports", "calls", "contains"] },
+          "form": { "type": "string", "enum": ["import", "reexport", "require", "dynamic"] },
+          "names": { "type": "array", "items": { "type": "string" } },
+          "via": { "type": "string", "enum": ["barrel"] },
+          "from": { "type": "string", "pattern": "^[A-Za-z0-9_@.][A-Za-z0-9_@./-]*\\.[A-Za-z0-9]+(::[^\\s:]+)?$" },
+          "to": { "type": ["string", "null"] },
+          "target_hint": { "type": "string" },
+          "file": { "type": "string", "pattern": "^[A-Za-z0-9_@.][A-Za-z0-9_@./-]*\\.[A-Za-z0-9]+$" },
+          "line": { "type": ["integer", "null"] },
+          "line_source": { "type": "string", "enum": ["written", "derived"] },
+          "basis": { "type": "string", "enum": ["observed", "inferred", "unknown"] },
+          "engine_native_id": { "type": "string" }
+        }
+      }
+    },
+    "omissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["what", "reason"],
+        "properties": {
+          "what": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}
