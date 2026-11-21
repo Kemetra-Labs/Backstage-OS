@@ -54,7 +54,9 @@ results reproduce byte for byte (--contract v0). v1 differences, each tied to a 
   R5  An unknown matches on file + line (or from, when the engine line is null) regardless of edge type.
       An engine edge to an external package never claims the unknown target.
   R7  contract_errors() reports envelope-shape rules the subset schema validator cannot express.
-  R8  Hard fail = false observed edges + overclaimed + negatives hit. Reported, not a gate: false
+  R8  Hard fail = false observed edges + overclaimed + negatives hit + invalid claims (an observed or
+      inferred edge without a target, an unknown naming one) + an unknown claimed as observed + any schema
+      or contract error in a v1 envelope. Duplicate keys keep the strongest label. Reported, not a gate: false
       inferred, derived, understated, unknown coverage, per-type and per-language coverage, files seen
       vs total and external_refs. Counts only, never percentages.
 """
@@ -353,22 +355,37 @@ def gt_v1_edges(gt):
 
 
 def contract_errors(env):
-    """Envelope rules the subset schema validator cannot express (R3, R4, R6, R7). Reported, not scored."""
+    """Envelope rules the subset schema validator cannot express (R3, R4, R6, R7). apply_v1_gate() makes any
+    error here fail the v1 verdict."""
     errs = []
     for i, e in enumerate(env.get("edges", [])):
         tag = f"edges[{i}] {e.get('type')} {e.get('from')}"
-        basis = e.get("basis")
-        if basis in ("observed", "inferred") and not isinstance(e.get("line"), int):
-            errs.append(f"{tag}: {basis} edge needs an integer line (R7)")
+        basis, line = e.get("basis"), e.get("line")
+        if basis in ("observed", "inferred") and not (isinstance(line, int) and not isinstance(line, bool) and line >= 1):
+            errs.append(f"{tag}: {basis} edge needs a 1-based integer line (R7)")
         if e.get("type") == "imports" and not e.get("form"):
             errs.append(f"{tag}: imports edge needs form (R3)")
         if e.get("type") == "contains" and e.get("line_source") != "derived":
             errs.append(f"{tag}: contains edge needs line_source=derived (R7)")
+        if e.get("line_source") == "derived" and e.get("type") != "contains":
+            errs.append(f"{tag}: line_source=derived is only defined for contains edges (R7)")
         if e.get("to") is None and basis != "unknown":
             errs.append(f"{tag}: null target is only valid for basis unknown (R4, R6)")
+        if basis == "unknown" and e.get("to") is not None:
+            errs.append(f"{tag}: unknown edge must have to=null (R4)")
         if basis == "unknown" and e.get("to") is None and not e.get("target_hint"):
             errs.append(f"{tag}: unknown edge needs target_hint (R6)")
     return errs
+
+
+def apply_v1_gate(result, schema_errs, c_errs):
+    """Schema or contract errors in a v1 envelope fail the verdict. c_errs None = not checked (v0 envelope)."""
+    v = result["verdict"]
+    v["schema_errors"] = len(schema_errs)
+    v["contract_errors"] = None if c_errs is None else len(c_errs)
+    if schema_errs or c_errs:
+        v["result"] = "FAIL"
+    return result
 
 
 def score_v1(env, gt):
@@ -388,14 +405,17 @@ def score_v1(env, gt):
     counters = {"external_ignored": 0, "null_target_ignored": 0, "intrafile_ignored": 0,
                 "unlisted_contains_ignored": 0, "duplicate_ignored": 0, "alias_resolved": 0,
                 "engine_unknown_edges": 0, "names_folded": 0}
-    matched, extras, resolved, derived = {}, [], [], []
+    matched, extras, resolved, derived, invalid_claims = {}, [], [], [], []
     engine_edges = env.get("edges", [])
     for e in engine_edges:
         if e.get("basis") == "unknown":
             counters["engine_unknown_edges"] += 1
+            if e.get("to") is not None:  # R4: unknown means to=null plus target_hint; naming a target is a claim
+                invalid_claims.append(_edge_str(e) + " (unknown edge names a target)")
             continue
         if e.get("to") is None:
             counters["null_target_ignored"] += 1
+            invalid_claims.append(_edge_str(e) + " (observed/inferred edge without a target)")
             continue
         f, t = res.norm(e.get("from")), res.norm(e.get("to"))
         if f is None or t is None:
@@ -423,9 +443,13 @@ def score_v1(env, gt):
         if key in gt_by_key:
             if key in matched:
                 counters["duplicate_ignored"] += 1
+                # keep the strongest label so a later observed duplicate cannot hide behind an earlier inferred one
+                if ne.get("basis") == "observed" and matched[key].get("basis") != "observed":
+                    matched[key] = ne
             else:
                 matched[key] = ne
-        elif etype == "imports" and t in reexports.get(import_at.get((f, ne.get("line"))), ()):
+        elif (etype == "imports" and res.module(ne.get("file")) == f
+              and t in reexports.get(import_at.get((f, ne.get("line"))), ())):
             derived.append(_edge_str(ne) + " via barrel")
         else:
             extras.append((ne, f, t))
@@ -504,27 +528,35 @@ def score_v1(env, gt):
             status = "silent"
         unknown.append({"edge": u["id"], "type": u["type"], "file": u["file"], "line": u["line"], "status": status})
     langs = engine_languages(env)
-    hard = len(false_observed) + len(overclaimed) + len(neg_hits)
+    unknown_claimed = sum(1 for u in unknown if u["status"] == "claimed_observed")
+    hard = len(false_observed) + len(overclaimed) + len(neg_hits) + len(invalid_claims) + unknown_claimed
     return {
         "contract": "v1", "table": table, "missed": missed, "false_observed": false_observed,
         "false_inferred": false_inferred, "overclaimed": overclaimed, "understated": understated,
+        "invalid_claims": invalid_claims,
         "derived": derived, "form_mismatch": form_mismatch, "type_mismatch": type_mismatch,
         "negatives_hit": neg_hits, "negatives_total": len(gt["negatives"]),
         "line_provenance": {"exact": exact, "missing": missing, "off_by_n": off},
         "unknown": unknown, "languages_zero_nodes": [lg for lg in gt["fixture"]["languages"] if langs.get(lg, 0) == 0],
         "engine_node_counts": langs, "coverage_by_language": lang_cov,
         "files": env.get("coverage"), "external_refs": env.get("external_refs"), "ignored": counters,
-        "verdict": {"criterion": "no_false_observed_overclaimed_or_negative_hits", "false_observed": len(false_observed),
-                    "overclaimed": len(overclaimed), "negatives_hit": len(neg_hits), "result": "PASS" if not hard else "FAIL"},
+        "verdict": {"criterion": "no_false_observed_overclaimed_invalid_or_negative_hits", "false_observed": len(false_observed),
+                    "overclaimed": len(overclaimed), "negatives_hit": len(neg_hits), "invalid_claims": len(invalid_claims),
+                    "unknown_claimed": unknown_claimed, "result": "PASS" if not hard else "FAIL"},
     }
 
 
 def render_v1(result, engine, schema_errs, contract_errs):
-    out = ["G1 SCORE REPORT v1 (counts only)", f"engine: {engine.get('name')} {engine.get('version')}",
-           "envelope schema: " + ("VALID" if not schema_errs else f"INVALID ({len(schema_errs)} errors)")]
-    out += ["  schema error: " + x for x in schema_errs[:10]]
-    out.append("contract errors: " + (str(len(contract_errs)) if contract_errs else "none"))
-    out += ["  " + x for x in contract_errs[:10]]
+    """contract_errs None means the envelope is not v1, so schema v1 and contract rules were not checked."""
+    out = ["G1 SCORE REPORT v1 (counts only)", f"engine: {engine.get('name')} {engine.get('version')}"]
+    if contract_errs is None:
+        out += ["envelope schema: v0 envelope, not checked against the v1 schema",
+                "contract errors: NOT CHECKED (v0 envelope; calibration preview, see CONTRACT-V1.md section 3)"]
+    else:
+        out.append("envelope schema: " + ("VALID" if not schema_errs else f"INVALID ({len(schema_errs)} errors)"))
+        out += ["  schema error: " + x for x in schema_errs[:10]]
+        out.append("contract errors: " + (str(len(contract_errs)) if contract_errs else "none"))
+        out += ["  " + x for x in contract_errs[:10]]
     out += ["", "Edge type   expected    TP    FN    FP", "----------  --------  ----  ----  ----"]
     tot = {"expected": 0, "tp": 0, "fn": 0, "fp": 0}
     for ty in EDGE_TYPES_V1:
@@ -535,6 +567,7 @@ def render_v1(result, engine, schema_errs, contract_errs):
     out.append(f"{'TOTAL':<10}  {tot['expected']:>8}  {tot['tp']:>4}  {tot['fn']:>4}  {tot['fp']:>4}")
     sections = (("Missed (FN)", "missed"), ("HARD: false observed edges", "false_observed"),
                 ("HARD: overclaimed (observed label on an inferred truth)", "overclaimed"),
+                ("HARD: invalid claims (observed/inferred without target, unknown naming a target)", "invalid_claims"),
                 ("Reported: false inferred edges", "false_inferred"),
                 ("Reported: understated (inferred label on an observed truth)", "understated"),
                 ("Reported: derived through a barrel (R2)", "derived"),
@@ -562,7 +595,10 @@ def render_v1(result, engine, schema_errs, contract_errs):
     out.append("Ignored: " + json.dumps(result["ignored"], sort_keys=True))
     v = result["verdict"]
     out.append(f"VERDICT {v['criterion']}: {v['result']} (false observed = {v['false_observed']}, "
-               f"overclaimed = {v['overclaimed']}, negatives hit = {v['negatives_hit']})")
+               f"overclaimed = {v['overclaimed']}, negatives hit = {v['negatives_hit']}, "
+               f"invalid claims = {v['invalid_claims']}, unknown claimed as observed = {v['unknown_claimed']}, "
+               f"schema errors = {v['schema_errors']}, contract errors = "
+               f"{'not checked' if v['contract_errors'] is None else v['contract_errors']})")
     return "\n".join(out)
 
 
@@ -627,8 +663,8 @@ def run_score(env_path, gt_path, json_out=None, quiet=False, contract="auto"):
         raise SystemExit("--contract v0 cannot score a kawalys.graph.v1 envelope")
     schema_errs = validate_schema(env, load_json(SCHEMA_V1_PATH if is_v1_env else SCHEMA_PATH))
     if contract == "v1":
-        c_errs = contract_errors(env) if is_v1_env else []
-        result = score_v1(env, gt)
+        c_errs = contract_errors(env) if is_v1_env else None  # None = not checked
+        result = apply_v1_gate(score_v1(env, gt), schema_errs, c_errs)
         result["schema_errors"] = schema_errs
         result["contract_errors"] = c_errs
         text = render_v1(result, env.get("engine", {}), schema_errs, c_errs)
@@ -762,6 +798,68 @@ def self_check_v1(gt, envgt, need):
     next(e for e in env["edges"] if e["basis"] == "observed" and e["type"] == "calls")["line"] = None
     next(e for e in env["edges"] if e["type"] == "contains").pop("line_source")
     need(len(contract_errors(env)) == 3, f"v1 S4: contract_errors = {len(contract_errors(env))}, want 3")
+    barrel_import = {"type": "imports", "form": "import", "from": "src/web/OrderList.tsx", "to": "src/web/orders.ts",
+                     "file": "src/web/OrderList.tsx", "line": 4, "basis": "observed", "via": "barrel"}
+    loader_dyn = {"type": "imports", "form": "dynamic", "from": "src/web/loader.ts", "to": None,
+                  "file": "src/web/loader.ts", "line": 3}
+    # S5: derived, understated and false inferred are reported and never gate the verdict
+    env = copy.deepcopy(base)
+    env["edges"] += [dict(barrel_import),
+                     {"type": "calls", "from": "src/web/handler.ts::createOrderHandler", "to": "src/web/pricing.ts::computeTotal",
+                      "file": "src/web/handler.ts", "line": 8, "basis": "inferred"}]
+    edge(env, "E14")["basis"] = "inferred"
+    r5 = score_v1(env, gt)
+    need((len(r5["derived"]), len(r5["understated"]), len(r5["false_inferred"]), r5["verdict"]["result"]) == (1, 1, 1, "PASS"),
+         f"v1 S5: reported-only findings must not gate: {(len(r5['derived']), len(r5['understated']), len(r5['false_inferred']), r5['verdict']['result'])}")
+    # S6: a duplicate key keeps the strongest label, whatever the order (R4)
+    for first, second in (("inferred", "observed"), ("observed", "inferred")):
+        env = copy.deepcopy(base)
+        e13 = edge(env, "E13")
+        env["edges"].remove(e13)
+        env["edges"] += [dict(e13, basis=first), dict(e13, basis=second)]
+        r6 = score_v1(env, gt)
+        need(len(r6["overclaimed"]) == 1 and r6["verdict"]["result"] == "FAIL" and r6["ignored"]["duplicate_ignored"] == 1,
+             f"v1 S6: duplicate E13 ({first} then {second}) must be overclaimed and FAIL")
+    # S7: null-target claims, unknown naming a target, missing hint, weak lines (R4, R5, R6, R7)
+    env = copy.deepcopy(base)
+    env["edges"].append(dict(loader_dyn, basis="observed"))
+    r7 = score_v1(env, gt)
+    need(len(r7["invalid_claims"]) == 1 and r7["verdict"]["result"] == "FAIL"
+         and next(u for u in r7["unknown"] if u["edge"] == "E23")["status"] == "claimed_observed",
+         "v1 S7a: an observed null-target edge at an unknown site must be an invalid claim, claim E23 and FAIL")
+    need(len(contract_errors(env)) == 1, "v1 S7a: contract_errors must flag the observed null target")
+    env = copy.deepcopy(base)
+    env["edges"].append({"type": "calls", "from": "src/svc/gateway.py::submit_order", "to": "src/web/handler.ts::createOrderHandler",
+                         "file": "src/svc/gateway.py", "line": 18, "basis": "unknown"})
+    r7b = score_v1(env, gt)
+    need(len(r7b["invalid_claims"]) == 1 and r7b["verdict"]["result"] == "FAIL" and len(contract_errors(env)) == 1,
+         "v1 S7b: an unknown edge naming a target must be an invalid claim, a contract error and FAIL")
+    env = copy.deepcopy(base)
+    env["edges"].append(dict(loader_dyn, basis="unknown"))
+    need(len(contract_errors(env)) == 1 and "target_hint" in contract_errors(env)[0], "v1 S7c: unknown without target_hint must be a contract error")
+    env = copy.deepcopy(base)
+    edge(env, "E14")["line"] = True
+    edge(env, "E12")["line"] = 0
+    edge(env, "E01")["line_source"] = "derived"
+    need(len(contract_errors(env)) == 3, f"v1 S7d: weak lines, got {len(contract_errors(env))} contract errors, want 3")
+    # S8: schema and contract errors fail the verdict; an unchecked (v0) envelope is labelled, not passed off as clean
+    clean = apply_v1_gate(score_v1(base, gt), [], contract_errors(base))
+    need(clean["verdict"]["result"] == "PASS", "v1 S8: clean envelope must PASS the gate")
+    need(apply_v1_gate(score_v1(base, gt), ["x"], [])["verdict"]["result"] == "FAIL", "v1 S8: schema errors must FAIL the gate")
+    need(apply_v1_gate(score_v1(base, gt), [], ["x"])["verdict"]["result"] == "FAIL", "v1 S8: contract errors must FAIL the gate")
+    need(apply_v1_gate(score_v1(base, gt), [], None)["verdict"]["contract_errors"] is None, "v1 S8: unchecked contract must stay None")
+    # S9: derived needs the edge's own file to be the importing module (R2, R7)
+    env = copy.deepcopy(base)
+    env["edges"].append(dict(barrel_import, file="src/web/handler.ts"))
+    r9 = score_v1(env, gt)
+    need(not r9["derived"] and len(r9["false_observed"]) == 1, "v1 S9: a barrel import written in another file must not be derived")
+    # S10: an inferred edge at an unknown site claims it. Only this gate fails it (false inferred is reported only)
+    env = copy.deepcopy(base)
+    env["edges"].append(dict(loader_dyn, to="src/web/handler.ts", basis="inferred"))
+    r10 = score_v1(env, gt)
+    need(len(r10["false_inferred"]) == 1 and not r10["false_observed"] and not r10["invalid_claims"]
+         and next(u for u in r10["unknown"] if u["edge"] == "E23")["status"] == "claimed_observed"
+         and r10["verdict"]["result"] == "FAIL", "v1 S10: an inferred edge at an unknown site must claim it and FAIL on that alone")
 
 
 def self_check():
