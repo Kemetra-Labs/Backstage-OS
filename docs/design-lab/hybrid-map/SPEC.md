@@ -80,7 +80,8 @@ Filters apply to the ledger and links (dim in the map, hide in the list, as V2).
 - Arrow keys move focus to the nearest node within 60 degrees (`nextByDirection`, unchanged).
 - Filters (All, Products, Projects, Services, Risks) dim, never remove. Scope select and Map / List toggle as in V2.
 - **Selection trace:** on selecting a node, links that are not its own drop to 18 % opacity and one 3 px trace sweeps along each of its own links once, 720 ms, `cubic-bezier(0.22, 1, 0.36, 1)`, `stroke-dashoffset` and `opacity` only. No loop, no ambient motion.
-- **Reduced motion** (`prefers-reduced-motion` or the in-app setting): the trace is not rendered; the static dim and highlight remain, so no information depends on motion. Test: zero running animations.
+- **First-load orbit (owner decision D-24.1, BACK-24, 2026-11-21):** the only motion allowed without a user action. On first load the orbits draw once and the nodes settle inward (about 900 ms, `transform`, `opacity` and `stroke-dashoffset` only), then everything rests in the same static state the reduced-motion render shows. It plays once per page session; the "already played" flag is an in-memory variable (D-24.8), so a reload plays it again and nothing is stored. It carries no information. The no-library baseline builds it with CSS or the Web Animations API (D-24.10). It must not read as a live feed: no loop, pulse or idle drift follows it. Details and limits: `docs/planning/BACK-24/README.md` section 3.
+- **Reduced motion** (`prefers-reduced-motion` or the in-app setting): neither the trace nor the first-load orbit is rendered; the static dim and highlight remain, so no information depends on motion. Test: zero running animations.
 - No pan or zoom in this concept (the pilot dropped V2's); decide separately whether to keep them. If kept, keep the buttons and keyboard keys from V2.
 
 ## 6. Accessibility and i18n
@@ -92,7 +93,7 @@ Filters apply to the ledger and links (dim in the map, hide in the list, as V2).
 
 ## 7. Performance budget (from the pilot, Chromium)
 
-At most about 600 DOM elements and 200 SVG elements on the map screen; no `backdrop-filter`; no more than one filter; one-shot animations only. Re-measure after the port.
+At most about 600 DOM elements and 200 SVG elements on the map screen; no `backdrop-filter`; no more than one filter; one-shot animations only (the first-load orbit included). Re-measure after the port.
 
 ## 8. Acceptance (port)
 

@@ -24,11 +24,11 @@ Rules that apply to every layer (from `PRODUCT.md` and `DESIGN.md`, unchanged):
 | --- | --- | --- |
 | Select a node | Own links draw in from the selected node outward (about 700 ms); other links ease to 18 % | Which links belong to the selection |
 | Change selection | Hub and selected card cross-fade; inspector content fades in place (no layout jump) | Continuity of focus |
-| First load | Orbits draw once, then nodes settle inward (about 900 ms, once per session) | None (orientation only); skipped on later visits |
+| First load | Orbits draw once, then nodes settle inward (about 900 ms, once per page session). **Allowed by owner decision D-24.1 (BACK-24, 2026-11-21).** Remembered by an in-memory flag, so a reload plays it again (D-24.8). The no-library baseline builds it too (D-24.10) | None (orientation only); skipped after it has played in the same page session, and under reduced motion |
 | Filter change | Non-matching nodes fade to 32 % | Same as the static dim |
 | Map / List switch | Cross-fade, no slide | None |
 
-**Not allowed:** infinite loops, pulsing "alive" halos, travelling dots along links, ambient star drift, any motion that starts without a user action.
+**Not allowed:** infinite loops, pulsing "alive" halos, travelling dots along links, ambient star drift, any motion that starts without a user action, except the once-per-page-session first-load orbit in the table above (owner decision D-24.1).
 
 **Reduced motion:** `prefers-reduced-motion` (and the in-app setting) turns every item above into an instant state change. The static highlight, dim and focus ring carry the same meaning. Test: zero running animations.
 
