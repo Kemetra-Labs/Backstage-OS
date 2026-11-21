@@ -2,7 +2,8 @@
 
 Jira: [BACK-24](https://rahmaqanater.atlassian.net/browse/BACK-24) (parent BACK-1). Written 2026-11-21 on branch
 `claude/back-24-bbf751` from `main` at `ed0497c` (PR 20). Updated 2026-11-21 on branch `claude/back-24-decisions` from
-`main` at `c4a5bf3` to record the owner's answers (section 9) and the hybrid-map files now being on `main`.
+`main` at `c4a5bf3` to record the owner's answers (section 9) and the hybrid-map files now being on `main` (PR 22).
+Updated again 2026-11-21 on branch `claude/back-24-decisions-2` from `main` at `a6dcd17` for D-24.3 and D-24.8 to D-24.10.
 Related: BACK-18 (V2 fidelity pass, done, not reopened), BACK-22 (G1-03 renderer comparison, separate), BACK-8 (G0
 visual/a11y audit, separate and still open).
 
@@ -98,7 +99,9 @@ disagree until the owner updates them. The rules that bound the exception:
   motion, on any arm.
 - It runs once per session (about 900 ms, per the note's "First load" row), then orbits and nodes rest in the same
   static state the fallback shows. Later visits in the session do not replay it.
-- It does not run under `prefers-reduced-motion`, and not on the static fallback arms (M2, M3, W2, W3).
+- It does not run under `prefers-reduced-motion`, and not where animation is unsupported or disabled. Per D-24.10 the
+  baseline B0 has the **same** orbit built with CSS or the Web Animations API, so arms M2 and M3 (library off or failed)
+  show that baseline version, and M1 shows the library version. Fallback arms are compared on the static end state.
 - It carries no information (orientation only), so no node, status or truth label depends on it.
 - Orbit and link tracing after load stay **one-shot** and user-initiated (selecting a node, or an explicit "Trace"
   control that only changes view state, allowed under BACK-17 section 2.2). The trace keeps SPEC.md's 720 ms.
@@ -107,8 +110,8 @@ disagree until the owner updates them. The rules that bound the exception:
   (BACK-15 rule: no pulse, blink or idle animation that could read as a live feed).
 - "Once per session" needs somewhere to remember it. FACT: the V2 scope test asserts no network, storage or secrets in
   V2 source (`app/src/design-lab/v2/scope.test.ts`, per the V2 README). So an in-memory flag (replays on reload) fits
-  the V2 rules, and `sessionStorage` would need a separate exception. **Open item for the owner** (carried into
-  section 9).
+  the V2 rules, and `sessionStorage` would need a separate exception. **Decided (D-24.8, 2026-11-21): in-memory flag**,
+  so the orbit replays on reload.
 
 ## 4. Test matrix
 
@@ -162,7 +165,7 @@ kept apart.
 | Reduced motion | `prefers-reduced-motion: reduce` in each engine. One-shot tracing becomes an instant state change. WebGL not started at all, not just paused | Automated plus manual |
 | Contrast and legibility | Computed contrast of every text and edge state over the decorative layer at its worst frame, not only a still. Text never sits on bright WebGL regions | Automated computed values |
 | Chromium, WebKit, Firefox | The root static-prototype suite runs Chromium and WebKit, but the V2 suite (`npm run e2e:v2`) is **Chromium only**. So WebKit is an addition for the V2 arms, and Firefox (opt-in via `PW_FIREFOX=1` in the root suite) is added for the WebGL arms because WebGL context behaviour differs | Automated, after the configs are extended in an approved experiment |
-| Real device and low end | Real iPhone and a low-end Android. The BrowserStack SDK route in `CLAUDE.md` is **not yet proven**: the BACK-6 real-device check is paused after the SDK fell back to a local run, so a working Local-tunnel path is a precondition, or the owner supplies hardware. One low-end device class must be named by the owner (D-24.3) | **Independent, owner-gated. Not implied by Playwright** |
+| Real device and low end | Real iPhone and a low-end Android. The BrowserStack SDK route in `CLAUDE.md` is **not yet proven**: the BACK-6 real-device check is paused after the SDK fell back to a local run, so a working Local-tunnel path is a precondition, or the owner supplies hardware. **D-24.3 (accepted 2026-11-21):** class = a low-end Android phone (4 GB RAM or less, Chrome) plus an older iPhone; specific models come from the BrowserStack catalog or owner-supplied hardware at experiment time. Chromium CPU throttling (about 4x) is a rough proxy only, not adoption evidence | **Independent, owner-gated. Not implied by Playwright** |
 
 PROPOSED rule: an arm is not eligible for an adopt recommendation until the screen-reader pass and the real-device pass
 exist as recorded evidence for that arm. A missing pass is reported as "not verified", never as pass.
@@ -186,7 +189,7 @@ browser version and run count beside each number.
 | CPU and GPU | Chrome trace main-thread time and GPU process time during trace and while idle | Idle: no measurable activity beyond B0 (follows from zero idle frames). Active: reported with the device, no limit until the owner sets one |
 | Battery and resource use | Real hardware only, with a stated method (for example an OS energy report or a fixed-duration drain test). No cross-browser Battery Status API is assumed | Reported with the method named. No numeric threshold until the owner picks one |
 | Memory | Heap and GPU memory after repeated select and trace cycles, WebGL context created and released | No growth across cycles that survives a forced GC, and at most one WebGL context, released on route leave. Cycle count chosen at experiment time and recorded |
-| Visual regression | Pixel diff against B0 at a fixed viewport, animations finished or disabled | Fallback arms (M2, M3, W2, W3): identical to B0 in information regions, matching ENHANCEMENT-NOTE section 5 ("screenshots with the layer off are identical"). On-arms: tolerance owned by the owner (D-24.3) |
+| Visual regression | Pixel diff against B0 at a fixed viewport, animations finished or disabled | Fallback arms (M2, M3, W2, W3): identical to B0 in information regions, matching ENHANCEMENT-NOTE section 5 ("screenshots with the layer off are identical"). On-arms (D-24.3, accepted 2026-11-21): information regions use Playwright `toHaveScreenshot` at its defaults (per-pixel threshold 0.2, no differing pixels allowed) with the WebGL layer and decorative horizon masked out. The decorative region is reviewed by eye, because WebGL output varies by GPU |
 
 ## 7. Due diligence per library
 
@@ -260,19 +263,20 @@ They authorize no install, benchmark, experiment, commit or PR.
 | --- | --- | --- |
 | D-24.1 | Auto-play | **Allow** a once-per-session first-load orbit, bounded as in section 3. Conflicts with SPEC.md section 5 until that file is updated |
 | D-24.2 | Combined arms | **Add** the combined Motion + WebGL arm (MW) |
-| D-24.3 | Visual regression tolerance for on-arms, and who owns low-end-device verification and which device class | **Open.** To be decided before the experiment. Adoption stays blocked until a person and a device class are named |
+| D-24.3 | Visual regression tolerance for on-arms, and who owns low-end-device verification and which device class | **Accepted as proposed by Claude** (2026-11-21): tolerance and device class as in sections 5 and 6. Claude runs the tests and the owner approves results before any adoption decision |
 | D-24.4 | V2 "no dependencies" rule | **Motion may be evaluated**, plus single D3 modules later if justified (section 7). Not an install approval |
 | D-24.5 | Decorative WebGL | **Wanted**, behind a feature flag. Phones (and widths under 900 px) get the static image |
 | D-24.6 | React 19 and R3F | **Plain `three`**, no `@react-three/fiber`. A React upgrade is out of scope |
 | D-24.7 | Experiment location and stop boundary | **Separate branch**, stop before commit and before PR |
 
-New open items created by these answers (not yet decided):
+Follow-up items created by those answers, answered by the owner on 2026-11-21 (second batch, also recorded in a BACK-24
+comment):
 
-| ID | Item | Why it is open |
+| ID | Item | Owner answer |
 | --- | --- | --- |
-| D-24.8 | How "once per session" is remembered for the first-load orbit: in-memory flag (replays on reload) or a `sessionStorage` exception to the V2 scope test | V2's scope test asserts no storage in V2 source (section 3) |
-| D-24.9 | Whether SPEC.md section 5 and the ENHANCEMENT-NOTE "Not allowed" line are updated to match D-24.1 | They currently say the opposite of the owner's answer |
-| D-24.10 | Whether the first-load orbit is also applied to the no-library baseline B0 (CSS or Web Animations API) so Motion is compared like for like | Without it, a first-load orbit would appear only in Motion arms and bias the comparison |
+| D-24.8 | How "once per session" is remembered for the first-load orbit | **In-memory flag.** Replays on reload. No storage, so it fits the V2 scope test (section 3) |
+| D-24.9 | Whether SPEC.md section 5 and the ENHANCEMENT-NOTE "Not allowed" line are updated to match D-24.1 | **Update them in a separate PR.** **Not yet done:** until then those two files say the opposite of D-24.1 |
+| D-24.10 | Whether the first-load orbit is also applied to the no-library baseline B0 | **Yes.** B0 gets the same orbit built with CSS or the Web Animations API, so Motion is compared like for like (section 3) |
 
 ## 10. Decision package, risk and rollback
 
@@ -313,11 +317,12 @@ STOP and report, do not continue, on any of these (from the ticket):
   a framework replacement; a silent WebGL rollout.
 - A missing explicit owner implementation gate.
 
-Proposed next gate (matches the ticket): D-24.1, D-24.2 and D-24.4 to D-24.7 are answered. Still needed before the owner
-authorizes **one** isolated experiment: D-24.3 (tolerance, owner, low-end device class), D-24.8 to D-24.10 (section 9),
-and the owner's review of the Concept B mobile, Arabic and contrast evidence (captures exist under
+Proposed next gate (matches the ticket): D-24.1 to D-24.10 are all answered. Still needed before the owner authorizes
+**one** isolated experiment: the D-24.9 update to SPEC.md and ENHANCEMENT-NOTE (separate PR, not yet done), and the
+owner's review of the Concept B mobile, Arabic and contrast evidence (captures exist under
 `docs/design-lab/hybrid-map/out/` but were not opened for this protocol). The experiment then runs on a separate
-branch with a stop-before-commit and stop-before-PR boundary. BACK-8 and BACK-22 stay separate; nothing in this document approves a design, a renderer or a dependency.
+branch with a stop-before-commit and stop-before-PR boundary. BACK-8 and BACK-22 stay separate; nothing in this
+document approves a design, a renderer or a dependency.
 
 ## 12. Sources read and what was not checked
 
@@ -332,7 +337,7 @@ Read:
 - `docs/design-lab/hybrid-map/ENHANCEMENT-NOTE.md` and `SPEC.md`: first as untracked working copies in the sibling
   worktree `claude/kawalys-mission-map-visual-a9038d`, then re-compared against the versions merged to `main` in
   PR 21 (identical text after normalizing line endings).
-- The owner's answers to D-24.1 to D-24.7 (session chat, 2026-11-21, recorded in a BACK-24 comment).
+- The owner's answers to D-24.1 to D-24.10 (session chat, 2026-11-21, recorded in two BACK-24 comments).
 
 Not checked, and so not used as evidence:
 
