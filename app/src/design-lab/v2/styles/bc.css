@@ -1,0 +1,300 @@
+/* Mission Map, Hybrid B+C pilot (BACK-27). Scoped to .kv2-bc so nothing here can touch the other V2 screens; delete this file,
+   screens/MissionMapBC.tsx, bc/ and the Outlet switch in App.tsx to remove the pilot. Tokens only, text 11 px or larger.
+   The canvas keeps left-to-right geometry in Arabic; text inside the cards and every panel follows the language. */
+
+/* ---- Shell: a 76 px icon rail while the pilot is on screen. At 860 px and below V2's own menu drawer stays. ---- */
+.kv2-app:has(.kv2-bc) .kv2-main { padding: 0; }
+@media (min-width: 861px) {
+  .kv2-app:has(.kv2-bc) { grid-template-columns: 76px minmax(0, 1fr); }
+  .kv2-app:has(.kv2-bc) .kv2-side { align-items: center; gap: 8px; padding: 12px 6px; overflow-x: hidden; }
+  .kv2-app:has(.kv2-bc) .kv2-ws { justify-content: center; inline-size: 52px; padding: 8px; }
+  .kv2-app:has(.kv2-bc) .kv2-ws > span:last-child { display: none; }
+  .kv2-app:has(.kv2-bc) .kv2-side nav { inline-size: 100%; }
+  .kv2-app:has(.kv2-bc) .kv2-side nav ul { justify-items: center; }
+  .kv2-app:has(.kv2-bc) .kv2-side nav a { flex-direction: column; justify-content: center; gap: 4px; inline-size: 64px; min-block-size: 56px; padding: 8px 2px; font-size: var(--kv2-t-xs); line-height: 1.2; text-align: center; }
+  .kv2-app:has(.kv2-bc) .kv2-side-group { display: none; }
+}
+
+/* ---- Stage ---- */
+.kv2-bc { position: relative; block-size: calc(100vh - 57px); min-block-size: 760px; overflow: hidden; }
+.kv2-bc-region { position: absolute; inset-block: 0; inset-inline: 0 372px; overflow: hidden; }
+.kv2-bc-view { position: absolute; inset: 0; }
+.kv2-bc-view[data-mode="map"] { display: grid; place-items: center; container-type: size; }
+.kv2-bc-glass { border: 1px solid var(--kv2-line); border-radius: var(--kv2-r-lg); background: color-mix(in srgb, var(--kv2-panel) 90%, transparent); box-shadow: var(--kv2-shadow); }
+.kv2-bc .kv2-chip { padding: 2px 8px 2px 6px; font-size: var(--kv2-t-xs); font-weight: 700; letter-spacing: 0; text-transform: none; }
+.kv2-bc .kv2-chip-outline { font-size: var(--kv2-t-xs); }
+
+.kv2-bc-title { position: absolute; z-index: 3; inset-block-start: 14px; inset-inline-start: 16px; inline-size: 330px; display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+.kv2-bc-title h1 { margin: 0; font-size: 34px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.kv2-bc-pills { display: flex; gap: 8px; inline-size: 100%; }
+.kv2-bc-pills .kv2-kpi { flex: 1; padding: 6px 10px; }
+.kv2-bc-pills .kv2-kpi strong { font-size: 20px; }
+.kv2-bc-controls { position: absolute; z-index: 3; inset-block-start: 14px; inset-inline: 372px 14px; display: flex; flex-direction: column; gap: 8px; }
+.kv2-bc-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 10px; }
+.kv2-bc-top .kv2-seg { background: color-mix(in srgb, var(--kv2-well) 92%, transparent); }
+.kv2-bc-top .kv2-seg button { min-block-size: 32px; padding: 0 11px; font-size: var(--kv2-t-sm); }
+.kv2-bc-key { display: flex; flex-direction: column; gap: 5px; padding: 7px 12px; }
+.kv2-bc-hint { color: var(--kv2-muted); font-size: var(--kv2-t-xs); }
+
+/* Legend and orbit key */
+.kv2-bc-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 13px; color: var(--kv2-ink-2); font-size: var(--kv2-t-xs); direction: var(--kv2-dir, ltr); }
+.kv2-bc-legend li { display: inline-flex; align-items: center; gap: 7px; }
+.kv2-bc-lg { position: relative; display: inline-block; flex: none; inline-size: 30px; block-size: 10px; direction: ltr; }
+.kv2-bc-lg::before { content: ""; position: absolute; inset-inline: 1px; inset-block-start: 4px; border-block-start: 2px solid var(--kv2-cyan); }
+.kv2-bc-lg::after { content: ""; position: absolute; inset-inline-start: 11px; inset-block-start: 1px; display: none; box-sizing: border-box; inline-size: 8px; block-size: 8px; border: 2px solid var(--kv2-cyan); border-radius: 50%; background: var(--kv2-bg); }
+.kv2-bc-lg[data-t="observed"]::after { display: block; background: var(--kv2-cyan); }
+.kv2-bc-lg[data-t="correlated"]::before { border-color: var(--kv2-blue); }
+.kv2-bc-lg[data-t="correlated"]::after { display: block; border-color: var(--kv2-blue); }
+.kv2-bc-lg[data-t="hypothesis"]::before { border-color: var(--kv2-amber); border-block-start-style: dashed; }
+.kv2-bc-lg[data-t="hypothesis"]::after { display: block; border-color: var(--kv2-amber); border-radius: 1px; rotate: 45deg; }
+.kv2-bc-lg[data-t="unknown"]::before { border-color: var(--kv2-unk); border-block-start-style: dotted; }
+.kv2-bc-lg[data-t="group"]::before { border-color: var(--kv2-ink-2); border-block-start-width: 1px; opacity: 0.4; }
+.kv2-bc-lg[data-t="stale"]::before { opacity: 0.55; }
+.kv2-bc-lg[data-t="stale"]::after { display: block; border-color: var(--kv2-amber); }
+.kv2-bc-rk { display: inline-block; flex: none; box-sizing: border-box; inline-size: 18px; block-size: 18px; border: 3px solid var(--kv2-unk-line); border-block-start-color: var(--kv2-cyan); border-inline-end-color: var(--kv2-cyan); border-radius: 50%; }
+.kv2-bc-orbitkey { display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--kv2-ink-2); font-size: var(--kv2-t-xs); }
+.kv2-bc-orbitkey b { color: var(--kv2-ink); }
+
+/* ---- Canvas ---- */
+/* The glow behind the hub is a CSS gradient (260 units wide on the 1000 x 860 canvas), not SVG, to keep the element count down. */
+.kv2-bc-canvas {
+  position: relative; z-index: 1; direction: ltr; container-type: inline-size; inline-size: min(100cqw, calc(100cqh * 1000 / 860)); aspect-ratio: 1000 / 860;
+  background: radial-gradient(ellipse 26% 30.23% at 50% 58.14%, color-mix(in srgb, var(--kv2-cyan) 40%, transparent), transparent);
+}
+/* --pad insets the drawing on narrow canvases so the outermost cards never clip; nodes use the same inset (see .kv2-bc-node). */
+.kv2-bc-svg { position: absolute; inset-block: 0; inset-inline-start: var(--pad, 0px); inline-size: calc(100% - 2 * var(--pad, 0px)); block-size: 100%; }
+.kv2-bc-orbit { fill: none; stroke: var(--kv2-cyan); stroke-dasharray: 3 7; vector-effect: non-scaling-stroke; }
+.kv2-bc-orbit-inner { stroke-opacity: 0.55; }
+.kv2-bc-orbit-middle { stroke-opacity: 0.4; }
+.kv2-bc-orbit-outer { stroke-opacity: 0.28; }
+
+.kv2-bc-edge path { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.kv2-bc-edge[data-cls="group"] path { stroke: var(--kv2-ink-2); stroke-opacity: 0.28; stroke-width: 1; }
+.kv2-bc-edge[data-truth="observed"] path { stroke: var(--kv2-cyan); stroke-width: 2.2; }
+.kv2-bc-edge[data-truth="observed"] .kv2-bc-glow { stroke: var(--kv2-cyan); stroke-width: 7; stroke-opacity: 0.16; }
+.kv2-bc-edge[data-truth="correlated"] path { stroke: var(--kv2-blue); stroke-width: 2; }
+.kv2-bc-edge[data-truth="hypothesis"] path { stroke: var(--kv2-amber); stroke-width: 2; stroke-dasharray: 7 5; }
+.kv2-bc-edge[data-cls="dep"][data-truth="unknown"] path { stroke: var(--kv2-unk); stroke-width: 1.8; stroke-dasharray: 1.5 5.5; stroke-opacity: 0.85; }
+.kv2-bc-edge[data-stale] path:not(.kv2-bc-glow) { stroke-opacity: 0.55; }
+.kv2-bc-edge[data-dim] { opacity: 0.18; }
+.kv2-bc-edge .kv2-bc-mk { fill: var(--kv2-bg); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.kv2-bc-edge[data-truth="observed"] .kv2-bc-mk { fill: var(--kv2-cyan); stroke: var(--kv2-cyan); }
+.kv2-bc-edge[data-truth="correlated"] .kv2-bc-mk { stroke: var(--kv2-blue); }
+.kv2-bc-edge[data-truth="hypothesis"] .kv2-bc-mk { stroke: var(--kv2-amber); }
+.kv2-bc-edge[data-stale] .kv2-bc-mk { fill: var(--kv2-bg); stroke: var(--kv2-amber); }
+
+/* One-shot trace along the selected node's own links. Reduced motion removes it; the static dim and highlight remain. */
+.kv2-bc-trace { fill: none; stroke: var(--kv2-ink); stroke-width: 3; stroke-linecap: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1 1; stroke-dashoffset: 1; opacity: 0; animation: kv2-bc-sweep 720ms var(--kv2-ease) 1 both; }
+.kv2-bc-trace[data-rev] { stroke-dashoffset: -1; animation-name: kv2-bc-sweep-rev; }
+@keyframes kv2-bc-sweep { 0% { stroke-dashoffset: 1; opacity: 0.95; } 70% { opacity: 0.8; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes kv2-bc-sweep-rev { 0% { stroke-dashoffset: -1; opacity: 0.95; } 70% { opacity: 0.8; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+
+/* First-load orbit (D-24.1): orbits draw once and the nodes settle inward, then everything rests. About 0.9 s in all. */
+.kv2-bc-draw { fill: none; stroke: var(--kv2-cyan); stroke-width: 1.4; vector-effect: non-scaling-stroke; stroke-dasharray: 1 1; stroke-dashoffset: 1; opacity: 0; animation: kv2-bc-draw 420ms var(--kv2-ease) 1 both; }
+@keyframes kv2-bc-draw { 0% { stroke-dashoffset: 1; opacity: 0.8; } 80% { opacity: 0.6; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+.kv2-bc-node[data-intro] { animation: kv2-bc-settle 460ms var(--kv2-ease) var(--delay, 0ms) 1 backwards; }
+@keyframes kv2-bc-settle { 0% { opacity: 0; translate: calc(var(--vx) * 1cqw) calc(var(--vy) * 1cqw); } 100% { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .kv2-bc-trace, .kv2-bc-draw { display: none; }
+}
+
+/* Nodes: one native button each. The orb is sized by kind, never by data. */
+.kv2-bc-node {
+  position: absolute; z-index: 2; left: calc(var(--pad, 0px) + (100% - 2 * var(--pad, 0px)) * var(--fx)); top: calc(var(--fy) * 100%);
+  display: flex; flex-direction: column; align-items: center; gap: 5px; min-inline-size: 44px; padding: 0; border: 0; background: transparent;
+  color: var(--kv2-ink); text-align: center; transform: translate(-50%, calc(var(--orb) / -2)); transition: opacity var(--kv2-dur-short) var(--kv2-ease);
+}
+.kv2-bc-node[data-hub] { z-index: 1; }
+.kv2-bc-node:focus-visible { z-index: 6; outline: none; }
+.kv2-bc-node[data-dim] { opacity: 0.32; }
+.kv2-bc-orbw { position: relative; display: grid; place-items: center; flex: none; inline-size: var(--orb); block-size: var(--orb); }
+.kv2-bc-orb {
+  position: relative; z-index: 1; display: grid; place-items: center; inline-size: calc(var(--orb) - 8px); block-size: calc(var(--orb) - 8px); border-radius: 50%;
+  border: 1.5px solid var(--kv2-line-hi); background: radial-gradient(circle at 50% 30%, var(--kv2-panel-hi), var(--kv2-well)); color: var(--kv2-cyan);
+  transition: box-shadow var(--kv2-dur-short) var(--kv2-ease), border-color var(--kv2-dur-short) var(--kv2-ease);
+}
+.kv2-bc-node[data-hub] .kv2-bc-orb { border-color: var(--kv2-cyan); box-shadow: 0 0 0 7px var(--kv2-cyan-soft), 0 0 36px var(--kv2-cyan-glow); }
+.kv2-bc-node[data-tone="warn"] .kv2-bc-orb { color: var(--kv2-amber); border-color: var(--kv2-amber-line); }
+.kv2-bc-node[data-tone="bad"] .kv2-bc-orb { color: var(--kv2-red); border-color: var(--kv2-red-line); }
+.kv2-bc-node[data-tone="unk"] .kv2-bc-orb { color: var(--kv2-ink-2); border-color: var(--kv2-unk-line); }
+.kv2-bc-node[data-selected] .kv2-bc-orb { border-color: var(--kv2-cyan); box-shadow: var(--kv2-bloom-sel); }
+.kv2-bc-node:focus-visible .kv2-bc-orb { outline: 2px solid var(--kv2-cyan); outline-offset: 3px; }
+.kv2-bc-ring { position: absolute; inset: -4px; inline-size: calc(100% + 8px); block-size: calc(100% + 8px); overflow: visible; pointer-events: none; }
+.kv2-bc-ring circle { fill: none; }
+.kv2-bc-ring-track { stroke: var(--kv2-unk-line); stroke-width: 3; }
+.kv2-bc-ring-arc { stroke: var(--kv2-cyan); stroke-width: 4.5; stroke-linecap: round; }
+.kv2-bc-ring-arc[data-over] { stroke: var(--kv2-amber); }
+.kv2-bc-ring-over { stroke: var(--kv2-amber); stroke-width: 2.4; stroke-dasharray: 4 3; }
+.kv2-bc-ring-none { stroke: var(--kv2-unk-line); stroke-width: 2.5; stroke-dasharray: 3 4; }
+.kv2-bc-card {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; min-inline-size: 104px; max-inline-size: 150px; padding: 6px 9px 7px; border: 1px solid var(--kv2-line); border-radius: var(--kv2-r-md);
+  background: color-mix(in srgb, var(--kv2-panel) 92%, transparent); line-height: 1.2; direction: var(--kv2-dir, ltr);
+}
+.kv2-bc-card b { font-size: var(--kv2-t-md); font-weight: 700; }
+.kv2-bc-card small { color: var(--kv2-ink-2); font-size: var(--kv2-t-xs); }
+.kv2-bc-cardread { color: var(--kv2-muted); font-size: var(--kv2-t-xs); white-space: nowrap; }
+.kv2-bc-node[data-selected] .kv2-bc-card { border-color: var(--kv2-line-hi); box-shadow: var(--kv2-shadow-sel); }
+.kv2-bc-node:hover .kv2-bc-card { border-color: var(--kv2-line-hi); }
+.kv2-bc-node:focus-visible .kv2-bc-card { outline: 2px solid var(--kv2-cyan); outline-offset: 3px; }
+
+/* ---- Signal timeline ---- */
+.kv2-bc-tl { position: absolute; z-index: 3; inset-inline: 14px; inset-block-end: 12px; padding: 8px 14px 10px; border-block-start: 1px solid var(--kv2-line-hi); border-radius: var(--kv2-r-md); background: color-mix(in srgb, var(--kv2-bg) 62%, transparent); box-shadow: 0 -10px 30px -18px var(--kv2-cyan-glow); }
+.kv2-bc-tl h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-block-end: 8px; font-size: var(--kv2-t-md); font-weight: 700; }
+.kv2-bc-tl h2 .kv2-icon { color: var(--kv2-cyan); }
+.kv2-bc-tl h2 small, .kv2-bc-readings h2 small { color: var(--kv2-ink-2); font-size: var(--kv2-t-xs); font-weight: 400; }
+.kv2-bc-tl ol { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); padding-block-start: 16px; }
+.kv2-bc-tl ol::before { content: ""; position: absolute; inset-inline: 8px; inset-block-start: 7px; block-size: 2px; direction: ltr; background: linear-gradient(90deg, var(--kv2-line-hi), var(--kv2-cyan), var(--kv2-line-hi)); box-shadow: 0 0 10px var(--kv2-cyan-glow); }
+.kv2-bc-tl li { position: relative; display: flex; flex-direction: column; gap: 1px; padding-inline: 4px 8px; font-size: var(--kv2-t-xs); line-height: 1.3; }
+.kv2-bc-tl li i { position: absolute; inset-block-start: -15px; inset-inline-start: 4px; inline-size: 13px; block-size: 13px; border: 2.5px solid var(--kv2-unk); border-radius: 50%; background: var(--kv2-bg); }
+.kv2-bc-tl li[data-tone="ok"] i { border-color: var(--kv2-cyan); background: var(--kv2-cyan); box-shadow: 0 0 10px var(--kv2-cyan-bloom); }
+.kv2-bc-tl li[data-tone="warn"] i { border-color: var(--kv2-amber); }
+.kv2-bc-tl li[data-tone="bad"] i { border-color: var(--kv2-red); background: var(--kv2-red); }
+.kv2-bc-tl time { color: var(--kv2-muted); text-align: start; }
+.kv2-bc-tl li b { font-size: var(--kv2-t-sm); }
+.kv2-bc-tl li span { color: var(--kv2-ink-2); }
+
+/* ---- Inspector with the three readings as its footer ---- */
+.kv2-bc-side { position: absolute; z-index: 4; inset-block: 12px; inset-inline-end: 12px; inline-size: 348px; display: flex; flex-direction: column; overflow: hidden; }
+.kv2-bc-insp { flex: 1; min-block-size: 0; display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 0; }
+.kv2-bc-insp-body { display: grid; align-content: start; gap: 12px; min-block-size: 0; padding-block: 8px 12px; overflow: auto; }
+.kv2-bc-insp .kv2-insp-head .kv2-orb { --orb: 46px; }
+.kv2-bc-prov { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+.kv2-bc-prov .kv2-icon { color: var(--kv2-cyan); }
+.kv2-bc-srcrows { display: grid; gap: 4px; }
+.kv2-bc-srcrows li { display: grid; grid-template-columns: 96px minmax(0, 1fr) 70px; align-items: center; gap: 10px; padding-block: 7px; border-block-start: 1px solid var(--kv2-line-2); font-size: var(--kv2-t-sm); }
+.kv2-bc-srcrows li:first-child { border-block-start: 0; }
+.kv2-bc-words { color: var(--kv2-ink-2); font-size: var(--kv2-t-xs); }
+.kv2-bc-srcrows li[data-conn="unavailable"] .kv2-bc-words:not(:last-child) { color: var(--kv2-red); }
+.kv2-bc-srcrows li[data-fresh="stale"] .kv2-bc-words:not(:last-child) { color: var(--kv2-amber); }
+
+.kv2-bc-readings { flex: none; display: flex; flex-direction: column; border-block-start: 1px solid var(--kv2-line-hi); background: color-mix(in srgb, var(--kv2-cyan) 4%, transparent); }
+.kv2-bc-readings h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 10px 14px 2px; font-size: var(--kv2-t-md); font-weight: 700; }
+.kv2-bc-readings h2 .kv2-icon { color: var(--kv2-cyan); }
+.kv2-bc-read { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "h h" "n p" "s s"; align-items: center; column-gap: 10px; row-gap: 4px; padding: 7px 14px 8px; }
+.kv2-bc-read + .kv2-bc-read { border-block-start: 1px solid var(--kv2-line-2); }
+.kv2-bc-read-h { grid-area: h; display: flex; align-items: center; gap: 7px; color: var(--kv2-ink-2); font-size: var(--kv2-t-sm); font-weight: 700; }
+.kv2-bc-read-h .kv2-icon { color: var(--kv2-cyan); }
+.kv2-bc-read-n { grid-area: n; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 7px; }
+.kv2-bc-read-n strong { font-size: 24px; font-weight: 700; line-height: 1; }
+.kv2-bc-read-n span { color: var(--kv2-ink-2); font-size: var(--kv2-t-xs); }
+.kv2-bc-read .kv2-bc-pips { grid-area: p; justify-self: end; }
+.kv2-bc-read small { grid-area: s; color: var(--kv2-muted); font-size: var(--kv2-t-xs); }
+
+/* ---- Source atoms: age against target and pips ---- */
+.kv2-bc-age { display: grid; gap: 3px; min-inline-size: 0; }
+.kv2-bc-track { position: relative; block-size: 8px; border: 1px solid var(--kv2-line-2); border-radius: 4px; background: var(--kv2-well); direction: ltr; }
+.kv2-bc-target { position: absolute; inset-block: -3px; inline-size: 2px; border-radius: 1px; background: var(--kv2-ink-2); opacity: 0.8; }
+.kv2-bc-fill { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 3px; background: linear-gradient(90deg, var(--kv2-cyan-2), var(--kv2-cyan)); }
+.kv2-bc-age[data-state="stale"] .kv2-bc-fill { background: var(--kv2-amber); }
+.kv2-bc-over { position: absolute; inset-block: 0; border-radius: 0 3px 3px 0; background: repeating-linear-gradient(135deg, var(--kv2-amber) 0 3px, color-mix(in srgb, var(--kv2-amber) 25%, transparent) 3px 6px); }
+.kv2-bc-cut { position: absolute; inset-block: -4px; inline-size: 7px; margin-inline-start: -3px; border-inline: 2px solid var(--kv2-bg); background: var(--kv2-amber); transform: skewX(-20deg); }
+.kv2-bc-age[data-state="none"] .kv2-bc-track { border-style: dashed; background: transparent; }
+.kv2-bc-nums { display: flex; justify-content: space-between; gap: 8px; color: var(--kv2-ink-2); font-size: var(--kv2-t-xs); white-space: nowrap; }
+.kv2-bc-nums b { color: var(--kv2-ink); font-weight: 700; }
+.kv2-bc-age[data-state="stale"] .kv2-bc-nums b { color: var(--kv2-amber); }
+.kv2-bc-pips { display: flex; gap: 4px; direction: ltr; }
+.kv2-bc-pips i { display: grid; place-items: center; inline-size: 24px; block-size: 20px; border: 1.5px dashed var(--kv2-unk-line); border-radius: 5px; font-style: normal; }
+.kv2-bc-pips i b { color: var(--kv2-muted); font-size: var(--kv2-t-xs); font-weight: 800; line-height: 1; }
+.kv2-bc-pips i[data-on="ok"] { border-style: solid; border-color: var(--kv2-cyan); background: var(--kv2-cyan); box-shadow: 0 0 8px -1px var(--kv2-cyan-bloom); }
+.kv2-bc-pips i[data-on="warn"] { border-style: solid; border-color: var(--kv2-amber); background: repeating-linear-gradient(135deg, var(--kv2-amber) 0 3px, transparent 3px 6px); }
+.kv2-bc-pips i[data-on="bad"] { border-style: solid; border-color: var(--kv2-red); background: var(--kv2-red); }
+.kv2-bc-pips i[data-on="ok"] b, .kv2-bc-pips i[data-on="bad"] b { color: var(--kv2-cyan-ink); }
+.kv2-bc-pips i[data-on="warn"] b { padding: 1px 3px; border-radius: 3px; background: var(--kv2-bg); color: var(--kv2-ink); }
+
+/* ---- List view: C's ledger and readings matrix inside B's shell ---- */
+.kv2-bc-view[data-mode="list"] { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); grid-auto-rows: min-content; align-content: start; gap: 10px 14px; padding: 14px 18px 24px; overflow-y: auto; }
+.kv2-bc-view[data-mode="list"] .kv2-bc-title { position: static; inline-size: auto; }
+.kv2-bc-view[data-mode="list"] .kv2-bc-controls { position: static; grid-column: 2; }
+.kv2-bc-list { display: grid; grid-column: 1 / -1; gap: 12px; min-inline-size: 0; }
+.kv2-bc-view[data-mode="list"] .kv2-bc-tl { position: static; }
+.kv2-bc-panel { padding: 0 0 6px; }
+.kv2-bc-panel .kv2-panel-head { margin: 0; padding: 12px 14px 8px; }
+.kv2-bc-panel .kv2-panel-head h2 { font-size: var(--kv2-t-lg); }
+.kv2-bc-panel .kv2-table-wrap { border: 0; border-radius: 0; }
+.kv2-bc-panel .kv2-table th, .kv2-bc-panel .kv2-table td { padding: 3px 8px; border-block-end: 0; border-block-start: 1px solid var(--kv2-line-2); }
+.kv2-bc-panel .kv2-table thead th { border-block-start: 0; background: transparent; font-size: var(--kv2-t-xs); }
+.kv2-bc-panel .kv2-table tbody th { font-size: var(--kv2-t-md); }
+.kv2-bc-panel .kv2-table tr:last-child > * { border-block-end: 0; }
+.kv2-bc-ledger th button { display: flex; align-items: center; gap: 8px; min-block-size: 30px; text-decoration: none; font-size: var(--kv2-t-md); font-weight: 600; white-space: nowrap; }
+.kv2-bc-ledger tr[data-selected] { box-shadow: inset 3px 0 0 var(--kv2-cyan); }
+.kv2-bc-num { inline-size: 56px; text-align: end !important; }
+.kv2-bc-mini { display: grid; place-items: center; flex: none; inline-size: 24px; block-size: 24px; border: 1.5px solid var(--kv2-line-hi); border-radius: 50%; background: var(--kv2-well); color: var(--kv2-cyan); }
+.kv2-bc-mini[data-tone="warn"] { color: var(--kv2-amber); border-color: var(--kv2-amber-line); }
+.kv2-bc-mini[data-tone="bad"] { color: var(--kv2-red); border-color: var(--kv2-red-line); }
+.kv2-bc-mini[data-tone="unk"] { color: var(--kv2-ink-2); border-color: var(--kv2-unk-line); }
+.kv2-bc-th { display: block; color: var(--kv2-ink-2); font-size: var(--kv2-t-xs); font-weight: 600; }
+.kv2-bc-count { display: block; max-inline-size: 120px; color: var(--kv2-ink-2); font-size: var(--kv2-t-xs); font-weight: 400; line-height: 1.25; }
+.kv2-bc-count b { color: var(--kv2-ink); font-size: 17px; font-weight: 700; }
+.kv2-bc-matrix thead th { vertical-align: bottom; }
+.kv2-bc-matrix .kv2-bc-age { min-inline-size: 112px; }
+.kv2-bc-matrix .kv2-bc-prov { white-space: nowrap; }
+.kv2-bc-links td, .kv2-bc-links th { font-size: var(--kv2-t-sm); }
+
+/* ---- Breakpoints ---- */
+@container (max-width: 960px) {
+  .kv2-bc-node, .kv2-bc-svg { --pad: 76px; }
+}
+@container (max-width: 700px) {
+  .kv2-bc-node, .kv2-bc-svg { --pad: 44px; }
+  .kv2-bc-node { --orb: 44px; }
+  .kv2-bc-node[data-hub] { --orb: 84px; }
+  /* Narrow canvas: every system keeps its orb and a title; only the selected one opens its card (status word included).
+     The List view carries every status word, so nothing is lost. */
+  .kv2-bc-card { min-inline-size: 72px; max-inline-size: 120px; padding: 4px 6px 5px; }
+  .kv2-bc-card small, .kv2-bc-cardread { display: none; }
+  .kv2-bc-node:not([data-selected]) .kv2-bc-card { min-inline-size: 0; max-inline-size: 86px; padding: 1px 5px; border-color: transparent; border-radius: 5px; background: color-mix(in srgb, var(--kv2-bg) 72%, transparent); }
+  .kv2-bc-node:not([data-selected]) .kv2-bc-card b { font-size: var(--kv2-t-xs); font-weight: 600; }
+  .kv2-bc-node:not([data-selected]) .kv2-bc-card .kv2-chip { display: none; }
+}
+@media (max-width: 1180px) {
+  /* Stacked: title, risk pills, readings, filters, map, legend, timeline, inspector. The SPEC's bottom sheet (901 to 1180 px)
+     left the inspector body about 100 px high once the readings footer was inside it, so this layout starts at 1180 instead. */
+  .kv2-bc { display: flex; flex-direction: column; gap: 12px; block-size: auto; min-block-size: 0; padding: 12px; overflow: visible; }
+  .kv2-bc .kv2-bc-region, .kv2-bc .kv2-bc-view, .kv2-bc .kv2-bc-view[data-mode], .kv2-bc .kv2-bc-side, .kv2-bc .kv2-bc-list, .kv2-bc .kv2-bc-controls { display: contents; }
+  .kv2-bc .kv2-cosmos { display: none; }
+  .kv2-bc > *, .kv2-bc-view > * { min-inline-size: 0; max-inline-size: 100%; }
+  .kv2-bc .kv2-bc-title, .kv2-bc .kv2-bc-tl { position: static; inline-size: auto; inset-inline: auto; }
+  .kv2-bc-title { order: 0; }
+  .kv2-bc-title h1 { font-size: 28px; }
+  .kv2-bc-readings { order: 1; border: 1px solid var(--kv2-line); border-radius: var(--kv2-r-lg); background: var(--kv2-grad-panel); }
+  .kv2-bc-top { order: 2; }
+  .kv2-bc-top .kv2-seg { max-inline-size: 100%; overflow-x: auto; scrollbar-width: none; }
+  .kv2-bc-key { order: 3; }
+  .kv2-bc-canvas, .kv2-bc-panel { order: 4; }
+  .kv2-bc-canvas { inline-size: 100%; aspect-ratio: 1000 / 900; }
+  .kv2-bc-tl { order: 5; }
+  .kv2-bc-tl ol { grid-template-columns: minmax(0, 1fr); gap: 10px; padding-block-start: 0; }
+  .kv2-bc-tl ol::before { display: none; }
+  .kv2-bc-tl li i { position: static; display: inline-block; margin-inline-end: 6px; vertical-align: middle; }
+  .kv2-bc-insp { order: 6; border: 1px solid var(--kv2-line); border-radius: var(--kv2-r-lg); background: var(--kv2-grad-panel); padding-block-end: 0; }
+  .kv2-bc-insp-body { overflow: visible; }
+}
+@media (max-width: 640px) {
+  /* Phone: every control is at least 44 x 44 px, and the readings matrix becomes one card per source. */
+  .kv2-bc .kv2-seg button, .kv2-bc .kv2-tabs button, .kv2-bc .kv2-btn, .kv2-bc .kv2-select, .kv2-bc .kv2-select select, .kv2-bc .kv2-linkbtn, .kv2-bc .kv2-table button, .kv2-bc button.kv2-ev { min-block-size: 44px; min-inline-size: 44px; }
+  .kv2-app:has(.kv2-bc) .kv2-seg-compact button, .kv2-app:has(.kv2-bc) .kv2-search, .kv2-app:has(.kv2-bc) .kv2-search input { min-block-size: 44px; }
+  .kv2-app:has(.kv2-bc) .kv2-seg-compact button { min-inline-size: 44px; }
+  .kv2-bc-canvas { aspect-ratio: 1000 / 1250; }
+  .kv2-bc-matrix thead { display: none; }
+  .kv2-bc-matrix, .kv2-bc-matrix tbody { display: block; }
+  .kv2-bc-matrix tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 10px 12px; border-block-start: 1px solid var(--kv2-line-2); }
+  .kv2-bc-matrix tr:first-child { border-block-start: 0; }
+  .kv2-bc-panel .kv2-bc-matrix th[scope="row"], .kv2-bc-panel .kv2-bc-matrix td { display: block; padding: 0; border: 0; }
+  .kv2-bc-matrix th[scope="row"] { grid-column: 1 / -1; }
+  .kv2-bc-matrix td::before { content: attr(data-label); display: block; margin-block-end: 3px; color: var(--kv2-muted); font-size: var(--kv2-t-xs); }
+  .kv2-bc-matrix td:nth-of-type(2) { grid-column: 1 / -1; order: 3; }
+  .kv2-bc-matrix .kv2-bc-age { min-inline-size: 0; }
+  .kv2-bc-ledger th button { min-block-size: 44px; white-space: normal; }
+  .kv2-bc-panel .kv2-bc-ledger th, .kv2-bc-panel .kv2-bc-ledger td { padding-inline: 6px; }
+  .kv2-bc-num { inline-size: 44px; }
+  /* The links table becomes one card per link, as the matrix does. */
+  .kv2-bc-links thead { display: none; }
+  .kv2-bc-links, .kv2-bc-links tbody { display: block; }
+  .kv2-bc-links tr { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; padding: 10px 12px; border-block-start: 1px solid var(--kv2-line-2); }
+  .kv2-bc-links tr:first-child { border-block-start: 0; }
+  .kv2-bc-panel .kv2-bc-links td { display: block; padding: 0; border: 0; }
+  .kv2-bc-links td::before { content: attr(data-label); display: block; color: var(--kv2-muted); font-size: var(--kv2-t-xs); }
+  .kv2-bc-links td:nth-of-type(n+3) { grid-column: 1 / -1; }
+  .kv2-bc-srcrows li { grid-template-columns: minmax(0, 1fr) auto; }
+  .kv2-bc-srcrows li > span:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+}
