@@ -30,8 +30,8 @@ function scopeEdge(e: WorldEdge, visible: Visible): WorldEdge {
 }
 
 function scopeSource(s: SourceMeta): SourceMeta {
-  const basis = s.health.basis.filter(keepRef);
-  return basis.length === s.health.basis.length ? s : { ...s, health: { ...s.health, basis } };
+  const health = scopeState(s.health, [s], s.provider);
+  return health === s.health ? s : { ...s, health };
 }
 
 const scopeReplay = (r: ReplayEvent, visible: Visible): ReplayEvent => (r.evidence !== null && !visible(r.evidence) ? { ...r, evidence: null } : r);

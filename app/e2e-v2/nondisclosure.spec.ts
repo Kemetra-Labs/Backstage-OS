@@ -5,6 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { WORLD } from '../src/design-lab/v2/fixtures/world';
 import { authorizedWorld } from '../src/design-lab/v2/logic/authorize';
 import { TABLE } from '../src/design-lab/v2/i18n/t';
+import { COPY } from '../src/i18n/strings';
 import { loadBc, squash, waitForIntroDone } from './bc-helpers';
 import { load } from './helpers';
 
@@ -12,6 +13,16 @@ const UNAUTHORIZED = ['owner', 'nontechnical'] as const;
 const LANGS = ['en', 'ar'] as const;
 const copyOf = (key: 'chip.stale' | 'edge.restricted', lang: 'en' | 'ar'): string => TABLE[key][lang === 'ar' ? 1 : 0].replace(/[{}]/g, '');
 const listWord = (lang: 'en' | 'ar'): string => TABLE['view.list'][lang === 'ar' ? 1 : 0];
+const emptyCopy = (lang: 'en' | 'ar'): string => TABLE['map.signals.none'][lang === 'ar' ? 1 : 0];
+
+/** On the Evidence tab the restricted-record placeholder must be gone (it would reveal the record exists) and the generic empty state shown. */
+async function expectNoPlaceholder(page: Page, panel: string, lang: 'en' | 'ar'): Promise<void> {
+  const restricted = [COPY[lang].restricted, COPY[lang].notRead.restricted];
+  for (const text of restricted) await expect(page.getByText(text)).toHaveCount(0);
+  await expect(page.locator(`${panel} .kv2-ev-list`)).toHaveCount(0);
+  await expect(page.locator(`${panel} .kv2-empty`)).toHaveText(emptyCopy(lang));
+}
+
 const SCOPED_EDGES = authorizedWorld(WORLD, 'owner').edges.length;
 
 /** Everything a viewer, a screen reader or a tooltip could read that matches the restricted id. */
@@ -47,6 +58,16 @@ for (const persona of UNAUTHORIZED) {
           await expect(page.locator(`#mapinsp-tab-${tab}`)).toHaveAttribute('aria-selected', 'true');
           expect(await leaks(page)).toEqual([]);
         }
+      });
+
+      test('Evidence tab: no restricted-record placeholder, only the generic empty state (V2 and B+C)', async ({ page }) => {
+        await openV2(page, persona, lang);
+        await page.locator('#mapinsp-tab-evidence').click();
+        await expect(page.locator('#mapinsp-tab-evidence')).toHaveAttribute('aria-selected', 'true');
+        await expectNoPlaceholder(page, '#mapinsp-panel', lang);
+        await loadBc(page, { persona, lang, node: 'inventory', view: 'list', tab: 'evidence' });
+        await expect(page.locator('#bcinsp-tab-evidence')).toHaveAttribute('aria-selected', 'true');
+        await expectNoPlaceholder(page, '#bcinsp-panel', lang);
       });
 
       test('V2 list: Inventory shows evidence count 0, no Inventory-Sentry row, no edge.restricted copy', async ({ page }) => {

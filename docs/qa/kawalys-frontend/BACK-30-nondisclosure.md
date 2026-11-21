@@ -53,7 +53,7 @@ its authorized stale state is still true.
 | Sources tab, Inventory | already listed no provider (evidenceView filtered it) | unchanged: no providers listed, and no record behind it |
 | Sentry node scope membership | in scope through d4 | stays in scope (unattached nodes are shown) |
 | Sources matrix, Sentry stale state | shown | unchanged: from source authority, not from E-5 |
-| Source health basis (Sentry) | E-5 inside `sources[].health.basis` | removed (display unchanged, still unknown) |
+| Source health basis (Sentry) | E-5 inside `sources[].health.basis` | removed, and its claimed health becomes unknown (display unchanged, still unknown) |
 
 Technical sees exactly what it saw before. The old restricted branches (`evidenceView`, `edgeRestricted`, the
 `edge.restricted` copy) stay as defence in depth and are now unreachable from these two screens.
@@ -74,8 +74,9 @@ Technical sees exactly what it saw before. The old restricted branches (`evidenc
 
 ## Out of scope (still read the raw `WORLD`)
 
-Source Observatory, Mission Replay, Agent Flight Deck and the Shell search. They can still show E-5 to every persona and
-are tracked as follow-ups. Source-level events (for example the Sentry readings on the B+C signal timeline) come from
+Source Observatory, Mission Replay, Agent Flight Deck (including mission `events` counts and `label`) and the Shell search.
+They can still show E-5 to every persona and are tracked as follow-ups. Shell search renders on the in-scope screens and
+currently shows no E-5 data, because no replay entry, mission label or node title carries it. Source-level events (for example the Sentry readings on the B+C signal timeline) come from
 source authority and are not scoped here.
 
 ## Rollback

@@ -53,12 +53,18 @@ describe('authorizedWorld', () => {
         const sentry = w.nodes.find((n) => n.id === 'sentry')!;
         expect(sentry).toBeDefined();
         expect(sentry.evidence).toEqual([]);
-        // Source reachability, age and TTL are authorized for everyone. Only the Technical-only record leaves a source's health basis.
+        // Source reachability, age and TTL are authorized for everyone. Only the Technical-only record leaves a source's health basis
+        // (and the claim that rested only on it is reset, checked below).
         expect(w.sources.map((s) => s.source)).toEqual(WORLD.sources.map((s) => s.source));
-        expect(w.sources.map((s) => ({ ...s, health: { ...s.health, basis: [] } }))).toEqual(
-          WORLD.sources.map((s) => ({ ...s, health: { ...s.health, basis: [] } })),
-        );
-        expect(w.sources.find((s) => s.provider === 'sentry')!.health.basis).toEqual([]);
+        const blank = (list: typeof w.sources) => list.map((s) => ({ ...s, health: { ...s.health, basis: [], health: 'x' } }));
+        expect(blank(w.sources.filter((s) => s.provider !== 'sentry'))).toEqual(blank(WORLD.sources.filter((s) => s.provider !== 'sentry')));
+        expect(w.sources.filter((s) => s.provider !== 'sentry')).toEqual(WORLD.sources.filter((s) => s.provider !== 'sentry'));
+        const sentrySource = w.sources.find((s) => s.provider === 'sentry')!;
+        expect(sentrySource.health.basis).toEqual([]);
+        // A claim whose only basis was removed is unknown, never healthy; freshness stays what the source authority says
+        expect(sentrySource.health.health).toBe('unknown');
+        expect(sentrySource.health.freshness).toBe('stale');
+        expect(w.sources.find((s) => s.provider === 'github')!.health.health).toBe('healthy');
       });
 
       it('keeps a record independently supported by authorized evidence', () => {
