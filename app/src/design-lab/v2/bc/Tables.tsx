@@ -13,6 +13,10 @@ import { NODE_ICON, PROV_ICON, useChipText, useStatusWords } from './shared';
 
 const KINDS = ['product', 'project', 'service'] as const;
 
+// Each table sits in a scrollable `role="region"` wrapper with tabIndex={0} on purpose: a scroll container that cannot take
+// focus is unreachable by keyboard (WCAG 2.1.1). It is the same pattern V2's own list view uses. Static analysers flag
+// tabIndex on a non-interactive element (Sonar S6845); here the region is the keyboard-scrollable control.
+
 interface RowProps {
   readonly w: World;
   readonly active: ReadonlySet<string>;

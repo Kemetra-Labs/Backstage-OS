@@ -1,7 +1,7 @@
 // BACK-27 evidence captures. Not a regression test: it only runs with BC_CAPTURE=1 and writes untracked images to
 // docs/design-lab/hybrid-map/out/pilot/ (npm run e2e:v2 skips it). Run: BC_CAPTURE=1 npx playwright test -c playwright.v2.config.ts e2e-v2/bc-capture.spec.ts
 import path from 'node:path';
-import { test, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { loadBc, type BcOpts } from './bc-helpers';
 import { load } from './helpers';
 
@@ -50,6 +50,7 @@ test('capture after-en-1448-map-reduced-motion', async ({ browser }) => {
 test('capture after-en-1448-map-first-load-orbit-frame', async ({ page }) => {
   await page.setViewportSize({ width: 1448, height: 1086 });
   await page.goto('/v2.html?concept=bc&view=map#/mission-map?persona=owner&lang=en&node=stock-sync');
+  await expect(page.locator('.kv2-bc-canvas')).toBeVisible();
   await page.waitForTimeout(520); // mid-way: orbits drawn, the inner nodes settling
   await page.screenshot({ path: path.join(OUT, 'after-en-1448-map-first-load-orbit-frame.png') });
 });
