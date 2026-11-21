@@ -3,6 +3,7 @@
 import type { Lang, Persona } from '../../../contract/types';
 import { COMMON } from './common';
 import { MAP } from './map';
+import { BC } from './bc';
 import { OBS } from './observatory';
 import { REPLAY_COPY } from './replay';
 import { DECK } from './deck';
@@ -11,7 +12,7 @@ export type Pair = readonly [string, string];
 export type Entry = Pair | Readonly<Record<Persona, Pair>>;
 export type Table = Readonly<Record<string, Entry>>;
 
-export const TABLE = { ...COMMON, ...MAP, ...OBS, ...REPLAY_COPY, ...DECK } as const;
+export const TABLE = { ...COMMON, ...MAP, ...BC, ...OBS, ...REPLAY_COPY, ...DECK } as const;
 export type K = keyof typeof TABLE;
 
 const isPair = (e: Entry): e is Pair => Array.isArray(e);

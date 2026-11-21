@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 // @ts-ignore node builtin, available at test time
 const { readFileSync, existsSync, statSync } = await import('node:fs');
 const read = (rel: string): string => readFileSync(new URL(rel, import.meta.url), 'utf8') as string;
-const NAMES = ['fonts', 'tokens', 'base', 'map', 'observatory', 'replay', 'deck'] as const;
+const NAMES = ['fonts', 'tokens', 'base', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;
 const css: Record<string, string> = Object.fromEntries(NAMES.map((n) => [`./styles/${n}.css`, read(`./styles/${n}.css`)]));
 const src = import.meta.glob(['./**/*.ts', './**/*.tsx', '!./**/*.test.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const v1css: Record<string, string> = Object.fromEntries(['tokens', 'app'].map((n) => [n, read(`../../styles/${n}.css`)]));

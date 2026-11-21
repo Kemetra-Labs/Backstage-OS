@@ -1,0 +1,439 @@
+// BACK-27: the Hybrid Mission Map pilot (concept B with C's list view), opened with v2.html?concept=bc.
+// Runs against the built lab on port 4279 (npm run e2e:v2). Chromium only; WebKit is NOT RUN (see the report).
+import { expect, test } from '@playwright/test';
+import { isForbiddenControlLabel } from '../src/contract/rules';
+import { clippedElements, latinOutsideIsolates, loadBc, smallTargets, squash } from './bc-helpers';
+import { LANGS, ORIGIN, PERSONAS, WIDTHS, controlLabels, overflow } from './helpers';
+
+const IDS = ['retail-tower', 'khepri', 'stock-sync', 'pos', 'inventory', 'github', 'jira', 'sentry', 'port', 'seshat-bi'];
+const chipOf = (page: import('@playwright/test').Page, id: string) => page.locator(`.kv2-bc-node[data-node="${id}"] .kv2-chip`).innerText();
+
+test.describe('layout', () => {
+  for (const lang of LANGS) {
+    for (const view of ['map', 'list'] as const) {
+      for (const width of [...WIDTHS, 1024, 1180, 1181]) {
+        test(`${view} ${lang} @${width}px: no overflow or clipping, one h1, ordered headings, no console errors, no foreign requests`, async ({ page }) => {
+          const probe = await loadBc(page, { lang, width, view });
+          await expect(page.locator('html')).toHaveAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+          expect(await overflow(page)).toBeLessThanOrEqual(0);
+          expect(await clippedElements(page)).toEqual([]);
+          await expect(page.locator('h1')).toHaveCount(1);
+          const levels = await page.evaluate(() => [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].filter((h) => (h as HTMLElement).offsetParent !== null || getComputedStyle(h).position === 'fixed').map((h) => Number(h.tagName[1])));
+          levels.reduce((prev, cur) => { expect(cur).toBeLessThanOrEqual(prev + 1); return cur; }, 1);
+          await expect(page.locator('.kv2-demo')).toBeVisible();
+          expect(probe.errors).toEqual([]);
+          expect(probe.requests.filter((u) => !u.startsWith(ORIGIN) && !u.startsWith('data:'))).toEqual([]);
+          expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
+        });
+      }
+    }
+  }
+
+  test('the V2 map is untouched without ?concept=bc', async ({ page }) => {
+    await page.goto('/v2.html#/mission-map?persona=owner&lang=en');
+    await expect(page.locator('.kv2-map')).toBeVisible();
+    await expect(page.locator('.kv2-bc')).toHaveCount(0);
+    await expect(page.locator('.kv2-node')).toHaveCount(10);
+  });
+
+  test('desktop: the shell collapses to a 76 px rail with the same four destinations, and the inspector floats at the inline end', async ({ page }) => {
+    await loadBc(page, { width: 1440, height: 1000 });
+    const side = await page.locator('#kv2-side').boundingBox();
+    expect(Math.round(side!.width)).toBe(76);
+    const links = page.locator('#kv2-side nav a');
+    await expect(links).toHaveCount(4);
+    await expect(page.locator('#kv2-side nav a[aria-current="page"]')).toContainText('Mission Map');
+    const insp = await page.getByTestId('inspector').boundingBox();
+    expect(insp!.x + insp!.width).toBeGreaterThan(1440 - 20);
+    expect(Math.round(insp!.width)).toBeGreaterThanOrEqual(340);
+  });
+
+  test('phones open on the list; wider screens open on the map', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/v2.html?concept=bc#/mission-map?persona=owner&lang=en');
+    await expect(page.locator('.kv2-bc-ledger')).toBeVisible();
+    await expect(page.locator('.kv2-bc-canvas')).toHaveCount(0);
+    const wide = await page.context().newPage();
+    await wide.setViewportSize({ width: 1440, height: 1000 });
+    await wide.goto('/v2.html?concept=bc#/mission-map?persona=owner&lang=en');
+    await expect(wide.locator('.kv2-bc-canvas')).toBeVisible();
+    await expect(wide.locator('.kv2-bc-ledger')).toHaveCount(0);
+  });
+
+  test('performance budget: the pilot stays within about 600 DOM and 200 SVG elements, no backdrop-filter, one filter', async ({ page }) => {
+    // The budget is for the pilot's own screen. The shared V2 shell (top bar, navigation) is measured and reported, not budgeted.
+    await loadBc(page, { view: 'map' });
+    await page.waitForTimeout(1500);
+    const count = () => page.evaluate(() => {
+      const stage = document.querySelector('.kv2-bc')!;
+      const all = [...stage.querySelectorAll('*')];
+      return {
+        page: document.body.querySelectorAll('*').length,
+        pageSvg: document.body.querySelectorAll('svg, svg *').length,
+        dom: all.length,
+        svg: stage.querySelectorAll('svg, svg *').length,
+        backdrop: all.filter((e) => { const b = getComputedStyle(e).backdropFilter; return b && b !== 'none'; }).length,
+        filters: all.filter((e) => getComputedStyle(e).filter !== 'none').length,
+      };
+    });
+    const map = await count();
+    await page.getByRole('button', { name: 'List' }).click();
+    const list = await count();
+    await page.goto('/v2.html#/mission-map?persona=owner&lang=en');
+    await expect(page.locator('.kv2-map')).toBeVisible();
+    const v2 = await page.evaluate(() => ({ page: document.body.querySelectorAll('*').length, pageSvg: document.body.querySelectorAll('svg, svg *').length }));
+    console.log(`bc budget: map stage dom=${map.dom} svg=${map.svg} | whole page dom=${map.page} svg=${map.pageSvg} | list stage dom=${list.dom} svg=${list.svg} | V2 map whole page dom=${v2.page} svg=${v2.pageSvg}`);
+    // SPEC section 7 says "about 600 / about 200": 5 % of headroom on the SVG count, recorded in the report.
+    expect(map.dom).toBeLessThanOrEqual(600);
+    expect(map.svg).toBeLessThanOrEqual(210);
+    expect(map.backdrop).toBe(0);
+    expect(map.filters).toBeLessThanOrEqual(1);
+  });
+});
+
+test.describe('map and list carry the same information', () => {
+  test('map: ten systems, each a native button named "title, kind, status"', async ({ page }) => {
+    await loadBc(page);
+    const nodes = page.locator('.kv2-bc-node');
+    await expect(nodes).toHaveCount(10);
+    const info = await nodes.evaluateAll((els) => els.map((e) => ({ tag: e.tagName, id: (e as HTMLElement).dataset.node, label: e.getAttribute('aria-label') ?? '' })));
+    expect(info.map((i) => i.id).sort()).toEqual([...IDS].sort());
+    for (const i of info) {
+      expect(i.tag).toBe('BUTTON');
+      expect(i.label, i.id).toMatch(/^.+, (Product|Project|Service), .+$/);
+    }
+  });
+
+  test('list: 10 systems, 6 sources, 11 links, 6 timeline events, and the three counters in the matrix headings', async ({ page }) => {
+    await loadBc(page, { view: 'list' });
+    await expect(page.locator('.kv2-bc-ledger tbody tr')).toHaveCount(10);
+    await expect(page.locator('.kv2-bc-matrix tbody tr')).toHaveCount(6);
+    await expect(page.locator('.kv2-bc-links tbody tr')).toHaveCount(11);
+    await expect(page.locator('.kv2-bc-tl li')).toHaveCount(6);
+    const head = squash(await page.locator('.kv2-bc-matrix thead').innerText());
+    for (const c of ['3 of 6 reachable', '2 of 6 within target', '1 of 6 confirmed healthy']) {
+      expect(head).toContain(c);
+      expect(squash(await page.getByTestId('bc-readings').innerText())).toContain(c);
+    }
+  });
+
+  test('the same systems carry the same status word on the map and in the list', async ({ page }) => {
+    await loadBc(page);
+    const onMap: Record<string, string> = {};
+    for (const id of IDS) onMap[id] = squash(await chipOf(page, id));
+    await page.getByRole('button', { name: 'List' }).click();
+    const inList = await page.locator('.kv2-bc-ledger tbody tr').evaluateAll((rows) => Object.fromEntries(rows.map((r) => [(r.querySelector('button') as HTMLElement).dataset.node, (r.querySelector('.kv2-chip')!.textContent ?? '').trim()])));
+    expect(inList).toEqual(onMap);
+  });
+
+  test('one selection: a node, a ledger row and the inspector always agree, and the hash keeps it', async ({ page }) => {
+    await loadBc(page, { node: 'stock-sync' });
+    await page.locator('.kv2-bc-node[data-node="pos"]').click();
+    await expect(page.locator('.kv2-bc-insp h2')).toContainText('POS client');
+    await expect(page.locator('.kv2-bc-node[data-node="pos"]')).toHaveAttribute('aria-pressed', 'true');
+    expect(page.url()).toContain('node=pos');
+    await page.getByRole('button', { name: 'List' }).click();
+    await expect(page.locator('.kv2-bc-ledger tr[data-selected] button')).toHaveAttribute('data-node', 'pos');
+    await page.locator('.kv2-bc-ledger button[data-node="jira"]').click();
+    await expect(page.locator('.kv2-bc-insp h2')).toContainText('Jira');
+    await expect(page.locator('.kv2-bc-ledger button[data-node="jira"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'Map', exact: true }).click();
+    await expect(page.locator('.kv2-bc-node[data-node="jira"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.kv2-bc-node[aria-pressed="true"]')).toHaveCount(1);
+  });
+
+  test('changing the scope selects the scoped product and marks it Focus', async ({ page }) => {
+    await loadBc(page);
+    await page.getByLabel('Scope').selectOption('khepri');
+    await expect(page.locator('.kv2-bc-insp h2')).toContainText('Khepri');
+    await expect(page.getByTestId('inspector').locator('.kv2-chip-focus')).toBeVisible();
+    await expect(page.locator('.kv2-bc-node[data-node="khepri"]')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('filters dim in the map and hide in the list, and an empty result says so', async ({ page }) => {
+    await loadBc(page);
+    await page.getByRole('button', { name: 'Risks' }).click();
+    await expect(page.locator('.kv2-bc-node[data-dim]')).toHaveCount(7);
+    await expect(page.locator('.kv2-bc-edge[data-dim]')).toHaveCount(11); // no link joins two risk systems
+    await page.getByRole('button', { name: 'List' }).click();
+    await expect(page.locator('.kv2-bc-ledger tbody tr')).toHaveCount(3);
+    await expect(page.locator('.kv2-bc-links')).toContainText('No links match this filter.');
+    await expect(page.locator('.kv2-bc-matrix tbody tr')).toHaveCount(6); // sources are not systems: never filtered away
+  });
+
+  test('keyboard: arrows move focus between nodes, Enter selects, tabs move with arrows and mirror in Arabic', async ({ page }) => {
+    await loadBc(page, { node: 'stock-sync' });
+    await page.locator('.kv2-bc-node[data-node="stock-sync"]').focus();
+    await page.keyboard.press('ArrowRight');
+    expect(await page.evaluate(() => (document.activeElement as HTMLElement).dataset.node)).toBe('github');
+    await expect(page.locator('.kv2-bc-insp h2')).toContainText('stock-sync'); // moving focus does not select
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.kv2-bc-insp h2')).toContainText('GitHub');
+    await page.getByRole('tab', { name: 'Overview' }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: 'Evidence' })).toHaveAttribute('aria-selected', 'true');
+    await loadBc(page, { lang: 'ar' });
+    await page.locator('#bcinsp-tab-overview').focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('#bcinsp-tab-evidence')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('keyboard: the skip link is the first stop, and every node shows a visible focus ring', async ({ page }) => {
+    await loadBc(page);
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.kv2-skip')).toBeFocused();
+    const missing: string[] = [];
+    for (const id of IDS) {
+      await page.locator(`.kv2-bc-node[data-node="${id}"]`).focus();
+      const ok = await page.evaluate((nid) => {
+        const el = document.querySelector(`.kv2-bc-node[data-node="${nid}"]`)!;
+        const orb = getComputedStyle(el.querySelector('.kv2-bc-orb')!);
+        return parseFloat(orb.outlineWidth) > 0 && orb.outlineStyle !== 'none';
+      }, id);
+      if (!ok) missing.push(id);
+    }
+    expect(missing).toEqual([]);
+  });
+});
+
+test.describe('truth rules', () => {
+  for (const view of ['map', 'list'] as const) {
+    for (const lang of LANGS) {
+      test(`${view} ${lang}: no percentage, no composite score, no executable approval`, async ({ page }) => {
+        await loadBc(page, { view, lang });
+        const text = await page.locator('body').innerText();
+        expect(text).not.toMatch(/\d\s?%/);
+        expect(text).not.toMatch(/\b(trust score|overall trust|trust posture|mission health|confidence:?\s*0\.\d)/i);
+        // Controls only: an evidence row may quote an event title ("...was merged...") that is not an action.
+        await expect(page.getByRole('button', { name: /(approve|execute|deploy|merge|retry|release now|run now)/i }).and(page.locator('button:not(.kv2-ev)'))).toHaveCount(0);
+      });
+    }
+  }
+
+  test('unknown is never healthy: exactly one system and one source read Healthy', async ({ page }) => {
+    await loadBc(page, { view: 'map' });
+    const healthy = await page.locator('.kv2-bc-node').evaluateAll((els) => els.filter((e) => /^healthy$/i.test((e.querySelector('.kv2-chip')?.textContent ?? '').trim())).map((e) => (e as HTMLElement).dataset.node));
+    expect(healthy).toEqual(['github']);
+    for (const id of ['khepri', 'jira', 'seshat-bi', 'pos', 'retail-tower']) expect(await chipOf(page, id)).toMatch(/Health unknown/);
+    for (const id of ['sentry', 'inventory']) expect(await chipOf(page, id)).toMatch(/Stale/);
+    expect(await chipOf(page, 'port')).toMatch(/Unavailable/);
+    expect(await chipOf(page, 'stock-sync')).toMatch(/CI check failing/);
+    await page.getByRole('button', { name: 'List' }).click();
+    const rows = await page.locator('.kv2-bc-matrix tbody tr').evaluateAll((trs) => trs.map((r) => ({ id: (r as HTMLElement).dataset.source, health: (r.querySelectorAll('td')[2]!.textContent ?? '').trim() })));
+    expect(rows.filter((r) => /^healthy$/i.test(r.health)).map((r) => r.id)).toEqual(['github']);
+    expect(rows.find((r) => r.id === 'jira')!.health).toBe('Unknown');
+  });
+
+  test('stale, unavailable and unresolved are shown, not hidden', async ({ page }) => {
+    await loadBc(page, { view: 'list' });
+    const matrix = squash(await page.locator('.kv2-bc-matrix').innerText());
+    expect(matrix).toContain('540 of 15 min');
+    expect(matrix).toContain('36× target');
+    expect(matrix).toContain('1500 of 1440 min');
+    expect(matrix).toContain('Offline');
+    expect(matrix.match(/never read/g)).toHaveLength(2); // Datadog and Confluence
+    expect(matrix.match(/Not set up/g)).toHaveLength(2);
+    await expect(page.locator('.kv2-bc-links [data-stale-chip]')).toHaveCount(1);
+    await expect(page.locator('.kv2-bc-links tr[data-link="d4"] [data-stale-chip]')).toHaveCount(1);
+    await expect(page.locator('.kv2-bc-links tbody tr[data-truth="unknown"]')).toHaveCount(4);
+    await expect(page.locator('.kv2-bc-links tbody tr[data-truth="group"]')).toHaveCount(3);
+    // the age bars carry their numbers as text
+    const label = await page.locator('.kv2-bc-matrix tr[data-source="sentry"] .kv2-bc-age').getAttribute('aria-label');
+    expect(label).toBe('540 of 15 min, 36× target');
+  });
+
+  test('restricted evidence: Owner sees that it exists, Technical sees the detail (persona rules as in V2)', async ({ page }) => {
+    await loadBc(page, { node: 'sentry', tab: 'evidence', persona: 'owner' });
+    const owner = squash(await page.getByTestId('inspector').innerText());
+    expect(owner).toContain('Restricted to Technical');
+    // V2's evidence row shows the id of a restricted record (that it exists), never its title, provider or age
+    expect(owner).not.toMatch(/Recent errors|Sentry API|540 min/i);
+    await page.getByRole('button', { name: 'List' }).click();
+    const d4 = squash(await page.locator('.kv2-bc-links tr[data-link="d4"]').innerText());
+    expect(d4).toContain('Based on evidence restricted to Technical');
+    expect(d4).not.toContain('Inventory errors were reported');
+    await loadBc(page, { node: 'sentry', tab: 'evidence', persona: 'technical', view: 'list' });
+    expect(squash(await page.getByTestId('inspector').innerText())).toMatch(/E-5/);
+    expect(squash(await page.locator('.kv2-bc-links tr[data-link="d4"]').innerText())).toContain('Inventory errors were reported in Sentry (stale read)');
+  });
+
+  test('Sources tab: a provider named only by Technical-only evidence is listed for Technical and not for Owner', async ({ page }) => {
+    await loadBc(page, { node: 'inventory', tab: 'sources', persona: 'owner' });
+    await expect(page.locator('.kv2-bc-srcrows li')).toHaveCount(0);
+    await expect(page.getByTestId('inspector')).toContainText('No evidence has been read for this item.');
+    await loadBc(page, { node: 'inventory', tab: 'sources', persona: 'technical' });
+    await expect(page.locator('.kv2-bc-srcrows li')).toHaveCount(1);
+    await expect(page.locator('.kv2-bc-srcrows li')).toContainText('Sentry');
+  });
+
+  test('the inspector shows a source with its age against target and links to the Source Observatory', async ({ page }) => {
+    await loadBc(page, { node: 'sentry', tab: 'sources', persona: 'technical' });
+    await expect(page.locator('.kv2-bc-srcrows li')).toHaveCount(1);
+    await expect(page.locator('.kv2-bc-srcrows .kv2-bc-age')).toHaveAttribute('aria-label', '540 of 15 min, 36× target');
+    await page.locator('.kv2-bc-srcrows').getByRole('button', { name: 'Sentry' }).click();
+    await expect(page.locator('h1')).toContainText('Source Observatory');
+  });
+
+  for (const lang of LANGS) {
+    for (const persona of PERSONAS) {
+      for (const view of ['map', 'list'] as const) {
+        test(`controls ${view} ${lang}/${persona}: no forbidden action verb, no form, no submit`, async ({ page }) => {
+          await loadBc(page, { lang, persona, view });
+          const labels = await controlLabels(page);
+          expect(labels.length).toBeGreaterThan(10);
+          for (const l of labels) expect(isForbiddenControlLabel(l), l).toBe(false);
+          await expect(page.locator('form, input[type="submit"], button[type="submit"]')).toHaveCount(0);
+        });
+      }
+    }
+  }
+});
+
+test.describe('return context and links out', () => {
+  test('opening the Source Observatory and going back returns to the pilot with the same system, view and tab', async ({ page }) => {
+    await loadBc(page, { view: 'list', node: 'stock-sync' });
+    await page.locator('.kv2-bc-ledger button[data-node="sentry"]').click();
+    await page.getByRole('button', { name: 'Open in Source Observatory' }).click();
+    await expect(page.locator('h1')).toContainText('Source Observatory');
+    expect(page.url()).toContain('src=sentry');
+    await page.goBack();
+    await expect(page.locator('h1')).toContainText('Mission Map');
+    await expect(page.locator('h1')).toContainText('B + C pilot');
+    await expect(page.locator('.kv2-bc-ledger tr[data-selected] button')).toHaveAttribute('data-node', 'sentry');
+    expect(page.url()).toContain('node=sentry');
+  });
+
+  test('the rail link back to Mission Map returns to the pilot, and the replay link opens the replay', async ({ page }) => {
+    await loadBc(page, { node: 'stock-sync' });
+    await page.getByRole('button', { name: 'Open the investigation replay' }).click();
+    await expect(page.locator('h1')).toContainText('Mission Replay');
+    await page.locator('#kv2-side nav').getByRole('link', { name: 'Mission Map' }).click();
+    await expect(page.getByTestId('bc-stage')).toBeVisible();
+  });
+
+  test('search selects a system on the pilot map', async ({ page }) => {
+    await loadBc(page);
+    const box = page.getByRole('combobox', { name: 'Search' });
+    await box.fill('Sentry');
+    await box.press('Enter');
+    await expect(page.locator('.kv2-bc-insp h2')).toContainText('Sentry');
+    await expect(page.locator('.kv2-bc-node[data-node="sentry"]')).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+test.describe('Arabic and right-to-left', () => {
+  for (const view of ['map', 'list'] as const) {
+    test(`${view}: the canvas stays left-to-right, panels flip, and every Latin run is isolated`, async ({ page }) => {
+      await loadBc(page, { lang: 'ar', view, width: 1440 });
+      await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+      if (view === 'map') expect(await page.locator('.kv2-bc-canvas').evaluate((e) => getComputedStyle(e).direction)).toBe('ltr');
+      const insp = await page.getByTestId('inspector').boundingBox();
+      const region = await page.locator('.kv2-bc-region').boundingBox();
+      expect(insp!.x).toBeLessThan(region!.x); // the inspector sits at the inline end, which is the left in Arabic
+      expect(await latinOutsideIsolates(page)).toEqual([]);
+    });
+  }
+});
+
+test.describe('motion', () => {
+  test('reduced motion: zero animations, also after selecting and switching views, and no first-load orbit', async ({ browser }) => {
+    const ctx = await browser.newContext({ reducedMotion: 'reduce', baseURL: ORIGIN });
+    const page = await ctx.newPage();
+    await loadBc(page);
+    await page.locator('.kv2-bc-node[data-node="github"]').click();
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+    await expect(page.locator('.kv2-bc-draw')).toHaveCount(0);
+    await page.getByRole('button', { name: 'List' }).click();
+    await page.getByRole('button', { name: 'Map', exact: true }).click();
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+    // the selection is still shown without motion: own links stay, the rest are dimmed
+    await expect(page.locator('.kv2-bc-edge[data-hl]')).toHaveCount(1); // GitHub has one link of its own (d1)
+    await expect(page.locator('.kv2-bc-edge[data-dim]')).toHaveCount(10);
+    await ctx.close();
+  });
+
+  test('selecting a system sweeps one trace per own link, once; nothing loops', async ({ page }) => {
+    await loadBc(page);
+    await page.waitForTimeout(1600); // let the first-load orbit finish
+    await page.locator('.kv2-bc-node[data-node="stock-sync"]').click();
+    await page.locator('.kv2-bc-node[data-node="pos"]').click();
+    await page.locator('.kv2-bc-node[data-node="stock-sync"]').click();
+    await expect(page.locator('.kv2-bc-trace')).toHaveCount(5); // g1, d1, d2, d3, d5
+    const running = await page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').map((a) => ({ it: a.effect!.getTiming().iterations, d: a.effect!.getTiming().duration })));
+    expect(running.length).toBeGreaterThan(0);
+    for (const a of running) { expect(a.it).toBe(1); expect(Number(a.d)).toBeLessThanOrEqual(1000); }
+    await page.waitForTimeout(1200);
+    expect(await page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').length)).toBe(0);
+  });
+
+  test('first-load orbit: plays once, animates only opacity, translate and stroke-dashoffset, never more than 10 at once, never replays', async ({ page }) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as { __seen: boolean; __max: number; __props: string[] };
+      w.__seen = false; w.__max = 0; w.__props = [];
+      const tick = () => {
+        if (document.querySelector('.kv2-bc-canvas[data-intro]')) w.__seen = true;
+        const active = document.getAnimations().filter((a) => (a.effect?.getComputedTiming() as { phase?: string } | undefined)?.phase === 'active');
+        w.__max = Math.max(w.__max, active.length);
+        for (const a of active) for (const kf of (a.effect as KeyframeEffect).getKeyframes()) for (const k of Object.keys(kf)) if (!w.__props.includes(k)) w.__props.push(k);
+        if (performance.now() < 3000) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await loadBc(page);
+    await page.waitForTimeout(2000);
+    const r = await page.evaluate(() => {
+      const w = window as unknown as { __seen: boolean; __max: number; __props: string[] };
+      return { __seen: w.__seen, __max: w.__max, __props: w.__props };
+    });
+    expect(r.__seen).toBe(true);
+    expect(r.__max).toBeLessThanOrEqual(10);
+    for (const p of r.__props) expect(['offset', 'easing', 'composite', 'computedOffset', 'strokeDashoffset', 'opacity', 'translate']).toContain(p);
+    await expect(page.locator('.kv2-bc-canvas[data-intro]')).toHaveCount(0);
+    await expect(page.locator('.kv2-bc-draw')).toHaveCount(0);
+    await page.getByRole('button', { name: 'List' }).click();
+    await page.getByRole('button', { name: 'Map', exact: true }).click();
+    await expect(page.locator('.kv2-bc-canvas[data-intro]')).toHaveCount(0); // it does not replay within the page session
+    await expect(page.locator('.kv2-bc-draw')).toHaveCount(0);
+  });
+});
+
+test.describe('phone', () => {
+  for (const view of ['map', 'list'] as const) {
+    test(`touch targets at 375px (${view}): every visible control is at least 44 x 44, with and without touch emulation`, async ({ browser }) => {
+      for (const touch of [true, false]) {
+        const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, hasTouch: touch, isMobile: touch, baseURL: ORIGIN });
+        const page = await ctx.newPage();
+        await loadBc(page, { width: 375, height: 812, view });
+        expect(await smallTargets(page), `touch=${touch}`).toEqual([]);
+        await ctx.close();
+      }
+    });
+  }
+
+  test('at 320px the matrix is one card per source and the counters sit above the list', async ({ page }) => {
+    await loadBc(page, { width: 320, height: 700, view: 'list' });
+    await expect(page.locator('.kv2-bc-matrix thead')).toBeHidden();
+    const rows = await page.locator('.kv2-bc-matrix tbody tr').count();
+    expect(rows).toBe(6);
+    const readings = await page.getByTestId('bc-readings').boundingBox();
+    const ledger = await page.locator('#bc-ledger').boundingBox();
+    expect(readings!.y).toBeLessThan(ledger!.y);
+    expect(squash(await page.getByTestId('bc-readings').innerText())).toContain('3 of 6 reachable');
+  });
+
+  test('the map is usable on a phone too: ten buttons inside the canvas, none clipped', async ({ page }) => {
+    await loadBc(page, { width: 375, height: 812, view: 'map' });
+    const box = await page.locator('.kv2-bc-canvas').boundingBox();
+    const nodes = await page.locator('.kv2-bc-node').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [r.left, r.right, r.width, r.height]; }));
+    expect(nodes).toHaveLength(10);
+    for (const [l, r, w, h] of nodes as number[][]) {
+      expect(l).toBeGreaterThanOrEqual(-0.5);
+      expect(r).toBeLessThanOrEqual(375.5);
+      expect(w).toBeGreaterThanOrEqual(43.5);
+      expect(h).toBeGreaterThanOrEqual(43.5);
+    }
+    expect(box!.width).toBeGreaterThan(300);
+  });
+});

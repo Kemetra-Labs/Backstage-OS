@@ -5,6 +5,7 @@ import './styles/fonts.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/map.css';
+import './styles/bc.css';
 import './styles/observatory.css';
 import './styles/replay.css';
 import './styles/deck.css';
