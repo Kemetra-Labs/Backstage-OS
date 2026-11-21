@@ -457,3 +457,78 @@ test.describe('phone', () => {
     expect(box!.width).toBeGreaterThan(300);
   });
 });
+
+// BACK-34: on a phone the canvas aspect ratio changes while the SVG stretches (preserveAspectRatio="none"), so the cues that
+// must keep their shape are HTML markers and non-scaling strokes. Node coordinates are not moved (SPEC.md deviation record).
+test.describe('phone map legibility', () => {
+  for (const [width, height] of [[320, 700], [375, 812], [768, 1024]] as const) {
+    test(`map at ${width}px: link markers are round, on their link, counted from the DOM; strokes do not scale; orbs do not overlap`, async ({ page }) => {
+      await loadBc(page, { width, height, view: 'map' });
+      await waitForIntroDone(page);
+
+      // markers are HTML siblings of the node buttons, not SVG shapes
+      await expect(page.locator('.kv2-bc-svg .kv2-bc-mk')).toHaveCount(0);
+      const expected = await page.locator('.kv2-bc-edge').evaluateAll((els) => els.filter((e) => {
+        const d = (e as SVGElement).dataset;
+        return d.truth !== 'unknown' && d.cls !== 'group'; // observed, correlated and hypothesis links carry a marker, as before
+      }).length);
+      expect(expected).toBeGreaterThan(0);
+      await expect(page.locator('.kv2-bc-canvas > .kv2-bc-mk')).toHaveCount(expected);
+
+      const marks = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.kv2-bc-mk')].map((m) => {
+        const r = m.getBoundingClientRect();
+        const path = document.querySelector<SVGPathElement>(`.kv2-bc-edge[data-id="${m.dataset.edge}"] path:not(.kv2-bc-glow)`)!;
+        const p = path.getPointAtLength(path.getTotalLength() / 2);
+        const q = new DOMPoint(p.x, p.y).matrixTransform(path.getScreenCTM()!);
+        return { edge: m.dataset.edge, w: r.width, h: r.height, off: Math.hypot(r.left + r.width / 2 - q.x, r.top + r.height / 2 - q.y) };
+      }));
+      expect(marks).toHaveLength(expected);
+      for (const m of marks) {
+        expect(m.w, `${m.edge} width`).toBeGreaterThanOrEqual(10);
+        expect(m.h, `${m.edge} height`).toBeGreaterThanOrEqual(10);
+        expect(Math.abs(m.w - m.h), `${m.edge} stretched`).toBeLessThanOrEqual(1);
+        expect(m.off, `${m.edge} off its link`).toBeLessThanOrEqual(3);
+      }
+
+      const effects = await page.evaluate(() => [...document.querySelectorAll('.kv2-bc-edge path, .kv2-bc-orbit')].map((e) => getComputedStyle(e).vectorEffect));
+      expect(effects.length).toBeGreaterThan(0);
+      expect([...new Set(effects)]).toEqual(['non-scaling-stroke']);
+
+      const orbs = await page.locator('.kv2-bc-orb').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, n: (e.closest('[data-node]') as HTMLElement).dataset.node }; }));
+      expect(orbs).toHaveLength(10);
+      for (let i = 0; i < orbs.length; i++) {
+        for (let j = i + 1; j < orbs.length; j++) {
+          const a = orbs[i]!; const b = orbs[j]!;
+          const ox = Math.min(a.r, b.r) - Math.max(a.l, b.l);
+          const oy = Math.min(a.b, b.b) - Math.max(a.t, b.t);
+          expect(ox > 4 && oy > 4, `orbs ${a.n} and ${b.n} overlap by ${Math.round(ox)} x ${Math.round(oy)}`).toBe(false);
+        }
+      }
+
+      if (width <= 640) expect(await smallTargets(page)).toEqual([]);
+      expect(await overflow(page)).toBeLessThanOrEqual(0);
+      expect(await clippedElements(page)).toEqual([]);
+    });
+  }
+
+  test('markers keep their shape and colour state: dim follows the edge, and they stay left-to-right in Arabic', async ({ page }) => {
+    await loadBc(page, { width: 375, height: 812, view: 'map', lang: 'ar', node: 'stock-sync' });
+    await waitForIntroDone(page);
+    const dimEdges = await page.locator('.kv2-bc-edge[data-dim]').evaluateAll((els) => els.map((e) => (e as SVGElement).dataset.id).sort());
+    const dimMarks = await page.locator('.kv2-bc-mk[data-dim]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.edge).sort());
+    const withMark = await page.locator('.kv2-bc-mk').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.edge));
+    expect(dimMarks).toEqual(dimEdges.filter((id) => withMark.includes(id)));
+    expect(await page.locator('.kv2-bc-mk').evaluateAll((els) => els.map((e) => getComputedStyle(e).direction))).toEqual(withMark.map(() => 'ltr'));
+    await expect(page.locator('.kv2-bc-mk[data-shape="diamond"]')).not.toHaveCount(0);
+    await expect(page.locator('.kv2-bc-mk[data-shape="circle"]')).not.toHaveCount(0);
+  });
+
+  test('reduced motion at 375px: markers are present and nothing animates', async ({ browser }) => {
+    const ctx = await browser.newContext({ reducedMotion: 'reduce', baseURL: ORIGIN });
+    const page = await ctx.newPage();
+    await loadBc(page, { width: 375, height: 812, view: 'map' });
+    await expect(page.locator('.kv2-bc-mk').first()).toBeVisible();
+    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+    await ctx.close();
+  });
+});

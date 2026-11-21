@@ -6,11 +6,12 @@ import { loadBc, waitForIntroDone, type BcOpts } from './bc-helpers';
 import { load } from './helpers';
 
 const OUT = path.resolve('..', 'docs', 'design-lab', 'hybrid-map', 'out', 'pilot');
+const OUT_34 = path.resolve('..', 'docs', 'design-lab', 'hybrid-map', 'out', 'BACK-34');
 test.skip(!process.env.BC_CAPTURE, 'capture only');
 
-const shot = async (page: Page, name: string, full = false) => {
+const shot = async (page: Page, name: string, full = false, dir = OUT) => {
   await waitForIntroDone(page); // the one-shot first-load orbit and any trace have finished
-  await page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: full });
+  await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: full });
 };
 
 const cases: ReadonlyArray<readonly [string, BcOpts, boolean]> = [
@@ -64,3 +65,17 @@ test('capture before: the current V2 map', async ({ page }) => {
   await load(page, { width: 1448, height: 1086, lang: 'ar' });
   await page.screenshot({ path: path.join(OUT, 'before-v2-ar-1448-map.png') });
 });
+
+// BACK-34: phone map legibility (non-scaling link markers and strokes). Run with -g back34; writes to out/BACK-34/.
+const back34: ReadonlyArray<readonly [string, BcOpts]> = [
+  ...(['en', 'ar'] as const).flatMap((lang) => ([[320, 700], [375, 812], [640, 900], [768, 1024]] as const).map(([width, height]) => [`back34-${lang}-${width}-map`, { width, height, view: 'map', lang }] as const)),
+  ['back34-en-375-list', { width: 375, height: 812, view: 'list' }],
+  ['back34-ar-375-list', { width: 375, height: 812, view: 'list', lang: 'ar' }],
+];
+
+for (const [name, opts] of back34) {
+  test(`capture ${name}`, async ({ page }) => {
+    await loadBc(page, opts);
+    await shot(page, name, true, OUT_34);
+  });
+}

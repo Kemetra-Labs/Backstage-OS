@@ -37,16 +37,32 @@ const bendOf = (e: WorldEdge): number => (e.cls === 'group' ? 0 : LINK_BEND[e.id
 
 function Edge({ e, a, b, dim, hl, stale }: { readonly e: WorldEdge; readonly a: Point; readonly b: Point; readonly dim: boolean; readonly hl: boolean; readonly stale: boolean }) {
   const c = curve(a, b, bendOf(e));
-  const mid = { x: Math.round(c.mx * 10) / 10, y: Math.round(c.my * 10) / 10 };
-  const mark = e.cls === 'group' || e.truth === 'unknown' ? null : e.truth === 'hypothesis'
-    ? <rect className="kv2-bc-mk" x={mid.x - 4.5} y={mid.y - 4.5} width="9" height="9" transform={`rotate(45 ${mid.x} ${mid.y})`} />
-    : <circle className="kv2-bc-mk" cx={mid.x} cy={mid.y} r="5" />;
   return (
     <g className="kv2-bc-edge" data-id={e.id} data-cls={e.cls} data-truth={e.truth} data-stale={stale || undefined} data-dim={dim || undefined} data-hl={hl || undefined}>
       {e.truth === 'observed' && <path className="kv2-bc-glow" d={c.d} />}
       <path d={c.d} />
-      {mark}
     </g>
+  );
+}
+
+/** The truth marker at a link's midpoint. It is HTML, not SVG: the SVG stretches with the canvas (preserveAspectRatio none), which
+ * would squash a circle or diamond on a phone. Position uses the same canvas fractions and --pad inset as the node buttons. */
+function Marker({ e, a, b, dim, hl, stale }: { readonly e: WorldEdge; readonly a: Point; readonly b: Point; readonly dim: boolean; readonly hl: boolean; readonly stale: boolean }) {
+  if (e.cls === 'group' || e.truth === 'unknown') return null;
+  const c = curve(a, b, bendOf(e));
+  const style = { '--fx': (c.mx / BC_CANVAS.w).toFixed(4), '--fy': (c.my / BC_CANVAS.h).toFixed(4) } as CSSProperties;
+  return (
+    <span
+      className="kv2-bc-mk"
+      style={style}
+      data-edge={e.id}
+      data-truth={e.truth}
+      data-shape={e.truth === 'hypothesis' ? 'diamond' : 'circle'}
+      data-stale={stale || undefined}
+      data-dim={dim || undefined}
+      data-hl={hl || undefined}
+      aria-hidden="true"
+    />
   );
 }
 
@@ -73,10 +89,11 @@ function Node({ n, w, p, selected, dim, onSelect, refFn, intro }: NodeProps) {
   const dx = (p.x - BC_CANVAS.cx) / BC_CANVAS.w;
   const dy = (p.y - BC_CANVAS.cy) / BC_CANVAS.w;
   // Position is a fraction of the canvas; the stylesheet turns it into left/top and may inset it on narrow screens.
+  // --orb-d is the desktop orb size; the stylesheet picks the real --orb from it (an inline --orb could not be overridden on phones).
   const style = {
     '--fx': (p.x / BC_CANVAS.w).toFixed(4),
     '--fy': (p.y / BC_CANVAS.h).toFixed(4),
-    '--orb': `${hub ? HUB_ORB : ORB[n.kind]}px`,
+    '--orb-d': `${hub ? HUB_ORB : ORB[n.kind]}px`,
     ...(intro ? { '--vx': (dx * 8).toFixed(2), '--vy': (dy * 8).toFixed(2), '--delay': `${SETTLE_DELAY[orbitOf(n)]}ms` } : {}),
   } as CSSProperties;
   return (
@@ -113,6 +130,10 @@ function Node({ n, w, p, selected, dim, onSelect, refFn, intro }: NodeProps) {
 export function Canvas({ w, points, sel, active, onSelect, nodeRefs, intro }: CanvasProps) {
   const { t } = useV2();
   const edges = w.edges;
+  const edgeStates = edges.map((e) => {
+    const own = isIncident(e, sel);
+    return { e, hl: own, stale: edgeStale(e, w), dim: !active.has(e.a) || !active.has(e.b) || !own };
+  });
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const dir = ({ ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' } as Record<string, Dir | undefined>)[e.key];
@@ -133,17 +154,13 @@ export function Canvas({ w, points, sel, active, onSelect, nodeRefs, intro }: Ca
         {intro && ORBITS.map((o) => (
           <ellipse key={`draw-${o}`} className="kv2-bc-draw" pathLength={1} cx={BC_CANVAS.cx} cy={BC_CANVAS.cy} rx={ORBIT_RADII[o].rx} ry={ORBIT_RADII[o].ry} style={{ animationDelay: `${DRAW_DELAY[o]}ms` }} />
         ))}
-        {edges.map((e) => {
-          const own = isIncident(e, sel);
-          return (
-            <Edge key={e.id} e={e} a={points[e.a]!} b={points[e.b]!} hl={own} stale={edgeStale(e, w)} dim={!active.has(e.a) || !active.has(e.b) || !own} />
-          );
-        })}
+        {edgeStates.map(({ e, ...st }) => <Edge key={e.id} e={e} a={points[e.a]!} b={points[e.b]!} {...st} />)}
         {/* One-shot trace along the selected node's own links. Keyed by the selection so it replays on every change. */}
         {edges.filter((e) => isIncident(e, sel)).map((e) => (
           <path key={`${sel}:${e.id}`} className="kv2-bc-trace" pathLength={1} d={curve(points[e.a]!, points[e.b]!, bendOf(e)).d} data-rev={e.b === sel || undefined} />
         ))}
       </svg>
+      {edgeStates.map(({ e, ...st }) => <Marker key={e.id} e={e} a={points[e.a]!} b={points[e.b]!} {...st} />)}
       {w.nodes.map((n) => (
         <Node
           key={n.id}

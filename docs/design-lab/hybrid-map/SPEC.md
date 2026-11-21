@@ -110,3 +110,19 @@ At most about 600 DOM elements and 200 SVG elements on the map screen; no `backd
 4. Sentence-case chips (removes V2's recorded Hallmark chip FAIL) with the caps eyebrow kept: **not yet confirmed**; the pilot assumes yes, and it is a reversible CSS change.
 5. Arabic review owner for the new strings: **open** (a name, not a choice).
 6. Dependencies (motion library, D3 maths): **deferred by the owner pending an investigation of benefit against risk**. Until decided, the port uses no new libraries (CSS and the Web Animations API). WebGL stays deferred whatever is decided. See [ENHANCEMENT-NOTE.md](ENHANCEMENT-NOTE.md).
+
+## 10. Deviation record: phone map legibility (BACK-34, 2026-11-21)
+
+**Decision (owner, 2026-11-21): minimal fix.** The B+C layout and the stretched orbit geometry stay. The canvas aspect ratio changes per breakpoint while the SVG draws the 1000 x 860 viewBox with `preserveAspectRatio="none"`. That stretch is kept on purpose: uniform scaling would need a second phone layout, which is a different design and is not built here. Node coordinates are unchanged.
+
+What changed:
+
+- **Link markers moved from SVG to HTML.** Each observed, correlated or hypothesis link (never `group`, never `unknown`) gets a `span.kv2-bc-mk` inside `.kv2-bc-canvas`, positioned at the link's midpoint with the same canvas fraction and `--pad` inset as the node buttons. `data-shape` is `circle` (diamond for hypothesis), `data-dim` and `data-stale` mirror the edge. Size is 10 px (diamond 9 px side) and 12 px (diamond 11 px) at 640 px and below, so a circle stays a circle on a stretched canvas. Colour tokens are unchanged. Markers have no transition, so reduced motion needs no override. The canvas stays `direction: ltr` in Arabic, so they do not mirror.
+- **Strokes use `vector-effect: non-scaling-stroke`** on edge paths and orbit ellipses, so line weights do not stretch with the canvas.
+- **Orb sizes on narrow canvases.** The stylesheet's narrow-canvas orb sizes never took effect because the node's inline `--orb` overrode them. The inline value is now `--orb-d` (desktop size) and the stylesheet derives `--orb` from it. At a canvas width of 700 px and below the orbs are 44 px (hub 64 px) and `--pad` is 32 px. Without this the hub orb covered the Khepri orb at 320 and 375 px.
+
+Regression criteria (`app/e2e-v2/bc.spec.ts`, `phone map legibility`, at 320, 375 and 768 px): every marker is at least 10 x 10 px and square within 1 px; its centre is within 3 px of its link's midpoint; the marker count equals the drawn markable links, derived from the DOM (Owner draws one link fewer than Technical); edge and orbit strokes are non-scaling; no two orbs overlap by more than 4 px on both axes; 44 px targets and no horizontal overflow at 640 px and below; under reduced motion markers are present and nothing animates.
+
+Rollback: revert the BACK-34 commit.
+
+Open: BACK-32 should judge the result on real devices. On a phone the selected node's card can still sit over a neighbour's title; that is a label-density question, not covered here.
