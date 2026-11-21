@@ -1,0 +1,382 @@
+{
+  "envelope_version": "kawalys.graph.v0",
+  "source": {
+    "scope": "fixture-copy",
+    "revision": "b359992de75f5eb96bcf84ac4830ee4a46b01a35227aba0873be696e931f0bca",
+    "fixture_version": "g1-01-v0"
+  },
+  "engine": {
+    "name": "graphify",
+    "version": "synthetic",
+    "config_digest": "80c7f79fb53bd27bf433613514ef0c5044c6a8b7dba19289272b2dda2581a9fe"
+  },
+  "generated_at": "2026-01-01T00:00:00Z",
+  "nodes": [
+    {
+      "id": "src/svc/__init__.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/svc/__init__.py",
+      "line": 1,
+      "engine_native_id": "m_ini"
+    },
+    {
+      "id": "src/svc/gateway.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/svc/gateway.py",
+      "line": 1,
+      "engine_native_id": "m_gw"
+    },
+    {
+      "id": "src/svc/service.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/svc/service.py",
+      "line": 1,
+      "engine_native_id": "m_svc"
+    },
+    {
+      "id": "src/svc/service.py::OrderService",
+      "kind": "class",
+      "language": "python",
+      "file": "src/svc/service.py",
+      "line": 10,
+      "engine_native_id": "s_os"
+    },
+    {
+      "id": "src/web/OrderList.tsx",
+      "kind": "module",
+      "language": "tsx",
+      "file": "src/web/OrderList.tsx",
+      "line": 1,
+      "engine_native_id": "m_ols"
+    },
+    {
+      "id": "src/web/format.js",
+      "kind": "module",
+      "language": "javascript",
+      "file": "src/web/format.js",
+      "line": 1,
+      "engine_native_id": "m_fmt"
+    },
+    {
+      "id": "src/web/format.js::formatMoney",
+      "kind": "function",
+      "language": "javascript",
+      "file": "src/web/format.js",
+      "line": 3,
+      "engine_native_id": "s_money"
+    },
+    {
+      "id": "src/web/index.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/index.ts",
+      "line": 1,
+      "engine_native_id": "m_idx"
+    },
+    {
+      "id": "src/web/orders.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/orders.ts",
+      "line": 1,
+      "engine_native_id": "m_ord"
+    },
+    {
+      "id": "src/web/orders.ts::buildOrder",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/web/orders.ts",
+      "line": 8,
+      "engine_native_id": "s_build"
+    },
+    {
+      "id": "src/web/pricing.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 1,
+      "engine_native_id": "m_pri"
+    },
+    {
+      "id": "src/web/pricing.ts::Cart",
+      "kind": "class",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 5,
+      "engine_native_id": "s_cart"
+    },
+    {
+      "id": "src/web/pricing.ts::Cart.addItem",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 7,
+      "engine_native_id": "s_add"
+    },
+    {
+      "id": "src/web/pricing.ts::computeTotal",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 20,
+      "engine_native_id": "s_total"
+    },
+    {
+      "id": "src/web/report.js",
+      "kind": "module",
+      "language": "javascript",
+      "file": "src/web/report.js",
+      "line": 1,
+      "engine_native_id": "m_rep"
+    }
+  ],
+  "edges": [
+    {
+      "type": "imports",
+      "from": "src/web/orders.ts",
+      "to": "src/web/pricing.ts",
+      "file": "src/web/orders.ts",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "m_ord|imports_from|m_pri"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/orders.ts",
+      "to": "src/web/pricing.ts::Cart",
+      "file": "src/web/orders.ts",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "m_ord|imports|s_cart"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/orders.ts",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/orders.ts",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "m_ord|imports|s_total"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/orders.ts",
+      "to": "src/web/pricing.ts",
+      "file": "src/web/orders.ts",
+      "line": 7,
+      "basis": "observed",
+      "engine_native_id": "m_ord|imports_from|m_pri"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/OrderList.tsx",
+      "to": "react",
+      "file": "src/web/OrderList.tsx",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "m_ols|imports_from|ref_react"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/OrderList.tsx",
+      "to": "src/web/index.ts",
+      "file": "src/web/OrderList.tsx",
+      "line": 4,
+      "basis": "observed",
+      "engine_native_id": "m_ols|imports_from|m_idx"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/OrderList.tsx",
+      "to": "src/web/orders.ts::buildOrder",
+      "file": "src/web/OrderList.tsx",
+      "line": 4,
+      "basis": "observed",
+      "engine_native_id": "m_ols|imports|s_build"
+    },
+    {
+      "type": "reexports",
+      "from": "src/web/index.ts",
+      "to": "src/web/orders.ts",
+      "file": "src/web/index.ts",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "m_idx|re_exports|m_ord"
+    },
+    {
+      "type": "reexports",
+      "from": "src/web/index.ts",
+      "to": "src/web/orders.ts::buildOrder",
+      "file": "src/web/index.ts",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "m_idx|re_exports|s_build"
+    },
+    {
+      "type": "reexports",
+      "from": "src/web/index.ts",
+      "to": "src/web/pricing.ts",
+      "file": "src/web/index.ts",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "m_idx|re_exports|m_pri"
+    },
+    {
+      "type": "reexports",
+      "from": "src/svc/__init__.py",
+      "to": "src/svc/service.py",
+      "file": "src/svc/__init__.py",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "m_ini|re_exports|m_svc"
+    },
+    {
+      "type": "reexports",
+      "from": "src/svc/__init__.py",
+      "to": "src/svc/service.py::OrderService",
+      "file": "src/svc/__init__.py",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "m_ini|re_exports|s_os"
+    },
+    {
+      "type": "imports",
+      "from": "src/svc/__init__.py",
+      "to": "src/svc/service.py::OrderService",
+      "file": "src/svc/__init__.py",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "m_ini|imports|s_os"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/report.js",
+      "to": "src/web/format.js",
+      "file": "src/web/report.js",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "m_rep|imports_from|m_fmt"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/report.js",
+      "to": "src/web/format.js::formatMoney",
+      "file": "src/web/report.js",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "m_rep|imports|s_money"
+    },
+    {
+      "type": "imports",
+      "from": "src/svc/gateway.py",
+      "to": "json",
+      "file": "src/svc/gateway.py",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "m_gw|imports|ref_json"
+    },
+    {
+      "type": "imports",
+      "from": "src/svc/gateway.py",
+      "to": "requests",
+      "file": "src/svc/gateway.py",
+      "line": 5,
+      "basis": "observed",
+      "engine_native_id": "m_gw|imports_from|ref_requests"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "requests",
+      "file": "src/web/orders.ts",
+      "line": 15,
+      "basis": "observed",
+      "engine_native_id": "s_build|calls|ref_requests"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/orders.ts",
+      "to": "src/web/orders.ts::buildOrder",
+      "file": "src/web/orders.ts",
+      "line": 99,
+      "basis": "observed",
+      "engine_native_id": "m_ord|contains|s_build"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/pricing.ts",
+      "to": "src/web/pricing.ts::Cart",
+      "file": "src/web/pricing.ts",
+      "line": 5,
+      "basis": "observed",
+      "engine_native_id": "m_pri|contains|s_cart"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/pricing.ts::Cart",
+      "to": "src/web/pricing.ts::Cart.addItem",
+      "file": "src/web/pricing.ts",
+      "line": 7,
+      "basis": "observed",
+      "engine_native_id": "s_cart|method|s_add"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/orders.ts",
+      "line": 9,
+      "basis": "observed",
+      "engine_native_id": "s_build|calls|s_total"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::Cart.addItem",
+      "file": "src/web/orders.ts",
+      "line": 10,
+      "basis": "inferred",
+      "engine_native_id": "s_build|calls|s_add"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/orders.ts",
+      "line": 12,
+      "basis": "inferred",
+      "engine_native_id": "s_build|indirect_call|s_total"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/orders.ts",
+      "line": 13,
+      "basis": "inferred",
+      "engine_native_id": "s_build|calls|s_total"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::Cart",
+      "file": "src/web/orders.ts",
+      "line": null,
+      "basis": "observed",
+      "engine_native_id": "s_build|calls|s_cart"
+    }
+  ],
+  "omissions": [
+    {
+      "what": "1 Graphify edge(s) of relation rationale_for",
+      "reason": "no envelope edge type or endpoint is not an envelope node (not mapped)"
+    },
+    {
+      "what": "src/web/index.ts",
+      "reason": "engine warning: file yielded no symbols"
+    }
+  ]
+}

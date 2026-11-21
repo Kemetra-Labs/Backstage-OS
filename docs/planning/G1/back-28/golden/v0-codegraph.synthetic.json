@@ -1,0 +1,283 @@
+{
+  "envelope_version": "kawalys.graph.v0",
+  "source": {
+    "scope": "fixture-copy",
+    "revision": "b359992de75f5eb96bcf84ac4830ee4a46b01a35227aba0873be696e931f0bca",
+    "fixture_version": "g1-01-v0"
+  },
+  "engine": {
+    "name": "codegraph",
+    "version": "1.6.4",
+    "config_digest": "63148f8df228ab7debd452b5f09f363511d01f2f690deff3b17307af3fcc573d"
+  },
+  "generated_at": "2026-01-01T00:00:00Z",
+  "nodes": [
+    {
+      "id": "src/web/OrderList.tsx",
+      "kind": "module",
+      "language": "tsx",
+      "file": "src/web/OrderList.tsx",
+      "line": 1,
+      "engine_native_id": "file:ols"
+    },
+    {
+      "id": "src/web/index.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/index.ts",
+      "line": 1,
+      "engine_native_id": "file:idx"
+    },
+    {
+      "id": "src/web/orders.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/orders.ts",
+      "line": 1,
+      "engine_native_id": "file:ord"
+    },
+    {
+      "id": "src/web/orders.ts::buildOrder",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/web/orders.ts",
+      "line": 8,
+      "engine_native_id": "fn:build"
+    },
+    {
+      "id": "src/web/pricing.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 1,
+      "engine_native_id": "file:pri"
+    },
+    {
+      "id": "src/web/pricing.ts::Cart",
+      "kind": "class",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 5,
+      "engine_native_id": "class:cart"
+    },
+    {
+      "id": "src/web/pricing.ts::Cart.addItem",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 7,
+      "engine_native_id": "method:add"
+    },
+    {
+      "id": "src/web/pricing.ts::computeTotal",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/web/pricing.ts",
+      "line": 20,
+      "engine_native_id": "fn:total"
+    }
+  ],
+  "edges": [
+    {
+      "type": "imports",
+      "from": "src/web/orders.ts",
+      "to": "src/web/pricing.ts",
+      "file": "src/web/orders.ts",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "file:ord|imports|file:pri"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/orders.ts",
+      "to": "src/web/pricing.ts::Cart",
+      "file": "src/web/orders.ts",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "file:ord|imports|class:cart"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/orders.ts",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/orders.ts",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "file:ord|imports|fn:total"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/orders.ts",
+      "to": "src/web/pricing.ts",
+      "file": "src/web/orders.ts",
+      "line": 7,
+      "basis": "observed",
+      "engine_native_id": "file:ord|imports|file:pri"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/OrderList.tsx",
+      "to": "src/web/index.ts",
+      "file": "src/web/OrderList.tsx",
+      "line": 4,
+      "basis": "observed",
+      "engine_native_id": "file:ols|imports|file:idx"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/OrderList.tsx",
+      "to": "src/web/orders.ts::buildOrder",
+      "file": "src/web/OrderList.tsx",
+      "line": 4,
+      "basis": "observed",
+      "engine_native_id": "file:ols|imports|fn:build"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/index.ts",
+      "to": "src/web/orders.ts",
+      "file": "src/web/index.ts",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "file:idx|imports|file:ord"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/orders.ts",
+      "to": "src/web/orders.ts::buildOrder",
+      "file": "src/web/orders.ts",
+      "line": null,
+      "basis": "observed",
+      "engine_native_id": "file:ord|contains|fn:build"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/pricing.ts",
+      "to": "src/web/pricing.ts::Cart",
+      "file": "src/web/pricing.ts",
+      "line": null,
+      "basis": "observed",
+      "engine_native_id": "file:pri|contains|class:cart"
+    },
+    {
+      "type": "contains",
+      "from": "src/web/pricing.ts::Cart",
+      "to": "src/web/pricing.ts::Cart.addItem",
+      "file": "src/web/pricing.ts",
+      "line": null,
+      "basis": "observed",
+      "engine_native_id": "class:cart|contains|method:add"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/orders.ts",
+      "line": 9,
+      "basis": "observed",
+      "engine_native_id": "fn:build|calls|fn:total"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::Cart.addItem",
+      "file": "src/web/orders.ts",
+      "line": 10,
+      "basis": "observed",
+      "engine_native_id": "fn:build|calls|method:add"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::Cart",
+      "file": "src/web/orders.ts",
+      "line": 11,
+      "basis": "observed",
+      "engine_native_id": "fn:build|instantiates|class:cart"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/orders.ts",
+      "line": 12,
+      "basis": "inferred",
+      "engine_native_id": "fn:build|calls|fn:total"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/orders.ts",
+      "line": 13,
+      "basis": "inferred",
+      "engine_native_id": "fn:build|calls|fn:total"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::computeTotal",
+      "file": "src/web/orders.ts",
+      "line": 14,
+      "basis": "inferred",
+      "engine_native_id": "fn:build|calls|fn:total"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": "src/web/pricing.ts::Cart",
+      "file": "src/web/orders.ts",
+      "line": null,
+      "basis": "observed",
+      "engine_native_id": "fn:build|calls|class:cart"
+    },
+    {
+      "type": "imports",
+      "from": "src/web/OrderList.tsx",
+      "to": null,
+      "target_hint": "react",
+      "file": "src/web/OrderList.tsx",
+      "line": 3,
+      "basis": "unknown",
+      "engine_native_id": "unresolved_refs:1"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": null,
+      "target_hint": "noline",
+      "file": "src/web/orders.ts",
+      "line": null,
+      "basis": "unknown",
+      "engine_native_id": "unresolved_refs:5"
+    },
+    {
+      "type": "calls",
+      "from": "src/web/orders.ts::buildOrder",
+      "to": null,
+      "target_hint": "pluginPath",
+      "file": "src/web/orders.ts",
+      "line": 5,
+      "basis": "unknown",
+      "engine_native_id": "unresolved_refs:2"
+    }
+  ],
+  "omissions": [
+    {
+      "what": "1 CodeGraph node(s) of kind variable",
+      "reason": "no envelope node kind (not mapped)"
+    },
+    {
+      "what": "1 CodeGraph edge(s) of kind references",
+      "reason": "no envelope edge type or endpoint is not an envelope node (not mapped)"
+    },
+    {
+      "what": "1 unresolved_refs row(s) of kind decorates",
+      "reason": "not calls/imports (not mapped)"
+    },
+    {
+      "what": "1 unresolved_refs row(s) of kind unmapped-source",
+      "reason": "not calls/imports (not mapped)"
+    }
+  ]
+}
