@@ -63,9 +63,10 @@ jobs:
           python-version: '3.12'
 
       # No dependency needs lifecycle scripts; skip them (supply-chain hardening).
+      # The script also falls back to a private npm cache when ~/.npm is not writable (CircleCI EACCES).
       - name: Install dependencies
         if: steps.changes.outputs.docs_only != 'true'
-        run: npm ci --ignore-scripts
+        run: bash .github/scripts/npm-ci.sh
 
       # Call the lockfile-pinned binary directly instead of npx, which can
       # fetch and run unpinned packages on demand.
@@ -86,7 +87,7 @@ jobs:
       - name: Install app dependencies
         if: steps.changes.outputs.docs_only != 'true'
         working-directory: app
-        run: npm ci --ignore-scripts
+        run: bash ../.github/scripts/npm-ci.sh
 
       - name: App typecheck and unit tests
         if: steps.changes.outputs.docs_only != 'true'
