@@ -456,6 +456,61 @@ test.describe('phone', () => {
     }
     expect(box!.width).toBeGreaterThan(300);
   });
+
+  // BACK-33 (Sonar S6845 on Tables.tsx): the three tables sit in scroll regions with tabIndex={0}. This is the keyboard evidence
+  // the owner cites when accepting those warnings: Tab from the control before the region lands on it, it is a named
+  // region, and where it overflows the arrow key scrolls it. A region that does not overflow is still a named focus stop.
+  test('list tables: each scroll region is reachable by Tab, named, and scrolls with the arrow keys', async ({ browser }) => {
+    const REGIONS = [
+      { id: 'ledger', line: 31, name: { en: 'Systems ledger', ar: 'سجل الأنظمة' } },
+      { id: 'matrix', line: 79, name: { en: 'Source readings', ar: 'قراءات المصادر' } },
+      { id: 'links', line: 111, name: { en: 'Links between systems', ar: 'الروابط بين الأنظمة' } },
+    ] as const;
+    const scrolledAtSomeWidth = new Set<string>();
+    for (const lang of ['en', 'ar'] as const) {
+      const key = lang === 'en' ? 'ArrowRight' : 'ArrowLeft';
+      for (const region of REGIONS) {
+        const log: string[] = [];
+        for (const width of [375, 320]) {
+          const ctx = await browser.newContext({ viewport: { width, height: 812 }, baseURL: ORIGIN });
+          const page = await ctx.newPage();
+          await loadBc(page, { width, height: 812, view: 'list', lang });
+          await waitForIntroDone(page);
+          // The surrounding Panel is a region with the same name, so address the scroll wrapper itself.
+          const el = page.locator(`#bc-${region.id} .kv2-table-wrap`);
+          await expect(el).toHaveCount(1);
+          await expect(el).toHaveRole('region');
+          await expect(el).toHaveAccessibleName(region.name[lang]);
+          // Known starting focus: the last tabbable control before the region in document order.
+          const startedFrom = await el.evaluate((r) => {
+            const tabbable = [...document.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, [tabindex]')]
+              .filter((e) => !e.hasAttribute('disabled') && e.tabIndex >= 0 && !e.closest('[hidden], [inert]') && getComputedStyle(e).visibility !== 'hidden' && e.getClientRects().length > 0);
+            const before = tabbable.filter((e) => e !== r && (e.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0).pop();
+            before?.focus();
+            return before ? `${before.tagName.toLowerCase()}${before.getAttribute('aria-label') ? `[${before.getAttribute('aria-label')}]` : ''}` : null;
+          });
+          expect(startedFrom, `${region.id}/${lang}: a control precedes the region`).not.toBeNull();
+          await page.keyboard.press('Tab');
+          expect(await el.evaluate((r) => document.activeElement === r), `${region.id}/${lang}@${width}: Tab from ${startedFrom} lands on the region`).toBe(true);
+          const m = await el.evaluate((r) => ({ sw: r.scrollWidth, cw: r.clientWidth, role: r.getAttribute('role') }));
+          expect(m.role).toBe('region');
+          const overflows = m.sw > m.cw;
+          if (overflows) {
+            const before = await el.evaluate((r) => r.scrollLeft);
+            await page.keyboard.press(key);
+            await expect.poll(() => el.evaluate((r) => r.scrollLeft), { message: `${region.id}/${lang}@${width}: ${key} scrolls` }).not.toBe(before);
+            scrolledAtSomeWidth.add(`${region.id}/${lang}`);
+          }
+          log.push(`${width}px: scrollWidth ${m.sw} clientWidth ${m.cw} ${overflows ? `overflows, ${key} scrolls` : 'no overflow'}`);
+          await ctx.close();
+          if (overflows) break; // 320 is only tried when 375 shows no overflow
+        }
+        console.log(`S6845 line ${region.line} ${region.id} ${lang}: reached by Tab; ${log.join('; ')}`);
+      }
+    }
+    // The evidence needs at least one width where each region truly scrolls by keyboard, otherwise say so in the doc.
+    console.log(`S6845 arrow-key scroll proven for: ${[...scrolledAtSomeWidth].sort().join(', ') || 'none'}`);
+  });
 });
 
 // BACK-34: on a phone the canvas aspect ratio changes while the SVG stretches (preserveAspectRatio="none"), so the cues that
