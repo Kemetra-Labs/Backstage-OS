@@ -44,6 +44,12 @@ or forced with --contract v1). Everything above stays the v0 behaviour and is un
 results reproduce byte for byte (--contract v0). v1 differences, each tied to a contract rule:
   R1  An imports edge is scored at module level. An engine edge to path::Symbol is folded onto the
       path (the symbol is just names[]), counted as names_folded and never as a separate false edge.
+      One truth edge per import STATEMENT: several truth edges may share (type, from, to) on different
+      lines and are matched one by one (own line first, then nearest line). Engine duplicates on the
+      same line collapse (strongest label wins); an engine edge on another line once every truth
+      statement is matched is reported as surplus, never silently dropped and never a hard fail.
+      An edge of a different relation type at a truth location stays a false observed edge (type_mismatch
+      only annotates it; R3 removed the only reason, imports vs reexports, for exempting it).
   R2  An engine imports edge that resolves THROUGH a barrel (its file+line is a ground-truth import of a
       barrel that re-exports the target) is `derived`: listed, never a false edge.
   R3  Re-exports are imports edges (form reexport). Legacy v0 type `reexports` is read as imports. `form`
@@ -396,7 +402,12 @@ def score_v1(env, gt):
     all_gt = gt_v1_edges(gt)
     gt_edges = [e for e in all_gt if e["basis"] in ("observed", "inferred")]
     gt_unknown = [e for e in all_gt if e["basis"] == "unknown"]
-    gt_by_key = {(e["type"], e["from"], e["to"]): e for e in gt_edges}
+    # R1: one imports edge per import STATEMENT, so several truth edges may share (type, from, to) on different
+    # lines. Keep them all, in line order; matching below is per statement, never per key alone.
+    gt_by_id = {e["id"]: e for e in gt_edges}
+    gt_group = {}
+    for e in sorted(gt_edges, key=lambda x: (x["line"], x["id"])):
+        gt_group.setdefault((e["type"], e["from"], e["to"]), []).append(e)
     # R2: (importing module, line) -> barrel it imports, and the modules each barrel re-exports
     import_at = {(e["from"], e["line"]): e["to"] for e in gt_edges if e["type"] == "imports" and e.get("form") != "reexport"}
     reexports = {}
@@ -406,7 +417,7 @@ def score_v1(env, gt):
     counters = {"external_ignored": 0, "null_target_ignored": 0, "intrafile_ignored": 0,
                 "unlisted_contains_ignored": 0, "duplicate_ignored": 0, "alias_resolved": 0,
                 "engine_unknown_edges": 0, "names_folded": 0}
-    matched, extras, resolved, derived, invalid_claims = {}, [], [], [], []
+    matched, by_key, extras, resolved, derived, invalid_claims = {}, {}, [], [], [], []
     engine_edges = env.get("edges", [])
     for e in engine_edges:
         if e.get("basis") == "unknown":
@@ -438,55 +449,78 @@ def score_v1(env, gt):
             counters["intrafile_ignored"] += 1
             continue
         key = (etype, f, t)
-        if etype == "contains" and key not in gt_by_key and t not in node_ids:
+        if etype == "contains" and key not in gt_group and t not in node_ids:
             counters["unlisted_contains_ignored"] += 1
             continue
-        if key in gt_by_key:
-            if key in matched:
-                counters["duplicate_ignored"] += 1
-                # keep the strongest label so a later observed duplicate cannot hide behind an earlier inferred one
-                if ne.get("basis") == "observed" and matched[key].get("basis") != "observed":
-                    matched[key] = ne
-            else:
-                matched[key] = ne
+        if key in gt_group:
+            by_key.setdefault(key, []).append(ne)
         elif (etype == "imports" and res.module(ne.get("file")) == f
               and t in reexports.get(import_at.get((f, ne.get("line"))), ())):
             derived.append(_edge_str(ne) + " via barrel")
         else:
             extras.append((ne, f, t))
+    # Match engine edges to truth statements per (type, from, to) group.
+    #  pass 1: engine edges written on a statement's own line. Duplicates of one statement (for example the
+    #          symbol-level edges an engine emits for one import line) collapse and keep the strongest label.
+    #  pass 2: leftover engine edges go to the still-unmatched statements, nearest line first, so a wrong
+    #          line is reported as provenance (off_by_n) instead of a missing edge.
+    #  rest:   an engine edge on another line when every truth statement is matched is `surplus`: reported
+    #          only, because one multi-line import statement can legitimately yield edges on several lines.
+    surplus = []
+    for key, pool in by_key.items():
+        free = list(gt_group[key])
+        for g in list(free):
+            same = [x for x in pool if x.get("line") == g["line"]]
+            if same:
+                matched[g["id"]] = next((x for x in same if x.get("basis") == "observed"), same[0])
+                counters["duplicate_ignored"] += len(same) - 1
+                pool = [x for x in pool if x.get("line") != g["line"]]
+                free.remove(g)
+        for g in free:
+            if not pool:
+                break
+            pick = min(pool, key=lambda x: 0 if x.get("line") is None else abs(x["line"] - g["line"]))
+            matched[g["id"]] = pick
+            pool.remove(pick)
+        for x in pool:
+            if x.get("line") is None:
+                counters["duplicate_ignored"] += 1
+            else:
+                surplus.append(_edge_str(x))
     overclaimed, understated, form_mismatch = [], [], []
-    for k, e in matched.items():
-        g = gt_by_key[k]
+    for gid, e in matched.items():
+        g = gt_by_id[gid]
         if g["basis"] == "inferred" and e.get("basis") == "observed":
             overclaimed.append(f"{g['id']} {_edge_str(e)}")
         elif g["basis"] == "observed" and e.get("basis") == "inferred":
             understated.append(f"{g['id']} {_edge_str(e)}")
         if g.get("form") and e.get("form") and g["form"] != e["form"]:
             form_mismatch.append(f"{g['id']} expected form {g['form']}, got {e['form']}")
+    # An edge of a different relation type at a truth location is annotated here but STAYS in extras: under R3
+    # imports and re-exports are one family, so what is left (calls vs imports vs contains) is a relation the
+    # truth does not contain. An observed one is a false observed edge (R4, R8); the truth edge counts as missed.
     type_mismatch = []
-    unmatched_gt = [g for k, g in gt_by_key.items() if k not in matched]
-    for item in list(extras):
-        e, f, t = item
+    unmatched_gt = [g for g in gt_edges if g["id"] not in matched]
+    for e, f, t in extras:
         efile = res.module(e.get("file")) if e.get("file") else None
         for g in unmatched_gt:
             if (g["type"] != e.get("type") and g["from"] == f and module_of(g["to"]) == module_of(t)
                     and g["file"] == efile and g["line"] == e.get("line")):
                 type_mismatch.append({"engine": _edge_str(e), "expected_type": g["type"], "gt_edge": g["id"]})
-                extras.remove(item)
                 break
     table = {}
     for ty in EDGE_TYPES_V1:
-        exp = [k for k in gt_by_key if k[0] == ty]
-        tp = [k for k in exp if k in matched]
+        exp = [g for g in gt_edges if g["type"] == ty]
+        tp = [g for g in exp if g["id"] in matched]
         fp = [x for x in extras if x[0].get("type") == ty]
         table[ty] = {"expected": len(exp), "tp": len(tp), "fn": len(exp) - len(tp), "fp": len(fp)}
     lang_cov = {}
-    for k, g in gt_by_key.items():
+    for g in gt_edges:
         lang = EXT_LANG.get(os.path.splitext(module_of(g["from"]))[1].lower(), "other")
         d = lang_cov.setdefault(lang, {"expected": 0, "tp": 0})
         d["expected"] += 1
-        d["tp"] += 1 if k in matched else 0
-    missed = [gt_by_key[k]["id"] + " " + " ".join(k) for k in gt_by_key if k not in matched]
+        d["tp"] += 1 if g["id"] in matched else 0
+    missed = [g["id"] + " " + " ".join((g["type"], g["from"], g["to"])) for g in gt_edges if g["id"] not in matched]
     false_observed = [_edge_str(x[0]) for x in extras if x[0].get("basis") == "observed"]
     false_inferred = [_edge_str(x[0]) for x in extras if x[0].get("basis") != "observed"]
     neg_hits = []
@@ -500,8 +534,8 @@ def score_v1(env, gt):
         if hit:
             neg_hits.append({"negatives": [n["id"] for n in hit], "reason": hit[0]["reason"], "engine": _edge_str(e)})
     exact, missing, off = 0, 0, []
-    for k, e in matched.items():
-        g = gt_by_key[k]
+    for gid, e in matched.items():
+        g = gt_by_id[gid]
         if e.get("line") is None:
             missing += 1
         elif e["line"] == g["line"]:
@@ -534,7 +568,7 @@ def score_v1(env, gt):
     return {
         "contract": "v1", "table": table, "missed": missed, "false_observed": false_observed,
         "false_inferred": false_inferred, "overclaimed": overclaimed, "understated": understated,
-        "invalid_claims": invalid_claims,
+        "invalid_claims": invalid_claims, "surplus_statements": surplus,
         "derived": derived, "form_mismatch": form_mismatch, "type_mismatch": type_mismatch,
         "negatives_hit": neg_hits, "negatives_total": len(gt["negatives"]),
         "line_provenance": {"exact": exact, "missing": missing, "off_by_n": off},
@@ -572,11 +606,12 @@ def render_v1(result, engine, schema_errs, contract_errs):
                 ("Reported: false inferred edges", "false_inferred"),
                 ("Reported: understated (inferred label on an observed truth)", "understated"),
                 ("Reported: derived through a barrel (R2)", "derived"),
-                ("Reported: form mismatches", "form_mismatch"))
+                ("Reported: form mismatches", "form_mismatch"),
+                ("Reported: surplus edges (same type/from/to as a matched truth edge, other line)", "surplus_statements"))
     for title, key in sections:
         out.append(f"{title}: {len(result[key])}")
         out += ["  " + x for x in result[key]]
-    out.append(f"Reported: type mismatches: {len(result['type_mismatch'])}")
+    out.append(f"Annotation: wrong-relation-type edges at a truth location (also counted as false observed/inferred): {len(result['type_mismatch'])}")
     out += [f"  {m['engine']} (expected type {m['expected_type']}, {m['gt_edge']})" for m in result["type_mismatch"]]
     out.append(f"HARD: negatives hit: {len(result['negatives_hit'])}; negatives defined: {result['negatives_total']}")
     out += [f"  {'+'.join(h['negatives'])}: {h['engine']} ({h['reason']})" for h in result["negatives_hit"]]
@@ -722,8 +757,11 @@ def self_check_v1(gt, envgt, need):
         need(e.get("v1_form") in (None, "reexport") and (e.get("v1_form") is None or e["type"] == "reexports"),
              f"edge {e['id']}: v1_form only allowed as 'reexport' on reexports")
     v1 = gt_v1_edges(gt)
-    keys = [(e["type"], e["from"], e["to"]) for e in v1 if e["basis"] != "unknown"]
-    need(len(keys) == len(set(keys)), "v1 view: duplicate (type, from, to) keys")
+    # R1: only imports may repeat (type, from, to), and only as separate statements on different lines
+    keys = [(e["type"], e["from"], e["to"], e["line"]) for e in v1 if e["basis"] != "unknown"]
+    need(len(keys) == len(set(keys)), "v1 view: duplicate (type, from, to, line) keys")
+    plain = [(e["type"], e["from"], e["to"]) for e in v1 if e["basis"] != "unknown" and e["type"] != "imports"]
+    need(len(plain) == len(set(plain)), "v1 view: only imports edges may repeat (type, from, to)")
     need(sum(1 for e in v1 if e["basis"] == "inferred") == 2, "v1 view: expected exactly 2 inferred ground-truth edges")
     base = gt_to_v1_envelope(gt, envgt)
     need(not validate_schema(base, schema1), "v1 ground-truth envelope invalid: " + "; ".join(validate_schema(base, schema1)[:3]))
@@ -855,6 +893,62 @@ def self_check_v1(gt, envgt, need):
     env["edges"].append(dict(barrel_import, file="src/web/handler.ts"))
     r9 = score_v1(env, gt)
     need(not r9["derived"] and len(r9["false_observed"]) == 1, "v1 S9: a barrel import written in another file must not be derived")
+    # S11 (R1): one truth edge per import statement. Two statements importing the same target stay two truth edges
+    gt2 = copy.deepcopy(gt)
+    gt2["edges"].append(dict(next(e for e in gt2["edges"] if e["id"] == "E01"), id="E90", line=9))
+    two = gt_to_v1_envelope(gt2, envgt)
+
+    def pricing_edges(env):
+        return [e for e in env["edges"] if (e["type"], e["from"], e["to"]) == ("imports", "src/web/orders.ts", "src/web/pricing.ts")]
+
+    r = score_v1(two, gt2)
+    need(tp_fn_fp(r) == (n_edges + 1, 0, 0) and r["line_provenance"]["exact"] == n_edges + 1 and not r["surplus_statements"],
+         f"v1 S11: both statements reported must give {n_edges + 1} exact matches, got {tp_fn_fp(r)}")
+    for keep, want_missed in ((3, "E90"), (9, "E01")):
+        env = copy.deepcopy(two)
+        env["edges"].remove(next(e for e in pricing_edges(env) if e["line"] != keep))
+        r = score_v1(env, gt2)
+        need(tp_fn_fp(r) == (n_edges, 1, 0) and [m.split()[0] for m in r["missed"]] == [want_missed]
+             and not r["line_provenance"]["off_by_n"] and r["verdict"]["result"] == "PASS",
+             f"v1 S11: engine reports only the line {keep} statement: must miss {want_missed} and nothing else, got {r['missed']}")
+    env = copy.deepcopy(two)
+    env["edges"].remove(next(e for e in pricing_edges(env) if e["line"] == 9))
+    env["edges"].append(dict(pricing_edges(env)[0], line=12))
+    r = score_v1(env, gt2)
+    need(tp_fn_fp(r) == (n_edges + 1, 0, 0) and [o["got"] for o in r["line_provenance"]["off_by_n"]] == [12],
+         "v1 S11: a wrong line on the second statement is provenance (off_by_n), not a missing edge")
+    # two truth statements (lines 3, 9), engine edges on neither line: nearest line wins, whatever the edge order
+    for lines in ((12, 1), (1, 12)):
+        env = copy.deepcopy(two)
+        t0 = pricing_edges(env)[0]
+        for e in pricing_edges(env):
+            env["edges"].remove(e)
+        env["edges"] += [dict(t0, line=ln) for ln in lines]
+        r = score_v1(env, gt2)
+        got = sorted((o["edge"], o["expected"], o["got"]) for o in r["line_provenance"]["off_by_n"])
+        need(tp_fn_fp(r) == (n_edges + 1, 0, 0) and got == [("E01", 3, 1), ("E90", 9, 12)],
+             f"v1 S11: engine lines {lines} must pair to the nearest statements (E01<-1, E90<-12), got {got}")
+    # single-statement truth: an engine edge on another line is reported as surplus whatever the order, never matched first
+    for order in ("true_first", "bogus_first"):
+        env = copy.deepcopy(base)
+        true = pricing_edges(env)[0]
+        env["edges"].remove(true)
+        env["edges"] += [true, dict(true, line=77)] if order == "true_first" else [dict(true, line=77), true]
+        r = score_v1(env, gt)
+        need(tp_fn_fp(r) == (n_edges, 0, 0) and r["line_provenance"]["exact"] == n_edges and len(r["surplus_statements"]) == 1
+             and r["ignored"]["duplicate_ignored"] == 0 and r["verdict"]["result"] == "PASS",
+             f"v1 S11: bogus-line duplicate ({order}) must be surplus, with the true line matched and the verdict unchanged")
+    # S12 (F2): an edge of the wrong relation type at a truth location is a false edge, not just an annotation
+    for basis, hard in (("observed", True), ("inferred", False)):
+        env = copy.deepcopy(base)
+        imp = edge(env, "E01")
+        env["edges"].remove(imp)
+        env["edges"].append(dict(imp, type="calls", basis=basis, form=None))
+        env["edges"][-1].pop("form")
+        r = score_v1(env, gt)
+        got = (len(r["false_observed"]), len(r["false_inferred"]), len(r["type_mismatch"]), len(r["missed"]), r["verdict"]["result"])
+        want = (1, 0, 1, 1, "FAIL") if hard else (0, 1, 1, 1, "PASS")
+        need(got == want, f"v1 S12: wrong-type {basis} edge: (false_observed, false_inferred, type_mismatch, missed, verdict) = {got}, want {want}")
     self_check_v1_cli(gt, base, need)
     # S10: an inferred edge at an unknown site claims it. Only this gate fails it (false inferred is reported only)
     env = copy.deepcopy(base)

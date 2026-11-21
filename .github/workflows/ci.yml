@@ -41,11 +41,19 @@ jobs:
             *) BASE="" ;;
           esac
           bash .github/scripts/docs-only.sh "$BASE" HEAD >> "$GITHUB_OUTPUT"
+          bash .github/scripts/g1-scorer-changed.sh "$BASE" HEAD >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
 
       - name: Docs-only change, skipping browser tests
         if: steps.changes.outputs.docs_only == 'true'
         run: echo "Only *.md or docs/ files changed; Playwright suite skipped."
+
+      # The G1 scorer is executable Python under docs/, so the docs-only skip above never runs it. Run its
+      # self-check whenever the scorer, fixture, schema or ground truth changes. Stdlib only: it uses the
+      # python3 already on the runner, so docs-only PRs that do not touch it stay lightweight.
+      - name: G1 scorer self-check
+        if: steps.changes.outputs.g1_scorer == 'true'
+        run: python3 -B docs/planning/G1/fixture/score.py --self-check
 
       - uses: actions/setup-node@v4
         if: steps.changes.outputs.docs_only != 'true'
