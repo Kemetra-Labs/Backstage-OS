@@ -1,0 +1,87 @@
+PASS [A] no console or page errors                                          []
+PASS [A] every request is same-origin                                       []
+PASS [A] no percent sign in rendered text                                 
+PASS [A] derived figures match the audit table                              {}
+PASS [A] link classes 2 observed / 1 correlated / 1 hypothesis / 4 unknown  {'observed': 2, 'correlated': 1, 'hypothesis': 1, 'unknown': 4}
+PASS [A] exactly one node reads Healthy (GitHub)                            1
+PASS [A] 10 nodes, all native buttons, all focusable                      
+PASS [A] Khepri reads Health unknown                                        ['Khepri, Product, Health unknown']
+PASS [A] Jira reads Health unknown                                          ['Jira, Service, Health unknown']
+PASS [A] Seshat BI reads Health unknown                                     ['Seshat BI, Service, Health unknown']
+PASS [A] Inventory service reads Stale                                      ['Inventory service, Project, Stale']
+PASS [A] Sentry reads Stale                                                 ['Sentry, Service, Stale']
+PASS [A] Port reads Unavailable                                             ['Port, Service, Unavailable']
+PASS [A] stock-sync reads CI check failing                                  ['stock-sync, Project, CI check failing']
+PASS [A] no approve/reject/defer/go/release/retry/run control vocabulary    []
+PASS [A] no form or submit control                                        
+PASS [A] arrow keys move focus between nodes                                retail-tower
+PASS [A] list view shows the same 10 systems and 11 links                   21
+PASS [A] inspector tabs move with arrow keys                              
+PASS [A] perf                                                               {"svg": 189, "dom": 663, "anim": 0, "filters": 1, "shadows": 22, "frame": [1448, 1086]}
+PASS [A] fits one 1448x1086 frame without scrolling                         [1448, 1086]
+PASS [A] AR: dir=rtl and canvas stays ltr                                 
+PASS [A] AR: inspector flips to the left of the map                         [16, 361]
+PASS [A] AR: no percent sign                                              
+PASS [A] AR: every Latin run is inside an LTR isolate                       0
+PASS [A] AR: no page errors                                               
+PASS [A] reduced motion: zero running animations                          
+PASS [A] 375px: every visible control is at least 44x44                     []
+PASS [A] 375px: no horizontal overflow                                      375
+PASS [B] no console or page errors                                          []
+PASS [B] every request is same-origin                                       []
+PASS [B] no percent sign in rendered text                                 
+PASS [B] derived figures match the audit table                              {}
+PASS [B] link classes 2 observed / 1 correlated / 1 hypothesis / 4 unknown  {'observed': 2, 'correlated': 1, 'hypothesis': 1, 'unknown': 4}
+PASS [B] exactly one node reads Healthy (GitHub)                            1
+PASS [B] 10 nodes, all native buttons, all focusable                      
+PASS [B] Khepri reads Health unknown                                        ['Khepri, Product, Health unknown']
+PASS [B] Jira reads Health unknown                                          ['Jira, Service, Health unknown']
+PASS [B] Seshat BI reads Health unknown                                     ['Seshat BI, Service, Health unknown']
+PASS [B] Inventory service reads Stale                                      ['Inventory service, Project, Stale']
+PASS [B] Sentry reads Stale                                                 ['Sentry, Service, Stale']
+PASS [B] Port reads Unavailable                                             ['Port, Service, Unavailable']
+PASS [B] stock-sync reads CI check failing                                  ['stock-sync, Project, CI check failing']
+PASS [B] no approve/reject/defer/go/release/retry/run control vocabulary    []
+PASS [B] no form or submit control                                        
+PASS [B] arrow keys move focus between nodes                                retail-tower
+PASS [B] list view shows the same 10 systems and 11 links                   27
+PASS [B] inspector tabs move with arrow keys                              
+PASS [B] perf                                                               {"svg": 180, "dom": 541, "anim": 5, "filters": 1, "shadows": 23, "frame": [1448, 1086]}
+PASS [B] fits one 1448x1086 frame without scrolling                         [1448, 1086]
+PASS [B] AR: dir=rtl and canvas stays ltr                                 
+PASS [B] AR: inspector flips to the left of the map                         [12, 372]
+PASS [B] AR: no percent sign                                              
+PASS [B] AR: every Latin run is inside an LTR isolate                       0
+PASS [B] AR: no page errors                                               
+PASS [B] reduced motion: zero running animations                          
+PASS [B] 375px: every visible control is at least 44x44                     []
+PASS [B] 375px: no horizontal overflow                                      375
+PASS [C] no console or page errors                                          []
+PASS [C] every request is same-origin                                       []
+PASS [C] no percent sign in rendered text                                 
+PASS [C] derived figures match the audit table                              {}
+PASS [C] link classes 2 observed / 1 correlated / 1 hypothesis / 4 unknown  {'observed': 2, 'correlated': 1, 'hypothesis': 1, 'unknown': 4}
+PASS [C] exactly one node reads Healthy (GitHub)                            1
+PASS [C] 10 nodes, all native buttons, all focusable                      
+PASS [C] Khepri reads Health unknown                                        ['Khepri, Product, Health unknown']
+PASS [C] Jira reads Health unknown                                          ['Jira, Service, Health unknown']
+PASS [C] Seshat BI reads Health unknown                                     ['Seshat BI, Service, Health unknown']
+PASS [C] Inventory service reads Stale                                      ['Inventory service, Project, Stale']
+PASS [C] Sentry reads Stale                                                 ['Sentry, Service, Stale']
+PASS [C] Port reads Unavailable                                             ['Port, Service, Unavailable']
+PASS [C] stock-sync reads CI check failing                                  ['stock-sync, Project, CI check failing']
+PASS [C] no approve/reject/defer/go/release/retry/run control vocabulary    []
+PASS [C] no form or submit control                                        
+PASS [C] arrow keys move focus between nodes                                github
+PASS [C] list view shows the same 10 systems and 11 links                   37
+PASS [C] inspector tabs move with arrow keys                              
+PASS [C] perf                                                               {"svg": 282, "dom": 871, "anim": 0, "filters": 1, "shadows": 17, "frame": [1448, 1086]}
+PASS [C] fits one 1448x1086 frame without scrolling                         [1448, 1086]
+PASS [C] AR: dir=rtl and canvas stays ltr                                 
+PASS [C] AR: inspector flips to the left of the map                         [16, 375]
+PASS [C] AR: no percent sign                                              
+PASS [C] AR: every Latin run is inside an LTR isolate                       0
+PASS [C] AR: no page errors                                               
+PASS [C] reduced motion: zero running animations                          
+PASS [C] 375px: every visible control is at least 44x44                     []
+PASS [C] 375px: no horizontal overflow                                      375

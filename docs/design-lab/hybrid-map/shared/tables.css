@@ -1,0 +1,29 @@
+/* Systems ledger + source-readings matrix (concept C's views, reused as concept B's list and phone view). */
+.kh-ledger th[scope="row"] button { display: flex; gap: 7px; align-items: center; color: var(--kv2-ink); min-block-size: 24px; padding: 0; white-space: nowrap; }
+.kh-ledger small { font-weight: 400; font-size: 10.5px; color: var(--kv2-ink-2); }
+.kh-ledger b { font-weight: 700; font-size: var(--kv2-t-sm); }
+.kh-num { text-align: end !important; font-variant-numeric: tabular-nums; inline-size: 40px; }
+.kh-ledger tr[data-selected] { box-shadow: inset 3px 0 0 var(--kv2-cyan); }
+.kh-mini { inline-size: 24px; block-size: 24px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--kv2-line-hi); color: var(--kv2-cyan); flex: none; background: var(--kv2-well); }
+.kh-mini[data-tone="warn"] { color: var(--kv2-amber); border-color: var(--kv2-amber-line); } .kh-mini[data-tone="bad"] { color: var(--kv2-red); border-color: var(--kv2-red-line); } .kh-mini[data-tone="unk"] { color: var(--kv2-ink-2); border-color: var(--kv2-unk-line); }
+.kh-ledger tbody tr[data-kind="project"]:first-of-type, .kh-ledger tbody tr[data-kind="service"]:first-of-type { border-block-start: 0; }
+.kh-th { display: block; font-size: var(--kv2-t-xs); color: var(--kv2-ink-2); font-weight: 600; }
+.kh-count { display: block; color: var(--kv2-ink-2); font-size: 11px; font-weight: 400; line-height: 1.25; max-inline-size: 104px; } .kh-count b { font-size: 17px; color: var(--kv2-ink); font-weight: 700; }
+.kh-matrix thead th { vertical-align: bottom; padding-block: 3px 6px; }
+.kh-matrix .kh-age { min-inline-size: 112px; } .kh-matrix .kh-prov { white-space: nowrap; }
+.kh-matrix td, .kh-matrix th { padding-block: 4px; }
+@media (max-width: 640px) { .kh-ledger th[scope="row"] button { min-block-size: 44px; min-inline-size: 44px; } }
+.kh-ledger th, .kh-ledger td { padding: 2px 7px; } .kh-matrix th, .kh-matrix td { padding-inline: 7px; } .kh-table .kh-chip { white-space: nowrap; }
+@media (max-width: 640px) {
+  /* Phone: the matrix becomes one card per source; its three counters already sit above the list. */
+  .kh-matrix thead { display: none; }
+  .kh-matrix, .kh-matrix tbody { display: block; }
+  .kh-matrix tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 10px 12px; border-block-start: 1px solid var(--kv2-line-2); }
+  .kh-matrix tr:first-child { border-block-start: 0; }
+  .kh-matrix th[scope="row"], .kh-matrix td { display: block; padding: 0; border: 0; }
+  .kh-matrix th[scope="row"] { grid-column: 1 / -1; }
+  .kh-matrix td::before { content: attr(data-label); display: block; font-size: var(--kv2-t-xs); color: var(--kv2-muted); margin-block-end: 3px; }
+  .kh-matrix td:nth-of-type(2) { grid-column: 1 / -1; order: 3; }
+  .kh-matrix .kh-age { min-inline-size: 0; }
+  .kh-ledger th[scope="row"] button { min-block-size: 44px; }
+}
