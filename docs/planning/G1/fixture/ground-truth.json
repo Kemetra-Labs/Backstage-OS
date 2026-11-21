@@ -21,7 +21,8 @@
     "contains": "module -> top-level function/class/component, class -> method; only listed symbols are scored",
     "type_only_imports": "import type is an imports edge (observed); a calls edge to a type-only symbol is a negative",
     "unknown": "dynamic import(variable), importlib.import_module(name) and HTTP calls are unknown edges with to = null and a target_hint",
-    "line": "1-based line in file where the relation is written (import/require/export line, call line, definition line)"
+    "line": "1-based line in file where the relation is written (import/require/export line, call line, definition line)",
+    "contract_v1": "kawalys.graph.v1 overlay (CONTRACT-V1.md). The v0 fields above are unchanged so v0 scoring reproduces. Under v1 an edge with v1_form=reexport is an imports edge with form reexport (R3); an edge with v1_basis=inferred needs receiver typing and is an inferred relation (R4). Edges without these keys keep form import and their v0 basis."
   },
   "nodes": [
     {
@@ -379,6 +380,7 @@
       "line": 2,
       "basis": "observed",
       "note": "named re-export (export { x } from); modelled as reexports only, no separate imports edge",
+      "v1_form": "reexport",
       "evidence_token": "'./orders'"
     },
     {
@@ -390,6 +392,7 @@
       "line": 3,
       "basis": "observed",
       "note": "star re-export (export * from); exposes every export of pricing.ts through the barrel",
+      "v1_form": "reexport",
       "evidence_token": "export *"
     },
     {
@@ -412,6 +415,7 @@
       "line": 10,
       "basis": "observed",
       "note": "class method called from another file; receiver typed by local new Cart()",
+      "v1_basis": "inferred",
       "evidence_token": "cart.addItem("
     },
     {
@@ -511,6 +515,7 @@
       "line": 12,
       "basis": "observed",
       "note": "cross-module method call; receiver typed by local service = OrderService()",
+      "v1_basis": "inferred",
       "evidence_token": "service.place(order)"
     },
     {

@@ -72,6 +72,18 @@ Output is an ASCII report of counts only (no ratios): per edge type expected / T
 
 Tree hash: sha256 over files under `src/` sorted by relative posix path (`src/...`); per file the path in UTF-8, a NUL byte, the bytes with CRLF turned into LF, a NUL byte. `__pycache__` and `*.pyc` are excluded.
 
+## Contract v1 (G1-C1 Step 1, paper only)
+
+`envelope.schema.v1.json` and the v1 mode of `score.py` implement the owner-approved rules R1 to R8 in [../contract-v1/CONTRACT-V1.md](../contract-v1/CONTRACT-V1.md). Nothing about v0 changed: `envelope.schema.json`, `ground-truth.envelope.json` and the v0 scoring path are untouched, and the stored BACK-21 v0 scores reproduce. `ground-truth.json` gained additive keys only: `v1_form: reexport` on E10 and E11 (R3) and `v1_basis: inferred` on E13 and E22, the two receiver-typed calls (R4).
+
+- `score.py <envelope>` picks the contract from the envelope's `envelope_version`. `--contract v1` on a v0 envelope is a calibration preview only. A v1 envelope cannot be scored with `--contract v0`.
+- Matching is per import statement (R1): several truth edges may share (type, from, to) on different lines. Engine duplicates on the same line collapse (strongest label wins), and an engine edge on another line once every truth statement is matched is reported as `surplus`, not a hard fail, because one multi-line import can legitimately yield edges on several lines.
+- An edge of a different relation type at a truth location (for example `calls` where the truth is `imports`) is a false observed edge. `type_mismatch` only annotates it, and the truth edge counts as missed.
+- CI runs `python3 -B docs/planning/G1/fixture/score.py --self-check` when anything under `docs/planning/G1/fixture/` changes (`.github/scripts/g1-scorer-changed.sh`), even for docs-only PRs.
+- A v1 envelope adds `coverage` (files seen and total) and `external_refs`, edge `form`, `names`, `via` and `line_source`, and has no `reexports` type.
+- Hard fail: false observed edges, overclaimed inferred truths, negatives hit, invalid claims (an observed or inferred edge without a target, an unknown naming one), an unknown claimed as observed or inferred, and any schema or contract error in a v1 envelope. Duplicate keys keep the strongest label. Everything else is reported as counts. A v0 envelope scored with `--contract v1` is labelled "not checked" for schema and contract rules.
+- `--self-check` now also covers the v1 overlay, schema, `contract_errors` and one scenario per rule. The hold-out fixture, the normalizers and the v1 re-score of the stored BACK-21 envelopes are not part of this step.
+
 ## NOT VERIFIED
 
 Go, Java, C#, Rust, SQL, Jinja2, Terraform/HCL, and cross-runtime runtime wiring (HTTP, queues, RPC between Python and TypeScript). Also not covered: monorepo workspaces and path aliases, Python `__all__` star imports, conditional or lazy imports other than the two dynamic cases, decorators, and inheritance or interface resolution.
