@@ -160,6 +160,187 @@ def normalize(graph, fixture_dir, cmd, generated_at, stderr_text=""):
     }
 
 
+# ----------------------------------------------------------------------------------------------------------
+# kawalys.graph.v1 path (BACK-28, G1-C1 Step 1c; CONTRACT-V1.md R1-R8). The v0 code above is unchanged and stays
+# the default. Mapping rules for v1 (same discipline: fixed before scoring, same rule for every edge):
+#
+#   V1  One `imports` edge per import statement (R1): an `imports_from` link (or an `imports` link to a module) gives
+#       the statement edge, `to` = the literal specifier's file. `imports` links to a symbol at the same file and
+#       line fold into names[] of that edge; they are never separate edges.
+#   V2  `re_exports` (R3): module and symbol variants at one file and line collapse to one `imports` edge. On
+#       .ts/.tsx/.js sources form=reexport; on .py sources form=import (language rule, never a fixture name),
+#       so `from .x import Y` with __all__ stays an import.
+#   V3  A symbol `imports` link whose file differs from the line's literal specifier AND whose literal file
+#       re-exports that file (re_exports links in the same graph) is also emitted as a derived edge with
+#       via=barrel (R2). Without that evidence nothing derived is emitted and the case is recorded as an omission.
+#   V4  basis: unchanged from v0 (R4). Merging duplicates keeps the weaker label, never an upgrade.
+#   V5  `contains` / `method` links: line = the child node's definition line, line_source=derived (R7); the
+#       engine's own link line is not used. A calls link without a source_location is not emitted and is counted.
+#   V6  Targets that are engine-marked external nodes are counted in external_refs, not emitted (R5, R8).
+#   V7  Graphify has no unknown class: no unknown edge is ever emitted. form is not reported by the engine, so
+#       every non-reexport statement defaults to form=import; the count is recorded as an omission.
+#   V8  coverage: files_total from the scope walk (as tree_hash), files_seen = module nodes in the output.
+# ----------------------------------------------------------------------------------------------------------
+_IMPORT_RELS = ("imports_from", "imports", "re_exports")
+_RANK = {"observed": 0, "inferred": 1}
+
+
+def _module_of(node_id):
+    return node_id.split("::", 1)[0]
+
+
+def scope_file_count(fixture_dir):
+    n = 0
+    for _root, dirs, files in os.walk(os.path.join(fixture_dir, "src")):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        n += sum(1 for f in files if not f.endswith(".pyc"))
+    return n
+
+
+def _add_name(edge, name):
+    names = edge.setdefault("names", [])
+    if name not in names:
+        names.append(name)
+
+
+def normalize_v1(graph, fixture_dir, cmd, generated_at, stderr_text=""):
+    base = normalize(graph, fixture_dir, cmd, generated_at, stderr_text)  # reused for the node mapping only
+    nodes_in = {n["id"]: n for n in graph["nodes"]}
+    idmap = {n["engine_native_id"]: n["id"] for n in base["nodes"]}
+    node_line = {n["id"]: n["line"] for n in base["nodes"]}
+    omissions = [o for o in base["omissions"]
+                 if "non-callable symbol" in o["reason"] or o["reason"].startswith("engine warning")]
+    out, recs, dropped, ext_refs, no_line = [], [], {}, set(), 0
+    reexport_targets = set()
+    rel_type = {"contains": "contains", "method": "contains", "calls": "calls", "indirect_call": "calls"}
+
+    def drop(key):
+        dropped[key] = dropped.get(key, 0) + 1
+
+    for e in graph["links"]:
+        rel = e["relation"]
+        s, line = idmap.get(e["source"]), line_of(e.get("source_location"))
+        tn = nodes_in.get(e["target"])
+        tgt = idmap.get(e["target"])
+        ext = tgt is None and tn is not None and tn.get("external")
+        if rel not in rel_type and rel not in _IMPORT_RELS:
+            drop(rel)
+            continue
+        if s is None or (tgt is None and not ext):
+            drop("unmapped-endpoint:" + rel)
+            continue
+        if ext:  # V6: counted, never emitted, never an unknown claim
+            ext_refs.add((s, line, tn["label"]))
+            continue
+        if rel == "re_exports":
+            reexport_targets.add((s, _module_of(tgt)))
+        if rel in _IMPORT_RELS:
+            if line is None:
+                no_line += 1
+            else:
+                recs.append((rel, e, s, line, tgt))
+            continue
+        if rel in ("contains", "method"):  # V5: the child's NATIVE location only; v0's `or 1` default is never used
+            child_line = line_of(nodes_in[e["target"]].get("source_location"))
+            if child_line is None:
+                no_line += 1
+                continue
+            out.append({"type": "contains", "from": s, "to": tgt, "file": e["source_file"], "line": child_line,
+                        "line_source": "derived", "basis": basis_of(e),
+                        "engine_native_id": f"{e['source']}|{rel}|{e['target']}"})
+            continue
+        if line is None:
+            no_line += 1
+            continue
+        basis = "inferred" if rel == "indirect_call" else basis_of(e)
+        out.append({"type": "calls", "from": s, "to": tgt, "file": e["source_file"], "line": line, "basis": basis,
+                    "engine_native_id": f"{e['source']}|{rel}|{e['target']}"})
+
+    stmts = {}  # (from, line, to, via) -> statement edge; insertion order = link order
+
+    def statement(e, s, line, to, form, via=None):
+        key = (s, line, to, via)
+        cur = stmts.get(key)
+        basis = basis_of(e)
+        if cur is None:
+            cur = {"type": "imports", "form": form, "from": s, "to": to, "file": e["source_file"], "line": line,
+                   "basis": basis, "engine_native_id": f"{e['source']}|{e['relation']}|{e['target']}"}
+            if via:
+                cur["via"] = via
+            stmts[key] = cur
+        elif _RANK[basis] > _RANK[cur["basis"]]:
+            cur["basis"] = basis  # V4: the weaker label wins, nothing is upgraded
+        return cur
+
+    for rel, e, s, line, tgt in recs:  # V1 literal statements
+        if rel != "re_exports" and "::" not in tgt:
+            statement(e, s, line, tgt, "import")
+    for rel, e, s, line, tgt in recs:  # V2 re-exports
+        if rel == "re_exports":
+            form = "import" if os.path.splitext(_module_of(s))[1].lower() == ".py" else "reexport"
+            cur = statement(e, s, line, _module_of(tgt), form)
+            if "::" in tgt:
+                _add_name(cur, tgt.split("::", 1)[1])
+    different_file = unattached = 0
+    for rel, e, s, line, tgt in recs:  # V1 names, V3 barrel
+        if rel == "re_exports" or "::" not in tgt:
+            continue
+        here = [v for k, v in stmts.items() if k[0] == s and k[1] == line and k[3] is None]
+        name, mod = tgt.split("::", 1)[1], _module_of(tgt)
+        own = [v for v in here if v["to"] == mod]
+        if own:
+            _add_name(own[0], name)
+        elif here:
+            _add_name(here[0], name)
+            if (here[0]["to"], mod) in reexport_targets:
+                _add_name(statement(e, s, line, mod, "import", via="barrel"), name)
+            else:
+                different_file += 1
+        else:
+            unattached += 1
+    out.extend(stmts.values())
+
+    for rel, cnt in sorted(dropped.items()):
+        omissions.append({"what": f"{cnt} Graphify edge(s) of relation {rel}",
+                          "reason": "no envelope edge type or endpoint is not an envelope node (not mapped)"})
+    if different_file:
+        omissions.append({"what": f"{different_file} Graphify symbol import(s)",
+                          "reason": "resolved to a different file than the literal specifier with no re-export evidence "
+                                    "in the graph; derived edge not emitted (R2)"})
+    if unattached:
+        omissions.append({"what": f"{unattached} Graphify symbol import(s)",
+                          "reason": "no statement edge at the same file and line; not emitted"})
+    if no_line:
+        omissions.append({"what": f"{no_line} Graphify edge(s) without a source line",
+                          "reason": "the engine reports no line; an observed or inferred edge needs one, so it is not "
+                                    "emitted and no line is guessed (R7)"})
+    n_node_default = sum(1 for n in base["nodes"]
+                         if line_of(nodes_in[n["engine_native_id"]].get("source_location")) is None)
+    if n_node_default:
+        omissions.append({"what": f"{n_node_default} Graphify node(s) without a source location",
+                          "reason": "the schema requires a node line; the v0 node mapping defaulted it to 1, which is "
+                                    "not an engine-reported line (no edge uses it)"})
+    n_default = sum(1 for e in out if e["type"] == "imports" and e["form"] == "import")
+    if n_default:
+        omissions.append({"what": f"{n_default} import edge(s)",
+                          "reason": "the engine does not report require or dynamic form; form defaulted to import "
+                                    "(re-export form is derived from relation re_exports)"})
+    cfg = hashlib.sha256((cmd + "|GRAPHIFY_BACKEND=none|code-only").encode()).hexdigest()
+    return {
+        "envelope_version": "kawalys.graph.v1",
+        "source": {"scope": "fixture-copy", "revision": tree_hash(fixture_dir), "fixture_version": "g1-01-v0"},
+        "engine": {"name": "graphify", "version": graph.get("graph", {}).get("graphify_version", "unknown"),
+                   "config_digest": cfg},
+        "generated_at": generated_at,
+        "nodes": base["nodes"],
+        "edges": out,
+        "omissions": omissions,
+        "coverage": {"files_seen": sum(1 for n in base["nodes"] if n["kind"] == "module"),
+                     "files_total": scope_file_count(fixture_dir)},
+        "external_refs": len(ext_refs),
+    }
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("graph")
@@ -167,6 +348,8 @@ def main():
     ap.add_argument("out")
     ap.add_argument("--cmd", default="graphify extract <fixture-copy> --code-only")
     ap.add_argument("--stderr", default=None, help="engine stderr log (for engine-reported warnings)")
+    ap.add_argument("--contract", choices=("v0", "v1"), default="v0",
+                    help="envelope contract to emit (default v0 keeps the BACK-21 output byte-identical)")
     a = ap.parse_args()
     with open(a.graph, encoding="utf-8") as fh:
         graph = json.load(fh)
@@ -175,7 +358,7 @@ def main():
         with open(a.stderr, encoding="utf-8") as fh:
             stderr_text = fh.read()
     ts = datetime.datetime.fromtimestamp(os.path.getmtime(a.graph), datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    env = normalize(graph, a.fixture_dir, a.cmd, ts, stderr_text)
+    env = (normalize_v1 if a.contract == "v1" else normalize)(graph, a.fixture_dir, a.cmd, ts, stderr_text)
     with open(a.out, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(env, fh, indent=2)
         fh.write("\n")
