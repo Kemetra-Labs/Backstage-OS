@@ -1,0 +1,107 @@
+{
+  "engine_node_counts": {
+    "javascript": 4,
+    "python": 17,
+    "tsx": 2,
+    "typescript": 14
+  },
+  "extra_inferred": [],
+  "false_observed": [
+    "reexports src/web/index.ts -> src/web/orders.ts @ src/web/index.ts:2 [observed]",
+    "imports src/svc/app.py -> src/svc/schema.py::validate @ src/svc/app.py:3 [observed]",
+    "imports src/svc/app.py -> src/svc/service.py::Order @ src/svc/app.py:4 [observed]",
+    "imports src/svc/app.py -> src/svc/service.py::OrderService @ src/svc/app.py:4 [observed]",
+    "imports src/svc/__init__.py -> src/svc/service.py::OrderService @ src/svc/__init__.py:2 [observed]",
+    "imports src/svc/service.py -> src/svc/validators.py::validate @ src/svc/service.py:4 [observed]",
+    "imports src/web/handler.ts -> src/web/orders.ts::buildOrder @ src/web/handler.ts:3 [observed]",
+    "imports src/web/OrderList.tsx -> src/web/orders.ts::buildOrder @ src/web/OrderList.tsx:4 [observed]",
+    "imports src/web/orders.ts -> src/web/pricing.ts::Cart @ src/web/orders.ts:3 [observed]",
+    "imports src/web/orders.ts -> src/web/pricing.ts::computeTotal @ src/web/orders.ts:3 [observed]",
+    "imports src/web/orders.ts -> src/web/types.ts::OrderDraft @ src/web/orders.ts:4 [observed]",
+    "imports src/web/report.js -> src/web/format.js::formatMoney @ src/web/report.js:2 [observed]"
+  ],
+  "ignored": {
+    "alias_resolved": 0,
+    "duplicate_ignored": 0,
+    "engine_unknown_edges": 0,
+    "external_ignored": 8,
+    "intrafile_ignored": 2,
+    "null_target_ignored": 0,
+    "unlisted_contains_ignored": 2
+  },
+  "languages_zero_nodes": [],
+  "line_provenance": {
+    "exact": 38,
+    "missing": 0,
+    "off_by_n": []
+  },
+  "missed": [
+    "E06 imports src/svc/__init__.py src/svc/service.py",
+    "E31 contains src/web/format.js src/web/format.js::formatMoney",
+    "E32 contains src/web/report.js src/web/report.js::renderReport"
+  ],
+  "negatives_hit": [],
+  "negatives_total": 12,
+  "schema_errors": [],
+  "table": {
+    "calls": {
+      "expected": 11,
+      "fn": 0,
+      "fp": 0,
+      "tp": 11
+    },
+    "contains": {
+      "expected": 19,
+      "fn": 2,
+      "fp": 0,
+      "tp": 17
+    },
+    "imports": {
+      "expected": 9,
+      "fn": 1,
+      "fp": 11,
+      "tp": 8
+    },
+    "reexports": {
+      "expected": 2,
+      "fn": 0,
+      "fp": 1,
+      "tp": 2
+    }
+  },
+  "type_mismatch": [
+    {
+      "engine": "reexports src/svc/__init__.py -> src/svc/service.py @ src/svc/__init__.py:2 [observed]",
+      "expected_type": "imports",
+      "gt_edge": "E06"
+    }
+  ],
+  "unknown": [
+    {
+      "edge": "E23",
+      "file": "src/web/loader.ts",
+      "line": 3,
+      "status": "silent",
+      "type": "imports"
+    },
+    {
+      "edge": "E24",
+      "file": "src/svc/gateway.py",
+      "line": 14,
+      "status": "silent",
+      "type": "imports"
+    },
+    {
+      "edge": "E25",
+      "file": "src/svc/gateway.py",
+      "line": 18,
+      "status": "claimed_observed",
+      "type": "calls"
+    }
+  ],
+  "verdict": {
+    "criterion": "no_false_observed_edges",
+    "false_observed": 12,
+    "result": "FAIL"
+  }
+}

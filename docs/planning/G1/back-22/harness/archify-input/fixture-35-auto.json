@@ -1,0 +1,475 @@
+{
+ "schema_version": 1,
+ "diagram_type": "architecture",
+ "meta": {
+  "title": "Hybrid Mission Map renderer test: g1-01-v0",
+  "output": "fixture-35-auto.html",
+  "quality_profile": "standard"
+ },
+ "layout": {
+  "mode": "grid",
+  "cols": 8,
+  "cellW": 150,
+  "cellH": 54,
+  "gapX": 90,
+  "gapY": 30
+ },
+ "components": [
+  {
+   "id": "n0",
+   "type": "backend",
+   "label": "__init__.py",
+   "sublabel": "module | __init__.py"
+  },
+  {
+   "id": "n1",
+   "type": "backend",
+   "label": "app.py",
+   "sublabel": "module | app.py"
+  },
+  {
+   "id": "n2",
+   "type": "backend",
+   "label": "gateway.py",
+   "sublabel": "module | gateway.py"
+  },
+  {
+   "id": "n3",
+   "type": "backend",
+   "label": "schema.py",
+   "sublabel": "module | schema.py"
+  },
+  {
+   "id": "n4",
+   "type": "backend",
+   "label": "service.py",
+   "sublabel": "module | service.py"
+  },
+  {
+   "id": "n5",
+   "type": "backend",
+   "label": "unused.py",
+   "sublabel": "module | unused.py"
+  },
+  {
+   "id": "n6",
+   "type": "backend",
+   "label": "validators.py",
+   "sublabel": "module | validators.py"
+  },
+  {
+   "id": "n7",
+   "type": "frontend",
+   "label": "OrderList.tsx",
+   "sublabel": "module | OrderList.tsx"
+  },
+  {
+   "id": "n8",
+   "type": "frontend",
+   "label": "format.js",
+   "sublabel": "module | format.js"
+  },
+  {
+   "id": "n9",
+   "type": "frontend",
+   "label": "handler.ts",
+   "sublabel": "module | handler.ts"
+  },
+  {
+   "id": "n10",
+   "type": "frontend",
+   "label": "index.ts",
+   "sublabel": "module | index.ts"
+  },
+  {
+   "id": "n11",
+   "type": "frontend",
+   "label": "loader.ts",
+   "sublabel": "module | loader.ts"
+  },
+  {
+   "id": "n12",
+   "type": "frontend",
+   "label": "orders.ts",
+   "sublabel": "module | orders.ts"
+  },
+  {
+   "id": "n13",
+   "type": "frontend",
+   "label": "pricing.ts",
+   "sublabel": "module | pricing.ts"
+  },
+  {
+   "id": "n14",
+   "type": "frontend",
+   "label": "report.js",
+   "sublabel": "module | report.js"
+  },
+  {
+   "id": "n15",
+   "type": "frontend",
+   "label": "types.ts",
+   "sublabel": "module | types.ts"
+  },
+  {
+   "id": "n16",
+   "type": "frontend",
+   "label": "computeTotal",
+   "sublabel": "function | pricing.ts"
+  },
+  {
+   "id": "n17",
+   "type": "frontend",
+   "label": "Cart",
+   "sublabel": "class | pricing.ts"
+  },
+  {
+   "id": "n18",
+   "type": "frontend",
+   "label": "Cart.addItem",
+   "sublabel": "method | pricing.ts"
+  },
+  {
+   "id": "n19",
+   "type": "frontend",
+   "label": "buildOrder",
+   "sublabel": "function | orders.ts"
+  },
+  {
+   "id": "n20",
+   "type": "frontend",
+   "label": "OrderList",
+   "sublabel": "component | OrderList.tsx"
+  },
+  {
+   "id": "n21",
+   "type": "frontend",
+   "label": "formatMoney",
+   "sublabel": "function | format.js"
+  },
+  {
+   "id": "n22",
+   "type": "frontend",
+   "label": "renderReport",
+   "sublabel": "function | report.js"
+  },
+  {
+   "id": "n23",
+   "type": "frontend",
+   "label": "loadPlugin",
+   "sublabel": "function | loader.ts"
+  },
+  {
+   "id": "n24",
+   "type": "frontend",
+   "label": "createOrderHandler",
+   "sublabel": "function | handler.ts"
+  },
+  {
+   "id": "n25",
+   "type": "backend",
+   "label": "Order",
+   "sublabel": "class | service.py"
+  },
+  {
+   "id": "n26",
+   "type": "backend",
+   "label": "Order.total",
+   "sublabel": "method | service.py"
+  },
+  {
+   "id": "n27",
+   "type": "backend",
+   "label": "OrderService",
+   "sublabel": "class | service.py"
+  },
+  {
+   "id": "n28",
+   "type": "backend",
+   "label": "OrderService.place",
+   "sublabel": "method | service.py"
+  },
+  {
+   "id": "n29",
+   "type": "backend",
+   "label": "validate",
+   "sublabel": "function | validators.py"
+  },
+  {
+   "id": "n30",
+   "type": "backend",
+   "label": "validate",
+   "sublabel": "function | schema.py"
+  },
+  {
+   "id": "n31",
+   "type": "backend",
+   "label": "main",
+   "sublabel": "function | app.py"
+  },
+  {
+   "id": "n32",
+   "type": "backend",
+   "label": "load_handler",
+   "sublabel": "function | gateway.py"
+  },
+  {
+   "id": "n33",
+   "type": "backend",
+   "label": "submit_order",
+   "sublabel": "function | gateway.py"
+  },
+  {
+   "id": "n34",
+   "type": "backend",
+   "label": "orphan_helper",
+   "sublabel": "function | unused.py"
+  },
+  {
+   "id": "u0",
+   "type": "external",
+   "label": "unresolved",
+   "sublabel": "variable pluginPath (run"
+  },
+  {
+   "id": "u1",
+   "type": "external",
+   "label": "unresolved",
+   "sublabel": "name from config key han"
+  },
+  {
+   "id": "u2",
+   "type": "external",
+   "label": "unresolved",
+   "sublabel": "POST /orders -> candidat"
+  }
+ ],
+ "connections": [
+  {
+   "id": "e0",
+   "from": "n12",
+   "to": "n13"
+  },
+  {
+   "id": "e1",
+   "from": "n12",
+   "to": "n15"
+  },
+  {
+   "id": "e2",
+   "from": "n7",
+   "to": "n10"
+  },
+  {
+   "id": "e3",
+   "from": "n14",
+   "to": "n8"
+  },
+  {
+   "id": "e4",
+   "from": "n9",
+   "to": "n12"
+  },
+  {
+   "id": "e5",
+   "from": "n0",
+   "to": "n4"
+  },
+  {
+   "id": "e6",
+   "from": "n4",
+   "to": "n6"
+  },
+  {
+   "id": "e7",
+   "from": "n1",
+   "to": "n3"
+  },
+  {
+   "id": "e8",
+   "from": "n1",
+   "to": "n4"
+  },
+  {
+   "id": "e9",
+   "from": "n10",
+   "to": "n19"
+  },
+  {
+   "id": "e10",
+   "from": "n10",
+   "to": "n13"
+  },
+  {
+   "id": "e11",
+   "from": "n19",
+   "to": "n17"
+  },
+  {
+   "id": "e12",
+   "from": "n19",
+   "to": "n18"
+  },
+  {
+   "id": "e13",
+   "from": "n19",
+   "to": "n16"
+  },
+  {
+   "id": "e14",
+   "from": "n20",
+   "to": "n19"
+  },
+  {
+   "id": "e15",
+   "from": "n22",
+   "to": "n21"
+  },
+  {
+   "id": "e16",
+   "from": "n24",
+   "to": "n19"
+  },
+  {
+   "id": "e17",
+   "from": "n28",
+   "to": "n29"
+  },
+  {
+   "id": "e18",
+   "from": "n31",
+   "to": "n30"
+  },
+  {
+   "id": "e19",
+   "from": "n31",
+   "to": "n25"
+  },
+  {
+   "id": "e20",
+   "from": "n31",
+   "to": "n27"
+  },
+  {
+   "id": "e21",
+   "from": "n31",
+   "to": "n28"
+  },
+  {
+   "id": "e22",
+   "from": "n11",
+   "to": "u0",
+   "label": "unknown",
+   "variant": "dashed"
+  },
+  {
+   "id": "e23",
+   "from": "n2",
+   "to": "u1",
+   "label": "unknown",
+   "variant": "dashed"
+  },
+  {
+   "id": "e24",
+   "from": "n33",
+   "to": "u2",
+   "label": "unknown",
+   "variant": "dashed"
+  },
+  {
+   "id": "e25",
+   "from": "n13",
+   "to": "n16"
+  },
+  {
+   "id": "e26",
+   "from": "n13",
+   "to": "n17"
+  },
+  {
+   "id": "e27",
+   "from": "n17",
+   "to": "n18"
+  },
+  {
+   "id": "e28",
+   "from": "n12",
+   "to": "n19"
+  },
+  {
+   "id": "e29",
+   "from": "n7",
+   "to": "n20"
+  },
+  {
+   "id": "e30",
+   "from": "n8",
+   "to": "n21"
+  },
+  {
+   "id": "e31",
+   "from": "n14",
+   "to": "n22"
+  },
+  {
+   "id": "e32",
+   "from": "n11",
+   "to": "n23"
+  },
+  {
+   "id": "e33",
+   "from": "n9",
+   "to": "n24"
+  },
+  {
+   "id": "e34",
+   "from": "n4",
+   "to": "n25"
+  },
+  {
+   "id": "e35",
+   "from": "n25",
+   "to": "n26"
+  },
+  {
+   "id": "e36",
+   "from": "n4",
+   "to": "n27"
+  },
+  {
+   "id": "e37",
+   "from": "n27",
+   "to": "n28"
+  },
+  {
+   "id": "e38",
+   "from": "n6",
+   "to": "n29"
+  },
+  {
+   "id": "e39",
+   "from": "n3",
+   "to": "n30"
+  },
+  {
+   "id": "e40",
+   "from": "n1",
+   "to": "n31"
+  },
+  {
+   "id": "e41",
+   "from": "n2",
+   "to": "n32"
+  },
+  {
+   "id": "e42",
+   "from": "n2",
+   "to": "n33"
+  },
+  {
+   "id": "e43",
+   "from": "n5",
+   "to": "n34"
+  }
+ ]
+}

@@ -1,0 +1,38 @@
+{
+ "label": "prescribed",
+ "csp_violations": {
+  "font: default-src": 6
+ },
+ "console_non_csp": [],
+ "frame_requests": [
+  [
+   "http://127.0.0.1:5191/out/fixture-35-modules.html",
+   "document"
+  ]
+ ],
+ "failed_requests": [],
+ "external_requests": [],
+ "sandbox": {
+  "origin": "null",
+  "cookie": "throws SecurityError",
+  "localStorage": "throws SecurityError",
+  "sessionStorage": "throws SecurityError",
+  "parent_access": "throws SecurityError",
+  "top_nav": "throws SecurityError",
+  "storage_try_catch_ok": true
+ },
+ "frame_dom": {
+  "elements": 884,
+  "inline_scripts": 3,
+  "ext_scripts": 0,
+  "ext_links": [
+   "A https://github.com/tt-a1i/archify"
+  ]
+ },
+ "framing_from_disallowed_origin": {
+  "refused_messages": [
+   "Framing 'http://127.0.0.1:5191/' violates the following Content Security Policy directive: \"frame-ancestors http://127.0.0.1:5190\". The request has been blocked"
+  ],
+  "frame_body_text_len": 0
+ }
+}

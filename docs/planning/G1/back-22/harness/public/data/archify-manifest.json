@@ -1,0 +1,15 @@
+{
+ "fixture-35": {
+  "status": "generated",
+  "file": "fixture-35-modules.html",
+  "scope": "Archify REDUCED SCOPE: 18 of 38 components (35 nodes + 3 unresolved stubs), 13 of 44 edges (modules only, no contains edges). Full graph failed validation: 60 layout violations."
+ },
+ "synthetic-60": {
+  "status": "not-generated",
+  "reason": "validator rejected both variants. full: {'clean-flow/edge-through-node': 578, 'layout/constraint': 289} ; modules: {'clean-flow/edge-through-node': 104, 'layout/constraint': 52}"
+ },
+ "synthetic-250": {
+  "status": "not-generated",
+  "reason": "validator rejected both variants. full: {'clean-flow/edge-through-node': 7436, 'layout/constraint': 3718} ; modules: {'clean-flow/edge-through-node': 1908, 'layout/constraint': 954}"
+ }
+}

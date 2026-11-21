@@ -1,0 +1,1418 @@
+{
+ "envelope_version": "kawalys.graph.v0",
+ "source": {
+  "scope": "SYNTHETIC seed=2260 nodes=60 (generated for BACK-22; not real code)",
+  "revision": "0000000000000000000000000000000000000000000000000000000000000000",
+  "fixture_version": "synthetic-60"
+ },
+ "engine": {
+  "name": "synthetic-generator",
+  "version": "back-22",
+  "config_digest": "seed-2260"
+ },
+ "generated_at": "2026-11-21T00:00:00Z",
+ "nodes": [
+  {
+   "id": "src/web/m000.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m000.ts",
+   "line": 1
+  },
+  {
+   "id": "src/web/m001.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m001.ts",
+   "line": 1
+  },
+  {
+   "id": "src/svc/m002.py",
+   "kind": "module",
+   "language": "python",
+   "file": "src/svc/m002.py",
+   "line": 1
+  },
+  {
+   "id": "src/web/m003.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m003.ts",
+   "line": 1
+  },
+  {
+   "id": "src/web/m004.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m004.ts",
+   "line": 1
+  },
+  {
+   "id": "src/svc/m005.py",
+   "kind": "module",
+   "language": "python",
+   "file": "src/svc/m005.py",
+   "line": 1
+  },
+  {
+   "id": "src/web/m006.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m006.ts",
+   "line": 1
+  },
+  {
+   "id": "src/web/m007.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m007.ts",
+   "line": 1
+  },
+  {
+   "id": "src/svc/m008.py",
+   "kind": "module",
+   "language": "python",
+   "file": "src/svc/m008.py",
+   "line": 1
+  },
+  {
+   "id": "src/web/m009.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m009.ts",
+   "line": 1
+  },
+  {
+   "id": "src/web/m010.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m010.ts",
+   "line": 1
+  },
+  {
+   "id": "src/svc/m011.py",
+   "kind": "module",
+   "language": "python",
+   "file": "src/svc/m011.py",
+   "line": 1
+  },
+  {
+   "id": "src/web/m012.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m012.ts",
+   "line": 1
+  },
+  {
+   "id": "src/web/m013.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m013.ts",
+   "line": 1
+  },
+  {
+   "id": "src/svc/m014.py",
+   "kind": "module",
+   "language": "python",
+   "file": "src/svc/m014.py",
+   "line": 1
+  },
+  {
+   "id": "src/web/m015.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m015.ts",
+   "line": 1
+  },
+  {
+   "id": "src/web/m016.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m016.ts",
+   "line": 1
+  },
+  {
+   "id": "src/svc/m017.py",
+   "kind": "module",
+   "language": "python",
+   "file": "src/svc/m017.py",
+   "line": 1
+  },
+  {
+   "id": "src/web/m018.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m018.ts",
+   "line": 1
+  },
+  {
+   "id": "src/web/m019.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m019.ts",
+   "line": 1
+  },
+  {
+   "id": "src/svc/m020.py",
+   "kind": "module",
+   "language": "python",
+   "file": "src/svc/m020.py",
+   "line": 1
+  },
+  {
+   "id": "src/web/m021.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m021.ts",
+   "line": 1
+  },
+  {
+   "id": "src/web/m022.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m022.ts",
+   "line": 1
+  },
+  {
+   "id": "src/svc/m023.py",
+   "kind": "module",
+   "language": "python",
+   "file": "src/svc/m023.py",
+   "line": 1
+  },
+  {
+   "id": "src/web/m024.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m024.ts",
+   "line": 1
+  },
+  {
+   "id": "src/web/m025.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m025.ts",
+   "line": 1
+  },
+  {
+   "id": "src/svc/m026.py",
+   "kind": "module",
+   "language": "python",
+   "file": "src/svc/m026.py",
+   "line": 1
+  },
+  {
+   "id": "src/web/m027.ts",
+   "kind": "module",
+   "language": "typescript",
+   "file": "src/web/m027.ts",
+   "line": 1
+  },
+  {
+   "id": "src/web/m000.ts::fn001",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m000.ts",
+   "line": 3
+  },
+  {
+   "id": "src/web/m001.ts::fn002",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m001.ts",
+   "line": 3
+  },
+  {
+   "id": "src/svc/m002.py::fn003",
+   "kind": "function",
+   "language": "python",
+   "file": "src/svc/m002.py",
+   "line": 3
+  },
+  {
+   "id": "src/web/m003.ts::fn004",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m003.ts",
+   "line": 3
+  },
+  {
+   "id": "src/web/m004.ts::fn005",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m004.ts",
+   "line": 3
+  },
+  {
+   "id": "src/svc/m005.py::fn006",
+   "kind": "function",
+   "language": "python",
+   "file": "src/svc/m005.py",
+   "line": 3
+  },
+  {
+   "id": "src/web/m006.ts::fn007",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m006.ts",
+   "line": 3
+  },
+  {
+   "id": "src/web/m007.ts::fn008",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m007.ts",
+   "line": 3
+  },
+  {
+   "id": "src/svc/m008.py::fn009",
+   "kind": "function",
+   "language": "python",
+   "file": "src/svc/m008.py",
+   "line": 3
+  },
+  {
+   "id": "src/web/m009.ts::fn010",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m009.ts",
+   "line": 3
+  },
+  {
+   "id": "src/web/m010.ts::fn011",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m010.ts",
+   "line": 3
+  },
+  {
+   "id": "src/svc/m011.py::fn012",
+   "kind": "function",
+   "language": "python",
+   "file": "src/svc/m011.py",
+   "line": 3
+  },
+  {
+   "id": "src/web/m012.ts::fn013",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m012.ts",
+   "line": 3
+  },
+  {
+   "id": "src/web/m013.ts::fn014",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m013.ts",
+   "line": 3
+  },
+  {
+   "id": "src/svc/m014.py::fn015",
+   "kind": "function",
+   "language": "python",
+   "file": "src/svc/m014.py",
+   "line": 3
+  },
+  {
+   "id": "src/web/m015.ts::fn016",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m015.ts",
+   "line": 3
+  },
+  {
+   "id": "src/web/m016.ts::fn017",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m016.ts",
+   "line": 3
+  },
+  {
+   "id": "src/svc/m017.py::fn018",
+   "kind": "function",
+   "language": "python",
+   "file": "src/svc/m017.py",
+   "line": 3
+  },
+  {
+   "id": "src/web/m018.ts::fn019",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m018.ts",
+   "line": 3
+  },
+  {
+   "id": "src/web/m019.ts::fn020",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m019.ts",
+   "line": 3
+  },
+  {
+   "id": "src/svc/m020.py::fn021",
+   "kind": "function",
+   "language": "python",
+   "file": "src/svc/m020.py",
+   "line": 3
+  },
+  {
+   "id": "src/web/m021.ts::fn022",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m021.ts",
+   "line": 3
+  },
+  {
+   "id": "src/web/m022.ts::fn023",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m022.ts",
+   "line": 3
+  },
+  {
+   "id": "src/svc/m023.py::fn024",
+   "kind": "function",
+   "language": "python",
+   "file": "src/svc/m023.py",
+   "line": 3
+  },
+  {
+   "id": "src/web/m024.ts::fn025",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m024.ts",
+   "line": 3
+  },
+  {
+   "id": "src/web/m025.ts::fn026",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m025.ts",
+   "line": 3
+  },
+  {
+   "id": "src/svc/m026.py::fn027",
+   "kind": "function",
+   "language": "python",
+   "file": "src/svc/m026.py",
+   "line": 3
+  },
+  {
+   "id": "src/web/m027.ts::fn028",
+   "kind": "function",
+   "language": "typescript",
+   "file": "src/web/m027.ts",
+   "line": 3
+  },
+  {
+   "id": "src/web/m000.ts::Cls029",
+   "kind": "class",
+   "language": "typescript",
+   "file": "src/web/m000.ts",
+   "line": 10
+  },
+  {
+   "id": "src/web/m000.ts::Cls029.run",
+   "kind": "method",
+   "language": "typescript",
+   "file": "src/web/m000.ts",
+   "line": 11
+  },
+  {
+   "id": "src/web/m001.ts::Cls030",
+   "kind": "class",
+   "language": "typescript",
+   "file": "src/web/m001.ts",
+   "line": 10
+  },
+  {
+   "id": "src/web/m001.ts::Cls030.run",
+   "kind": "method",
+   "language": "typescript",
+   "file": "src/web/m001.ts",
+   "line": 11
+  }
+ ],
+ "edges": [
+  {
+   "type": "contains",
+   "from": "src/web/m000.ts",
+   "to": "src/web/m000.ts::fn001",
+   "file": "src/web/m000.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m001.ts",
+   "to": "src/web/m001.ts::fn002",
+   "file": "src/web/m001.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/svc/m002.py",
+   "to": "src/svc/m002.py::fn003",
+   "file": "src/svc/m002.py",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m003.ts",
+   "to": "src/web/m003.ts::fn004",
+   "file": "src/web/m003.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m004.ts",
+   "to": "src/web/m004.ts::fn005",
+   "file": "src/web/m004.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/svc/m005.py",
+   "to": "src/svc/m005.py::fn006",
+   "file": "src/svc/m005.py",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m006.ts",
+   "to": "src/web/m006.ts::fn007",
+   "file": "src/web/m006.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m007.ts",
+   "to": "src/web/m007.ts::fn008",
+   "file": "src/web/m007.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/svc/m008.py",
+   "to": "src/svc/m008.py::fn009",
+   "file": "src/svc/m008.py",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m009.ts",
+   "to": "src/web/m009.ts::fn010",
+   "file": "src/web/m009.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m010.ts",
+   "to": "src/web/m010.ts::fn011",
+   "file": "src/web/m010.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/svc/m011.py",
+   "to": "src/svc/m011.py::fn012",
+   "file": "src/svc/m011.py",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m012.ts",
+   "to": "src/web/m012.ts::fn013",
+   "file": "src/web/m012.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m013.ts",
+   "to": "src/web/m013.ts::fn014",
+   "file": "src/web/m013.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/svc/m014.py",
+   "to": "src/svc/m014.py::fn015",
+   "file": "src/svc/m014.py",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m015.ts",
+   "to": "src/web/m015.ts::fn016",
+   "file": "src/web/m015.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m016.ts",
+   "to": "src/web/m016.ts::fn017",
+   "file": "src/web/m016.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/svc/m017.py",
+   "to": "src/svc/m017.py::fn018",
+   "file": "src/svc/m017.py",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m018.ts",
+   "to": "src/web/m018.ts::fn019",
+   "file": "src/web/m018.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m019.ts",
+   "to": "src/web/m019.ts::fn020",
+   "file": "src/web/m019.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/svc/m020.py",
+   "to": "src/svc/m020.py::fn021",
+   "file": "src/svc/m020.py",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m021.ts",
+   "to": "src/web/m021.ts::fn022",
+   "file": "src/web/m021.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m022.ts",
+   "to": "src/web/m022.ts::fn023",
+   "file": "src/web/m022.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/svc/m023.py",
+   "to": "src/svc/m023.py::fn024",
+   "file": "src/svc/m023.py",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m024.ts",
+   "to": "src/web/m024.ts::fn025",
+   "file": "src/web/m024.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m025.ts",
+   "to": "src/web/m025.ts::fn026",
+   "file": "src/web/m025.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/svc/m026.py",
+   "to": "src/svc/m026.py::fn027",
+   "file": "src/svc/m026.py",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m027.ts",
+   "to": "src/web/m027.ts::fn028",
+   "file": "src/web/m027.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m000.ts",
+   "to": "src/web/m000.ts::Cls029",
+   "file": "src/web/m000.ts",
+   "line": 10,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m000.ts::Cls029",
+   "to": "src/web/m000.ts::Cls029.run",
+   "file": "src/web/m000.ts",
+   "line": 11,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m001.ts",
+   "to": "src/web/m001.ts::Cls030",
+   "file": "src/web/m001.ts",
+   "line": 10,
+   "basis": "observed"
+  },
+  {
+   "type": "contains",
+   "from": "src/web/m001.ts::Cls030",
+   "to": "src/web/m001.ts::Cls030.run",
+   "file": "src/web/m001.ts",
+   "line": 11,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m000.ts",
+   "to": "src/web/m025.ts",
+   "file": "src/web/m000.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m000.ts",
+   "to": "src/web/m001.ts",
+   "file": "src/web/m000.ts",
+   "line": 7,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m001.ts",
+   "to": "src/web/m000.ts",
+   "file": "src/web/m001.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m002.py",
+   "to": "src/web/m000.ts",
+   "file": "src/svc/m002.py",
+   "line": 8,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m002.py",
+   "to": "src/web/m001.ts",
+   "file": "src/svc/m002.py",
+   "line": 8,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m003.ts",
+   "to": "src/web/m001.ts",
+   "file": "src/web/m003.ts",
+   "line": 2,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m003.ts",
+   "to": "src/svc/m002.py",
+   "file": "src/web/m003.ts",
+   "line": 4,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m004.ts",
+   "to": "src/web/m001.ts",
+   "file": "src/web/m004.ts",
+   "line": 6,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m005.py",
+   "to": "src/web/m003.ts",
+   "file": "src/svc/m005.py",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m005.py",
+   "to": "src/web/m001.ts",
+   "file": "src/svc/m005.py",
+   "line": 8,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m006.ts",
+   "to": "src/web/m000.ts",
+   "file": "src/web/m006.ts",
+   "line": 8,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m006.ts",
+   "to": "src/svc/m005.py",
+   "file": "src/web/m006.ts",
+   "line": 4,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m007.ts",
+   "to": "src/web/m000.ts",
+   "file": "src/web/m007.ts",
+   "line": 2,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m008.py",
+   "to": "src/svc/m005.py",
+   "file": "src/svc/m008.py",
+   "line": 2,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m008.py",
+   "to": "src/web/m003.ts",
+   "file": "src/svc/m008.py",
+   "line": 6,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m008.py",
+   "to": "src/web/m000.ts",
+   "file": "src/svc/m008.py",
+   "line": 6,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m009.ts",
+   "to": "src/web/m004.ts",
+   "file": "src/web/m009.ts",
+   "line": 2,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m009.ts",
+   "to": "src/web/m006.ts",
+   "file": "src/web/m009.ts",
+   "line": 5,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m010.ts",
+   "to": "src/svc/m002.py",
+   "file": "src/web/m010.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m010.ts",
+   "to": "src/web/m003.ts",
+   "file": "src/web/m010.ts",
+   "line": 4,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m011.py",
+   "to": "src/web/m009.ts",
+   "file": "src/svc/m011.py",
+   "line": 8,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m012.ts",
+   "to": "src/svc/m005.py",
+   "file": "src/web/m012.ts",
+   "line": 4,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m012.ts",
+   "to": "src/svc/m011.py",
+   "file": "src/web/m012.ts",
+   "line": 9,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m013.ts",
+   "to": "src/web/m003.ts",
+   "file": "src/web/m013.ts",
+   "line": 7,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m014.py",
+   "to": "src/web/m013.ts",
+   "file": "src/svc/m014.py",
+   "line": 7,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m014.py",
+   "to": "src/web/m001.ts",
+   "file": "src/svc/m014.py",
+   "line": 4,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m015.ts",
+   "to": "src/web/m001.ts",
+   "file": "src/web/m015.ts",
+   "line": 4,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m015.ts",
+   "to": "src/web/m000.ts",
+   "file": "src/web/m015.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m016.ts",
+   "to": "src/web/m003.ts",
+   "file": "src/web/m016.ts",
+   "line": 5,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m016.ts",
+   "to": "src/svc/m005.py",
+   "file": "src/web/m016.ts",
+   "line": 4,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m017.py",
+   "to": "src/web/m013.ts",
+   "file": "src/svc/m017.py",
+   "line": 8,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m017.py",
+   "to": "src/svc/m011.py",
+   "file": "src/svc/m017.py",
+   "line": 7,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m018.ts",
+   "to": "src/svc/m017.py",
+   "file": "src/web/m018.ts",
+   "line": 2,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m018.ts",
+   "to": "src/web/m006.ts",
+   "file": "src/web/m018.ts",
+   "line": 8,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m019.ts",
+   "to": "src/web/m009.ts",
+   "file": "src/web/m019.ts",
+   "line": 2,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m020.py",
+   "to": "src/web/m004.ts",
+   "file": "src/svc/m020.py",
+   "line": 4,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m021.ts",
+   "to": "src/svc/m014.py",
+   "file": "src/web/m021.ts",
+   "line": 9,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m022.ts",
+   "to": "src/svc/m011.py",
+   "file": "src/web/m022.ts",
+   "line": 8,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m023.py",
+   "to": "src/svc/m017.py",
+   "file": "src/svc/m023.py",
+   "line": 5,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m023.py",
+   "to": "src/web/m009.ts",
+   "file": "src/svc/m023.py",
+   "line": 7,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m024.ts",
+   "to": "src/svc/m008.py",
+   "file": "src/web/m024.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m024.ts",
+   "to": "src/web/m003.ts",
+   "file": "src/web/m024.ts",
+   "line": 4,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m025.ts",
+   "to": "src/web/m006.ts",
+   "file": "src/web/m025.ts",
+   "line": 6,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m025.ts",
+   "to": "src/web/m021.ts",
+   "file": "src/web/m025.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m026.py",
+   "to": "src/web/m022.ts",
+   "file": "src/svc/m026.py",
+   "line": 9,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/svc/m026.py",
+   "to": "src/web/m024.ts",
+   "file": "src/svc/m026.py",
+   "line": 8,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m027.ts",
+   "to": "src/web/m003.ts",
+   "file": "src/web/m027.ts",
+   "line": 3,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m000.ts::Cls029.run",
+   "to": "src/web/m001.ts::fn002",
+   "file": "src/web/m000.ts",
+   "line": 25,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m002.py::fn003",
+   "to": "src/web/m000.ts::Cls029.run",
+   "file": "src/svc/m002.py",
+   "line": 59,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m003.ts::fn004",
+   "to": "src/web/m001.ts::Cls030",
+   "file": "src/web/m003.ts",
+   "line": 59,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m003.ts::fn004",
+   "to": "src/svc/m002.py::fn003",
+   "file": "src/web/m003.ts",
+   "line": 39,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m005.py::fn006",
+   "to": "src/web/m003.ts::fn004",
+   "file": "src/svc/m005.py",
+   "line": 58,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m006.ts::fn007",
+   "to": "src/svc/m005.py::fn006",
+   "file": "src/web/m006.ts",
+   "line": 65,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m007.ts::fn008",
+   "to": "src/web/m000.ts::fn001",
+   "file": "src/web/m007.ts",
+   "line": 12,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m008.py::fn009",
+   "to": "src/svc/m005.py::fn006",
+   "file": "src/svc/m008.py",
+   "line": 34,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m008.py::fn009",
+   "to": "src/web/m003.ts::fn004",
+   "file": "src/svc/m008.py",
+   "line": 38,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m009.ts::fn010",
+   "to": "src/web/m004.ts::fn005",
+   "file": "src/web/m009.ts",
+   "line": 19,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m009.ts::fn010",
+   "to": "src/web/m006.ts::fn007",
+   "file": "src/web/m009.ts",
+   "line": 44,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m010.ts::fn011",
+   "to": "src/svc/m002.py::fn003",
+   "file": "src/web/m010.ts",
+   "line": 22,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m010.ts::fn011",
+   "to": "src/web/m003.ts::fn004",
+   "file": "src/web/m010.ts",
+   "line": 17,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m011.py::fn012",
+   "to": "src/web/m009.ts::fn010",
+   "file": "src/svc/m011.py",
+   "line": 58,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m012.ts::fn013",
+   "to": "src/svc/m005.py::fn006",
+   "file": "src/web/m012.ts",
+   "line": 26,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m013.ts::fn014",
+   "to": "src/web/m003.ts::fn004",
+   "file": "src/web/m013.ts",
+   "line": 51,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m014.py::fn015",
+   "to": "src/web/m013.ts::fn014",
+   "file": "src/svc/m014.py",
+   "line": 13,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m014.py::fn015",
+   "to": "src/web/m001.ts::Cls030.run",
+   "file": "src/svc/m014.py",
+   "line": 33,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m015.ts::fn016",
+   "to": "src/web/m001.ts::fn002",
+   "file": "src/web/m015.ts",
+   "line": 47,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m016.ts::fn017",
+   "to": "src/svc/m005.py::fn006",
+   "file": "src/web/m016.ts",
+   "line": 62,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m017.py::fn018",
+   "to": "src/web/m013.ts::fn014",
+   "file": "src/svc/m017.py",
+   "line": 67,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m017.py::fn018",
+   "to": "src/svc/m011.py::fn012",
+   "file": "src/svc/m017.py",
+   "line": 48,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m018.ts::fn019",
+   "to": "src/svc/m017.py::fn018",
+   "file": "src/web/m018.ts",
+   "line": 28,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m018.ts::fn019",
+   "to": "src/web/m006.ts::fn007",
+   "file": "src/web/m018.ts",
+   "line": 26,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m019.ts::fn020",
+   "to": "src/web/m009.ts::fn010",
+   "file": "src/web/m019.ts",
+   "line": 48,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m021.ts::fn022",
+   "to": "src/svc/m014.py::fn015",
+   "file": "src/web/m021.ts",
+   "line": 23,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m023.py::fn024",
+   "to": "src/web/m009.ts::fn010",
+   "file": "src/svc/m023.py",
+   "line": 15,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m024.ts::fn025",
+   "to": "src/svc/m008.py::fn009",
+   "file": "src/web/m024.ts",
+   "line": 47,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m024.ts::fn025",
+   "to": "src/web/m003.ts::fn004",
+   "file": "src/web/m024.ts",
+   "line": 56,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m025.ts::fn026",
+   "to": "src/web/m006.ts::fn007",
+   "file": "src/web/m025.ts",
+   "line": 35,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m026.py::fn027",
+   "to": "src/web/m022.ts::fn023",
+   "file": "src/svc/m026.py",
+   "line": 20,
+   "basis": "observed"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m026.py::fn027",
+   "to": "src/web/m024.ts::fn025",
+   "file": "src/svc/m026.py",
+   "line": 47,
+   "basis": "observed"
+  },
+  {
+   "type": "reexports",
+   "from": "src/web/m010.ts",
+   "to": "src/svc/m002.py",
+   "file": "src/web/m010.ts",
+   "line": 2,
+   "basis": "observed"
+  },
+  {
+   "type": "reexports",
+   "from": "src/web/m009.ts",
+   "to": "src/web/m006.ts",
+   "file": "src/web/m009.ts",
+   "line": 2,
+   "basis": "observed"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m021.ts",
+   "to": null,
+   "target_hint": "variable plugin0 (runtime value)",
+   "file": "src/web/m021.ts",
+   "line": 5,
+   "basis": "unknown"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m016.ts::fn017",
+   "to": null,
+   "target_hint": "POST /route1 -> candidate unresolved",
+   "file": "src/web/m016.ts",
+   "line": 21,
+   "basis": "unknown"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m024.ts",
+   "to": "src/svc/m023.py",
+   "file": "src/web/m024.ts",
+   "line": 9,
+   "basis": "unknown"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m006.ts",
+   "to": null,
+   "target_hint": "variable plugin3 (runtime value)",
+   "file": "src/web/m006.ts",
+   "line": 8,
+   "basis": "unknown"
+  },
+  {
+   "type": "calls",
+   "from": "src/svc/m026.py::fn027",
+   "to": null,
+   "target_hint": "POST /route4 -> candidate unresolved",
+   "file": "src/svc/m026.py",
+   "line": 24,
+   "basis": "unknown"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m019.ts",
+   "to": "src/svc/m023.py",
+   "file": "src/web/m019.ts",
+   "line": 12,
+   "basis": "unknown"
+  },
+  {
+   "type": "imports",
+   "from": "src/web/m010.ts",
+   "to": null,
+   "target_hint": "variable plugin6 (runtime value)",
+   "file": "src/web/m010.ts",
+   "line": 11,
+   "basis": "unknown"
+  },
+  {
+   "type": "calls",
+   "from": "src/web/m013.ts::fn014",
+   "to": null,
+   "target_hint": "POST /route7 -> candidate unresolved",
+   "file": "src/web/m013.ts",
+   "line": 27,
+   "basis": "unknown"
+  }
+ ],
+ "omissions": [
+  {
+   "what": "everything",
+   "reason": "SYNTHETIC: random graph, no source behind it"
+  }
+ ]
+}

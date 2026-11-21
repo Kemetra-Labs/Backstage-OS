@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kawalys.graph.v0.schema.json",
+  "title": "Kawalys graph evidence envelope (draft, provider-neutral)",
+  "description": "Normalised output of any code-graph engine. Ids are relative to the analysed scope root (for the G1 fixture: the fixture directory, e.g. src/web/orders.ts) and are never engine-native ids. A symbol id is path::Symbol or path::Class.method. basis=observed means statically evident in source; inferred means derived by the engine; unknown means the relation exists or may exist but is not statically resolvable.",
+  "type": "object",
+  "required": ["envelope_version", "source", "engine", "generated_at", "nodes", "edges", "omissions"],
+  "properties": {
+    "envelope_version": { "type": "string", "const": "kawalys.graph.v0" },
+    "source": {
+      "type": "object",
+      "required": ["scope", "revision", "fixture_version"],
+      "properties": {
+        "scope": { "type": "string" },
+        "revision": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "fixture_version": { "type": "string" }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "required": ["name", "version", "config_digest"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "config_digest": { "type": "string" }
+      }
+    },
+    "generated_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$" },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "language", "file", "line"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9_@.][A-Za-z0-9_@./-]*\\.[A-Za-z0-9]+(::[^\\s:]+)?$" },
+          "kind": { "type": "string", "enum": ["module", "function", "class", "method", "component"] },
+          "language": { "type": "string" },
+          "file": { "type": "string", "pattern": "^[A-Za-z0-9_@.][A-Za-z0-9_@./-]*\\.[A-Za-z0-9]+$" },
+          "line": { "type": "integer" }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "from", "to", "file", "line", "basis"],
+        "properties": {
+          "type": { "type": "string", "enum": ["imports", "calls", "reexports", "contains"] },
+          "from": { "type": "string", "pattern": "^[A-Za-z0-9_@.][A-Za-z0-9_@./-]*\\.[A-Za-z0-9]+(::[^\\s:]+)?$" },
+          "to": { "type": ["string", "null"] },
+          "target_hint": { "type": "string" },
+          "file": { "type": "string", "pattern": "^[A-Za-z0-9_@.][A-Za-z0-9_@./-]*\\.[A-Za-z0-9]+$" },
+          "line": { "type": ["integer", "null"] },
+          "basis": { "type": "string", "enum": ["observed", "inferred", "unknown"] },
+          "engine_native_id": { "type": "string" }
+        }
+      }
+    },
+    "omissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["what", "reason"],
+        "properties": {
+          "what": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,232 @@
+{
+ "schema_version": 1,
+ "diagram_type": "architecture",
+ "meta": {
+  "title": "Hybrid Mission Map renderer test: g1-01-v0",
+  "output": "fixture-35-modules.html",
+  "quality_profile": "standard"
+ },
+ "layout": {
+  "mode": "grid",
+  "cols": 5,
+  "cellW": 150,
+  "cellH": 54,
+  "gapX": 90,
+  "gapY": 30
+ },
+ "components": [
+  {
+   "id": "n0",
+   "type": "backend",
+   "label": "__init__.py",
+   "sublabel": "module | __init__.py",
+   "row": 0,
+   "col": 0
+  },
+  {
+   "id": "n1",
+   "type": "backend",
+   "label": "app.py",
+   "sublabel": "module | app.py",
+   "row": 1,
+   "col": 0
+  },
+  {
+   "id": "n2",
+   "type": "backend",
+   "label": "gateway.py",
+   "sublabel": "module | gateway.py",
+   "row": 2,
+   "col": 0
+  },
+  {
+   "id": "n3",
+   "type": "backend",
+   "label": "schema.py",
+   "sublabel": "module | schema.py",
+   "row": 3,
+   "col": 0
+  },
+  {
+   "id": "n4",
+   "type": "backend",
+   "label": "service.py",
+   "sublabel": "module | service.py",
+   "row": 0,
+   "col": 1
+  },
+  {
+   "id": "n6",
+   "type": "backend",
+   "label": "validators.py",
+   "sublabel": "module | validators.py",
+   "row": 1,
+   "col": 1
+  },
+  {
+   "id": "n7",
+   "type": "frontend",
+   "label": "OrderList.tsx",
+   "sublabel": "module | OrderList.tsx",
+   "row": 2,
+   "col": 1
+  },
+  {
+   "id": "n8",
+   "type": "frontend",
+   "label": "format.js",
+   "sublabel": "module | format.js",
+   "row": 3,
+   "col": 1
+  },
+  {
+   "id": "n9",
+   "type": "frontend",
+   "label": "handler.ts",
+   "sublabel": "module | handler.ts",
+   "row": 0,
+   "col": 2
+  },
+  {
+   "id": "n10",
+   "type": "frontend",
+   "label": "index.ts",
+   "sublabel": "module | index.ts",
+   "row": 1,
+   "col": 2
+  },
+  {
+   "id": "n11",
+   "type": "frontend",
+   "label": "loader.ts",
+   "sublabel": "module | loader.ts",
+   "row": 2,
+   "col": 2
+  },
+  {
+   "id": "n12",
+   "type": "frontend",
+   "label": "orders.ts",
+   "sublabel": "module | orders.ts",
+   "row": 3,
+   "col": 2
+  },
+  {
+   "id": "n13",
+   "type": "frontend",
+   "label": "pricing.ts",
+   "sublabel": "module | pricing.ts",
+   "row": 0,
+   "col": 3
+  },
+  {
+   "id": "n14",
+   "type": "frontend",
+   "label": "report.js",
+   "sublabel": "module | report.js",
+   "row": 1,
+   "col": 3
+  },
+  {
+   "id": "n15",
+   "type": "frontend",
+   "label": "types.ts",
+   "sublabel": "module | types.ts",
+   "row": 2,
+   "col": 3
+  },
+  {
+   "id": "n19",
+   "type": "frontend",
+   "label": "buildOrder",
+   "sublabel": "function | orders.ts",
+   "row": 3,
+   "col": 3
+  },
+  {
+   "id": "u0",
+   "type": "external",
+   "label": "unresolved",
+   "sublabel": "variable pluginPath (run",
+   "row": 0,
+   "col": 4
+  },
+  {
+   "id": "u1",
+   "type": "external",
+   "label": "unresolved",
+   "sublabel": "name from config key han",
+   "row": 1,
+   "col": 4
+  }
+ ],
+ "connections": [
+  {
+   "id": "e0",
+   "from": "n12",
+   "to": "n13"
+  },
+  {
+   "id": "e1",
+   "from": "n12",
+   "to": "n15"
+  },
+  {
+   "id": "e2",
+   "from": "n7",
+   "to": "n10"
+  },
+  {
+   "id": "e3",
+   "from": "n14",
+   "to": "n8"
+  },
+  {
+   "id": "e4",
+   "from": "n9",
+   "to": "n12"
+  },
+  {
+   "id": "e5",
+   "from": "n0",
+   "to": "n4"
+  },
+  {
+   "id": "e6",
+   "from": "n4",
+   "to": "n6"
+  },
+  {
+   "id": "e7",
+   "from": "n1",
+   "to": "n3"
+  },
+  {
+   "id": "e8",
+   "from": "n1",
+   "to": "n4"
+  },
+  {
+   "id": "e9",
+   "from": "n10",
+   "to": "n19"
+  },
+  {
+   "id": "e10",
+   "from": "n10",
+   "to": "n13"
+  },
+  {
+   "id": "e22",
+   "from": "n11",
+   "to": "u0",
+   "variant": "dashed"
+  },
+  {
+   "id": "e23",
+   "from": "n2",
+   "to": "u1",
+   "variant": "dashed"
+  }
+ ]
+}
