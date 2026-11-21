@@ -61,7 +61,7 @@ Each `to: null` edge gets one placeholder node in DepGraph and React Flow. It is
 |---|---|---|---|
 | Adapter | 71-line TSX and about 20 lines of CSS. Changes: context stubbed, the health triad replaced by a kind line, two SVG markers added (the original draws none), unique React keys, endpoints never dropped | 68-line TSX and about 15 lines of CSS. v13 differs from v12: changeset iterables; no `colorMode` prop, so dark mode needs `color-scheme: dark` on `.react-flow`. One axe contrast failure was traced to React Flow's light default and fixed | 33-line JSON-IR converter, ids mapped to `n<i>`, `archify render` run offline. 4 generator rounds. Inspector parity impossible |
 | Time spent (judgement) | shortest | about 2x DepGraph | longest (a clone problem, then validator rejections) |
-| Defects in the original DepGraph | 3 of 44 edges (the `to: null` ones) would be dropped silently by `if (!a \|\| !b) return null`. The key `${from}-${to}` collides for edges between the same pair of nodes: 0 collisions in this fixture, but latent | | |
+| Latent gaps in the original DepGraph (not reproduced in the current app; tracked as BACK-26) | When fed this envelope, 3 of 44 edges (the `to: null` ones) would be dropped silently by `if (!a \|\| !b) return null`. The current app does not hit this, because `mapFor` already filters edges to present nodes. The key `${from}-${to}` would collide for edges between the same pair of nodes: 0 collisions in this fixture | | |
 
 **Archify: generated offline, but only at reduced scope.**
 - **Full graph rejected.** The full graph has 38 components (3 of them stubs) and 44 connections. On the shared layout, Archify's validator rejected it at all three gap settings, with code `clean-flow/edge-through-node`:
