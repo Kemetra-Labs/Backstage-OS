@@ -1,7 +1,8 @@
 # BACK-24 — EVAL Hybrid Mission Map B: Motion and optional WebGL visual pilot (planning and test protocol only)
 
 Jira: [BACK-24](https://rahmaqanater.atlassian.net/browse/BACK-24) (parent BACK-1). Written 2026-11-21 on branch
-`claude/back-24-bbf751` from `main` at `ed0497c`.
+`claude/back-24-bbf751` from `main` at `ed0497c` (PR 20). Updated 2026-11-21 on branch `claude/back-24-decisions` from
+`main` at `c4a5bf3` to record the owner's answers (section 9) and the hybrid-map files now being on `main`.
 Related: BACK-18 (V2 fidelity pass, done, not reopened), BACK-22 (G1-03 renderer comparison, separate), BACK-8 (G0
 visual/a11y audit, separate and still open).
 
@@ -37,16 +38,15 @@ and has not been installed, built or measured.
 
 | Input named in the ticket | State | Consequence |
 | --- | --- | --- |
-| `docs/design-lab/hybrid-map/ENHANCEMENT-NOTE.md` | FACT: not in `main` (`docs/design-lab` holds only `v2/`). It exists as an **untracked working copy** in the sibling worktree `claude/kawalys-mission-map-visual-a9038d` (HEAD `ed0497c`), and I read it there | Quoted below as "working copy". Its own text says "Nothing here is approved or built" and that package names, licences and sizes were not verified. Both caveats stand |
-| `docs/design-lab/hybrid-map/SPEC.md` (bounded spec for B) | Same: not in `main`, untracked working copy in the same worktree, read there | Quoted below as "working copy". It records the owner's 2026-11-21 selection of B with C's list view and says that selection is not approval to implement |
-| Concept pages `concept-a/b/c.html`, `motion-b.html`, `README.md`, `tools/`, `out/` | Same worktree, untracked | **Not opened.** Concept B's rendered behaviour and its mobile, Arabic and contrast evidence are **UNVERIFIED** here |
-| Confluence experience page 85688334 and ticket standard 85000222 | Linked from the ticket | Not opened. The ticket text and the two working-copy files are the requirement sources used |
+| `docs/design-lab/hybrid-map/ENHANCEMENT-NOTE.md` | FACT: **now on `main`** (PR 21, `c4a5bf3`). When this protocol was first written (PR 20) it was only an untracked working copy in the sibling worktree `claude/kawalys-mission-map-visual-a9038d`; the text read there is identical to the merged file after normalizing line endings | Quoted below. Its own text says "Nothing here is approved or built" and that package names, licences and sizes were not verified. Both caveats stand |
+| `docs/design-lab/hybrid-map/SPEC.md` (bounded spec for B) | FACT: now on `main` (PR 21), text identical to the working copy read earlier | Quoted below. It records the owner's 2026-11-21 selection of B with C's list view and says that selection is not approval to implement |
+| Concept pages `concept-a/b/c.html`, `README.md`, `tools/`, `out/` captures | FACT: now on `main`. `motion-b.html` was in the working copy but is not in `main` | **Not opened.** Concept B's rendered behaviour and its mobile, Arabic and contrast evidence are **UNVERIFIED** here |
+| Confluence experience page 85688334 and ticket standard 85000222 | Linked from the ticket | Not opened. The ticket text and the two hybrid-map files are the requirement sources used |
 | V2 fixture and screens | FACT: `app/src/design-lab/v2/` (Mission Map, Observatory, Replay, Flight Deck, one shared `world.ts`) | The synthetic fixture the pilot must reuse unchanged |
 
-Because the working copy can change without a commit, the first action of any approved experiment is to get the
-hybrid-map files committed to a branch the owner names, or handed over, so the baseline is a fixed revision.
+The baseline revision for any experiment is the `main` commit the owner names at the experiment gate, not a working copy.
 
-What the working-copy files already fix (FACT about their text, not about behaviour):
+What the two files already fix (FACT about their text, not about behaviour):
 
 - SPEC.md section 5: the only motion in B is a one-shot **selection trace**, 720 ms, `cubic-bezier(0.22, 1, 0.36, 1)`,
   `stroke-dashoffset` and `opacity` only, "No loop, no ambient motion". Under reduced motion the trace is not rendered.
@@ -89,17 +89,26 @@ first-load row is the only auto-play item. Two smaller points from the same file
 700 ms" while the spec says 720 ms (use the spec's number), and the note's WebGL section allows a "slow parallax from a
 one-time pointer or scroll offset", which is user-driven but should be confirmed as not a continuous effect.
 
-PROPOSED resolution, pending owner confirmation (decision D-24.1):
+**DECIDED by the owner, 2026-11-21 (D-24.1, recorded in the BACK-24 comment):** a once-per-session first-load orbit is
+**allowed**. This is the owner's call and it overrides the earlier PROPOSED "no auto-play" default. It is a deliberate
+exception to SPEC.md section 5 and to the ENHANCEMENT-NOTE "Not allowed" line, so those two files and this protocol
+disagree until the owner updates them. The rules that bound the exception:
 
-- Nothing moves before a user action. No auto-play, no loop, no idle drift, on any arm.
-- Orbit and link tracing are **one-shot**, started by selecting a node or pressing an explicit "Trace" control that
-  only changes view state (allowed under the display-only rule in BACK-17 section 2.2).
-- A tracing animation ends in the same static state the fallback shows. Its duration and easing are fixed numbers in a
-  token, not random.
-- This keeps the BACK-15 rule: no pulse, blink or idle animation that could read as a live feed.
-
-If the owner instead wants a first-load orbit, that is a separate approval with its own reduced-motion and
-live-telemetry-look review. It is not assumed here.
+- The first-load orbit is the **only** motion allowed without a user action. No loop, no idle drift, no ambient
+  motion, on any arm.
+- It runs once per session (about 900 ms, per the note's "First load" row), then orbits and nodes rest in the same
+  static state the fallback shows. Later visits in the session do not replay it.
+- It does not run under `prefers-reduced-motion`, and not on the static fallback arms (M2, M3, W2, W3).
+- It carries no information (orientation only), so no node, status or truth label depends on it.
+- Orbit and link tracing after load stay **one-shot** and user-initiated (selecting a node, or an explicit "Trace"
+  control that only changes view state, allowed under BACK-17 section 2.2). The trace keeps SPEC.md's 720 ms.
+- Its duration and easing are fixed token values, not random.
+- It needs its own live-telemetry-look review before it is tested: a first-load orbit must not read as a live feed
+  (BACK-15 rule: no pulse, blink or idle animation that could read as a live feed).
+- "Once per session" needs somewhere to remember it. FACT: the V2 scope test asserts no network, storage or secrets in
+  V2 source (`app/src/design-lab/v2/scope.test.ts`, per the V2 README). So an in-memory flag (replays on reload) fits
+  the V2 rules, and `sessionStorage` would need a separate exception. **Open item for the owner** (carried into
+  section 9).
 
 ## 4. Test matrix
 
@@ -115,7 +124,7 @@ combined cases the owner decides to allow (D-24.2).
 | W1 | WebGL on | none | decorative WebGL behind the SVG | The value of the shader or scene, alone |
 | W2 | WebGL off | none | flag off | Equals B0 |
 | W3 | WebGL load failure | none | context lost, chunk blocked, no WebGL, `webglcontextcreationfailed` | Static image shown, no blank or black area, no layout shift |
-| MW | Both on (only if D-24.2 allows) | on | on | Interaction between the two layers |
+| MW | Both on (allowed by D-24.2, owner 2026-11-21) | on | on | Interaction between the two layers, including the first-load orbit over the WebGL layer |
 
 Constant across all arms (the test oracle):
 
@@ -208,7 +217,11 @@ Items the diligence step must produce before an install request (acceptance crit
 8. Supply-chain note: pin exact versions, no ranges, same as the existing `app/package.json`.
 
 Dependency-policy note (FACT): V2 states "V2 adds no dependencies". Using any of these libraries is an exception to a
-stated V2 rule. That exception is the owner's call (D-24.4) and nothing here relaxes it.
+stated V2 rule. **Owner decision D-24.4 (2026-11-21):** Motion may be evaluated, and single D3 modules may follow only if
+graph density or curve and scale complexity justifies them (the note says 10 nodes and 11 links do not). The decision
+is permission to evaluate. It is not an install approval: licence, SBOM, audit, size and CSP review still come first,
+and `package.json` stays unchanged until an experiment is separately authorized. D3 stays out of the first experiment
+by default.
 
 ## 8. Truth and fallback rules
 
@@ -232,23 +245,34 @@ These bind every arm. They restate the repo's existing rules and add the pilot-s
   skip on `visibilitychange` hidden. Respect `prefers-reduced-motion` by not starting it. Do not assume a Battery
   Saver API exists across browsers (the working-copy ENHANCEMENT-NOTE lists "data-saver, battery-saver, low-power" as
   off-by-default conditions, which the ticket tells us not to rely on): low-performance handling is a capability test at start (context creation, a short
-  frame-time probe) with the static image as the answer on any doubt, plus phone-class default of off unless the owner
-  chooses otherwise (D-24.5).
+  frame-time probe) with the static image as the answer on any doubt, and phones (and widths under 900 px) always get
+  the static image, as the owner decided under D-24.5 on 2026-11-21.
 - **No remote calls.** No CDN, font, texture or telemetry request. Assets are local files.
 
 ## 9. Owner decisions
 
 The ticket asks the owner to resolve (a), (b), (c). They are listed with the extra decisions this document found.
 
-| ID | Decision | Default if unanswered |
+Answered by the owner in the session chat on 2026-11-21 and recorded in a BACK-24 comment. The answers record intent only.
+They authorize no install, benchmark, experiment, commit or PR.
+
+| ID | Decision | Owner answer (2026-11-21) |
 | --- | --- | --- |
-| D-24.1 | Confirm the auto-play resolution in section 3: no movement before user action, one-shot tracing only | Adopt the PROPOSED resolution in section 3 |
-| D-24.2 | Which combined arms are allowed (MW) and whether motion and WebGL are evaluated together or strictly apart | Apart only. No MW arm |
-| D-24.3 | Visual regression tolerance for on-arms, and who owns the low-end-device verification and which device class | No default. Adoption stays blocked until named |
-| D-24.4 | (a) Whether the V2 "no dependencies" rule may allow a justified Motion exception, and whether any D3 module may follow later | Exception not granted |
-| D-24.5 | (b) Whether decorative WebGL is wanted at all, and if so whether phone-class devices get the static image only | WebGL not wanted. Static horizon stays |
-| D-24.6 | Whether a React 19 upgrade is out of scope for this pilot (so R3F is excluded and the WebGL arm uses plain `three`) | Out of scope, R3F excluded |
-| D-24.7 | Where the experiment may live (detached design-lab branch or environment), and the stop-before-commit and stop-before-PR boundary | Detached branch, no commit, no PR |
+| D-24.1 | Auto-play | **Allow** a once-per-session first-load orbit, bounded as in section 3. Conflicts with SPEC.md section 5 until that file is updated |
+| D-24.2 | Combined arms | **Add** the combined Motion + WebGL arm (MW) |
+| D-24.3 | Visual regression tolerance for on-arms, and who owns low-end-device verification and which device class | **Open.** To be decided before the experiment. Adoption stays blocked until a person and a device class are named |
+| D-24.4 | V2 "no dependencies" rule | **Motion may be evaluated**, plus single D3 modules later if justified (section 7). Not an install approval |
+| D-24.5 | Decorative WebGL | **Wanted**, behind a feature flag. Phones (and widths under 900 px) get the static image |
+| D-24.6 | React 19 and R3F | **Plain `three`**, no `@react-three/fiber`. A React upgrade is out of scope |
+| D-24.7 | Experiment location and stop boundary | **Separate branch**, stop before commit and before PR |
+
+New open items created by these answers (not yet decided):
+
+| ID | Item | Why it is open |
+| --- | --- | --- |
+| D-24.8 | How "once per session" is remembered for the first-load orbit: in-memory flag (replays on reload) or a `sessionStorage` exception to the V2 scope test | V2's scope test asserts no storage in V2 source (section 3) |
+| D-24.9 | Whether SPEC.md section 5 and the ENHANCEMENT-NOTE "Not allowed" line are updated to match D-24.1 | They currently say the opposite of the owner's answer |
+| D-24.10 | Whether the first-load orbit is also applied to the no-library baseline B0 (CSS or Web Animations API) so Motion is compared like for like | Without it, a first-load orbit would appear only in Motion arms and bias the comparison |
 
 ## 10. Decision package, risk and rollback
 
@@ -289,10 +313,11 @@ STOP and report, do not continue, on any of these (from the ticket):
   a framework replacement; a silent WebGL rollout.
 - A missing explicit owner implementation gate.
 
-Proposed next gate (matches the ticket): the owner reviews this protocol and the Concept B mobile, Arabic and contrast
-evidence (which does not yet exist in the repo), answers D-24.1 to D-24.7, and only then authorizes **one** isolated
-experiment on a detached design-lab branch or environment, with a separate stop-before-commit and stop-before-PR
-boundary. BACK-8 and BACK-22 stay separate; nothing in this document approves a design, a renderer or a dependency.
+Proposed next gate (matches the ticket): D-24.1, D-24.2 and D-24.4 to D-24.7 are answered. Still needed before the owner
+authorizes **one** isolated experiment: D-24.3 (tolerance, owner, low-end device class), D-24.8 to D-24.10 (section 9),
+and the owner's review of the Concept B mobile, Arabic and contrast evidence (captures exist under
+`docs/design-lab/hybrid-map/out/` but were not opened for this protocol). The experiment then runs on a separate
+branch with a stop-before-commit and stop-before-PR boundary. BACK-8 and BACK-22 stay separate; nothing in this document approves a design, a renderer or a dependency.
 
 ## 12. Sources read and what was not checked
 
@@ -304,12 +329,14 @@ Read:
   (label convention and display-only rules).
 - npm registry metadata for `motion`, `framer-motion`, `three`, `@react-three/fiber`, `d3`, `d3-shape`, `d3-scale`
   (version, licence, dependencies, peer dependencies, unpacked size, modified date), read-only, 2026-11-21.
-- `docs/design-lab/hybrid-map/ENHANCEMENT-NOTE.md` and `SPEC.md`, as untracked working copies in the sibling worktree
-  `claude/kawalys-mission-map-visual-a9038d` (not on `main`).
+- `docs/design-lab/hybrid-map/ENHANCEMENT-NOTE.md` and `SPEC.md`: first as untracked working copies in the sibling
+  worktree `claude/kawalys-mission-map-visual-a9038d`, then re-compared against the versions merged to `main` in
+  PR 21 (identical text after normalizing line endings).
+- The owner's answers to D-24.1 to D-24.7 (session chat, 2026-11-21, recorded in a BACK-24 comment).
 
 Not checked, and so not used as evidence:
 
-- The hybrid-map concept pages, their README, tools and captures (same worktree, not opened).
+- The hybrid-map concept pages, their README, tools and captures (on `main`, not opened).
 - The Confluence experience page and the Jira ticket standard page.
 - Any licence file, NOTICE file, SBOM, advisory database or bundle size for any candidate.
 - Any browser, device, screen-reader or performance behaviour of Motion or WebGL in this app.
