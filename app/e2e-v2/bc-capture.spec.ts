@@ -2,14 +2,14 @@
 // docs/design-lab/hybrid-map/out/pilot/ (npm run e2e:v2 skips it). Run: BC_CAPTURE=1 npx playwright test -c playwright.v2.config.ts e2e-v2/bc-capture.spec.ts
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { loadBc, type BcOpts } from './bc-helpers';
+import { loadBc, waitForIntroDone, type BcOpts } from './bc-helpers';
 import { load } from './helpers';
 
 const OUT = path.resolve('..', 'docs', 'design-lab', 'hybrid-map', 'out', 'pilot');
 test.skip(!process.env.BC_CAPTURE, 'capture only');
 
 const shot = async (page: Page, name: string, full = false) => {
-  await page.waitForTimeout(1700); // let the one-shot first-load orbit and any trace finish
+  await waitForIntroDone(page); // the one-shot first-load orbit and any trace have finished
   await page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: full });
 };
 

@@ -81,3 +81,26 @@ export async function latinOutsideIsolates(page: Page): Promise<string[]> {
 }
 
 export const squash = (s: string): string => s.replace(/\s+/g, ' ').trim();
+
+/** Waits until no animation is running. A looping animation never settles, so this fails (times out) on one. */
+export async function waitForAnimationsSettled(page: Page, timeout = 5000): Promise<void> {
+  await page.waitForFunction(() => !document.getAnimations().some((a) => a.playState === 'running'), null, { timeout });
+}
+
+/** Waits for the first-load orbit to finish (the canvas drops data-intro), then for every animation to settle. */
+export async function waitForIntroDone(page: Page): Promise<void> {
+  await expect(page.locator('.kv2-bc-canvas[data-intro]')).toHaveCount(0, { timeout: 10_000 });
+  await waitForAnimationsSettled(page, 10_000);
+}
+
+/** Every animation that never ends (iterations === Infinity), described as "target class + animationName". */
+export async function infiniteAnimations(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    document.getAnimations().flatMap((a) => {
+      if (a.effect?.getTiming().iterations !== Infinity) return [];
+      const t = (a.effect as KeyframeEffect).target as Element | null;
+      const cls = t ? (t.getAttribute('class') ?? t.tagName) : 'unknown';
+      return [`${cls} ${(a as CSSAnimation).animationName ?? '(script)'}`];
+    }),
+  );
+}

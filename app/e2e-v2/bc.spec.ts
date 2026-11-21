@@ -2,7 +2,7 @@
 // Runs against the built lab on port 4279 (npm run e2e:v2). Chromium only; WebKit is NOT RUN (see the report).
 import { expect, test } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
-import { clippedElements, latinOutsideIsolates, loadBc, smallTargets, squash } from './bc-helpers';
+import { clippedElements, infiniteAnimations, latinOutsideIsolates, loadBc, smallTargets, squash, waitForAnimationsSettled, waitForIntroDone } from './bc-helpers';
 import { LANGS, ORIGIN, PERSONAS, WIDTHS, controlLabels, overflow } from './helpers';
 
 const IDS = ['retail-tower', 'khepri', 'stock-sync', 'pos', 'inventory', 'github', 'jira', 'sentry', 'port', 'seshat-bi'];
@@ -63,7 +63,7 @@ test.describe('layout', () => {
   test('performance budget: the pilot stays within about 600 DOM and 200 SVG elements, no backdrop-filter, one filter', async ({ page }) => {
     // The budget is for the pilot's own screen. The shared V2 shell (top bar, navigation) is measured and reported, not budgeted.
     await loadBc(page, { view: 'map' });
-    await page.waitForTimeout(1500);
+    await waitForIntroDone(page);
     const count = () => page.evaluate(() => {
       const stage = document.querySelector('.kv2-bc')!;
       const all = [...stage.querySelectorAll('*')];
@@ -82,8 +82,10 @@ test.describe('layout', () => {
     await page.goto('/v2.html#/mission-map?persona=owner&lang=en');
     await expect(page.locator('.kv2-map')).toBeVisible();
     const v2 = await page.evaluate(() => ({ page: document.body.querySelectorAll('*').length, pageSvg: document.body.querySelectorAll('svg, svg *').length }));
-    console.log(`bc budget: map stage dom=${map.dom} svg=${map.svg} | whole page dom=${map.page} svg=${map.pageSvg} | list stage dom=${list.dom} svg=${list.svg} | V2 map whole page dom=${v2.page} svg=${v2.pageSvg}`);
-    // SPEC section 7 says "about 600 / about 200": 5 % of headroom on the SVG count, recorded in the report.
+    const measured = `bc budget: map stage dom=${map.dom} svg=${map.svg} | whole page dom=${map.page} svg=${map.pageSvg} | list stage dom=${list.dom} svg=${list.svg} | V2 map whole page dom=${v2.page} svg=${v2.pageSvg}`;
+    console.log(measured);
+    test.info().annotations.push({ type: 'bc-budget', description: measured });
+    // SPEC section 7 says "about 600 / about 200": hard product limits on the pilot's own stage (shell drift cannot move them), 5 % of headroom on the SVG count, recorded in the report.
     expect(map.dom).toBeLessThanOrEqual(600);
     expect(map.svg).toBeLessThanOrEqual(210);
     expect(map.backdrop).toBe(0);
@@ -341,12 +343,12 @@ test.describe('motion', () => {
     const page = await ctx.newPage();
     await loadBc(page);
     await page.locator('.kv2-bc-node[data-node="github"]').click();
-    await page.waitForTimeout(300);
+    await expect(page.locator('.kv2-bc-node[data-node="github"][data-selected]')).toHaveCount(1);
     expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
     await expect(page.locator('.kv2-bc-draw')).toHaveCount(0);
     await page.getByRole('button', { name: 'List' }).click();
     await page.getByRole('button', { name: 'Map', exact: true }).click();
-    await page.waitForTimeout(300);
+    await expect(page.locator('.kv2-bc-canvas')).toBeVisible();
     expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
     // the selection is still shown without motion: own links stay, the rest are dimmed
     await expect(page.locator('.kv2-bc-edge[data-hl]')).toHaveCount(1); // GitHub has one link of its own (d1)
@@ -354,9 +356,15 @@ test.describe('motion', () => {
     await ctx.close();
   });
 
+  test('idle page runs no infinite animation, including the decorative background', async ({ page }) => {
+    await loadBc(page);
+    await waitForIntroDone(page);
+    expect(await infiniteAnimations(page)).toEqual([]);
+  });
+
   test('selecting a system sweeps one trace per own link, once; nothing loops', async ({ page }) => {
     await loadBc(page);
-    await page.waitForTimeout(1600); // let the first-load orbit finish
+    await waitForIntroDone(page); // the first-load orbit has finished
     await page.locator('.kv2-bc-node[data-node="stock-sync"]').click();
     await page.locator('.kv2-bc-node[data-node="pos"]').click();
     await page.locator('.kv2-bc-node[data-node="stock-sync"]').click();
@@ -364,29 +372,33 @@ test.describe('motion', () => {
     const running = await page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').map((a) => ({ it: a.effect!.getTiming().iterations, d: a.effect!.getTiming().duration })));
     expect(running.length).toBeGreaterThan(0);
     for (const a of running) { expect(a.it).toBe(1); expect(Number(a.d)).toBeLessThanOrEqual(1000); }
-    await page.waitForTimeout(1200);
+    await waitForAnimationsSettled(page); // a looping trace never settles, so it fails here
     expect(await page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').length)).toBe(0);
   });
 
   test('first-load orbit: plays once, animates only opacity, translate and stroke-dashoffset, never more than 10 at once, never replays', async ({ page }) => {
     await page.addInitScript(() => {
-      const w = window as unknown as { __seen: boolean; __max: number; __props: string[] };
-      w.__seen = false; w.__max = 0; w.__props = [];
+      const w = window as unknown as { __seen: boolean; __max: number; __props: string[]; __done: boolean; __timedOut: boolean };
+      w.__seen = false; w.__max = 0; w.__props = []; w.__done = false; w.__timedOut = false;
       const tick = () => {
         if (document.querySelector('.kv2-bc-canvas[data-intro]')) w.__seen = true;
         const active = document.getAnimations().filter((a) => (a.effect?.getComputedTiming() as { phase?: string } | undefined)?.phase === 'active');
         w.__max = Math.max(w.__max, active.length);
         for (const a of active) for (const kf of (a.effect as KeyframeEffect).getKeyframes()) for (const k of Object.keys(kf)) if (!w.__props.includes(k)) w.__props.push(k);
-        if (performance.now() < 3000) requestAnimationFrame(tick);
+        const idle = w.__seen && !document.querySelector('.kv2-bc-canvas[data-intro]') && !document.getAnimations().some((a) => a.playState === 'running');
+        if (idle) w.__done = true;
+        else if (performance.now() >= 10_000) { w.__timedOut = true; w.__done = true; }
+        else requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     });
     await loadBc(page);
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => (window as unknown as { __done: boolean }).__done, null, { timeout: 12_000 });
     const r = await page.evaluate(() => {
-      const w = window as unknown as { __seen: boolean; __max: number; __props: string[] };
-      return { __seen: w.__seen, __max: w.__max, __props: w.__props };
+      const w = window as unknown as { __seen: boolean; __max: number; __props: string[]; __timedOut: boolean };
+      return { __seen: w.__seen, __max: w.__max, __props: w.__props, __timedOut: w.__timedOut };
     });
+    expect(r.__timedOut).toBe(false);
     expect(r.__seen).toBe(true);
     expect(r.__max).toBeLessThanOrEqual(10);
     for (const p of r.__props) expect(['offset', 'easing', 'composite', 'computedOffset', 'strokeDashoffset', 'opacity', 'translate']).toContain(p);
