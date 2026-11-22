@@ -6,6 +6,7 @@ export interface RequestWithId {
   requestId?: string;
 }
 export interface ResponseLike {
+  headersSent?: boolean;
   setHeader(name: string, value: string): unknown;
   status(code: number): { json(body: unknown): unknown };
 }

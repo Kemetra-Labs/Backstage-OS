@@ -6,4 +6,8 @@ async function main(): Promise<void> {
   await app.listen(Number(process.env.KAWALYS_BFF_PORT ?? 8787), "127.0.0.1");
 }
 
-void main();
+main().catch(() => {
+  // Fixed message only: never print the error text.
+  console.error("kawalys-bff failed to start");
+  process.exitCode = 1;
+});

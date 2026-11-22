@@ -1,4 +1,4 @@
-import { Controller, Get, type INestApplication } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, UnauthorizedException, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { createApp } from '../../src/create-app';
 import { isErrorEnvelope } from '../../src/errors/envelope';
@@ -11,6 +11,21 @@ class BoomController {
   }
 }
 
+@Controller()
+class DeniedControllers401 {
+  @Get('denied401')
+  d(): never {
+    throw new UnauthorizedException('secret-401');
+  }
+}
+@Controller()
+class DeniedControllers403 {
+  @Get('denied403')
+  d(): never {
+    throw new ForbiddenException('secret-403');
+  }
+}
+
 const PERSONA = 'x-kawalys-demo-persona';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -18,7 +33,7 @@ describe('Kawalys BFF', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    app = await createApp([BoomController]);
+    app = await createApp([BoomController, DeniedControllers401, DeniedControllers403]);
   });
   afterAll(async () => {
     await app.close();
@@ -64,13 +79,41 @@ describe('Kawalys BFF', () => {
       delete rb.error.request_id;
       delete ab.error.request_id;
       expect(rb).toEqual(ab);
-      expect(restricted.headers['content-type']).toBe(absent.headers['content-type']);
-      expect(restricted.headers['content-length']).toBe(absent.headers['content-length']);
+      const rh = { ...restricted.headers };
+      const ah = { ...absent.headers };
+      delete rh.date;
+      delete ah.date;
+      expect(rh).toEqual(ah);
       expect(restricted.text).not.toContain('E-5');
       expect(restricted.text).not.toContain('technical');
       expect(restricted.text).not.toContain('Synthetic error read');
     },
   );
+
+  it.each(['denied401', 'denied403'])('%s is reported as not_found with no leaked text', async (path) => {
+    const send = (p: string) =>
+      request(app.getHttpServer()).get(p).set('x-request-id', 'req-aaaaaaaa');
+    const denied = await send(`/${path}`);
+    const absent = await send('/demo/evidence/E-999');
+    expect(denied.status).toBe(404);
+    expect(denied.body.error.code).toBe('not_found');
+    const db = JSON.parse(denied.text);
+    const ab = JSON.parse(absent.text);
+    delete db.error.request_id;
+    delete ab.error.request_id;
+    expect(db).toEqual(ab);
+    expect(denied.text).not.toContain('secret-40');
+  });
+
+  it('oversized JSON body (413) gives a fixed 400 validation_error', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/process')
+      .set('content-type', 'application/json')
+      .send(JSON.stringify({ a: 'x'.repeat(200_000) }));
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('validation_error');
+    expect(res.headers['x-request-id']).toBe(res.body.error.request_id);
+  });
 
   it('unknown route returns our envelope', async () => {
     const res = await request(app.getHttpServer()).get('/nope');
