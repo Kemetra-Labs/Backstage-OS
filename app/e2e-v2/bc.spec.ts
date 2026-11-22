@@ -459,57 +459,69 @@ test.describe('phone', () => {
 
   // BACK-33 (Sonar S6845 on Tables.tsx): the three tables sit in scroll regions with tabIndex={0}. This is the keyboard evidence
   // the owner cites when accepting those warnings: Tab from the control before the region lands on it, it is a named
-  // region, and where it overflows the arrow key scrolls it. A region that does not overflow is still a named focus stop.
+  // region, and when it overflows the arrow key scrolls it. Two scenarios: the default size (only the ledger overflows, at 320),
+  // and a 200% text-only resize (WCAG 1.4.4), approximated by doubling the px font tokens and the table font sizes, where each
+  // table overflows at the width chosen for it (the matrix and links tables stack as cards on a phone at default size).
   test('list tables: each scroll region is reachable by Tab, named, and scrolls with the arrow keys', async ({ browser }) => {
+    const TEXT_200 = ':root{--kv2-t-xs:22px;--kv2-t-sm:24px;--kv2-t-md:27px;--kv2-t-lg:30px;--kv2-t-xl:36px;--kv2-t-2xl:46px;--kv2-t-3xl:72px}.kv2-table{font-size:26px}.kv2-table thead th{font-size:24px}';
     const REGIONS = [
-      { id: 'ledger', line: 31, name: { en: 'Systems ledger', ar: 'سجل الأنظمة' } },
-      { id: 'matrix', line: 79, name: { en: 'Source readings', ar: 'قراءات المصادر' } },
-      { id: 'links', line: 111, name: { en: 'Links between systems', ar: 'الروابط بين الأنظمة' } },
+      { id: 'ledger', line: 31, name: { en: 'Systems ledger', ar: 'سجل الأنظمة' }, wide: 320 },
+      { id: 'matrix', line: 79, name: { en: 'Source readings', ar: 'قراءات المصادر' }, wide: 641 },
+      { id: 'links', line: 111, name: { en: 'Links between systems', ar: 'الروابط بين الأنظمة' }, wide: 320 },
     ] as const;
-    const scrolledAtSomeWidth = new Set<string>();
-    for (const lang of ['en', 'ar'] as const) {
-      const key = lang === 'en' ? 'ArrowRight' : 'ArrowLeft';
-      for (const region of REGIONS) {
-        const log: string[] = [];
-        for (const width of [375, 320]) {
-          const ctx = await browser.newContext({ viewport: { width, height: 812 }, baseURL: ORIGIN });
-          const page = await ctx.newPage();
-          await loadBc(page, { width, height: 812, view: 'list', lang });
-          await waitForIntroDone(page);
-          // The surrounding Panel is a region with the same name, so address the scroll wrapper itself.
-          const el = page.locator(`#bc-${region.id} .kv2-table-wrap`);
-          await expect(el).toHaveCount(1);
-          await expect(el).toHaveRole('region');
-          await expect(el).toHaveAccessibleName(region.name[lang]);
-          // Known starting focus: the last tabbable control before the region in document order.
-          const startedFrom = await el.evaluate((r) => {
-            const tabbable = [...document.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, [tabindex]')]
-              .filter((e) => !e.hasAttribute('disabled') && e.tabIndex >= 0 && !e.closest('[hidden], [inert]') && getComputedStyle(e).visibility !== 'hidden' && e.getClientRects().length > 0);
-            const before = tabbable.filter((e) => e !== r && (e.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0).pop();
-            before?.focus();
-            return before ? `${before.tagName.toLowerCase()}${before.getAttribute('aria-label') ? `[${before.getAttribute('aria-label')}]` : ''}` : null;
-          });
-          expect(startedFrom, `${region.id}/${lang}: a control precedes the region`).not.toBeNull();
-          await page.keyboard.press('Tab');
-          expect(await el.evaluate((r) => document.activeElement === r), `${region.id}/${lang}@${width}: Tab from ${startedFrom} lands on the region`).toBe(true);
-          const m = await el.evaluate((r) => ({ sw: r.scrollWidth, cw: r.clientWidth, role: r.getAttribute('role') }));
-          expect(m.role).toBe('region');
-          const overflows = m.sw > m.cw;
-          if (overflows) {
-            const before = await el.evaluate((r) => r.scrollLeft);
-            await page.keyboard.press(key);
-            await expect.poll(() => el.evaluate((r) => r.scrollLeft), { message: `${region.id}/${lang}@${width}: ${key} scrolls` }).not.toBe(before);
-            scrolledAtSomeWidth.add(`${region.id}/${lang}`);
+    const scrolled = new Set<string>();
+    for (const scenario of ['default', 'text-200'] as const) {
+      for (const lang of ['en', 'ar'] as const) {
+        const key = lang === 'en' ? 'ArrowRight' : 'ArrowLeft';
+        for (const region of REGIONS) {
+          // default: 375, then 320 only if 375 shows no overflow. text-200: the width chosen for this table.
+          const widths = scenario === 'default' ? [375, 320] : [region.wide];
+          const log: string[] = [];
+          for (const width of widths) {
+            const ctx = await browser.newContext({ viewport: { width, height: 812 }, baseURL: ORIGIN });
+            const page = await ctx.newPage();
+            await loadBc(page, { width, height: 812, view: 'list', lang });
+            await waitForIntroDone(page);
+            if (scenario === 'text-200') await page.addStyleTag({ content: TEXT_200 });
+            const where = `${scenario}/${lang}/${region.id}@${width}`;
+            // The surrounding Panel is a region with the same name, so address the scroll wrapper itself.
+            const el = page.locator(`#bc-${region.id} .kv2-table-wrap`);
+            await expect(el).toHaveCount(1);
+            await expect(el).toHaveRole('region');
+            await expect(el).toHaveAccessibleName(region.name[lang]);
+            // Known starting focus: the last tabbable control before the region in document order.
+            const startedFrom = await el.evaluate((r) => {
+              const tabbable = [...document.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, [tabindex]')]
+                .filter((e) => !e.hasAttribute('disabled') && e.tabIndex >= 0 && !e.closest('[hidden], [inert]') && getComputedStyle(e).visibility !== 'hidden' && e.getClientRects().length > 0);
+              const before = tabbable.filter((e) => e !== r && (e.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0).pop();
+              before?.focus();
+              return before ? `${before.tagName.toLowerCase()}${before.getAttribute('aria-label') ? `[${before.getAttribute('aria-label')}]` : ''}` : null;
+            });
+            expect(startedFrom, `${where}: a control precedes the region`).not.toBeNull();
+            await page.keyboard.press('Tab');
+            expect(await el.evaluate((r) => document.activeElement === r), `${where}: Tab from ${startedFrom} lands on the region`).toBe(true);
+            const m = await el.evaluate((r) => ({ sw: r.scrollWidth, cw: r.clientWidth }));
+            const overflows = m.sw > m.cw;
+            if (scenario === 'text-200') expect(overflows, `${where}: overflows at 200% text (${m.sw}/${m.cw})`).toBe(true);
+            if (overflows) {
+              const before = await el.evaluate((r) => r.scrollLeft);
+              await page.keyboard.press(key);
+              await expect.poll(() => el.evaluate((r) => r.scrollLeft), { message: `${where}: ${key} scrolls` }).not.toBe(before);
+              scrolled.add(`${scenario}/${lang}/${region.id}`);
+            }
+            log.push(`${width}px ${m.sw}/${m.cw} ${overflows ? `overflows, ${key} scrolls` : 'no overflow'}`);
+            await ctx.close();
+            if (overflows) break;
           }
-          log.push(`${width}px: scrollWidth ${m.sw} clientWidth ${m.cw} ${overflows ? `overflows, ${key} scrolls` : 'no overflow'}`);
-          await ctx.close();
-          if (overflows) break; // 320 is only tried when 375 shows no overflow
+          test.info().annotations.push({ type: `S6845 line ${region.line}`, description: `${scenario} ${lang} ${region.id}: reached by Tab, named; ${log.join('; ')}` });
         }
-        console.log(`S6845 line ${region.line} ${region.id} ${lang}: reached by Tab; ${log.join('; ')}`);
       }
     }
-    // The evidence needs at least one width where each region truly scrolls by keyboard, otherwise say so in the doc.
-    console.log(`S6845 arrow-key scroll proven for: ${[...scrolledAtSomeWidth].sort().join(', ') || 'none'}`);
+    // The evidence the SonarCloud comments cite: the ledger scrolls at default size (320), and every table scrolls at 200% text.
+    for (const lang of ['en', 'ar']) {
+      expect(scrolled.has(`default/${lang}/ledger`), `default/${lang}: ledger scrolls by arrow key at 320`).toBe(true);
+      for (const r of REGIONS) expect(scrolled.has(`text-200/${lang}/${r.id}`), `text-200/${lang}/${r.id} scrolls by arrow key`).toBe(true);
+    }
   });
 });
 
