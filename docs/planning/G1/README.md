@@ -9,6 +9,7 @@ Executed on 2026-11-21 with the owner's approval given in chat: install and exec
 | BACK-22 (G1-03) | DepGraph vs React Flow vs Archify on the same envelope: [back-22/REPORT.md](back-22/REPORT.md) | Run. React Flow is the provisional candidate if the D3 dependency is accepted; Archify not suggested; DepGraph not replaced |
 | BACK-23 (G1-04) | Decision package: [back-23/DECISION-PACKAGE.md](back-23/DECISION-PACKAGE.md) | Ready for owner review. Recommendation: defer selection for both capabilities; next approval slice listed |
 | BACK-29 / BACK-77 / BACK-78 | Hold-out fixture v1 and engine pass: [holdout-v1/](holdout-v1/README.md), [holdout-v1-run/](holdout-v1-run/REPORT.md), [holdout-v1-rescore/](holdout-v1-rescore/REPORT.md) | Both engines FAIL strict v1; CodeGraph 107/114, no invented relations |
-| BACK-23 decision | [back-23/DECISION-2026-11-22.md](back-23/DECISION-2026-11-22.md) | **Owner picked CodeGraph as RepositoryAnalyzer (22 Nov 2026)**, conditional on licence sign-off BACK-80. DiagramRenderer still deferred |
+| BACK-23 decision | [back-23/DECISION-2026-11-22.md](back-23/DECISION-2026-11-22.md) | **Owner picked CodeGraph as RepositoryAnalyzer (22 Nov 2026)**, conditional on licence sign-off BACK-80 |
+| BACK-81 decision | [back-23/DECISION-DIAGRAM-RENDERER.md](back-23/DECISION-DIAGRAM-RENDERER.md) | **Owner approved option A for DiagramRenderer (22 Nov 2026)**: keep the in-house SVG renderers, no new dependency. React Flow not adopted; re-open trigger recorded |
 
 Not run anywhere in G1: languages other than TS, TSX, JS and Python; WebKit; real devices; screen readers; private or real source code.
