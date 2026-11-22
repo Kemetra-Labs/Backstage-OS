@@ -42,7 +42,7 @@ describe('viewFor: least-privilege persona views (Blueprint v4 §5, D-5)', () =>
     }
   });
 
-  it('reduces restricted evidence to id and status for non-technical personas (M5)', () => {
+  it('reduces restricted evidence to id and status for non-technical personas (M5) (raw, unprojected input: defence in depth)', () => {
     for (const v of [owner, non]) {
       const e5 = v.evidence.find((e) => e.id === 'E-5') as EvidenceView;
       expect(e5.restricted).toBe(true);

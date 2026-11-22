@@ -22,6 +22,8 @@ const invMemo = new WeakMap<InvestigationData, Map<Persona, InvestigationData>>(
 const filterRefs = (refs: readonly EvidenceReference[], keep: Keep): readonly EvidenceReference[] => refs.filter(keep);
 
 // A claim whose whole basis was withheld is unknown, never healthy. Connectivity is a source fact and stays.
+// When only part of a basis is withheld, the stored freshness/health stay as claimed: screens resolve what is shown through
+// triadOf/resolveHealth from the remaining basis.
 function scopeState(s: DisplayState, keep: Keep): DisplayState {
   const basis = filterRefs(s.basis, keep);
   if (basis.length === s.basis.length) return s;

@@ -285,7 +285,7 @@ test('INV-DEMO-9 evidence opens in the Explorer, not a drawer', async ({ page })
 test('INV-DEMO-9: hypothesis is labelled, impact is unknown, missing evidence and links are present', async ({ page }) => {
   await load(page, R9);
   await expect(page.getByTestId('summary-hypothesis').locator('[data-truth="hypothesis"]')).toHaveText('Hypothesis');
-  await expect(page.getByTestId('summary-hypothesis')).toContainText('Not confirmed');
+  await expect(page.getByTestId('summary-hypothesis')).toContainText('The cause is not established yet');
   await expect(page.getByTestId('summary-impact').locator('[data-truth="unknown"]')).toBeVisible();
   await expect(page.getByTestId('summary-impact')).toContainText('Unknown, not evidenced');
   await expect(page.getByTestId('missing-evidence').locator('li')).toHaveCount(2);

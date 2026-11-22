@@ -18,6 +18,15 @@ describe.each<Persona>(['owner', 'nontechnical'])('V1 projection for %s', (p) =>
       expect(w).not.toContain(`"${id}"`);
       expect(i).not.toContain(`"${id}"`);
     }
+    // Ids can also appear inside prose, not just as quoted JSON values.
+    const strs: string[] = [];
+    const walk = (v: unknown): void => {
+      if (typeof v === 'string') strs.push(v);
+      else if (Array.isArray(v)) v.forEach(walk);
+      else if (v && typeof v === 'object') Object.values(v).forEach(walk);
+    };
+    walk(authorizedWorld(WORLD, p)); walk(authorizedInvestigation(INV_DEMO_7, p));
+    for (const s of strs) expect(s, s).not.toMatch(/\bE-(5|12|23)\b/);
   });
 
   it('persona-keyed text is collapsed to the active persona', () => {

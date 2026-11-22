@@ -87,9 +87,9 @@ const en: InvestigationCopy = {
     hypothesis: {
       title: 'Hypothesis',
       text: {
-        owner: 'A recent deploy may have introduced the errors. The only link is timing. Not confirmed.',
+        owner: 'Staging errors rose. The cause is not established yet.',
         technical: 'Deploy {DEMO-311} may have introduced the errors. The only link is timing, by the rule on {E-23}. Not confirmed.',
-        nontechnical: 'A recent change may have caused the extra errors. It is not confirmed.',
+        nontechnical: 'Staging errors rose. The cause is not established yet.',
       },
       note: 'A hypothesis, not an observation. No calibrated score.',
     },
@@ -149,9 +149,9 @@ const ar: InvestigationCopy = {
     hypothesis: {
       title: 'فرضية',
       text: {
-        owner: 'ربما سببت عملية نشر حديثة هذه الأخطاء. الصلة الوحيدة هي التوقيت. غير مؤكد.',
+        owner: 'ارتفعت الأخطاء في بيئة التجهيز. لم يُحدَّد السبب بعد.',
         technical: 'ربما سببت عملية النشر {DEMO-311} هذه الأخطاء. الصلة الوحيدة هي التوقيت، بقاعدة الدليل {E-23}. غير مؤكد.',
-        nontechnical: 'ربما سبب تغيير حديث الأخطاء الإضافية. هذا غير مؤكد.',
+        nontechnical: 'ارتفعت الأخطاء في بيئة التجهيز. لم يُحدَّد السبب بعد.',
       },
       note: 'فرضية وليست رصدًا. دون درجة معايرة.',
     },

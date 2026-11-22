@@ -37,7 +37,7 @@ describe('explorerFor', () => {
     expect(explorerFor(WORLD, 'E-2', 'technical', undefined, INV_DEMO_7.rawOutput)?.view.rawOutput).toBeUndefined();
   });
 
-  it('E-12 is restricted for Owner and Nontechnical and readable for Technical', () => {
+  it('E-12 is restricted for Owner and Nontechnical and readable for Technical (raw, unprojected input: defence in depth)', () => {
     expect(explorerFor(WORLD, 'E-12', 'owner', undefined, INV_DEMO_7.rawOutput)?.view.restricted).toBe(true);
     expect(explorerFor(WORLD, 'E-12', 'nontechnical', undefined, INV_DEMO_7.rawOutput)?.view.restricted).toBe(true);
     const t = explorerFor(WORLD, 'E-12', 'technical', undefined, INV_DEMO_7.rawOutput);
@@ -59,7 +59,7 @@ describe('explorerFor', () => {
     expect(explorerFor(WORLD, 'E-31', 'owner', undefined, INV_DEMO_7.rawOutput)?.project?.id).toBe('SB');
   });
 
-  it('E-23 is correlated with its rule for Technical, restricted for the others', () => {
+  it('E-23 is correlated with its rule for Technical, restricted for the others (raw, unprojected input: defence in depth)', () => {
     const t = explorerFor(WORLD, 'E-23', 'technical', undefined, INV_DEMO_7.rawOutput);
     expect(t?.view.label).toBe('correlated');
     expect(t?.view.rule).toMatch(/Deploy time/);

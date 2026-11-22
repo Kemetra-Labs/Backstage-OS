@@ -26,7 +26,7 @@ describe('homeView', () => {
     expect(v.decisions.map((d) => d.id)).toEqual(['DEC-DEMO-3', 'DEC-DEMO-5']);
   });
 
-  it('keeps restricted evidence listed and counted for Owner, and gives Technical none restricted', () => {
+  it('keeps restricted evidence listed and counted for Owner, and gives Technical none restricted (raw, unprojected input: defence in depth)', () => {
     const inv7 = v.investigations.find((i) => i.id === 'INV-DEMO-7');
     expect(inv7?.restrictedCount).toBeGreaterThan(0);
     expect(inv7?.evidenceCount).toBe(WORLD.investigations[0]?.evidence.length);
@@ -51,7 +51,7 @@ describe('homeView', () => {
     expect(agent?.text.en).toMatch(/^Simulated/);
   });
 
-  it('takes an event label from its evidence unless that evidence is restricted for the persona', () => {
+  it('takes an event label from its evidence unless that evidence is restricted for the persona (raw, unprojected input: defence in depth)', () => {
     const nt = homeView(WORLD, 'nontechnical').activity;
     const withEvidence = WORLD.activity.filter((e) => e.evidenceId);
     expect(withEvidence.length).toBeGreaterThan(0);
