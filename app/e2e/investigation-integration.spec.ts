@@ -64,7 +64,9 @@ test('drawer: the Explorer link is at least 44 px tall and keeps the focus trap 
 for (const persona of ['owner', 'nontechnical'] as const) {
   test(`drawer ${persona}: the Explorer link adds no banned token`, async ({ page }) => {
     await load(page, R7, { persona });
-    for (const id of ['E-1', 'E-5']) {
+    // E-5 is Technical-only: it is not in the room at all for these personas, so there is no row to open.
+    await expect(page.locator('[data-evidence="E-5"]')).toHaveCount(0);
+    for (const id of ['E-1', 'E-2']) {
       await page.locator(`[data-evidence="${id}"] button`).click();
       await expect(page.getByRole('dialog')).toBeVisible();
       const text = await page.locator('body').innerText();
@@ -105,12 +107,15 @@ test('room keeps its S1 counts with the new sections present', async ({ page }) 
   }
 });
 
-test('evidence timeline: newest observation first; unread and restricted items are listed apart in words', async ({ page }) => {
+test('evidence timeline: newest observation first; unread items are listed apart in words; withheld E-5 is absent for Owner', async ({ page }) => {
   await load(page, R7, { persona: 'owner' });
   const tl = page.getByTestId('evidence-timeline');
   const ids = await tl.locator('[data-timeline]').evaluateAll((els) => els.map((e) => e.getAttribute('data-timeline')));
   expect(ids).toEqual(['E-1', 'E-3', 'E-4', 'E-2']);
-  await expect(tl.locator('[data-untimed="E-5"]')).toContainText('Restricted to Technical');
+  await expect(tl.locator('[data-untimed="E-5"]')).toHaveCount(0);
+  await expect(tl.locator('[data-timeline="E-5"]')).toHaveCount(0);
+  await expect(tl).not.toContainText('Restricted to Technical');
+  await expect(tl.locator('[data-untimed]')).toHaveCount(2);
   await expect(tl.locator('[data-untimed="E-6"]')).toContainText('Not read: source not set up');
   await expect(tl.locator('[data-untimed="E-7"]')).toContainText('Not read: source unavailable');
   await expect(tl.locator('[data-timeline="E-1"] .truth')).toHaveText('Observed');
@@ -262,10 +267,15 @@ test('INV-DEMO-9: nothing says healthy for khepri-api, with or without the sourc
 test('INV-DEMO-9 evidence opens in the Explorer, not a drawer', async ({ page }) => {
   await load(page, R9);
   const ev = page.getByTestId('summary-evidence');
-  for (const id of ['E-21', 'E-22', 'E-23', 'E-24']) await expect(ev.locator(`[data-evidence-row="${id}"]`)).toBeVisible();
+  for (const id of ['E-21', 'E-22', 'E-24']) await expect(ev.locator(`[data-evidence-row="${id}"]`)).toBeVisible();
   await expect(ev.locator('button')).toHaveCount(0);
-  await expect(ev.locator('[data-evidence-row="E-23"]')).toContainText('Restricted to Technical');
+  await expect(ev.locator('[data-evidence-row="E-23"]')).toHaveCount(0);
+  await expect(ev).not.toContainText('Restricted to Technical');
   await expect(ev.locator('[data-evidence-row="E-24"]')).toContainText('Not read');
+  await load(page, R9, { persona: 'technical' });
+  await expect(page.getByTestId('summary-evidence').locator('[data-evidence-row="E-23"]')).toBeVisible();
+  await expect(page.getByTestId('summary-evidence')).not.toContainText('Restricted to Technical');
+  await load(page, R9);
   await ev.locator('a[href="#/evidence/E-24?from=INV-DEMO-9"]').click();
   await expect(page).toHaveURL(/#\/evidence\/E-24\?from=INV-DEMO-9$/);
   await expect(page.getByRole('dialog')).toHaveCount(0);
