@@ -7,6 +7,7 @@ import { Age, Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip } from
 import { useV2 } from '../context';
 import { WORLD } from '../fixtures/world';
 import type { K } from '../i18n/t';
+import { authorizedWorld } from '../logic/authorize';
 import { evidenceOf } from '../logic/evidence';
 import { hhmm, sourceCounts, sourceStatus, type SourceStatus, type Tone } from '../logic/status';
 import type { SourceAxis, SourceEvent, SourceKind, SourceMeta } from '../types';
@@ -90,7 +91,7 @@ const AXES: readonly AxisFilter[] = ['all', 'connectivity', 'freshness', 'health
 
 export function SourceObservatory() {
   const { route, go, t, copy } = useV2();
-  const w = WORLD;
+  const w = authorizedWorld(WORLD, route.persona);
   const [kind, setKind] = useState<KindFilter>('all');
   const [axis, setAxis] = useState<AxisFilter>('all');
   const [mode, setMode] = useState<'cards' | 'table'>('cards');
@@ -233,8 +234,8 @@ export function SourceObservatory() {
 }
 
 function SourceInspector({ m, s, tab }: { readonly m: SourceMeta; readonly s: SourceStatus; readonly tab: Tab }) {
-  const { t, copy } = useV2();
-  const w = WORLD;
+  const { t, copy, route } = useV2();
+  const w = authorizedWorld(WORLD, route.persona);
   const head = (
     <header className="kv2-insp-head">
       <span className="kv2-orb" data-tone={s.connectivity === 'unavailable' ? 'bad' : s.freshness === 'stale' ? 'warn' : 'ok'}><Icon name={ICON[m.provider]} size={28} /></span>

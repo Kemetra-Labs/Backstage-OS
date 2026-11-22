@@ -5,7 +5,9 @@ import { Lt, Seg, T, Tx } from '../components/ui';
 import { useV2 } from '../context';
 import { WORLD } from '../fixtures/world';
 import { plain, type K } from '../i18n/t';
-import { buildHash, PERSONAS, type Route } from './route';
+import { authorizedWorld } from '../logic/authorize';
+import { buildHits, type Hit } from './hits';
+import { buildHash, PERSONAS } from './route';
 import { SCREENS, type ScreenId } from '../types';
 
 const NAV: Readonly<Record<ScreenId, { readonly key: K; readonly icon: IconName }>> = {
@@ -27,18 +29,11 @@ function v1Links(): { readonly app: string; readonly proto: string } {
   return { app: onV2 ? 'http://127.0.0.1:4178/' : '/', proto: 'http://127.0.0.1:8765/' };
 }
 
-interface Hit { readonly id: string; readonly label: string; readonly kind: K; readonly screen: ScreenId; readonly patch: Partial<Route> }
-
+/** Search targets come from the world this persona is authorized to see (BACK-66), never from the raw fixture. */
 function useHits(): readonly Hit[] {
-  const { t, copy } = useV2();
-  return useMemo(() => {
-    const out: Hit[] = [];
-    for (const n of WORLD.nodes) out.push({ id: `n-${n.id}`, label: n.title, kind: `kind.${n.kind}` as K, screen: 'mission-map', patch: { node: n.id } });
-    for (const s of WORLD.sources) out.push({ id: `s-${s.provider}`, label: copy.provider[s.provider], kind: 'kind.source', screen: 'source-observatory', patch: { src: s.provider } });
-    for (const e of WORLD.replay) out.push({ id: `r-${e.id}`, label: `${e.id} ${plain(t(e.key as K))}`, kind: 'kind.evidence', screen: 'mission-replay', patch: { evt: e.id } });
-    for (const m of WORLD.missions) out.push({ id: `m-${m.id}`, label: `${m.id} ${plain(t(m.key as K))}`, kind: 'kind.mission', screen: 'agent-flight-deck', patch: { msn: m.id } });
-    return out;
-  }, [t, copy]);
+  const { t, copy, route } = useV2();
+  const w = authorizedWorld(WORLD, route.persona);
+  return useMemo(() => buildHits(w, (k) => t(k), copy.provider), [w, t, copy]);
 }
 
 function Search() {

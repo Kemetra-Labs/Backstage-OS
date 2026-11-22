@@ -7,6 +7,7 @@ import { Age, Cosmos, Kpi, Lt, Panel, T, ToneChip, TruthChip, Tx } from '../comp
 import { useV2 } from '../context';
 import { WORLD } from '../fixtures/world';
 import type { K } from '../i18n/t';
+import { authorizedWorld } from '../logic/authorize';
 import { STATUS_ORDER, deckCounts, filterMissions } from '../logic/deck';
 import { evidenceOf } from '../logic/evidence';
 import { hhmm, sourceCounts, sourceStatus, type Tone } from '../logic/status';
@@ -33,7 +34,7 @@ const SATS: readonly { readonly id: string; readonly key: K; readonly icon: Icon
 
 export function AgentFlightDeck() {
   const { route, go, open, t, copy } = useV2();
-  const w = WORLD;
+  const w = authorizedWorld(WORLD, route.persona);
   const persona = route.persona;
   const showIds = persona !== 'nontechnical';
   const counts = deckCounts(w);
