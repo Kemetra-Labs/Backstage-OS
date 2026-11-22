@@ -33,7 +33,7 @@ function v1Links(): { readonly app: string; readonly proto: string } {
 function useHits(): readonly Hit[] {
   const { t, copy, route } = useV2();
   const w = authorizedWorld(WORLD, route.persona);
-  return useMemo(() => buildHits(w, (k) => t(k), copy.provider), [w, t, copy]);
+  return useMemo(() => buildHits(w, (k) => t(k), copy.provider, route.persona), [w, t, copy, route.persona]);
 }
 
 function Search() {
