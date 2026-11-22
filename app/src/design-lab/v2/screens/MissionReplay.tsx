@@ -9,6 +9,7 @@ import { SourceRows } from '../components/SourceRows';
 import { useV2 } from '../context';
 import { WORLD } from '../fixtures/world';
 import { plain, type K } from '../i18n/t';
+import { authorizedWorld } from '../logic/authorize';
 import { SPEEDS, STEP_MS, advance, gapsAt, indexAt, milestonesAt, msOfIndex, stageAt, totalMs, type Speed } from '../logic/replay';
 import { sourceStatus } from '../logic/status';
 import { STAGES, type ReplayEvent, type ReplayStage } from '../types';
@@ -24,10 +25,13 @@ type HoldTab = 'cor' | 'hyp' | 'gap';
 
 export function MissionReplay() {
   const { route, go, t, copy } = useV2();
-  const w = WORLD;
+  const w = authorizedWorld(WORLD, route.persona);
   const events = w.replay;
   const n = events.length;
   const persona = route.persona;
+  // The investigation's evidence, as far as this persona may read it. The count, the list and the gap total all come from this one
+  // list, so a withheld record is never counted or listed (BACK-66).
+  const readable = useMemo(() => INV_DEMO_7.evidence.filter((e) => w.evidenceById[e.id] !== undefined), [w]);
 
   const startIdx = Math.max(0, events.findIndex((e) => e.id === route.evt));
   const [ms, setMs] = useState(() => msOfIndex(route.evt ? startIdx : 5));
@@ -88,7 +92,7 @@ export function MissionReplay() {
     const i = events.findIndex((e) => e.evidence === id);
     return i >= 0 ? i : ingestedIdx;
   };
-  const gapCount = INV_DEMO_7.evidence.filter((e) => e.notReadReason).length;
+  const gapCount = readable.filter((e) => e.notReadReason).length;
   const statuses = w.sources.map((m) => sourceStatus(m, w.now));
   const pos = (i: number) => (n <= 1 ? 0 : (i / (n - 1)) * 100);
   const posText = t('rp.pos', { i: idx + 1, n, c: `{${ev.clock}}` });
@@ -113,7 +117,7 @@ export function MissionReplay() {
           </div>
           <div className="kv2-kpis">
             <Kpi icon="layers" value={STAGES.length} label={<T k="rp.kpi.stages" />} />
-            <Kpi icon="link" value={INV_DEMO_7.evidence.length} label={<T k="rp.kpi.evidence" />} />
+            <Kpi icon="link" value={readable.length} label={<T k="rp.kpi.evidence" />} />
             <Kpi icon="alert" value={gapCount} label={<T k="rp.kpi.gaps" />} tone="warn" id="kpi-gaps" />
             <Kpi icon="doc" value={1} label={<T k="rp.kpi.proposals" />} />
           </div>
@@ -137,6 +141,8 @@ export function MissionReplay() {
             {STAGES.map((s) => {
               const reached = rank(s) <= rank(stage);
               const fi = firstOf(s);
+              // A stage with no remaining row (every row of it rested on a withheld record) is not shown, rather than shown empty.
+              if (fi < 0) return null;
               return (
                 <li key={s} data-reached={reached || undefined} data-current={s === stage || undefined} data-stage={s}>
                   <button type="button" className="kv2-stage" onClick={() => jump(fi)} aria-current={s === stage ? 'step' : undefined}>
@@ -293,9 +299,9 @@ export function MissionReplay() {
                 <p className="kv2-sel-meta"><TruthChip label={ev.label} /><span><T k="rp.sel.stage" />: <T k={STAGE_KEY[ev.stage]} /></span><span><T k="rp.sel.at" /> <Lt>{ev.clock}</Lt></span></p>
               </section>
               <section className="kv2-insp-sec" aria-labelledby="evl-h">
-                <h3 id="evl-h"><Icon name="link" size={16} /><T k="rp.ev.title" /> <span className="kv2-count">{INV_DEMO_7.evidence.length}</span></h3>
+                <h3 id="evl-h"><Icon name="link" size={16} /><T k="rp.ev.title" /> <span className="kv2-count">{readable.length}</span></h3>
                 <ul className="kv2-ev-list">
-                  {INV_DEMO_7.evidence.map((e) => {
+                  {readable.map((e) => {
                     const future = introducedAt(e.id) > idx;
                     return (
                       <li key={e.id} data-future={future || undefined}>

@@ -115,12 +115,28 @@ for (const lang of LANGS) {
   });
 }
 
-test('restricted evidence stays restricted for Owner and Nontechnical on every screen', async ({ page }) => {
-  await load(page, { screen: 'mission-replay', persona: 'owner' });
-  await expect(page.locator('#rpinsp-panel')).toContainText('Restricted to Technical');
-  await expect(page.locator('#rpinsp-panel')).not.toContainText('Sentry', { timeout: 500 }).catch(() => undefined);
-  await load(page, { screen: 'mission-replay', persona: 'technical' });
-  await expect(page.locator('#rpinsp-panel')).not.toContainText('Restricted to Technical');
+// BACK-66 (M05-D05-B): a Technical-only record must not be shown to Owner or Nontechnical at all. This test used to assert the
+// opposite on Replay (that Owner sees "Restricted to Technical"), and it swallowed a negative assertion; both were wrong. A
+// placeholder row is itself a disclosure. The full matrix (EN/AR, attributes, counts, persona switch) is in nondisclosure.spec.ts.
+test('a Technical-only record is absent, not a placeholder, for Owner and Nontechnical on Replay, Observatory and Deck; Technical still reads it', async ({ page }) => {
+  const surfaces = [
+    { screen: 'mission-replay', extra: undefined, tab: undefined, panel: '#rpinsp-panel' },
+    { screen: 'source-observatory', extra: 'src=sentry', tab: '#obsinsp-tab-evidence', panel: '#obsinsp-panel' },
+    { screen: 'agent-flight-deck', extra: 'msn=MSN-DEMO-2', tab: undefined, panel: '#mission' },
+  ] as const;
+  for (const s of surfaces) {
+    for (const persona of ['owner', 'nontechnical'] as const) {
+      await load(page, { screen: s.screen, persona, ...(s.extra ? { extra: s.extra } : {}) });
+      if (s.tab) await page.locator(s.tab).click();
+      await expect(page.locator(s.panel)).toBeVisible();
+      await expect(page.locator(s.panel)).not.toContainText('Restricted to Technical');
+      await expect(page.locator(s.panel)).not.toContainText('E-5');
+    }
+    await load(page, { screen: s.screen, persona: 'technical', ...(s.extra ? { extra: s.extra } : {}) });
+    if (s.tab) await page.locator(s.tab).click();
+    await expect(page.locator(s.panel)).toContainText('E-5');
+    await expect(page.locator(s.panel)).not.toContainText('Restricted to Technical');
+  }
 });
 
 for (const persona of PERSONAS) {

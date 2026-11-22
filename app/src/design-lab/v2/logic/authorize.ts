@@ -39,8 +39,22 @@ function scopeSource(s: SourceMeta): SourceMeta {
   return health === s.health ? s : { ...s, health };
 }
 
-const scopeReplay = (r: ReplayEvent, visible: Visible): ReplayEvent => (r.evidence !== null && !visible(r.evidence) ? { ...r, evidence: null } : r);
-const scopeMission = (m: Mission, visible: Visible): Mission => ({ ...m, evidence: m.evidence.filter(visible) });
+// A replay row that rests on a withheld record is removed, not blanked: keeping the row with its evidence nulled would still show
+// an event at that time, with its label and stage, and so tell the viewer something happened there (BACK-66, M05-D05-B). Rows that
+// never had evidence, or rest on a record the viewer may read, are untouched. Replay time is evenly spaced over the remaining
+// rows, so removing one leaves no gap.
+const keepReplay = (r: ReplayEvent, visible: Visible): boolean => r.evidence === null || visible(r.evidence);
+
+// A mission keeps the evidence it still has. Each withheld reference takes its event out of the count (the fixture does not say what
+// `events` counts; one event per reference is the assumption, and a lower number never reveals a hidden record). A mission whose
+// whole basis was withheld keeps no claim: unknown label, no evidence, no events.
+function scopeMission(m: Mission, visible: Visible): Mission {
+  const evidence = m.evidence.filter(visible);
+  const withheld = m.evidence.length - evidence.length;
+  if (withheld === 0) return m;
+  if (evidence.length === 0) return { ...m, evidence, events: 0, label: 'unknown' };
+  return { ...m, evidence, events: Math.max(0, m.events - withheld) };
+}
 
 function build(w: World): World {
   const evidenceById = Object.fromEntries(Object.entries(w.evidenceById).filter(([, r]) => keepRef(r)));
@@ -53,7 +67,7 @@ function build(w: World): World {
     nodes: w.nodes.map((n) => scopeNode(n, visible, sources)),
     edges,
     sources,
-    replay: w.replay.map((r) => scopeReplay(r, visible)),
+    replay: w.replay.filter((r) => keepReplay(r, visible)),
     missions: w.missions.map((m) => scopeMission(m, visible)),
     evidenceById,
   };

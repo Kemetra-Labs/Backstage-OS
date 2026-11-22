@@ -1,9 +1,12 @@
 // BACK-30 (M05-D05-B): a viewer not authorized for a Technical-only record must not be able to tell it exists.
 // Persona is a display switch, not authorization: this scopes the demo world only and claims no server-side enforcement.
 import { describe, expect, it } from 'vitest';
+import { COPY } from '../../../i18n/strings';
 import { WORLD } from '../fixtures/world';
+import { TABLE, translate } from '../i18n/t';
+import { buildHits } from '../navigation/hits';
+import type { Mission, ReplayEvent, World } from '../types';
 import { authorizedWorld } from './authorize';
-import { TABLE } from '../i18n/t';
 import { nodeStatus } from './status';
 
 const UNAUTHORIZED = ['owner', 'nontechnical'] as const;
@@ -97,4 +100,87 @@ describe('authorizedWorld', () => {
       });
     });
   }
+});
+
+// BACK-66: the replay, mission and search projections. The shipped fixture has no replay row or mission that rests ONLY on E-5,
+// so these use a constructed world: the rule has to hold for data the fixture does not happen to contain.
+const restrictedRow: ReplayEvent = { id: 'R-X', clock: '14:10', stage: 'correlated', label: 'observed', evidence: 'E-5', kind: 'event', key: 'rp.checkFailed' };
+const restrictedOnly: Mission = { id: 'MSN-X', agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, events: 3, label: 'observed', evidence: ['E-5'], key: 'ms.fresh' };
+const CONSTRUCTED: World = { ...WORLD, replay: [...WORLD.replay, restrictedRow], missions: [...WORLD.missions, restrictedOnly] };
+
+describe('authorizedWorld, replay rows and missions (BACK-66)', () => {
+  it('Technical keeps every replay row and mission', () => {
+    const t = authorizedWorld(CONSTRUCTED, 'technical');
+    expect(t.replay.map((r) => r.id)).toContain('R-X');
+    expect(t.missions.map((m) => m.id)).toContain('MSN-X');
+  });
+
+  for (const p of UNAUTHORIZED) {
+    describe(p, () => {
+      const w = authorizedWorld(CONSTRUCTED, p);
+
+      it('drops a replay row that rests on a withheld record: no row, id, clock or evidence slot survives', () => {
+        expect(w.replay.map((r) => r.id)).not.toContain('R-X');
+        expect(w.replay.map((r) => r.id)).toEqual(WORLD.replay.map((r) => r.id));
+        const json = JSON.stringify(w.replay);
+        expect(json).not.toContain('R-X');
+        expect(json).not.toContain('14:10');
+      });
+
+      it('keeps replay rows that never had evidence, and rows resting on authorized evidence, untouched', () => {
+        expect(w.replay.find((r) => r.id === 'R-3')).toEqual(WORLD.replay.find((r) => r.id === 'R-3'));
+        expect(w.replay.find((r) => r.id === 'R-5')).toEqual(WORLD.replay.find((r) => r.id === 'R-5'));
+      });
+
+      it('a mission that loses part of its evidence keeps the rest and no longer counts the withheld one', () => {
+        const m = w.missions.find((x) => x.id === 'MSN-DEMO-2')!;
+        expect(m.evidence).toEqual(['E-9']);
+        // The fixture does not say what `events` counts. Assumption: one event per evidence reference at least, so the withheld
+        // reference's event leaves the count. A lower number never tells the viewer a hidden record exists.
+        expect(m.events).toBe(WORLD.missions.find((x) => x.id === 'MSN-DEMO-2')!.events - 1);
+        expect(m.label).toBe('observed');
+      });
+
+      it('a mission that rested only on a withheld record keeps no claim: unknown label, no evidence, no events', () => {
+        const m = w.missions.find((x) => x.id === 'MSN-X')!;
+        expect(m.evidence).toEqual([]);
+        expect(m.label).toBe('unknown');
+        expect(m.events).toBe(0);
+      });
+
+      it('leaves missions that never touched the withheld record exactly as they were', () => {
+        for (const id of ['MSN-DEMO-1', 'MSN-DEMO-3', 'MSN-DEMO-4', 'MSN-DEMO-5']) {
+          expect(w.missions.find((x) => x.id === id)).toEqual(WORLD.missions.find((x) => x.id === id));
+        }
+      });
+
+      it('the whole constructed projection still contains no trace of the record', () => {
+        expect(JSON.stringify(w)).not.toContain('E-5');
+      });
+    });
+  }
+});
+
+describe('shell search hits (BACK-66)', () => {
+  const hitsFor = (w: World) => buildHits(w, (k) => translate(k, 'en', 'owner'), COPY.en.provider);
+
+  it('built from the scoped world, search offers no replay row the viewer may not read', () => {
+    const owner = hitsFor(authorizedWorld(CONSTRUCTED, 'owner')).map((h) => h.id);
+    expect(owner).not.toContain('r-R-X');
+    expect(hitsFor(authorizedWorld(CONSTRUCTED, 'technical')).map((h) => h.id)).toContain('r-R-X');
+  });
+
+  it('keeps independently authorized targets: the Sentry node and source stay searchable', () => {
+    const ids = hitsFor(authorizedWorld(CONSTRUCTED, 'owner')).map((h) => h.id);
+    expect(ids).toContain('n-sentry');
+    expect(ids).toContain('s-sentry');
+    expect(ids).toContain('n-inventory');
+  });
+
+  it('no hit label or id carries the withheld record id', () => {
+    for (const h of hitsFor(authorizedWorld(CONSTRUCTED, 'owner'))) {
+      expect(h.id).not.toContain('E-5');
+      expect(h.label).not.toContain('E-5');
+    }
+  });
 });

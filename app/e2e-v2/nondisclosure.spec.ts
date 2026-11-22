@@ -1,8 +1,10 @@
 // BACK-30 (M05-D05-B): a Technical-only record (E-5) and everything derived from it must not reach Owner or Nontechnical
-// in the V2 Mission Map or the B+C pilot: not in text, accessible names, tooltips, data attributes, counts, links or tabs.
+// in the V2 Mission Map or the B+C pilot (BACK-30), nor in Source Observatory, Mission Replay, Agent Flight Deck or the shell
+// search (BACK-66): not in text, accessible names, tooltips, data attributes, counts, links or tabs.
 // A display persona is not authorization; this checks the demo's scoping only, not a server-side control.
 import { expect, test, type Page } from '@playwright/test';
 import { WORLD } from '../src/design-lab/v2/fixtures/world';
+import { INV_DEMO_7 } from '../src/fixture/inv-demo-7';
 import { authorizedWorld } from '../src/design-lab/v2/logic/authorize';
 import { TABLE } from '../src/design-lab/v2/i18n/t';
 import { COPY } from '../src/i18n/strings';
@@ -40,9 +42,11 @@ const escapeRe = (x: string): string => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const e5Titles = (lang: 'en' | 'ar'): string[] => [...new Set((['owner', 'technical', 'nontechnical'] as const).map((p) => COPY[lang].evidenceItem['E-5']![p].replace(/[{}]/g, '')))];
 
 /** Everything a viewer, a screen reader or a tooltip could read that matches the restricted id, title or age text. */
-async function leaks(page: Page, lang: 'en' | 'ar' = 'en'): Promise<string[]> {
+async function leaks(page: Page, lang: 'en' | 'ar' = 'en', opts: { readonly inspectorAge?: boolean } = {}): Promise<string[]> {
   const pageWide = ['E-5', ...e5Titles(lang)].map(escapeRe);
-  const inspectorOnly = [escapeRe(formatAge(E5_AGE_MINUTES, lang))];
+  // The Observatory and Replay inspectors show the Sentry source's own last-read age, which is the same text as E-5's age and is an
+  // authorized source fact there, so those screens match the id and the title only.
+  const inspectorOnly = opts.inspectorAge === false ? [] : [escapeRe(formatAge(E5_AGE_MINUTES, lang))];
   return page.evaluate(({ wide, narrow }) => {
     const found: string[] = [];
     const scan = (root: Element, srcs: string[]) => {
@@ -148,6 +152,148 @@ for (const persona of UNAUTHORIZED) {
     });
   }
 }
+
+// ---- BACK-66: Source Observatory, Mission Replay, Agent Flight Deck and shell search ---------------------------------------------
+// The same rule as above, on the four surfaces that used to read the unfiltered world. A display persona is not authorization; this
+// checks the demo's scoping, not a server-side control (X02/X04 stay open).
+const at = (key: 'obs.ev.none' | 'deck.md.events', lang: 'en' | 'ar'): string => TABLE[key][lang === 'ar' ? 1 : 0];
+const scoped = (persona: 'owner' | 'nontechnical') => authorizedWorld(WORLD, persona);
+const READABLE = (persona: 'owner' | 'nontechnical'): number => INV_DEMO_7.evidence.filter((e) => scoped(persona).evidenceById[e.id] !== undefined).length;
+
+const openObservatory = async (page: Page, persona: string, lang: string, src = 'sentry') => {
+  await load(page, { screen: 'source-observatory', persona, lang, extra: `src=${src}` });
+  await expect(page.locator('#obsinsp-panel')).toBeVisible();
+};
+
+for (const persona of UNAUTHORIZED) {
+  for (const lang of LANGS) {
+    test.describe(`BACK-66 ${persona} ${lang}`, () => {
+      test('Source Observatory: Sentry shows no E-5 on any tab, only the generic empty state, and keeps its authorized stale reading', async ({ page }) => {
+        await openObservatory(page, persona, lang);
+        expect(await leaks(page, lang, { inspectorAge: false })).toEqual([]);
+        // Independently authorized facts survive: reachable, stale by its own age, health unknown (never healthy).
+        const card = page.locator('.kv2-scard[data-provider="sentry"]');
+        await expect(card).toHaveAttribute('data-conn', 'reachable');
+        await expect(card).toHaveAttribute('data-fresh', 'stale');
+        await expect(card).toHaveAttribute('data-health', 'unknown');
+        for (const tab of ['evidence', 'provenance', 'details']) {
+          await page.locator(`#obsinsp-tab-${tab}`).click();
+          await expect(page.locator(`#obsinsp-tab-${tab}`)).toHaveAttribute('aria-selected', 'true');
+          expect(await leaks(page, lang, { inspectorAge: false })).toEqual([]);
+        }
+        await page.locator('#obsinsp-tab-evidence').click();
+        for (const text of [COPY[lang].restricted, COPY[lang].notRead.restricted]) await expect(page.getByText(text)).toHaveCount(0);
+        await expect(page.locator('#obsinsp-panel .kv2-ev-list')).toHaveCount(0);
+        await expect(page.locator('#obsinsp-panel .kv2-empty')).toHaveText(at('obs.ev.none', lang));
+      });
+
+      test('Source Observatory: authorized records stay visible (every GitHub record, including E-8)', async ({ page }) => {
+        await openObservatory(page, persona, lang, 'github');
+        await page.locator('#obsinsp-tab-evidence').click();
+        const github = Object.values(scoped(persona).evidenceById).filter((e) => e.observation?.source.provider === 'github');
+        expect(github.map((e) => e.id)).toContain('E-8');
+        await expect(page.locator('#obsinsp-panel .kv2-ev-list li')).toHaveCount(github.length);
+        expect(await leaks(page, lang, { inspectorAge: false })).toEqual([]);
+      });
+
+      test('Mission Replay: no E-5 row, count, title, attribute or placeholder; the authorized rows and the gap stay', async ({ page }) => {
+        await load(page, { screen: 'mission-replay', persona, lang, extra: 'evt=R-5' });
+        await expect(page.locator('#rpinsp-panel')).toBeVisible();
+        expect(await leaks(page, lang, { inspectorAge: false })).toEqual([]);
+        for (const text of [COPY[lang].restricted, COPY[lang].notRead.restricted]) await expect(page.getByText(text)).toHaveCount(0);
+        const readable = READABLE(persona);
+        expect(readable).toBeLessThan(INV_DEMO_7.evidence.length);
+        await expect(page.locator('#rpinsp-panel .kv2-ev-list li')).toHaveCount(readable);
+        await expect(page.locator('#evl-h .kv2-count')).toHaveText(String(readable));
+        await expect(page.locator('[data-testid="story"] li')).toHaveCount(WORLD.replay.length);
+        await expect(page.locator('#kpi-gaps')).toBeVisible();
+        for (const tab of ['context', 'history', 'evidence']) {
+          await page.locator(`#rpinsp-tab-${tab}`).click();
+          await expect(page.locator(`#rpinsp-tab-${tab}`)).toHaveAttribute('aria-selected', 'true');
+          expect(await leaks(page, lang, { inspectorAge: false })).toEqual([]);
+        }
+      });
+
+      test('Agent Flight Deck: MSN-DEMO-2 keeps E-9 and loses E-5, and its event count drops the withheld one', async ({ page }) => {
+        await load(page, { screen: 'agent-flight-deck', persona, lang, extra: 'msn=MSN-DEMO-2' });
+        await expect(page.locator('#mission')).toBeVisible();
+        expect(await leaks(page, lang, { inspectorAge: false })).toEqual([]);
+        for (const text of [COPY[lang].restricted, COPY[lang].notRead.restricted]) await expect(page.getByText(text)).toHaveCount(0);
+        await expect(page.locator('#mission .kv2-md-side .kv2-ev-list li')).toHaveCount(1);
+        const raw = WORLD.missions.find((m) => m.id === 'MSN-DEMO-2')!;
+        const mine = scoped(persona).missions.find((m) => m.id === 'MSN-DEMO-2')!;
+        expect(mine.events).toBeLessThan(raw.events);
+        const events = page.locator('#mission .kv2-md-grid > div', { hasText: at('deck.md.events', lang) }).locator('dd');
+        await expect(events).toHaveText(String(mine.events));
+      });
+
+      test('Shell search: E-5 is not searchable, and an authorized target (Sentry) still is', async ({ page }) => {
+        await load(page, { screen: 'mission-map', persona, lang });
+        const box = page.locator('.kv2-search input');
+        await box.fill('E-5');
+        await expect(page.locator('.kv2-search-list li[role="option"]')).toHaveCount(1);
+        await expect(page.locator('.kv2-search-list li[aria-disabled="true"]')).toHaveCount(1);
+        await box.fill('Sentry');
+        await expect(page.locator('.kv2-search-list li[aria-disabled="true"]')).toHaveCount(0);
+        expect(await page.locator('.kv2-search-list li[role="option"]').count()).toBeGreaterThan(0);
+        expect(await leaks(page, lang, { inspectorAge: false })).toEqual([]);
+      });
+    });
+  }
+}
+
+test.describe('BACK-66 Technical is permitted', () => {
+  test('Observatory: Technical reads E-5 on the Sentry evidence tab', async ({ page }) => {
+    await openObservatory(page, 'technical', 'en');
+    await page.locator('#obsinsp-tab-evidence').click();
+    await expect(page.locator('#obsinsp-panel')).toContainText('E-5');
+  });
+
+  test('Replay: Technical reads all seven evidence rows including E-5', async ({ page }) => {
+    await load(page, { screen: 'mission-replay', persona: 'technical', lang: 'en' });
+    await expect(page.locator('#rpinsp-panel .kv2-ev-list li')).toHaveCount(INV_DEMO_7.evidence.length);
+    await expect(page.locator('#rpinsp-panel')).toContainText('E-5');
+  });
+
+  test('Deck: Technical sees MSN-DEMO-2 with both evidence rows and the full event count', async ({ page }) => {
+    await load(page, { screen: 'agent-flight-deck', persona: 'technical', lang: 'en', extra: 'msn=MSN-DEMO-2' });
+    await expect(page.locator('#mission .kv2-md-side .kv2-ev-list li')).toHaveCount(2);
+    await expect(page.locator('#mission .kv2-md-side')).toContainText('E-5');
+    const events = page.locator('#mission .kv2-md-grid > div', { hasText: at('deck.md.events', 'en') }).locator('dd');
+    await expect(events).toHaveText(String(WORLD.missions.find((m) => m.id === 'MSN-DEMO-2')!.events));
+  });
+});
+
+test.describe('BACK-66 persona switch on the same page (display only, not authorization)', () => {
+  const toOwner = (page: Page) => page.evaluate(() => { location.hash = location.hash.replace('technical', 'owner'); });
+
+  test('Observatory: switching Technical to Owner removes E-5 at once', async ({ page }) => {
+    await openObservatory(page, 'technical', 'en');
+    await page.locator('#obsinsp-tab-evidence').click();
+    await expect(page.locator('#obsinsp-panel')).toContainText('E-5');
+    await toOwner(page);
+    await expect(page.locator('#obsinsp-panel')).not.toContainText('E-5');
+    await expect(page.locator('#obsinsp-panel .kv2-empty')).toHaveText(at('obs.ev.none', 'en'));
+    expect(await leaks(page, 'en', { inspectorAge: false })).toEqual([]);
+  });
+
+  test('Replay: switching Technical to Owner removes E-5 and drops the evidence count from 7 to 6', async ({ page }) => {
+    await load(page, { screen: 'mission-replay', persona: 'technical', lang: 'en' });
+    await expect(page.locator('#evl-h .kv2-count')).toHaveText(String(INV_DEMO_7.evidence.length));
+    await toOwner(page);
+    await expect(page.locator('#evl-h .kv2-count')).toHaveText(String(READABLE('owner')));
+    await expect(page.locator('#rpinsp-panel')).not.toContainText('E-5');
+    expect(await leaks(page, 'en', { inspectorAge: false })).toEqual([]);
+  });
+
+  test('Deck: switching Technical to Owner removes E-5 from MSN-DEMO-2 and lowers its event count', async ({ page }) => {
+    await load(page, { screen: 'agent-flight-deck', persona: 'technical', lang: 'en', extra: 'msn=MSN-DEMO-2' });
+    await expect(page.locator('#mission .kv2-md-side')).toContainText('E-5');
+    await toOwner(page);
+    await expect(page.locator('#mission .kv2-md-side .kv2-ev-list li')).toHaveCount(1);
+    expect(await leaks(page, 'en', { inspectorAge: false })).toEqual([]);
+  });
+});
 
 test.describe('Technical is permitted', () => {
   for (const lang of LANGS) {
