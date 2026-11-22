@@ -6,7 +6,7 @@ import type {
   ConfidenceBasis, DisplayState, EvidenceReference, FactRef, Hypothesis, InvestigationData, MapNode, Persona,
 } from '../contract/types';
 import type {
-  ActivityEvent, Attention, Decision, DecisionOption, DeliveryItem, InvestigationSummary, World, WorldComponent, WorldEdge,
+  ActivityEvent, ByPersonaL10n, Attention, Decision, DecisionOption, DeliveryItem, InvestigationSummary, World, WorldComponent, WorldEdge,
   WorldProject,
 } from '../contract/world';
 
@@ -31,11 +31,18 @@ function scopeState(s: DisplayState, keep: Keep): DisplayState {
 
 const scopeComponent = (c: WorldComponent, keep: Keep): WorldComponent => ({ ...c, state: scopeState(c.state, keep) });
 
-const scopeAttention = (list: readonly Attention[], keep: Keep): Attention[] =>
+// Persona text variants can name a withheld record (a job name, a deploy id). An unauthorized persona gets its own variant under
+// every key, so no other persona's wording is present in the data it holds.
+const collapse = (t: ByPersonaL10n, persona: Persona): ByPersonaL10n => {
+  const mine = t[persona];
+  return { owner: mine, technical: mine, nontechnical: mine };
+};
+
+const scopeAttention = (list: readonly Attention[], keep: Keep, persona: Persona): Attention[] =>
   list
     .map((a) => ({ a, evidence: filterRefs(a.evidence, keep) }))
     .filter(({ a, evidence }) => !(a.evidence.length > 0 && evidence.length === 0))
-    .map(({ a, evidence }) => ({ ...a, evidence }));
+    .map(({ a, evidence }) => ({ ...a, title: collapse(a.title, persona), evidence }));
 
 // An edge whose only basis was withheld has no authorized basis and is removed. Edges that never had one stay.
 const scopeEdges = (list: readonly WorldEdge[], keep: Keep): WorldEdge[] =>
@@ -45,26 +52,28 @@ const scopeEdges = (list: readonly WorldEdge[], keep: Keep): WorldEdge[] =>
 
 const scopeDelivery = (list: readonly DeliveryItem[], keep: Keep): DeliveryItem[] => list.filter((d) => keep(d.evidence));
 
-function scopeProject(p: WorldProject, keep: Keep): WorldProject {
+function scopeProject(p: WorldProject, keep: Keep, persona: Persona): WorldProject {
   return {
     ...p,
     health: scopeState(p.health, keep),
     components: p.components.map((c) => scopeComponent(c, keep)),
     edges: scopeEdges(p.edges, keep),
-    attention: scopeAttention(p.attention, keep),
+    attention: scopeAttention(p.attention, keep, persona),
     delivery: scopeDelivery(p.delivery, keep),
   };
 }
 
-const scopeInvestigationSummary = (i: InvestigationSummary, keep: Keep): InvestigationSummary =>
-  ({ ...i, evidence: filterRefs(i.evidence, keep) });
+const scopeInvestigationSummary = (i: InvestigationSummary, keep: Keep, persona: Persona): InvestigationSummary =>
+  ({ ...i, title: collapse(i.title, persona), evidence: filterRefs(i.evidence, keep) });
 
 const scopeOption = (o: DecisionOption, keep: Keep): DecisionOption => ({ ...o, evidence: filterRefs(o.evidence, keep) });
 
-function scopeDecision(d: Decision, keep: Keep): Decision {
+function scopeDecision(d: Decision, keep: Keep, persona: Persona): Decision {
   const { record, ...rest } = d;
   return {
     ...rest,
+    title: collapse(d.title, persona),
+    nextStep: collapse(d.nextStep, persona),
     ...(record && keep(record) ? { record } : {}),
     observed: filterRefs(d.observed, keep),
     options: d.options.map((o) => scopeOption(o, keep)),
@@ -78,12 +87,13 @@ function buildWorld(w: World, persona: Persona): World {
   const keep: Keep = (e) => !isWithheld(e, persona);
   const evidence = Object.fromEntries(Object.entries(w.evidence).filter(([, e]) => keep(e)));
   const visibleId = (id: string): boolean => evidence[id] !== undefined;
-  const evidenceText = Object.fromEntries(Object.entries(w.evidenceText).filter(([id]) => visibleId(id)));
+  const evidenceText = Object.fromEntries(Object.entries(w.evidenceText).filter(([id]) => visibleId(id)).map(([id, t]) => [id, collapse(t, persona)]));
   return {
     ...w,
-    projects: w.projects.map((p) => scopeProject(p, keep)),
-    investigations: w.investigations.map((i) => scopeInvestigationSummary(i, keep)),
-    decisions: w.decisions.map((d) => scopeDecision(d, keep)),
+    projects: w.projects.map((p) => scopeProject(p, keep, persona)),
+    investigations: w.investigations.map((i) => scopeInvestigationSummary(i, keep, persona)),
+    // An approved decision requires its record; with the record withheld the decision cannot be shown as approved, so it is dropped.
+    decisions: w.decisions.filter((d) => !(d.classification === 'approved' && d.record && !keep(d.record))).map((d) => scopeDecision(d, keep, persona)),
     activity: scopeActivity(w.activity, visibleId),
     evidence,
     evidenceText,
@@ -123,8 +133,8 @@ function buildInvestigation(inv: InvestigationData, persona: Persona): Investiga
   const evidence = filterRefs(inv.evidence, keep);
   // rawOutput is required by the type, so it is kept only when the evidence it came from is readable. The shipped fixture
   // cites E-1, which is not Technical-only; a fixture whose raw output were withheld would need the type to allow absence.
-  const rawVisible = inv.evidence.find((e) => e.id === inv.rawOutput.evidenceId);
-  if (rawVisible && !keep(rawVisible)) throw new Error('authorizedInvestigation: rawOutput evidence is withheld; rawOutput must become optional');
+  const rawRef = inv.evidence.find((e) => e.id === inv.rawOutput.evidenceId);
+  if (rawRef && isWithheld(rawRef, persona)) throw new Error('authorizedInvestigation: rawOutput evidence is withheld; rawOutput must become optional');
   return {
     ...inv,
     evidence,
