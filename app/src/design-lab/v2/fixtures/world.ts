@@ -1,31 +1,21 @@
-// The ONE synthetic world every V2 screen reads. It extends V1's INV-DEMO-7 fixture (same sources, evidence ids and
-// identities) and adds only what V2 needs: a catalogue graph, source events, a replay script and simulated agents.
+// The ONE synthetic world every V2 screen reads. The INV-DEMO-7 overlap (the five sources, evidence E-1..E-9, the components
+// pos, stock-sync and inventory and the dependencies between them) is projected from src/domain (BACK-83). What is defined here
+// is only what V2 adds: the catalogue graph's other nodes and edges, layout, source events, a replay script and simulated agents.
 // Every value is invented. Keys use RT-DEMO-, links use *.example.invalid, nothing here is live telemetry.
-import { EVIDENCE, INV_DEMO_7, SOURCES } from '../../../fixture/inv-demo-7';
-import type { DisplayState, EvidenceReference, Observation, SourceAuthority } from '../../../contract/types';
+import { DOMAIN } from '../../../domain/fixture';
+import { EVIDENCE, EXTRA_EVIDENCE, SOURCES } from '../../../domain/records';
+import { toV2EdgeFacts, toV2EvidenceById, toV2NodeFacts } from '../../../domain/toV2';
+import type { DisplayState, SourceAuthority } from '../../../contract/types';
 import type { Agent, Mission, ReplayEvent, SourceEvent, SourceMeta, World, WorldEdge, WorldNode } from '../types';
 
 /** Fixed "now" so every screen, test and screenshot is deterministic. V1 reads at 14:03 are 6 minutes old here. */
-export const NOW = '2026-11-16T14:09:00Z';
-
-const ghTarget = { kind: 'component', id: 'component:github', label: 'GitHub API (synthetic)' } as const;
-const portTarget = { kind: 'component', id: 'component:port-catalog', label: 'Port catalogue (synthetic)' } as const;
-
-const obs = (id: string, target: Observation['target'], src: SourceAuthority, at: string): Observation => ({
-  id, target, source: src, observedAt: at, ingestedAt: at, environment: 'ci',
-});
+export const NOW = DOMAIN.now;
 
 /** E-8: a current Observed read of GitHub itself. It is why GitHub may show Healthy and nothing else may. */
-const ghProbe: EvidenceReference = {
-  id: 'E-8', classification: 'observed', freshness: 'current', visibility: 'all',
-  observation: obs('O-8', ghTarget, SOURCES.github, '2026-11-16T14:03:00Z'),
-};
+const ghProbe = EXTRA_EVIDENCE.githubProbe;
 
 /** E-9: Port's last good read, a day old. Evidence that it once answered, not that it is healthy now. */
-const portLast: EvidenceReference = {
-  id: 'E-9', classification: 'observed', freshness: 'stale', visibility: 'all',
-  observation: obs('O-9', portTarget, SOURCES.port, '2026-11-15T13:09:00Z'),
-};
+const portLast = EXTRA_EVIDENCE.portLastRead;
 
 /** Confluence is a known provider type that V1's fixture does not list. Added here, never read. */
 const confluence: SourceAuthority = {
@@ -68,9 +58,9 @@ const svc = (p: SourceMeta['provider']): DisplayState => SOURCE_LIST.find((s) =>
 export const NODES: readonly WorldNode[] = [
   { id: 'retail-tower', kind: 'product', title: 'Retail Tower OS', x: 500, y: 335, state: state('unknown', [EVIDENCE.checkFailed]), evidence: ['E-1', 'E-2'] },
   { id: 'khepri', kind: 'product', title: 'Khepri', x: 170, y: 150, state: state('healthy', []), evidence: [] },
-  { id: 'stock-sync', kind: 'project', title: 'stock-sync', x: 500, y: 120, state: state('unknown', [EVIDENCE.runtime]), check: 'failing', evidence: ['E-1', 'E-2', 'E-3', 'E-6'] },
-  { id: 'pos', kind: 'project', title: 'POS client', x: 300, y: 300, state: state('unknown', []), evidence: [] },
-  { id: 'inventory', kind: 'project', title: 'Inventory service', x: 700, y: 305, state: state('healthy', [EVIDENCE.sentryErrors], 'reachable', 'stale'), evidence: ['E-5'], descWithoutEvidence: 'map.nl.inventory.none' },
+  { id: 'stock-sync', kind: 'project', title: 'stock-sync', x: 500, y: 120, ...toV2NodeFacts(DOMAIN, 'stock-sync') },
+  { id: 'pos', kind: 'project', title: 'POS client', x: 300, y: 300, ...toV2NodeFacts(DOMAIN, 'pos') },
+  { id: 'inventory', kind: 'project', title: 'Inventory service', x: 700, y: 305, ...toV2NodeFacts(DOMAIN, 'inventory'), descWithoutEvidence: 'map.nl.inventory.none' },
   { id: 'github', kind: 'service', title: 'GitHub', x: 830, y: 140, provider: 'github', state: svc('github'), evidence: ['E-1', 'E-2', 'E-8'] },
   { id: 'jira', kind: 'service', title: 'Jira', x: 850, y: 420, provider: 'jira', state: svc('jira'), evidence: ['E-3', 'E-4'] },
   { id: 'sentry', kind: 'service', title: 'Sentry', x: 925, y: 255, provider: 'sentry', state: svc('sentry'), evidence: ['E-5'] },
@@ -84,9 +74,9 @@ export const EDGES: readonly WorldEdge[] = [
   { id: 'g3', a: 'retail-tower', b: 'inventory', cls: 'group', truth: 'unknown', basisKey: 'edge.group', evidence: [] },
   { id: 'd1', a: 'stock-sync', b: 'github', cls: 'dep', truth: 'observed', basisKey: 'edge.ciOnGithub', evidence: ['E-1'] },
   { id: 'd2', a: 'stock-sync', b: 'jira', cls: 'dep', truth: 'correlated', basisKey: 'edge.commitKey', evidence: ['E-3'] },
-  { id: 'd3', a: 'stock-sync', b: 'inventory', cls: 'dep', truth: 'hypothesis', basisKey: 'edge.readsInventory', evidence: [] },
+  { id: 'd3', a: 'stock-sync', b: 'inventory', cls: 'dep', basisKey: 'edge.readsInventory', ...toV2EdgeFacts(DOMAIN, 'stock-sync', 'inventory') },
   { id: 'd4', a: 'inventory', b: 'sentry', cls: 'dep', truth: 'observed', basisKey: 'edge.errorsInSentry', evidence: ['E-5'] },
-  { id: 'd5', a: 'pos', b: 'stock-sync', cls: 'dep', truth: 'unknown', basisKey: 'edge.posUnknown', evidence: [] },
+  { id: 'd5', a: 'pos', b: 'stock-sync', cls: 'dep', basisKey: 'edge.posUnknown', ...toV2EdgeFacts(DOMAIN, 'pos', 'stock-sync') },
   { id: 'd6', a: 'retail-tower', b: 'khepri', cls: 'dep', truth: 'unknown', basisKey: 'edge.notEvidenced', evidence: [] },
   { id: 'd7', a: 'retail-tower', b: 'seshat-bi', cls: 'dep', truth: 'unknown', basisKey: 'edge.notEvidenced', evidence: [] },
   { id: 'd8', a: 'retail-tower', b: 'port', cls: 'dep', truth: 'unknown', basisKey: 'edge.catalogUnavailable', evidence: ['E-7'] },
@@ -127,11 +117,9 @@ export const MISSIONS: readonly Mission[] = [
   { id: 'MSN-DEMO-5', agent: 'AG-5', kind: 'proposal', status: 'waiting_review', human: 'needs_review', startedMinutesAgo: 1, events: 2, label: 'proposed', evidence: ['E-1', 'E-3'], key: 'ms.proposal' },
 ];
 
-const evidenceList: readonly EvidenceReference[] = [...Object.values(EVIDENCE), ghProbe, portLast];
-
 export const WORLD: World = {
   now: NOW,
-  investigationId: INV_DEMO_7.id,
+  investigationId: DOMAIN.investigationId,
   nodes: NODES,
   edges: EDGES,
   sources: SOURCE_LIST,
@@ -139,5 +127,5 @@ export const WORLD: World = {
   replay: REPLAY,
   agents: AGENTS,
   missions: MISSIONS,
-  evidenceById: Object.fromEntries(evidenceList.map((e) => [e.id, e])),
+  evidenceById: toV2EvidenceById(DOMAIN),
 };

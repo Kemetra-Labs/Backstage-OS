@@ -6,6 +6,8 @@ import type { EvidenceReference, Observation, SourceAuthority, EntityRef, Provid
 import type {
   ActivityEvent, AgentDemo, ByPersonaL10n, Decision, InvestigationSummary, L10n, World, WorldProject,
 } from '../contract/world';
+import { DOMAIN } from '../domain/fixture';
+import { toV1ComponentFacts } from '../domain/toV1';
 import { EVIDENCE, SOURCES } from './inv-demo-7';
 
 const l = (en: string, ar: string): L10n => ({ en, ar });
@@ -93,18 +95,18 @@ const RT: WorldProject = {
   environments: ['ci', 'staging', 'production'],
   components: [
     { id: 'pos', name: 'pos-client', layer: 'client', environment: 'production', pos: { col: 0, row: 1 },
-      state: { connectivity: 'not_configured', freshness: 'unknown', health: 'unknown', basis: [] },
+      ...toV1ComponentFacts(DOMAIN, 'pos'),
       note: l('No runtime monitoring set up.', 'لا توجد مراقبة تشغيل مُعدّة.') },
     { id: 'api-gateway', name: 'api-gateway', layer: 'edge', environment: 'ci', pos: { col: 1, row: 1 },
       state: { connectivity: 'reachable', freshness: 'current', health: 'healthy', basis: [X.gatewaySmoke] } },
-    { id: 'stock-sync', name: 'stock-sync', layer: 'service', environment: 'ci', pos: { col: 2, row: 0 }, checkFailing: true,
-      investigationId: 'INV-DEMO-7',
-      state: { connectivity: 'not_configured', freshness: 'unknown', health: 'unknown', basis: [E.runtime] } },
+    { id: 'stock-sync', name: 'stock-sync', layer: 'service', environment: 'ci', pos: { col: 2, row: 0 },
+      investigationId: DOMAIN.investigationId,
+      ...toV1ComponentFacts(DOMAIN, 'stock-sync') },
     { id: 'payments', name: 'payments', layer: 'service', environment: 'staging', pos: { col: 2, row: 2 },
       state: { connectivity: 'reachable', freshness: 'stale', health: 'degraded', basis: [X.paymentsErrors] } },
     // The last stale read said healthy; the contract renders unknown.
     { id: 'inventory', name: 'inventory', layer: 'data', environment: 'staging', pos: { col: 3, row: 1 },
-      state: { connectivity: 'reachable', freshness: 'stale', health: 'healthy', basis: [E.sentryErrors] } },
+      ...toV1ComponentFacts(DOMAIN, 'inventory') },
     { id: 'reporting', name: 'reporting', layer: 'integration', environment: 'unknown', pos: { col: 4, row: 1 },
       state: { connectivity: 'not_configured', freshness: 'unknown', health: 'unknown', basis: [] } },
   ],
@@ -112,6 +114,9 @@ const RT: WorldProject = {
     { from: 'pos', to: 'api-gateway', kind: 'authored', basis: [E.catalogOwner] },
     { from: 'api-gateway', to: 'stock-sync', kind: 'authored', basis: [E.catalogOwner] },
     { from: 'api-gateway', to: 'payments', kind: 'authored', basis: [E.catalogOwner] },
+    // NOT projected from src/domain: the canonical truth for this dependency is hypothesis with no evidence (BACK-71 ruling), and
+    // this edge says authored on E-7, which was never read. The conflict is recorded, not reconciled (BACK-83); changing it would
+    // change the V1 map, so it waits for an owner decision. parity.test.ts pins the divergence.
     { from: 'stock-sync', to: 'inventory', kind: 'authored', basis: [E.catalogOwner] },
     { from: 'payments', to: 'inventory', kind: 'hypothesis', basis: [] },
     { from: 'inventory', to: 'reporting', kind: 'provisional', basis: [] },
