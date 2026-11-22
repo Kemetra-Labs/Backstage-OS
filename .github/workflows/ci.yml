@@ -54,7 +54,9 @@ jobs:
       # python3 already on the runner, so docs-only PRs that do not touch it stay lightweight.
       - name: G1 scorer self-check
         if: steps.changes.outputs.g1_scorer == 'true'
-        run: python3 -B docs/planning/G1/fixture/score.py --self-check
+        run: |
+          python3 -B docs/planning/G1/fixture/score.py --self-check
+          python3 -B docs/planning/G1/holdout-v1/verify.py
 
       - uses: actions/setup-node@v4
         if: steps.changes.outputs.docs_only != 'true'

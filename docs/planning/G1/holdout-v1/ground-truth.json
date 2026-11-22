@@ -1,0 +1,2954 @@
+{
+  "envelope_version": "kawalys.graph.v1",
+  "source": {
+    "scope": "docs/planning/G1/holdout-v1",
+    "revision": "c17bb1c50fd1c9173a850e5862dba1f75f63d392822daa5cc91119fb673bfde8",
+    "fixture_version": "g1-holdout-v1"
+  },
+  "engine": {
+    "name": "ground-truth",
+    "version": "holdout-v1 hand-authored 2026-11-22",
+    "config_digest": "none"
+  },
+  "generated_at": "2026-11-22T00:00:00Z",
+  "coverage": {
+    "files_seen": 35,
+    "files_total": 35
+  },
+  "external_refs": 8,
+  "omissions": [
+    {
+      "what": "src/tsconfig.json",
+      "reason": "configuration file, not a source module; read only to resolve the @ledger, @ledger/* and ~atlas/* path aliases"
+    },
+    {
+      "what": "same-file calls and references",
+      "reason": "out of scope by convention (only cross-file relations are enumerated)"
+    },
+    {
+      "what": "external and builtin references",
+      "reason": "counted in external_refs (external import statements), never as unknown claims (R8)"
+    },
+    {
+      "what": "type annotations, interface references, JSX element usage and value references that are not call expressions",
+      "reason": "not an imports, calls or contains relation under kawalys.graph.v1"
+    },
+    {
+      "what": "class inheritance (extends clauses and Python base-class lists)",
+      "reason": "not a kawalys.graph.v1 relation type; inheritance is exercised through the base-class imports, super calls and inherited-method calls"
+    },
+    {
+      "what": "constants, constructors, nested functions and dataclass fields",
+      "reason": "not listed as nodes; only top-level functions, classes, components and class methods are nodes"
+    }
+  ],
+  "fixture": {
+    "name": "holdout-v1",
+    "version": "g1-holdout-v1",
+    "tree_sha256": "c17bb1c50fd1c9173a850e5862dba1f75f63d392822daa5cc91119fb673bfde8",
+    "languages": [
+      "typescript",
+      "tsx",
+      "javascript",
+      "python"
+    ],
+    "scope_root": "docs/planning/G1/holdout-v1",
+    "frozen": "2026-11-22"
+  },
+  "conventions": {
+    "format": "This file is both a kawalys.graph.v1 envelope (validates against ../fixture/envelope.schema.v1.json, 0 contract_errors) and the ground truth that ../fixture/score.py loads with --ground-truth. Extra keys (id, v1_form, specifier, evidence_token, local_name, case, note, fixture, conventions, negatives, external_imports, coverage_cases) are ignored by the schema.",
+    "id_root": "ids are relative to holdout-v1/ (src/packages/ledger/src/money.ts); symbols are path::Symbol or path::Class.method; an anonymous default export is path::default",
+    "python_source_root": "src/ (vault.models resolves to src/vault/models.py)",
+    "ts_path_aliases": "src/tsconfig.json, baseUrl '.' (= src/): @ledger -> packages/ledger/src/index.ts, @ledger/* -> packages/ledger/src/*, ~atlas/* -> packages/atlas/src/*",
+    "imports": "R1: one imports edge per import statement, to the literal specifier's file after alias resolution; form import|reexport|require|dynamic (R3); names[] optional detail. v1_form repeats form because score.py reads v1_form.",
+    "calls": "only cross-file calls are enumerated; a call starts at the innermost enclosing listed symbol (function, method, component); a decorator call starts at the scope that evaluates it (the module for top-level decorators); class instantiation is a call to the class",
+    "basis": "R4: observed when the binding is static (import/require binding, destructuring, star import with a literal __all__, super in single inheritance); inferred when receiver typing or inherited-method lookup is needed; unknown for dynamic loading and HTTP (R5)",
+    "unknown": "to = null plus target_hint; no ground-truth observed or inferred edge shares a file:line with an unknown, so the R5 file+line match is unambiguous",
+    "contains": "module -> top-level function/class/component; class -> method; line = definition line; line_source derived (R7)",
+    "negatives": "an engine edge with basis observed or inferred matching (type, from, to) is a hard fail (R8); from '*' matches any source"
+  },
+  "nodes": [
+    {
+      "id": "src/packages/ledger/src/money.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/money.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/ledger/src/entry.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/ledger/src/credit.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/ledger/src/journal.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/ledger/src/audit.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/audit.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/ledger/src/period.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/ledger/src/index.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/index.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/atlas/src/text.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/atlas/src/summary.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/atlas/src/LedgerPanel.tsx",
+      "kind": "module",
+      "language": "tsx",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 1
+    },
+    {
+      "id": "src/packages/atlas/src/App.tsx",
+      "kind": "module",
+      "language": "tsx",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 1
+    },
+    {
+      "id": "src/packages/atlas/src/views/monthly.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/atlas/src/views/lookup.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/views/lookup.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/atlas/src/server/health.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/server/health.ts",
+      "line": 1
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/bridge.js",
+      "kind": "module",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 1
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/csv.js",
+      "kind": "module",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/csv.js",
+      "line": 1
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/debug-panel.js",
+      "kind": "module",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/debug-panel.js",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/__init__.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/__init__.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/models.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/models.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/textkit.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/textkit.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/legacy.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/legacy.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/clean.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/clean.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/registry.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/registry.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/endpoints.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/endpoints.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/plugin_host.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/plugin_host.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/plugins/__init__.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/plugins/__init__.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/plugins/csv_sink.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/probe.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/probe.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/_speedups.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/_speedups.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/_purechecksum.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/_purechecksum.py",
+      "line": 1
+    },
+    {
+      "id": "src/ingest/compat.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/compat.py",
+      "line": 1
+    },
+    {
+      "id": "src/vault/__init__.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/vault/__init__.py",
+      "line": 1
+    },
+    {
+      "id": "src/vault/base.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/vault/base.py",
+      "line": 1
+    },
+    {
+      "id": "src/vault/models.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/vault/models.py",
+      "line": 1
+    },
+    {
+      "id": "src/vault/store.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/vault/store.py",
+      "line": 1
+    },
+    {
+      "id": "src/packages/ledger/src/money.ts::roundCents",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/money.ts",
+      "line": 4
+    },
+    {
+      "id": "src/packages/ledger/src/money.ts::normalize",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/money.ts",
+      "line": 8
+    },
+    {
+      "id": "src/packages/ledger/src/entry.ts::BaseEntry",
+      "kind": "class",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 2
+    },
+    {
+      "id": "src/packages/ledger/src/entry.ts::BaseEntry.amount",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 5
+    },
+    {
+      "id": "src/packages/ledger/src/entry.ts::BaseEntry.describe",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 9
+    },
+    {
+      "id": "src/packages/ledger/src/credit.ts::CreditEntry",
+      "kind": "class",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 4
+    },
+    {
+      "id": "src/packages/ledger/src/credit.ts::CreditEntry.describe",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 5
+    },
+    {
+      "id": "src/packages/ledger/src/journal.ts::postEntry",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 5
+    },
+    {
+      "id": "src/packages/ledger/src/journal.ts::previewEntry",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 11
+    },
+    {
+      "id": "src/packages/ledger/src/audit.ts::auditTrail",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/audit.ts",
+      "line": 4
+    },
+    {
+      "id": "src/packages/ledger/src/audit.ts::auditedNames",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/audit.ts",
+      "line": 8
+    },
+    {
+      "id": "src/packages/ledger/src/period.ts::PeriodCloser",
+      "kind": "class",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 5
+    },
+    {
+      "id": "src/packages/ledger/src/period.ts::PeriodCloser.close",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 6
+    },
+    {
+      "id": "src/packages/ledger/src/period.ts::closePeriod",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 11
+    },
+    {
+      "id": "src/packages/atlas/src/text.ts::normalize",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 2
+    },
+    {
+      "id": "src/packages/atlas/src/text.ts::initials",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 6
+    },
+    {
+      "id": "src/packages/atlas/src/summary.ts::default",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 5
+    },
+    {
+      "id": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "kind": "component",
+      "language": "tsx",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 9
+    },
+    {
+      "id": "src/packages/atlas/src/App.tsx::openMonthly",
+      "kind": "function",
+      "language": "tsx",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 7
+    },
+    {
+      "id": "src/packages/atlas/src/App.tsx::mount",
+      "kind": "function",
+      "language": "tsx",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 11
+    },
+    {
+      "id": "src/packages/atlas/src/views/monthly.ts::render",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 4
+    },
+    {
+      "id": "src/packages/atlas/src/views/lookup.ts::resolveView",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/views/lookup.ts",
+      "line": 2
+    },
+    {
+      "id": "src/packages/atlas/src/server/health.ts::healthHandler",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/server/health.ts",
+      "line": 7
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/bridge.js::exportRows",
+      "kind": "function",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 6
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/csv.js::toCsv",
+      "kind": "function",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/csv.js",
+      "line": 3
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/debug-panel.js::show",
+      "kind": "function",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/debug-panel.js",
+      "line": 3
+    },
+    {
+      "id": "src/ingest/models.py::Record",
+      "kind": "class",
+      "language": "python",
+      "file": "src/ingest/models.py",
+      "line": 6
+    },
+    {
+      "id": "src/ingest/models.py::Record.key",
+      "kind": "method",
+      "language": "python",
+      "file": "src/ingest/models.py",
+      "line": 10
+    },
+    {
+      "id": "src/ingest/textkit.py::slugify",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/textkit.py",
+      "line": 5
+    },
+    {
+      "id": "src/ingest/textkit.py::clamp",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/textkit.py",
+      "line": 9
+    },
+    {
+      "id": "src/ingest/textkit.py::trim",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/textkit.py",
+      "line": 13
+    },
+    {
+      "id": "src/ingest/legacy.py::trim",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/legacy.py",
+      "line": 5
+    },
+    {
+      "id": "src/ingest/clean.py::clean_label",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/clean.py",
+      "line": 6
+    },
+    {
+      "id": "src/ingest/clean.py::clean_rows",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/clean.py",
+      "line": 10
+    },
+    {
+      "id": "src/ingest/registry.py::plugin",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/registry.py",
+      "line": 8
+    },
+    {
+      "id": "src/ingest/registry.py::expose",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/registry.py",
+      "line": 13
+    },
+    {
+      "id": "src/ingest/endpoints.py::close_ledger",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/endpoints.py",
+      "line": 8
+    },
+    {
+      "id": "src/ingest/endpoints.py::echo",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/endpoints.py",
+      "line": 13
+    },
+    {
+      "id": "src/ingest/plugin_host.py::activate",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/plugin_host.py",
+      "line": 5
+    },
+    {
+      "id": "src/ingest/plugin_host.py::activate_legacy",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/plugin_host.py",
+      "line": 9
+    },
+    {
+      "id": "src/ingest/plugins/csv_sink.py::run",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 5
+    },
+    {
+      "id": "src/ingest/probe.py::check_health",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/probe.py",
+      "line": 9
+    },
+    {
+      "id": "src/ingest/_speedups.py::checksum",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/_speedups.py",
+      "line": 4
+    },
+    {
+      "id": "src/ingest/_purechecksum.py::checksum",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/_purechecksum.py",
+      "line": 4
+    },
+    {
+      "id": "src/ingest/compat.py::fingerprint",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/compat.py",
+      "line": 15
+    },
+    {
+      "id": "src/vault/base.py::BaseModel",
+      "kind": "class",
+      "language": "python",
+      "file": "src/vault/base.py",
+      "line": 4
+    },
+    {
+      "id": "src/vault/base.py::BaseModel.save",
+      "kind": "method",
+      "language": "python",
+      "file": "src/vault/base.py",
+      "line": 8
+    },
+    {
+      "id": "src/vault/base.py::BaseModel.describe",
+      "kind": "method",
+      "language": "python",
+      "file": "src/vault/base.py",
+      "line": 11
+    },
+    {
+      "id": "src/vault/models.py::Record",
+      "kind": "class",
+      "language": "python",
+      "file": "src/vault/models.py",
+      "line": 5
+    },
+    {
+      "id": "src/vault/models.py::Record.save",
+      "kind": "method",
+      "language": "python",
+      "file": "src/vault/models.py",
+      "line": 6
+    },
+    {
+      "id": "src/vault/store.py::persist",
+      "kind": "function",
+      "language": "python",
+      "file": "src/vault/store.py",
+      "line": 8
+    }
+  ],
+  "edges": [
+    {
+      "id": "E001",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "BaseEntry"
+      ],
+      "from": "src/packages/ledger/src/credit.ts",
+      "to": "src/packages/ledger/src/entry.ts",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 1,
+      "basis": "observed",
+      "specifier": "'./entry'",
+      "evidence_token": "'./entry'",
+      "case": [
+        "inheritance"
+      ],
+      "note": "base class import for extends"
+    },
+    {
+      "id": "E002",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "default"
+      ],
+      "from": "src/packages/ledger/src/journal.ts",
+      "to": "src/packages/ledger/src/credit.ts",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 1,
+      "basis": "observed",
+      "specifier": "'./credit'",
+      "evidence_token": "'./credit'",
+      "case": [
+        "default_export"
+      ],
+      "note": "default import of the CreditEntry class"
+    },
+    {
+      "id": "E003",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "roundCents"
+      ],
+      "from": "src/packages/ledger/src/journal.ts",
+      "to": "src/packages/ledger/src/money.ts",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "'./money'",
+      "evidence_token": "'./money'",
+      "case": [],
+      "note": "named import"
+    },
+    {
+      "id": "E004",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "auditTrail"
+      ],
+      "from": "src/packages/ledger/src/period.ts",
+      "to": "src/packages/ledger/src/audit.ts",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 1,
+      "basis": "observed",
+      "specifier": "'./audit'",
+      "evidence_token": "'./audit'",
+      "case": [
+        "decorator"
+      ],
+      "note": "imports the class decorator"
+    },
+    {
+      "id": "E005",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "postEntry"
+      ],
+      "from": "src/packages/ledger/src/period.ts",
+      "to": "src/packages/ledger/src/journal.ts",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "'./journal'",
+      "evidence_token": "'./journal'",
+      "case": [],
+      "note": "named import"
+    },
+    {
+      "id": "E006",
+      "type": "imports",
+      "form": "reexport",
+      "v1_form": "reexport",
+      "names": [
+        "postEntry"
+      ],
+      "from": "src/packages/ledger/src/index.ts",
+      "to": "src/packages/ledger/src/journal.ts",
+      "file": "src/packages/ledger/src/index.ts",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "'./journal'",
+      "evidence_token": "'./journal'",
+      "case": [
+        "reexport_barrel"
+      ],
+      "note": "export { x } from (R3: form reexport)"
+    },
+    {
+      "id": "E007",
+      "type": "imports",
+      "form": "reexport",
+      "v1_form": "reexport",
+      "names": [
+        "default"
+      ],
+      "from": "src/packages/ledger/src/index.ts",
+      "to": "src/packages/ledger/src/credit.ts",
+      "file": "src/packages/ledger/src/index.ts",
+      "line": 3,
+      "basis": "observed",
+      "specifier": "'./credit'",
+      "evidence_token": "'./credit'",
+      "case": [
+        "reexport_barrel",
+        "default_export"
+      ],
+      "note": "re-export of a default export under a name"
+    },
+    {
+      "id": "E008",
+      "type": "imports",
+      "form": "reexport",
+      "v1_form": "reexport",
+      "names": [],
+      "from": "src/packages/ledger/src/index.ts",
+      "to": "src/packages/ledger/src/money.ts",
+      "file": "src/packages/ledger/src/index.ts",
+      "line": 4,
+      "basis": "observed",
+      "specifier": "'./money'",
+      "evidence_token": "'./money'",
+      "case": [
+        "reexport_barrel"
+      ],
+      "note": "export * from"
+    },
+    {
+      "id": "E009",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "normalize"
+      ],
+      "from": "src/packages/atlas/src/summary.ts",
+      "to": "src/packages/atlas/src/text.ts",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 1,
+      "basis": "observed",
+      "specifier": "'./text'",
+      "evidence_token": "'./text'",
+      "case": [
+        "cross_package_collision"
+      ],
+      "note": "binds normalize to atlas text.ts, not ledger money.ts"
+    },
+    {
+      "id": "E010",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "roundCents"
+      ],
+      "from": "src/packages/atlas/src/summary.ts",
+      "to": "src/packages/ledger/src/money.ts",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "'@ledger/money'",
+      "evidence_token": "'@ledger/money'",
+      "case": [
+        "path_alias"
+      ],
+      "note": "tsconfig paths @ledger/* -> packages/ledger/src/*"
+    },
+    {
+      "id": "E011",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "postEntry"
+      ],
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/ledger/src/journal.ts",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "'@ledger/journal'",
+      "evidence_token": "'@ledger/journal'",
+      "case": [
+        "path_alias"
+      ],
+      "note": "tsconfig paths @ledger/*"
+    },
+    {
+      "id": "E012",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "LEDGER_CURRENCY"
+      ],
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/ledger/src/index.ts",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 3,
+      "basis": "observed",
+      "specifier": "'@ledger'",
+      "evidence_token": "'@ledger'",
+      "case": [
+        "path_alias",
+        "reexport_barrel"
+      ],
+      "note": "exact alias @ledger -> the barrel index.ts; the literal specifier's file is the barrel (R1); money.ts through it is derived (R2)"
+    },
+    {
+      "id": "E013",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "default"
+      ],
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/atlas/src/summary.ts",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 4,
+      "basis": "observed",
+      "specifier": "'./summary'",
+      "evidence_token": "'./summary'",
+      "case": [
+        "default_export"
+      ],
+      "note": "default import of an anonymous default function, bound as makeSummary"
+    },
+    {
+      "id": "E014",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "initials"
+      ],
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/atlas/src/text.ts",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 5,
+      "basis": "observed",
+      "specifier": "'~atlas/text'",
+      "evidence_token": "'~atlas/text'",
+      "case": [
+        "path_alias"
+      ],
+      "note": "tsconfig paths ~atlas/* -> packages/atlas/src/*"
+    },
+    {
+      "id": "E015",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "default"
+      ],
+      "from": "src/packages/atlas/src/App.tsx",
+      "to": "src/packages/atlas/src/LedgerPanel.tsx",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "'./LedgerPanel'",
+      "evidence_token": "'./LedgerPanel'",
+      "case": [
+        "default_export"
+      ],
+      "note": "default import of a component"
+    },
+    {
+      "id": "E016",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "normalize"
+      ],
+      "from": "src/packages/atlas/src/views/monthly.ts",
+      "to": "src/packages/atlas/src/text.ts",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 1,
+      "basis": "observed",
+      "specifier": "'../text'",
+      "evidence_token": "'../text'",
+      "case": [
+        "omission_coverage"
+      ],
+      "note": "outgoing edge of a module that is itself only dynamically reachable"
+    },
+    {
+      "id": "E017",
+      "type": "imports",
+      "form": "require",
+      "v1_form": "require",
+      "names": [
+        "roundCents"
+      ],
+      "from": "src/packages/atlas/src/legacy/bridge.js",
+      "to": "src/packages/ledger/src/money.ts",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "require('../../../ledger/src/money')",
+      "evidence_token": "require('../../../ledger/src/money')",
+      "case": [],
+      "note": "CommonJS destructured require across packages (JS to TS, same runtime)"
+    },
+    {
+      "id": "E018",
+      "type": "imports",
+      "form": "require",
+      "v1_form": "require",
+      "names": [
+        "default"
+      ],
+      "from": "src/packages/atlas/src/legacy/bridge.js",
+      "to": "src/packages/atlas/src/legacy/csv.js",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 3,
+      "basis": "observed",
+      "specifier": "require('./csv')",
+      "evidence_token": "require('./csv')",
+      "case": [
+        "default_export"
+      ],
+      "note": "require of a module.exports = function module"
+    },
+    {
+      "id": "E019",
+      "type": "imports",
+      "form": "require",
+      "v1_form": "require",
+      "names": [],
+      "from": "src/packages/atlas/src/legacy/bridge.js",
+      "to": "src/packages/atlas/src/legacy/debug-panel.js",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 4,
+      "basis": "observed",
+      "specifier": "require('./debug-panel')",
+      "evidence_token": "require('./debug-panel')",
+      "case": [
+        "conditional_import"
+      ],
+      "note": "require inside a ternary on an env flag: literal specifier, still observed"
+    },
+    {
+      "id": "E020",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "*"
+      ],
+      "from": "src/ingest/clean.py",
+      "to": "src/ingest/legacy.py",
+      "file": "src/ingest/clean.py",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "from .legacy import *",
+      "evidence_token": "from .legacy import *",
+      "case": [
+        "all_star_import"
+      ],
+      "note": "star import; legacy.__all__ = [trim]"
+    },
+    {
+      "id": "E021",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "*"
+      ],
+      "from": "src/ingest/clean.py",
+      "to": "src/ingest/textkit.py",
+      "file": "src/ingest/clean.py",
+      "line": 3,
+      "basis": "observed",
+      "specifier": "from .textkit import *",
+      "evidence_token": "from .textkit import *",
+      "case": [
+        "all_star_import"
+      ],
+      "note": "star import; textkit.__all__ = [slugify, clamp] (trim excluded)"
+    },
+    {
+      "id": "E022",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "clean_label"
+      ],
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/clean.py",
+      "file": "src/ingest/endpoints.py",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "from .clean import",
+      "evidence_token": "from .clean import",
+      "case": [],
+      "note": "package-relative import"
+    },
+    {
+      "id": "E023",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "Record"
+      ],
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/models.py",
+      "file": "src/ingest/endpoints.py",
+      "line": 3,
+      "basis": "observed",
+      "specifier": "from .models import",
+      "evidence_token": "from .models import",
+      "case": [
+        "cross_package_collision"
+      ],
+      "note": "relative .models is ingest/models.py, not vault/models.py"
+    },
+    {
+      "id": "E024",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "expose",
+        "plugin"
+      ],
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/registry.py",
+      "file": "src/ingest/endpoints.py",
+      "line": 4,
+      "basis": "observed",
+      "specifier": "from .registry import",
+      "evidence_token": "from .registry import",
+      "case": [
+        "decorator"
+      ],
+      "note": "imports both decorators"
+    },
+    {
+      "id": "E025",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "slugify"
+      ],
+      "from": "src/ingest/plugins/csv_sink.py",
+      "to": "src/ingest/textkit.py",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "from ..textkit import",
+      "evidence_token": "from ..textkit import",
+      "case": [
+        "omission_coverage"
+      ],
+      "note": "two-dot relative import from a module that is only loaded by name"
+    },
+    {
+      "id": "E026",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "checksum"
+      ],
+      "from": "src/ingest/compat.py",
+      "to": "src/ingest/_speedups.py",
+      "file": "src/ingest/compat.py",
+      "line": 5,
+      "basis": "observed",
+      "specifier": "from ._speedups import",
+      "evidence_token": "from ._speedups import",
+      "case": [
+        "conditional_import"
+      ],
+      "note": "try branch of try/except ImportError"
+    },
+    {
+      "id": "E027",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "checksum"
+      ],
+      "from": "src/ingest/compat.py",
+      "to": "src/ingest/_purechecksum.py",
+      "file": "src/ingest/compat.py",
+      "line": 7,
+      "basis": "observed",
+      "specifier": "from ._purechecksum import",
+      "evidence_token": "from ._purechecksum import",
+      "case": [
+        "conditional_import"
+      ],
+      "note": "except ImportError branch"
+    },
+    {
+      "id": "E028",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "Record"
+      ],
+      "from": "src/ingest/compat.py",
+      "to": "src/vault/models.py",
+      "file": "src/ingest/compat.py",
+      "line": 10,
+      "basis": "observed",
+      "specifier": "from vault.models import",
+      "evidence_token": "from vault.models import",
+      "case": [
+        "conditional_import",
+        "cross_package_collision"
+      ],
+      "note": "if TYPE_CHECKING: import (annotation use only)"
+    },
+    {
+      "id": "E029",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "Record"
+      ],
+      "from": "src/vault/__init__.py",
+      "to": "src/vault/models.py",
+      "file": "src/vault/__init__.py",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "from .models import",
+      "evidence_token": "from .models import",
+      "case": [],
+      "note": "package __init__ re-exposes Record; Python stays form import (R3)"
+    },
+    {
+      "id": "E030",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "BaseModel"
+      ],
+      "from": "src/vault/models.py",
+      "to": "src/vault/base.py",
+      "file": "src/vault/models.py",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "from .base import",
+      "evidence_token": "from .base import",
+      "case": [
+        "inheritance"
+      ],
+      "note": "base class import"
+    },
+    {
+      "id": "E031",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "fingerprint"
+      ],
+      "from": "src/vault/store.py",
+      "to": "src/ingest/compat.py",
+      "file": "src/vault/store.py",
+      "line": 2,
+      "basis": "observed",
+      "specifier": "from ingest.compat import",
+      "evidence_token": "from ingest.compat import",
+      "case": [],
+      "note": "absolute cross-package import (source root src/)"
+    },
+    {
+      "id": "E032",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "clean_label"
+      ],
+      "from": "src/vault/store.py",
+      "to": "src/ingest/clean.py",
+      "file": "src/vault/store.py",
+      "line": 3,
+      "basis": "observed",
+      "specifier": "from ingest.clean import",
+      "evidence_token": "from ingest.clean import",
+      "case": [],
+      "note": "absolute cross-package import"
+    },
+    {
+      "id": "E033",
+      "type": "imports",
+      "form": "import",
+      "v1_form": "import",
+      "names": [
+        "Record"
+      ],
+      "from": "src/vault/store.py",
+      "to": "src/vault/models.py",
+      "file": "src/vault/store.py",
+      "line": 4,
+      "basis": "observed",
+      "specifier": "from .models import",
+      "evidence_token": "from .models import",
+      "case": [
+        "cross_package_collision"
+      ],
+      "note": "relative .models is vault/models.py"
+    },
+    {
+      "id": "E034",
+      "type": "calls",
+      "from": "src/packages/ledger/src/credit.ts::CreditEntry.describe",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry.describe",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 6,
+      "basis": "observed",
+      "evidence_token": "super.describe()",
+      "case": [
+        "inheritance"
+      ],
+      "note": "super call: lexically bound to the extends clause"
+    },
+    {
+      "id": "E035",
+      "type": "calls",
+      "from": "src/packages/ledger/src/journal.ts::postEntry",
+      "to": "src/packages/ledger/src/credit.ts::CreditEntry",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 6,
+      "basis": "observed",
+      "evidence_token": "new CreditEntry(",
+      "case": [
+        "default_export"
+      ],
+      "note": "instantiation through a default import binding"
+    },
+    {
+      "id": "E036",
+      "type": "calls",
+      "from": "src/packages/ledger/src/journal.ts::postEntry",
+      "to": "src/packages/ledger/src/money.ts::roundCents",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 7,
+      "basis": "observed",
+      "evidence_token": "roundCents(line",
+      "case": [],
+      "note": "named import binding"
+    },
+    {
+      "id": "E037",
+      "type": "calls",
+      "from": "src/packages/ledger/src/journal.ts::postEntry",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry.amount",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 7,
+      "basis": "inferred",
+      "evidence_token": "line.amount()",
+      "case": [
+        "inheritance"
+      ],
+      "note": "receiver typing (line = new CreditEntry) plus inherited lookup"
+    },
+    {
+      "id": "E038",
+      "type": "calls",
+      "from": "src/packages/ledger/src/journal.ts::postEntry",
+      "to": "src/packages/ledger/src/credit.ts::CreditEntry.describe",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 8,
+      "basis": "inferred",
+      "evidence_token": "line.describe()",
+      "case": [
+        "inheritance"
+      ],
+      "note": "receiver typing; the subclass override is the target"
+    },
+    {
+      "id": "E039",
+      "type": "calls",
+      "from": "src/packages/ledger/src/period.ts",
+      "to": "src/packages/ledger/src/audit.ts::auditTrail",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 4,
+      "basis": "observed",
+      "evidence_token": "@auditTrail",
+      "case": [
+        "decorator"
+      ],
+      "note": "TS class decorator applied at module evaluation"
+    },
+    {
+      "id": "E040",
+      "type": "calls",
+      "from": "src/packages/ledger/src/period.ts::PeriodCloser.close",
+      "to": "src/packages/ledger/src/journal.ts::postEntry",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 7,
+      "basis": "observed",
+      "evidence_token": "postEntry(c)",
+      "case": [],
+      "note": "call inside an arrow in a method; credited to the method"
+    },
+    {
+      "id": "E041",
+      "type": "calls",
+      "from": "src/packages/atlas/src/summary.ts::default",
+      "to": "src/packages/atlas/src/text.ts::normalize",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 6,
+      "basis": "observed",
+      "evidence_token": "normalize(l)",
+      "case": [
+        "cross_package_collision"
+      ],
+      "note": "normalize bound to atlas text.ts"
+    },
+    {
+      "id": "E042",
+      "type": "calls",
+      "from": "src/packages/atlas/src/summary.ts::default",
+      "to": "src/packages/ledger/src/money.ts::roundCents",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 6,
+      "basis": "observed",
+      "evidence_token": "roundCents(cents)",
+      "case": [
+        "path_alias"
+      ],
+      "note": "callee imported through @ledger/money"
+    },
+    {
+      "id": "E043",
+      "type": "calls",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "to": "src/packages/ledger/src/journal.ts::postEntry",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 11,
+      "basis": "observed",
+      "evidence_token": "postEntry(cents)",
+      "case": [
+        "path_alias"
+      ],
+      "note": "callee imported through @ledger/journal"
+    },
+    {
+      "id": "E044",
+      "type": "calls",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "to": "src/packages/atlas/src/text.ts::initials",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 15,
+      "basis": "observed",
+      "evidence_token": "initials(owner)",
+      "case": [
+        "path_alias"
+      ],
+      "note": "callee imported through ~atlas/text"
+    },
+    {
+      "id": "E045",
+      "type": "calls",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "to": "src/packages/atlas/src/summary.ts::default",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 16,
+      "basis": "observed",
+      "evidence_token": "makeSummary(rows",
+      "local_name": "makeSummary",
+      "case": [
+        "default_export"
+      ],
+      "note": "anonymous default export called through its local binding"
+    },
+    {
+      "id": "E046",
+      "type": "calls",
+      "from": "src/packages/atlas/src/views/monthly.ts::render",
+      "to": "src/packages/atlas/src/text.ts::normalize",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 5,
+      "basis": "observed",
+      "evidence_token": "normalize(' Monthly ')",
+      "case": [
+        "cross_package_collision"
+      ],
+      "note": "normalize bound to atlas text.ts"
+    },
+    {
+      "id": "E047",
+      "type": "calls",
+      "from": "src/packages/atlas/src/legacy/bridge.js::exportRows",
+      "to": "src/packages/ledger/src/money.ts::roundCents",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 8,
+      "basis": "observed",
+      "evidence_token": "roundCents(r)",
+      "case": [],
+      "note": "destructured require binding (R4 observed)"
+    },
+    {
+      "id": "E048",
+      "type": "calls",
+      "from": "src/packages/atlas/src/legacy/bridge.js::exportRows",
+      "to": "src/packages/atlas/src/legacy/csv.js::toCsv",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 9,
+      "basis": "observed",
+      "evidence_token": "toCsv(cents)",
+      "case": [
+        "default_export"
+      ],
+      "note": "call of a module.exports = function binding"
+    },
+    {
+      "id": "E049",
+      "type": "calls",
+      "from": "src/ingest/clean.py::clean_label",
+      "to": "src/ingest/textkit.py::clamp",
+      "file": "src/ingest/clean.py",
+      "line": 7,
+      "basis": "observed",
+      "evidence_token": "clamp(",
+      "case": [
+        "all_star_import"
+      ],
+      "note": "bound by the textkit star import (__all__ literal)"
+    },
+    {
+      "id": "E050",
+      "type": "calls",
+      "from": "src/ingest/clean.py::clean_label",
+      "to": "src/ingest/textkit.py::slugify",
+      "file": "src/ingest/clean.py",
+      "line": 7,
+      "basis": "observed",
+      "evidence_token": "slugify(trim",
+      "case": [
+        "all_star_import"
+      ],
+      "note": "bound by the textkit star import"
+    },
+    {
+      "id": "E051",
+      "type": "calls",
+      "from": "src/ingest/clean.py::clean_label",
+      "to": "src/ingest/legacy.py::trim",
+      "file": "src/ingest/clean.py",
+      "line": 7,
+      "basis": "observed",
+      "evidence_token": "trim(text)",
+      "case": [
+        "all_star_import"
+      ],
+      "note": "textkit.__all__ excludes trim, so the earlier legacy star import still binds it"
+    },
+    {
+      "id": "E052",
+      "type": "calls",
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/registry.py::expose",
+      "file": "src/ingest/endpoints.py",
+      "line": 7,
+      "basis": "observed",
+      "evidence_token": "@expose(",
+      "case": [
+        "decorator"
+      ],
+      "note": "decorator factory call at module evaluation; a local function, not an HTTP call"
+    },
+    {
+      "id": "E053",
+      "type": "calls",
+      "from": "src/ingest/endpoints.py::close_ledger",
+      "to": "src/ingest/clean.py::clean_label",
+      "file": "src/ingest/endpoints.py",
+      "line": 9,
+      "basis": "observed",
+      "evidence_token": "clean_label(",
+      "case": [],
+      "note": "named import binding"
+    },
+    {
+      "id": "E054",
+      "type": "calls",
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/registry.py::plugin",
+      "file": "src/ingest/endpoints.py",
+      "line": 12,
+      "basis": "observed",
+      "evidence_token": "@plugin",
+      "case": [
+        "decorator"
+      ],
+      "note": "plain decorator: echo = plugin(echo) at module evaluation"
+    },
+    {
+      "id": "E055",
+      "type": "calls",
+      "from": "src/ingest/endpoints.py::echo",
+      "to": "src/ingest/models.py::Record",
+      "file": "src/ingest/endpoints.py",
+      "line": 14,
+      "basis": "observed",
+      "evidence_token": "Record(\"echo\"",
+      "case": [
+        "cross_package_collision"
+      ],
+      "note": "instantiation of ingest Record"
+    },
+    {
+      "id": "E056",
+      "type": "calls",
+      "from": "src/ingest/endpoints.py::echo",
+      "to": "src/ingest/models.py::Record.key",
+      "file": "src/ingest/endpoints.py",
+      "line": 14,
+      "basis": "inferred",
+      "evidence_token": ".key()",
+      "case": [],
+      "note": "method on a constructor-call receiver: receiver typing"
+    },
+    {
+      "id": "E057",
+      "type": "calls",
+      "from": "src/ingest/plugins/csv_sink.py::run",
+      "to": "src/ingest/textkit.py::slugify",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 6,
+      "basis": "observed",
+      "evidence_token": "slugify(r)",
+      "case": [
+        "omission_coverage"
+      ],
+      "note": "call from a module with no incoming static edge"
+    },
+    {
+      "id": "E058",
+      "type": "calls",
+      "from": "src/vault/models.py::Record.save",
+      "to": "src/vault/base.py::BaseModel.save",
+      "file": "src/vault/models.py",
+      "line": 7,
+      "basis": "observed",
+      "evidence_token": "super().save()",
+      "case": [
+        "inheritance"
+      ],
+      "note": "super() in single inheritance: lexically bound to BaseModel"
+    },
+    {
+      "id": "E059",
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/vault/models.py::Record",
+      "file": "src/vault/store.py",
+      "line": 9,
+      "basis": "observed",
+      "evidence_token": "Record(clean_label",
+      "case": [
+        "cross_package_collision"
+      ],
+      "note": "instantiation of vault Record"
+    },
+    {
+      "id": "E060",
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/ingest/clean.py::clean_label",
+      "file": "src/vault/store.py",
+      "line": 9,
+      "basis": "observed",
+      "evidence_token": "clean_label(ref)",
+      "case": [],
+      "note": "cross-package call"
+    },
+    {
+      "id": "E061",
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/vault/base.py::BaseModel.describe",
+      "file": "src/vault/store.py",
+      "line": 10,
+      "basis": "inferred",
+      "evidence_token": "rec.describe()",
+      "case": [
+        "inheritance"
+      ],
+      "note": "receiver typing plus inherited lookup (Record does not define describe)"
+    },
+    {
+      "id": "E062",
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/vault/models.py::Record.save",
+      "file": "src/vault/store.py",
+      "line": 11,
+      "basis": "inferred",
+      "evidence_token": "rec.save()",
+      "case": [
+        "inheritance"
+      ],
+      "note": "receiver typing; the override in Record is the target"
+    },
+    {
+      "id": "E063",
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/ingest/compat.py::fingerprint",
+      "file": "src/vault/store.py",
+      "line": 11,
+      "basis": "observed",
+      "evidence_token": "fingerprint(rec)",
+      "case": [],
+      "note": "cross-package call"
+    },
+    {
+      "id": "E064",
+      "type": "imports",
+      "form": "dynamic",
+      "v1_form": "dynamic",
+      "from": "src/packages/atlas/src/App.tsx",
+      "to": null,
+      "target_hint": "literal './views/monthly' -> candidate src/packages/atlas/src/views/monthly.ts; R5: dynamic import() is always unknown, even with a literal specifier",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 8,
+      "basis": "unknown",
+      "evidence_token": "import('./views/monthly')",
+      "case": [
+        "unknown_dynamic"
+      ],
+      "note": "the .render() call on the same line goes through the dynamically loaded module and is covered by this unknown"
+    },
+    {
+      "id": "E065",
+      "type": "imports",
+      "form": "dynamic",
+      "v1_form": "dynamic",
+      "from": "src/packages/atlas/src/views/lookup.ts",
+      "to": null,
+      "target_hint": "template ./${kind} under src/packages/atlas/src/views/ (runtime value kind)",
+      "file": "src/packages/atlas/src/views/lookup.ts",
+      "line": 3,
+      "basis": "unknown",
+      "evidence_token": "import(`./${kind}`)",
+      "case": [
+        "unknown_dynamic"
+      ],
+      "note": "dynamic import with a template specifier"
+    },
+    {
+      "id": "E066",
+      "type": "imports",
+      "form": "require",
+      "v1_form": "require",
+      "from": "src/packages/atlas/src/legacy/bridge.js",
+      "to": null,
+      "target_hint": "variable adapterName (runtime value)",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 7,
+      "basis": "unknown",
+      "evidence_token": "require(adapterName)",
+      "case": [
+        "unknown_dynamic"
+      ],
+      "note": "require with a variable specifier"
+    },
+    {
+      "id": "E067",
+      "type": "imports",
+      "form": "dynamic",
+      "v1_form": "dynamic",
+      "from": "src/ingest/plugin_host.py",
+      "to": null,
+      "target_hint": "\"ingest.plugins.\" + name (runtime value); candidate src/ingest/plugins/csv_sink.py",
+      "file": "src/ingest/plugin_host.py",
+      "line": 6,
+      "basis": "unknown",
+      "evidence_token": "importlib.import_module(",
+      "case": [
+        "unknown_dynamic"
+      ],
+      "note": "importlib with a computed module name"
+    },
+    {
+      "id": "E068",
+      "type": "imports",
+      "form": "dynamic",
+      "v1_form": "dynamic",
+      "from": "src/ingest/plugin_host.py",
+      "to": null,
+      "target_hint": "variable dotted (runtime value)",
+      "file": "src/ingest/plugin_host.py",
+      "line": 10,
+      "basis": "unknown",
+      "evidence_token": "__import__(dotted",
+      "case": [
+        "unknown_dynamic"
+      ],
+      "note": "__import__ builtin with a variable name"
+    },
+    {
+      "id": "E069",
+      "type": "calls",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "to": null,
+      "target_hint": "POST /api/ledger/close -> candidate src/ingest/endpoints.py::close_ledger (cross-runtime TS to Python)",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 12,
+      "basis": "unknown",
+      "evidence_token": "fetch('/api/ledger/close'",
+      "case": [
+        "unknown_http_cross_runtime"
+      ],
+      "note": "HTTP call; stays unknown until a route-matching gate (R5)"
+    },
+    {
+      "id": "E070",
+      "type": "calls",
+      "from": "src/ingest/probe.py::check_health",
+      "to": null,
+      "target_hint": "GET /healthz -> candidate src/packages/atlas/src/server/health.ts::healthHandler (cross-runtime Python to TS)",
+      "file": "src/ingest/probe.py",
+      "line": 10,
+      "basis": "unknown",
+      "evidence_token": "urlopen(BASE_URL + \"/healthz\"",
+      "case": [
+        "unknown_http_cross_runtime"
+      ],
+      "note": "HTTP call; urllib.request is external and is not a claim on this unknown"
+    },
+    {
+      "id": "E071",
+      "type": "contains",
+      "from": "src/packages/ledger/src/money.ts",
+      "to": "src/packages/ledger/src/money.ts::roundCents",
+      "file": "src/packages/ledger/src/money.ts",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "roundCents",
+      "case": [],
+      "note": "definition of roundCents"
+    },
+    {
+      "id": "E072",
+      "type": "contains",
+      "from": "src/packages/ledger/src/money.ts",
+      "to": "src/packages/ledger/src/money.ts::normalize",
+      "file": "src/packages/ledger/src/money.ts",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "normalize",
+      "case": [],
+      "note": "definition of normalize"
+    },
+    {
+      "id": "E073",
+      "type": "contains",
+      "from": "src/packages/ledger/src/entry.ts",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 2,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "BaseEntry",
+      "case": [],
+      "note": "definition of BaseEntry"
+    },
+    {
+      "id": "E074",
+      "type": "contains",
+      "from": "src/packages/ledger/src/entry.ts::BaseEntry",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry.amount",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "amount",
+      "case": [],
+      "note": "definition of BaseEntry.amount"
+    },
+    {
+      "id": "E075",
+      "type": "contains",
+      "from": "src/packages/ledger/src/entry.ts::BaseEntry",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry.describe",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 9,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "describe",
+      "case": [],
+      "note": "definition of BaseEntry.describe"
+    },
+    {
+      "id": "E076",
+      "type": "contains",
+      "from": "src/packages/ledger/src/credit.ts",
+      "to": "src/packages/ledger/src/credit.ts::CreditEntry",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "CreditEntry",
+      "case": [],
+      "note": "definition of CreditEntry"
+    },
+    {
+      "id": "E077",
+      "type": "contains",
+      "from": "src/packages/ledger/src/credit.ts::CreditEntry",
+      "to": "src/packages/ledger/src/credit.ts::CreditEntry.describe",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "describe",
+      "case": [],
+      "note": "definition of CreditEntry.describe"
+    },
+    {
+      "id": "E078",
+      "type": "contains",
+      "from": "src/packages/ledger/src/journal.ts",
+      "to": "src/packages/ledger/src/journal.ts::postEntry",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "postEntry",
+      "case": [],
+      "note": "definition of postEntry"
+    },
+    {
+      "id": "E079",
+      "type": "contains",
+      "from": "src/packages/ledger/src/journal.ts",
+      "to": "src/packages/ledger/src/journal.ts::previewEntry",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 11,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "previewEntry",
+      "case": [],
+      "note": "definition of previewEntry"
+    },
+    {
+      "id": "E080",
+      "type": "contains",
+      "from": "src/packages/ledger/src/audit.ts",
+      "to": "src/packages/ledger/src/audit.ts::auditTrail",
+      "file": "src/packages/ledger/src/audit.ts",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "auditTrail",
+      "case": [],
+      "note": "definition of auditTrail"
+    },
+    {
+      "id": "E081",
+      "type": "contains",
+      "from": "src/packages/ledger/src/audit.ts",
+      "to": "src/packages/ledger/src/audit.ts::auditedNames",
+      "file": "src/packages/ledger/src/audit.ts",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "auditedNames",
+      "case": [],
+      "note": "definition of auditedNames"
+    },
+    {
+      "id": "E082",
+      "type": "contains",
+      "from": "src/packages/ledger/src/period.ts",
+      "to": "src/packages/ledger/src/period.ts::PeriodCloser",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "PeriodCloser",
+      "case": [],
+      "note": "definition of PeriodCloser"
+    },
+    {
+      "id": "E083",
+      "type": "contains",
+      "from": "src/packages/ledger/src/period.ts::PeriodCloser",
+      "to": "src/packages/ledger/src/period.ts::PeriodCloser.close",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "close",
+      "case": [],
+      "note": "definition of PeriodCloser.close"
+    },
+    {
+      "id": "E084",
+      "type": "contains",
+      "from": "src/packages/ledger/src/period.ts",
+      "to": "src/packages/ledger/src/period.ts::closePeriod",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 11,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "closePeriod",
+      "case": [],
+      "note": "definition of closePeriod"
+    },
+    {
+      "id": "E085",
+      "type": "contains",
+      "from": "src/packages/atlas/src/text.ts",
+      "to": "src/packages/atlas/src/text.ts::normalize",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 2,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "normalize",
+      "case": [],
+      "note": "definition of normalize"
+    },
+    {
+      "id": "E086",
+      "type": "contains",
+      "from": "src/packages/atlas/src/text.ts",
+      "to": "src/packages/atlas/src/text.ts::initials",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "initials",
+      "case": [],
+      "note": "definition of initials"
+    },
+    {
+      "id": "E087",
+      "type": "contains",
+      "from": "src/packages/atlas/src/summary.ts",
+      "to": "src/packages/atlas/src/summary.ts::default",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "default",
+      "case": [],
+      "note": "definition of default"
+    },
+    {
+      "id": "E088",
+      "type": "contains",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 9,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "LedgerPanel",
+      "case": [],
+      "note": "definition of LedgerPanel"
+    },
+    {
+      "id": "E089",
+      "type": "contains",
+      "from": "src/packages/atlas/src/App.tsx",
+      "to": "src/packages/atlas/src/App.tsx::openMonthly",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 7,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "openMonthly",
+      "case": [],
+      "note": "definition of openMonthly"
+    },
+    {
+      "id": "E090",
+      "type": "contains",
+      "from": "src/packages/atlas/src/App.tsx",
+      "to": "src/packages/atlas/src/App.tsx::mount",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 11,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "mount",
+      "case": [],
+      "note": "definition of mount"
+    },
+    {
+      "id": "E091",
+      "type": "contains",
+      "from": "src/packages/atlas/src/views/monthly.ts",
+      "to": "src/packages/atlas/src/views/monthly.ts::render",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "render",
+      "case": [],
+      "note": "definition of render"
+    },
+    {
+      "id": "E092",
+      "type": "contains",
+      "from": "src/packages/atlas/src/views/lookup.ts",
+      "to": "src/packages/atlas/src/views/lookup.ts::resolveView",
+      "file": "src/packages/atlas/src/views/lookup.ts",
+      "line": 2,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "resolveView",
+      "case": [],
+      "note": "definition of resolveView"
+    },
+    {
+      "id": "E093",
+      "type": "contains",
+      "from": "src/packages/atlas/src/server/health.ts",
+      "to": "src/packages/atlas/src/server/health.ts::healthHandler",
+      "file": "src/packages/atlas/src/server/health.ts",
+      "line": 7,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "healthHandler",
+      "case": [],
+      "note": "definition of healthHandler"
+    },
+    {
+      "id": "E094",
+      "type": "contains",
+      "from": "src/packages/atlas/src/legacy/bridge.js",
+      "to": "src/packages/atlas/src/legacy/bridge.js::exportRows",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "exportRows",
+      "case": [],
+      "note": "definition of exportRows"
+    },
+    {
+      "id": "E095",
+      "type": "contains",
+      "from": "src/packages/atlas/src/legacy/csv.js",
+      "to": "src/packages/atlas/src/legacy/csv.js::toCsv",
+      "file": "src/packages/atlas/src/legacy/csv.js",
+      "line": 3,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "toCsv",
+      "case": [],
+      "note": "definition of toCsv"
+    },
+    {
+      "id": "E096",
+      "type": "contains",
+      "from": "src/packages/atlas/src/legacy/debug-panel.js",
+      "to": "src/packages/atlas/src/legacy/debug-panel.js::show",
+      "file": "src/packages/atlas/src/legacy/debug-panel.js",
+      "line": 3,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "show",
+      "case": [],
+      "note": "definition of show"
+    },
+    {
+      "id": "E097",
+      "type": "contains",
+      "from": "src/ingest/models.py",
+      "to": "src/ingest/models.py::Record",
+      "file": "src/ingest/models.py",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "Record",
+      "case": [],
+      "note": "definition of Record"
+    },
+    {
+      "id": "E098",
+      "type": "contains",
+      "from": "src/ingest/models.py::Record",
+      "to": "src/ingest/models.py::Record.key",
+      "file": "src/ingest/models.py",
+      "line": 10,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "key",
+      "case": [],
+      "note": "definition of Record.key"
+    },
+    {
+      "id": "E099",
+      "type": "contains",
+      "from": "src/ingest/textkit.py",
+      "to": "src/ingest/textkit.py::slugify",
+      "file": "src/ingest/textkit.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "slugify",
+      "case": [],
+      "note": "definition of slugify"
+    },
+    {
+      "id": "E100",
+      "type": "contains",
+      "from": "src/ingest/textkit.py",
+      "to": "src/ingest/textkit.py::clamp",
+      "file": "src/ingest/textkit.py",
+      "line": 9,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "clamp",
+      "case": [],
+      "note": "definition of clamp"
+    },
+    {
+      "id": "E101",
+      "type": "contains",
+      "from": "src/ingest/textkit.py",
+      "to": "src/ingest/textkit.py::trim",
+      "file": "src/ingest/textkit.py",
+      "line": 13,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "trim",
+      "case": [],
+      "note": "definition of trim"
+    },
+    {
+      "id": "E102",
+      "type": "contains",
+      "from": "src/ingest/legacy.py",
+      "to": "src/ingest/legacy.py::trim",
+      "file": "src/ingest/legacy.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "trim",
+      "case": [],
+      "note": "definition of trim"
+    },
+    {
+      "id": "E103",
+      "type": "contains",
+      "from": "src/ingest/clean.py",
+      "to": "src/ingest/clean.py::clean_label",
+      "file": "src/ingest/clean.py",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "clean_label",
+      "case": [],
+      "note": "definition of clean_label"
+    },
+    {
+      "id": "E104",
+      "type": "contains",
+      "from": "src/ingest/clean.py",
+      "to": "src/ingest/clean.py::clean_rows",
+      "file": "src/ingest/clean.py",
+      "line": 10,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "clean_rows",
+      "case": [],
+      "note": "definition of clean_rows"
+    },
+    {
+      "id": "E105",
+      "type": "contains",
+      "from": "src/ingest/registry.py",
+      "to": "src/ingest/registry.py::plugin",
+      "file": "src/ingest/registry.py",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "plugin",
+      "case": [],
+      "note": "definition of plugin"
+    },
+    {
+      "id": "E106",
+      "type": "contains",
+      "from": "src/ingest/registry.py",
+      "to": "src/ingest/registry.py::expose",
+      "file": "src/ingest/registry.py",
+      "line": 13,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "expose",
+      "case": [],
+      "note": "definition of expose"
+    },
+    {
+      "id": "E107",
+      "type": "contains",
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/endpoints.py::close_ledger",
+      "file": "src/ingest/endpoints.py",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "close_ledger",
+      "case": [],
+      "note": "definition of close_ledger"
+    },
+    {
+      "id": "E108",
+      "type": "contains",
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/endpoints.py::echo",
+      "file": "src/ingest/endpoints.py",
+      "line": 13,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "echo",
+      "case": [],
+      "note": "definition of echo"
+    },
+    {
+      "id": "E109",
+      "type": "contains",
+      "from": "src/ingest/plugin_host.py",
+      "to": "src/ingest/plugin_host.py::activate",
+      "file": "src/ingest/plugin_host.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "activate",
+      "case": [],
+      "note": "definition of activate"
+    },
+    {
+      "id": "E110",
+      "type": "contains",
+      "from": "src/ingest/plugin_host.py",
+      "to": "src/ingest/plugin_host.py::activate_legacy",
+      "file": "src/ingest/plugin_host.py",
+      "line": 9,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "activate_legacy",
+      "case": [],
+      "note": "definition of activate_legacy"
+    },
+    {
+      "id": "E111",
+      "type": "contains",
+      "from": "src/ingest/plugins/csv_sink.py",
+      "to": "src/ingest/plugins/csv_sink.py::run",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "run",
+      "case": [],
+      "note": "definition of run"
+    },
+    {
+      "id": "E112",
+      "type": "contains",
+      "from": "src/ingest/probe.py",
+      "to": "src/ingest/probe.py::check_health",
+      "file": "src/ingest/probe.py",
+      "line": 9,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "check_health",
+      "case": [],
+      "note": "definition of check_health"
+    },
+    {
+      "id": "E113",
+      "type": "contains",
+      "from": "src/ingest/_speedups.py",
+      "to": "src/ingest/_speedups.py::checksum",
+      "file": "src/ingest/_speedups.py",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "checksum",
+      "case": [],
+      "note": "definition of checksum"
+    },
+    {
+      "id": "E114",
+      "type": "contains",
+      "from": "src/ingest/_purechecksum.py",
+      "to": "src/ingest/_purechecksum.py::checksum",
+      "file": "src/ingest/_purechecksum.py",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "checksum",
+      "case": [],
+      "note": "definition of checksum"
+    },
+    {
+      "id": "E115",
+      "type": "contains",
+      "from": "src/ingest/compat.py",
+      "to": "src/ingest/compat.py::fingerprint",
+      "file": "src/ingest/compat.py",
+      "line": 15,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "fingerprint",
+      "case": [],
+      "note": "definition of fingerprint"
+    },
+    {
+      "id": "E116",
+      "type": "contains",
+      "from": "src/vault/base.py",
+      "to": "src/vault/base.py::BaseModel",
+      "file": "src/vault/base.py",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "BaseModel",
+      "case": [],
+      "note": "definition of BaseModel"
+    },
+    {
+      "id": "E117",
+      "type": "contains",
+      "from": "src/vault/base.py::BaseModel",
+      "to": "src/vault/base.py::BaseModel.save",
+      "file": "src/vault/base.py",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "save",
+      "case": [],
+      "note": "definition of BaseModel.save"
+    },
+    {
+      "id": "E118",
+      "type": "contains",
+      "from": "src/vault/base.py::BaseModel",
+      "to": "src/vault/base.py::BaseModel.describe",
+      "file": "src/vault/base.py",
+      "line": 11,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "describe",
+      "case": [],
+      "note": "definition of BaseModel.describe"
+    },
+    {
+      "id": "E119",
+      "type": "contains",
+      "from": "src/vault/models.py",
+      "to": "src/vault/models.py::Record",
+      "file": "src/vault/models.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "Record",
+      "case": [],
+      "note": "definition of Record"
+    },
+    {
+      "id": "E120",
+      "type": "contains",
+      "from": "src/vault/models.py::Record",
+      "to": "src/vault/models.py::Record.save",
+      "file": "src/vault/models.py",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "save",
+      "case": [],
+      "note": "definition of Record.save"
+    },
+    {
+      "id": "E121",
+      "type": "contains",
+      "from": "src/vault/store.py",
+      "to": "src/vault/store.py::persist",
+      "file": "src/vault/store.py",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "evidence_token": "persist",
+      "case": [],
+      "note": "definition of persist"
+    }
+  ],
+  "negatives": [
+    {
+      "id": "N01",
+      "type": "imports",
+      "from": "src/packages/ledger/src/journal.ts",
+      "to": "src/packages/ledger/src/period.ts",
+      "reason": "commented-out import line",
+      "evidence": {
+        "file": "src/packages/ledger/src/journal.ts",
+        "line": 3,
+        "token": "// import { closePeriod }"
+      },
+      "specifier": "'./period'",
+      "case": [
+        "negative_comment"
+      ]
+    },
+    {
+      "id": "N02",
+      "type": "imports",
+      "from": "src/vault/store.py",
+      "to": "src/ingest/models.py",
+      "reason": "commented-out import of the same-named Record from the other package",
+      "evidence": {
+        "file": "src/vault/store.py",
+        "line": 5,
+        "token": "# from ingest.models import Record"
+      },
+      "specifier": "from ingest.models import",
+      "case": [
+        "negative_comment",
+        "cross_package_collision"
+      ]
+    },
+    {
+      "id": "N03",
+      "type": "imports",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/ledger/src/period.ts",
+      "reason": "import-like text inside a string literal",
+      "evidence": {
+        "file": "src/packages/atlas/src/LedgerPanel.tsx",
+        "line": 7,
+        "token": "\"import { closePeriod } from '@ledger/period'\""
+      },
+      "specifier": "'@ledger/period'",
+      "case": [
+        "negative_string",
+        "path_alias"
+      ]
+    },
+    {
+      "id": "N04",
+      "type": "imports",
+      "from": "src/ingest/probe.py",
+      "to": "src/ingest/plugin_host.py",
+      "reason": "import-like text inside a string literal",
+      "evidence": {
+        "file": "src/ingest/probe.py",
+        "line": 6,
+        "token": "EXAMPLE = \"from ingest.plugin_host import"
+      },
+      "specifier": "from ingest.plugin_host import",
+      "case": [
+        "negative_string"
+      ]
+    },
+    {
+      "id": "N05",
+      "type": "calls",
+      "from": "src/packages/ledger/src/journal.ts::previewEntry",
+      "to": "src/packages/ledger/src/money.ts::roundCents",
+      "reason": "shadowed name: roundCents here is the parameter, not the import",
+      "evidence": {
+        "file": "src/packages/ledger/src/journal.ts",
+        "line": 12,
+        "token": "return roundCents(1.005)"
+      },
+      "case": [
+        "negative_shadow"
+      ]
+    },
+    {
+      "id": "N06",
+      "type": "calls",
+      "from": "src/ingest/clean.py::clean_rows",
+      "to": "src/ingest/textkit.py::slugify",
+      "reason": "shadowed name: slugify here is the parameter (default str.lower), not the star-imported function",
+      "evidence": {
+        "file": "src/ingest/clean.py",
+        "line": 11,
+        "token": "slugify(r)"
+      },
+      "case": [
+        "negative_shadow",
+        "all_star_import"
+      ]
+    },
+    {
+      "id": "N07",
+      "type": "calls",
+      "from": "src/ingest/clean.py::clean_label",
+      "to": "src/ingest/textkit.py::trim",
+      "reason": "__all__ trap: textkit.__all__ excludes trim, so trim is legacy.trim",
+      "evidence": {
+        "file": "src/ingest/clean.py",
+        "line": 7,
+        "token": "trim(text)"
+      },
+      "case": [
+        "all_star_import"
+      ]
+    },
+    {
+      "id": "N08",
+      "type": "calls",
+      "from": "src/packages/atlas/src/summary.ts::default",
+      "to": "src/packages/ledger/src/money.ts::normalize",
+      "reason": "cross-package name collision: normalize is bound to atlas text.ts",
+      "evidence": {
+        "file": "src/packages/atlas/src/summary.ts",
+        "line": 6,
+        "token": "normalize(l)"
+      },
+      "case": [
+        "cross_package_collision"
+      ]
+    },
+    {
+      "id": "N09",
+      "type": "calls",
+      "from": "src/packages/atlas/src/views/monthly.ts::render",
+      "to": "src/packages/ledger/src/money.ts::normalize",
+      "reason": "cross-package name collision: normalize is bound to atlas text.ts",
+      "evidence": {
+        "file": "src/packages/atlas/src/views/monthly.ts",
+        "line": 5,
+        "token": "normalize("
+      },
+      "case": [
+        "cross_package_collision"
+      ]
+    },
+    {
+      "id": "N10",
+      "type": "calls",
+      "from": "src/ingest/endpoints.py::echo",
+      "to": "src/vault/models.py::Record",
+      "reason": "cross-package name collision: Record is ingest.models.Record here",
+      "evidence": {
+        "file": "src/ingest/endpoints.py",
+        "line": 14,
+        "token": "Record(\"echo\""
+      },
+      "case": [
+        "cross_package_collision"
+      ]
+    },
+    {
+      "id": "N11",
+      "type": "imports",
+      "from": "src/ingest/endpoints.py",
+      "to": "src/vault/models.py",
+      "reason": "cross-package collision: relative .models is ingest/models.py",
+      "evidence": {
+        "file": "src/ingest/endpoints.py",
+        "line": 3,
+        "token": "from .models import"
+      },
+      "case": [
+        "cross_package_collision"
+      ]
+    },
+    {
+      "id": "N12",
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/ingest/models.py::Record",
+      "reason": "cross-package name collision: Record is vault.models.Record here",
+      "evidence": {
+        "file": "src/vault/store.py",
+        "line": 9,
+        "token": "Record(clean_label"
+      },
+      "case": [
+        "cross_package_collision"
+      ]
+    },
+    {
+      "id": "N13",
+      "type": "imports",
+      "from": "src/ingest/compat.py",
+      "to": "src/ingest/models.py",
+      "reason": "cross-package collision: the TYPE_CHECKING import names vault.models, not the sibling models.py",
+      "evidence": {
+        "file": "src/ingest/compat.py",
+        "line": 10,
+        "token": "from vault.models import"
+      },
+      "case": [
+        "cross_package_collision",
+        "conditional_import"
+      ]
+    },
+    {
+      "id": "N14",
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry.describe",
+      "reason": "cross-language method-name collision: rec is a Python vault Record",
+      "evidence": {
+        "file": "src/vault/store.py",
+        "line": 10,
+        "token": "rec.describe()"
+      },
+      "case": [
+        "cross_package_collision"
+      ]
+    },
+    {
+      "id": "N15",
+      "type": "calls",
+      "from": "src/packages/ledger/src/journal.ts::postEntry",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry.describe",
+      "reason": "override: line.describe() reaches CreditEntry.describe; the base method is reached only via super inside CreditEntry",
+      "evidence": {
+        "file": "src/packages/ledger/src/journal.ts",
+        "line": 8,
+        "token": "line.describe()"
+      },
+      "case": [
+        "inheritance"
+      ]
+    },
+    {
+      "id": "N16",
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/vault/base.py::BaseModel.save",
+      "reason": "override: rec.save() reaches Record.save; the base method is reached only via super() inside Record",
+      "evidence": {
+        "file": "src/vault/store.py",
+        "line": 11,
+        "token": "rec.save()"
+      },
+      "case": [
+        "inheritance"
+      ]
+    },
+    {
+      "id": "N17",
+      "type": "calls",
+      "from": "src/ingest/compat.py::fingerprint",
+      "to": "src/vault/models.py::Record",
+      "reason": "TYPE_CHECKING-only import used in an annotation, never called",
+      "evidence": {
+        "file": "src/ingest/compat.py",
+        "line": 15,
+        "token": "\"Record\""
+      },
+      "case": [
+        "conditional_import"
+      ]
+    },
+    {
+      "id": "N18",
+      "type": "calls",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "to": "src/ingest/endpoints.py::close_ledger",
+      "reason": "cross-runtime HTTP relation must not be an observed or inferred call (it is unknown)",
+      "evidence": {
+        "file": "src/packages/atlas/src/LedgerPanel.tsx",
+        "line": 12,
+        "token": "fetch("
+      },
+      "case": [
+        "unknown_http_cross_runtime"
+      ]
+    },
+    {
+      "id": "N19",
+      "type": "calls",
+      "from": "src/ingest/probe.py::check_health",
+      "to": "src/packages/atlas/src/server/health.ts::healthHandler",
+      "reason": "cross-runtime HTTP relation must not be an observed or inferred call (it is unknown)",
+      "evidence": {
+        "file": "src/ingest/probe.py",
+        "line": 10,
+        "token": "urlopen("
+      },
+      "case": [
+        "unknown_http_cross_runtime"
+      ]
+    },
+    {
+      "id": "N20",
+      "type": "imports",
+      "from": "*",
+      "to": "src/packages/atlas/src/views/monthly.ts",
+      "reason": "reachable only through a dynamic import(): no observed or inferred imports edge may target it",
+      "case": [
+        "unknown_dynamic",
+        "omission_coverage"
+      ]
+    },
+    {
+      "id": "N21",
+      "type": "imports",
+      "from": "*",
+      "to": "src/ingest/plugins/csv_sink.py",
+      "reason": "loaded only by computed name through importlib: no observed or inferred imports edge may target it",
+      "case": [
+        "unknown_dynamic",
+        "omission_coverage"
+      ]
+    },
+    {
+      "id": "N22",
+      "type": "calls",
+      "from": "*",
+      "to": "src/packages/atlas/src/server/health.ts::healthHandler",
+      "reason": "no static caller exists; it is reached only over HTTP",
+      "case": [
+        "unknown_http_cross_runtime",
+        "omission_coverage"
+      ]
+    }
+  ],
+  "external_imports": [
+    {
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 1,
+      "token": "'react'",
+      "note": "external or standard-library import; out of scope, counted in external_refs"
+    },
+    {
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 1,
+      "token": "'react-dom/client'",
+      "note": "external or standard-library import; out of scope, counted in external_refs"
+    },
+    {
+      "file": "src/ingest/models.py",
+      "line": 2,
+      "token": "from dataclasses import",
+      "note": "external or standard-library import; out of scope, counted in external_refs"
+    },
+    {
+      "file": "src/ingest/registry.py",
+      "line": 2,
+      "token": "from typing import",
+      "note": "external or standard-library import; out of scope, counted in external_refs"
+    },
+    {
+      "file": "src/ingest/plugin_host.py",
+      "line": 2,
+      "token": "import importlib",
+      "note": "external or standard-library import; out of scope, counted in external_refs"
+    },
+    {
+      "file": "src/ingest/probe.py",
+      "line": 2,
+      "token": "import json",
+      "note": "external or standard-library import; out of scope, counted in external_refs"
+    },
+    {
+      "file": "src/ingest/probe.py",
+      "line": 3,
+      "token": "import urllib.request",
+      "note": "external or standard-library import; out of scope, counted in external_refs"
+    },
+    {
+      "file": "src/ingest/compat.py",
+      "line": 2,
+      "token": "from typing import",
+      "note": "external or standard-library import; out of scope, counted in external_refs"
+    }
+  ],
+  "coverage_cases": [
+    {
+      "case": "empty module (0 bytes): still a module node and counted in files_total",
+      "file": "src/ingest/__init__.py",
+      "line": 1
+    },
+    {
+      "case": "docstring-only module: no symbols, no edges",
+      "file": "src/ingest/plugins/__init__.py",
+      "line": 1
+    },
+    {
+      "case": "module reachable only through dynamic import(): must be seen and parsed, no incoming import edge",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 1
+    },
+    {
+      "case": "module reachable only by computed importlib name: must be seen and parsed, its own outgoing edges are observed",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 2
+    },
+    {
+      "case": "handler with no static caller (HTTP only)",
+      "file": "src/packages/atlas/src/server/health.ts",
+      "line": 7
+    },
+    {
+      "case": "entry-point modules with no incoming imports edge (App.tsx, lookup.ts, health.ts, plugin_host.py, probe.py, store.py)",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 11
+    },
+    {
+      "case": "parse stress: Python 3.10 match statement with a walrus guard; an engine that cannot parse it must list the file in omissions, not drop it silently",
+      "file": "src/ingest/probe.py",
+      "line": 12
+    },
+    {
+      "case": "parse stress: TypeScript legacy decorator before export class",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 4
+    },
+    {
+      "case": "parse stress: anonymous default export function (node id ::default)",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 5
+    },
+    {
+      "case": "configuration file, not a source module: read for path aliases only, excluded from files_total",
+      "file": "src/tsconfig.json",
+      "line": 11
+    }
+  ],
+  "scope_notes": [
+    {
+      "what": "languages",
+      "status": "NOT VERIFIED",
+      "reason": "only TypeScript, TSX, JavaScript (CommonJS) and Python are present; no Go, Java, C#, Rust, SQL, templates or IaC"
+    },
+    {
+      "what": "cross-runtime wiring",
+      "status": "NOT VERIFIED",
+      "reason": "the two HTTP links are recorded as unknown edges with a candidate in target_hint only"
+    },
+    {
+      "what": "workspace tooling",
+      "status": "NOT VERIFIED",
+      "reason": "no package.json workspaces, pyproject or Node exports maps; aliases come only from src/tsconfig.json"
+    }
+  ]
+}
