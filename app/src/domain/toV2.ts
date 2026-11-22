@@ -1,6 +1,7 @@
 // Projection of the canonical fixture onto the V2 design-lab world shapes (the slices the canonical model owns).
 import type { EvidenceReference } from '../contract/types';
 import type { WorldEdge, WorldNode } from '../design-lab/v2/types';
+import { resolveEvidence } from './resolve';
 import type { DomainFixture } from './types';
 
 export type V2NodeSlice = Pick<WorldNode, 'id' | 'state' | 'evidence' | 'check'>;
@@ -13,7 +14,7 @@ export function toV2Nodes(f: DomainFixture): V2NodeSlice[] {
       connectivity: c.connectivity,
       freshness: c.freshness,
       health: c.health,
-      basis: c.basis.flatMap((id) => { const e = f.evidence[id]; return e ? [e] : []; }),
+      basis: resolveEvidence(f, c.basis),
     },
     evidence: c.evidence,
     ...(c.check ? { check: c.check } : {}),

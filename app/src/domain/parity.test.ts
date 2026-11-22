@@ -64,7 +64,10 @@ describe('canonical fixture parity', () => {
       expect(toV2EvidenceById(f)).toEqual(w.evidenceById);
       const nodes = toV2Nodes(f);
       for (const id of SHARED) expect(byId(nodes, id)).toEqual(slice(byId(w.nodes, id)));
-      expect(JSON.stringify(f)).not.toContain('E-5');
+      const technicalIds = Object.values(DOMAIN.evidence).filter((e) => e.visibility === 'technical').map((e) => e.id);
+      expect(technicalIds.length).toBeGreaterThan(0);
+      const json = JSON.stringify(f);
+      for (const id of technicalIds) expect(json).not.toContain(id);
     });
   }
 
@@ -103,9 +106,24 @@ describe('canonical fixture parity', () => {
     expect(second).toEqual(first);
   });
 
+  const v1Edge = () => V1_WORLD.projects.find((p) => p.id === 'RT')?.edges.find((e) => e.from === 'stock-sync' && e.to === 'inventory');
+
+  it('V1 world edge stock-sync→inventory is authored on E-7 today (pins the known divergence)', () => {
+    expect(V1_WORLD.projects.some((p) => p.id === 'RT')).toBe(true);
+    expect(v1Edge()).toBeDefined();
+    expect(v1Edge()?.kind).toBe('authored');
+    expect(v1Edge()?.basis.map((b) => b.id)).toEqual(['E-7']);
+  });
+
+  it('V1 evidence view for Owner is restricted but still carries E-5 today (pins the known divergence)', () => {
+    const v = evidenceViewFor('owner', EVIDENCE.sentryErrors);
+    expect(v.restricted).toBe(true);
+    expect(v.id).toBe('E-5');
+  });
+
   // Known divergences. Each is expected to fail until the named follow-up lands.
   it.fails('V1 world edge stock-sync→inventory agrees with the canonical truth (BACK-71 finding: V1 says authored on unread E-7)', () => {
-    const edge = V1_WORLD.projects.find((p) => p.id === 'RT')?.edges.find((e) => e.from === 'stock-sync' && e.to === 'inventory');
+    const edge = v1Edge();
     expect(edge).toBeDefined();
     expect(edge?.kind).toBe(toV1EdgeKind('hypothesis'));
   });
