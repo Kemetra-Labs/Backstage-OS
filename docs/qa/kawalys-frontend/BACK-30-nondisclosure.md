@@ -27,6 +27,9 @@ evidence; unknown never means healthy. A display persona switch is not authoriza
 world and persona; Technical gets the input itself). `MissionMap.tsx` (3 places) and `MissionMapBC.tsx` read it instead of
 `WORLD`. Every field that holds a record or its id is scoped:
 
+- `nodes[].descKey` (new): the overview description key. A node whose whole evidence was withheld and whose fixture declares
+  `descWithoutEvidence` gets that generic key (only Inventory does: `map.nl.inventory.none`). Both inspectors read it through
+  `NL(node)`. Other nodes keep `map.nl.<id>`.
 - `evidenceById`: Technical-only records removed.
 - `nodes[].evidence` and `nodes[].state.basis`: restricted ids and records removed. If the whole basis of a node is
   removed, its claimed health becomes `unknown` and its freshness is re-derived from the node's own (authorized) source
@@ -46,6 +49,7 @@ its authorized stale state is still true.
 | V2 and B+C evidence tab, node Inventory | row `E-5` (Owner) with "Restricted to Technical" | "No evidence has been read for this item." |
 | V2 and B+C evidence tab, node Sentry | row `E-5` placeholder | same empty state |
 | Node evidence count (V2 list, B+C ledger) | Inventory 1, Sentry 1 | 0 and 0 |
+| Overview description, node Inventory (V2 inspector `#mapinsp-panel`, B+C inspector `#bcinsp-panel`) | "The inventory service. Its latest error read is stale." / "خدمة المخزون. آخر قراءة للأخطاء قديمة." (`map.nl.inventory`): said an error read exists and is stale, and its only basis is E-5 | "The inventory service. No evidence has been read for it." / "خدمة المخزون. لم تُقرأ أدلة لها." (`map.nl.inventory.none`), the same wording shape as Seshat BI |
 | Inventory status chip, aria-label, tooltip | "Stale" (revealed a stale read exists) | "Health unknown" |
 | Link d4 Inventory to Sentry, V2 list and B+C links table | row with "Based on evidence restricted to Technical" | no row |
 | Link d4 drawn on the map (V2 SVG, B+C `.kv2-bc-edge[data-id="d4"]`) | drawn, flagged stale | not drawn (B+C edges 11 to 10) |
@@ -58,13 +62,35 @@ its authorized stale state is still true.
 Technical sees exactly what it saw before. The old restricted branches (`evidenceView`, `edgeRestricted`, the
 `edge.restricted` copy) stay as defence in depth and are now unreachable from these two screens.
 
+## Description and label audit (final review fix)
+
+Every per-node sentence or short label, checked against the question "is this wording derived only from a Technical-only record?".
+
+| Text | Where | Basis | Result |
+|---|---|---|---|
+| `map.nl.inventory` "Its latest error read is stale" | V2 and B+C inspector Overview | E-5 only | **Fixed**: replaced by `map.nl.inventory.none` for Owner and Nontechnical |
+| `map.nl.sentry` "Its last read is stale" | same | Sentry source authority (age 540 min against a 15 min target), which every persona may see on the node chip, the matrix and the V2 source panel | Kept: not derived from E-5 |
+| `map.nl.retail-tower`, `stock-sync` ("failing CI check") | same | E-1, E-2, visible to all | Kept |
+| `map.nl.khepri`, `pos`, `seshat-bi`, `github`, `jira`, `port` | same | no evidence, or authorized evidence (E-1, E-3, E-4, E-7, E-8, E-9) | Kept |
+| `map.nd.<id>` (all ten) | V2 node card subtitle, `bc/Canvas.tsx` card subtitle, both inspector headers | static kind/role labels ("Inventory project", "Error monitoring") | Kept: say nothing about any record |
+| Card read-age caption ("540 of 15 min") | B+C Canvas, Sentry card | Sentry source authority | Kept: source fact, not E-5 |
+| KPI subs and readings (`map.m.*`, `obs.pin.*`, Readings panel) | V2 and B+C | scoped world and source authority | Kept (checked earlier in BACK-30) |
+| Timeline captions `sev.sentryLast` and `sev.sentryStale` | B+C and Observatory | source events, i.e. source authority | Kept (listed under Out of scope) |
+| `edge.errorsInSentry` text | link d4 | E-5 | Already unreachable: d4 is removed |
+
+The e2e `leaks()` probe now also looks for E-5's title ("Recent errors for the inventory service" and its Arabic) on the whole
+page and for its age text ("9 h ago" / "قبل 9 س") inside the inspector. The age is matched in the inspector only because the same text is the
+age of the Sentry source's own last read, which the V2 source panel shows to everyone.
+
 ## Tests
 
 - `logic/authorize.test.ts`: Technical identity; no `E-5`, id, target label or external id anywhere in the scoped JSON;
   d4 removed (length - 1); Inventory unknown, not stale; Sentry kept with `[]`; mixed mission keeps `['E-9']`; memoized; world not mutated.
 - `e2e-v2/nondisclosure.spec.ts`: Owner and Nontechnical x EN and AR, V2 (overview, Evidence, Sources tabs, list) and B+C
-  (map and list); a `leaks()` probe over visible text and every `aria-label`, `title`, `alt` and `data-*`; the permitted
-  Technical case; the persona switch from Technical to Owner.
+  (map and list); a `leaks()` probe over visible text and every `aria-label`, `title`, `alt` and `data-*` for E-5's id, title
+  and age text; the Inventory overview description (generic text shown, `map.nl.inventory` absent) on V2 and on B+C map and list;
+  the permitted Technical case, including its original description in EN and AR; the persona switch from Technical to Owner on
+  both V2 and B+C.
 - Updated old expectations (assertions changed, tests kept): `world.test.ts`, `bc.test.ts`, `logic.test.ts`,
   `bc.spec.ts`, `interactions.spec.ts`, `structure.spec.ts`.
 

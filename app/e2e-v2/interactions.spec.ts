@@ -313,6 +313,7 @@ test.describe('review regressions', () => {
     const links = page.getByRole('table', { name: 'Links between systems' });
     await expect(links).toContainText('Inventory errors were reported in Sentry');
     await load(page, { screen: 'mission-map', persona: 'owner' }); // same page, so the list view stays selected
+    await expect(links).toBeVisible(); // without this the two negative checks below would pass if the table had gone away
     await expect(links).not.toContainText('restricted to Technical');
     await expect(links).not.toContainText('Inventory errors were reported in Sentry');
   });

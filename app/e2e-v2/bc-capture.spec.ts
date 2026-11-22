@@ -1,5 +1,6 @@
-// BACK-27 evidence captures. Not a regression test: it only runs with BC_CAPTURE=1 and writes untracked images to
-// docs/design-lab/hybrid-map/out/pilot/ (npm run e2e:v2 skips it). Run: BC_CAPTURE=1 npx playwright test -c playwright.v2.config.ts e2e-v2/bc-capture.spec.ts
+// BACK-27 evidence captures. Not a regression test: it only runs with BC_CAPTURE=1 (npm run e2e:v2 skips it). Most images go
+// untracked to docs/design-lab/hybrid-map/out/pilot/; the back34-* captures are written to docs/design-lab/hybrid-map/out/BACK-34/
+// and ARE committed, so re-running with BC_CAPTURE=1 changes tracked files. Run: BC_CAPTURE=1 npx playwright test -c playwright.v2.config.ts e2e-v2/bc-capture.spec.ts
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { loadBc, waitForIntroDone, type BcOpts } from './bc-helpers';

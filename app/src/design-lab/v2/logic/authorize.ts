@@ -22,7 +22,12 @@ function scopeState(state: DisplayState, sources: readonly SourceMeta[], provide
 }
 
 function scopeNode(n: WorldNode, visible: Visible, sources: readonly SourceMeta[]): WorldNode {
-  return { ...n, state: scopeState(n.state, sources, n.provider), evidence: n.evidence.filter(visible) };
+  const { descWithoutEvidence, ...rest } = n;
+  const evidence = n.evidence.filter(visible);
+  // A description written from a record this persona may not read would describe that record. When the node's whole
+  // evidence is withheld it falls back to the generic "no evidence has been read" wording its fixture declares.
+  const withheldAll = n.evidence.length > 0 && evidence.length === 0;
+  return { ...rest, state: scopeState(n.state, sources, n.provider), evidence, ...(withheldAll && descWithoutEvidence ? { descKey: descWithoutEvidence } : {}) };
 }
 
 function scopeEdge(e: WorldEdge, visible: Visible): WorldEdge {

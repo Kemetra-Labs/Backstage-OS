@@ -99,6 +99,8 @@ export const MAP = {
   'map.nl.stock-sync': ['The stock synchronisation project whose integration check is failing.', 'مشروع مزامنة المخزون الذي يفشل فحص التكامل فيه.'],
   'map.nl.pos': ['The store-side client. How it reaches stock-sync is not evidenced.', 'عميل جهة المتجر. طريقة وصوله إلى {stock-sync} غير مثبتة.'],
   'map.nl.inventory': ['The inventory service. Its latest error read is stale.', 'خدمة المخزون. آخر قراءة للأخطاء قديمة.'],
+  // Shown instead of map.nl.inventory when the persona may not read the record that sentence rests on (BACK-30). Same shape as map.nl.seshat-bi.
+  'map.nl.inventory.none': ['The inventory service. No evidence has been read for it.', 'خدمة المخزون. لم تُقرأ أدلة لها.'],
   'map.nl.github': ['Source control and CI for the repositories.', 'إدارة الشيفرة والتكامل المستمر للمستودعات.'],
   'map.nl.jira': ['Work items and release planning.', 'بنود العمل وتخطيط الإصدارات.'],
   'map.nl.sentry': ['Error monitoring. Its last read is stale.', 'رصد الأخطاء. آخر قراءة قديمة.'],

@@ -226,7 +226,8 @@ test.describe('truth rules', () => {
     const rows = await page.locator('.kv2-bc-matrix tbody tr').evaluateAll((trs) => trs.map((r) => ({ id: (r as HTMLElement).dataset.source, health: (r.querySelectorAll('td')[2]!.textContent ?? '').trim() })));
     expect(rows.filter((r) => /^healthy$/i.test(r.health)).map((r) => r.id)).toEqual(['github']);
     expect(rows.find((r) => r.id === 'jira')!.health).toBe('Unknown');
-    await page.getByRole('button', { name: 'Map', exact: true }).click(); // same page, so the list view is still selected
+    // loadBc only changes the hash here (same search, same document), so the list view stays selected: go back to the map first
+    await page.getByRole('button', { name: 'Map', exact: true }).click();
     await loadBc(page, { view: 'map', persona: 'technical' });
     expect(await chipOf(page, 'inventory')).toMatch(/Stale/); // the permitted persona still sees the stale Technical-only read
   });
@@ -463,6 +464,7 @@ test.describe('phone', () => {
   // and a 200% text-only resize (WCAG 1.4.4), approximated by doubling the px font tokens and the table font sizes, where each
   // table overflows at the width chosen for it (the matrix and links tables stack as cards on a phone at default size).
   test('list tables: each scroll region is reachable by Tab, named, and scrolls with the arrow keys', async ({ browser }) => {
+    test.setTimeout(60_000); // opens a fresh browser context per scenario, language, table and width; the default timeout is tight on a slow runner
     const TEXT_200 = ':root{--kv2-t-xs:22px;--kv2-t-sm:24px;--kv2-t-md:27px;--kv2-t-lg:30px;--kv2-t-xl:36px;--kv2-t-2xl:46px;--kv2-t-3xl:72px}.kv2-table{font-size:26px}.kv2-table thead th{font-size:24px}';
     const REGIONS = [
       { id: 'ledger', line: 31, name: { en: 'Systems ledger', ar: 'سجل الأنظمة' }, wide: 320 },

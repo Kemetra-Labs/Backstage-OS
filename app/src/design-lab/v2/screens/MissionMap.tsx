@@ -22,7 +22,7 @@ const NODE_ICON: Readonly<Record<string, IconName>> = {
   sentry: 'radar', port: 'book', 'seshat-bi': 'chart',
 };
 const ND = (id: string) => `map.nd.${id}` as K;
-const NL = (id: string) => `map.nl.${id}` as K;
+const NL = (node: Pick<WorldNode, 'id' | 'descKey'>) => (node.descKey ?? `map.nl.${node.id}`) as K;
 const FILTER_KEY: Readonly<Record<MapFilter, K>> = {
   all: 'map.f.all', products: 'map.f.products', projects: 'map.f.projects', services: 'map.f.services', risks: 'map.f.risks',
 };
@@ -458,7 +458,7 @@ function Inspector({ node, tab, setTab, isScope, onCenter, onOpen }: InspProps) 
   return (
     <>
       <InspHead node={node} chipKind={chip.kind} tone={chip.tone} chipText={chipText} isScope={isScope} />
-      <p className="kv2-insp-desc"><T k={NL(node.id)} /></p>
+      <p className="kv2-insp-desc"><T k={NL(node)} /></p>
       <dl className="kv2-stats">
         <div><dt><T k="map.stat.projects" /></dt><dd>{nb.filter((n) => n.kind === 'project').length}</dd></div>
         <div><dt><T k="map.stat.services" /></dt><dd>{nb.filter((n) => n.kind === 'service').length}</dd></div>

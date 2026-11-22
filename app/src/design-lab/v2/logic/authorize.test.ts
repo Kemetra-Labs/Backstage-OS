@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { WORLD } from '../fixtures/world';
 import { authorizedWorld } from './authorize';
+import { TABLE } from '../i18n/t';
 import { nodeStatus } from './status';
 
 const UNAUTHORIZED = ['owner', 'nontechnical'] as const;
@@ -11,6 +12,10 @@ const technicalRecords = Object.values(WORLD.evidenceById).filter((r) => r.visib
 describe('authorizedWorld', () => {
   it('returns the same world for Technical', () => {
     expect(authorizedWorld(WORLD, 'technical')).toBe(WORLD);
+  });
+
+  it('leaves every node description to Technical', () => {
+    expect(authorizedWorld(WORLD, 'technical').nodes.some((n) => n.descKey)).toBe(false);
   });
 
   it('the fixture has a Technical-only record to hide (guards the tests below against passing vacuously)', () => {
@@ -47,6 +52,15 @@ describe('authorizedWorld', () => {
         expect(st.freshness).not.toBe('stale');
         expect(inv.state.freshness).toBe('unknown');
         expect(inv.state.basis).toEqual([]);
+      });
+
+      it('swaps the Inventory overview description, whose only basis was the restricted record, for the generic no-evidence one', () => {
+        const inv = w.nodes.find((n) => n.id === 'inventory')!;
+        expect(inv.descKey).toBe('map.nl.inventory.none');
+        expect(TABLE['map.nl.inventory.none']).toEqual(['The inventory service. No evidence has been read for it.', 'خدمة المخزون. لم تُقرأ أدلة لها.']);
+        // Only that node: others keep the description their authorized evidence supports, and the declaration itself is not exposed.
+        expect(w.nodes.filter((n) => n.descKey).map((n) => n.id)).toEqual(['inventory']);
+        expect(w.nodes.some((n) => 'descWithoutEvidence' in n)).toBe(false);
       });
 
       it('keeps the Sentry node, with no evidence, and every source authority unchanged', () => {

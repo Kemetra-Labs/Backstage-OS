@@ -21,6 +21,10 @@ export interface WorldNode {
   readonly check?: 'failing';
   /** Evidence ids this node is backed by (ids from EVIDENCE_BY_ID). */
   readonly evidence: readonly string[];
+  /** Fixture declaration: the description key to use instead of `map.nl.<id>` when none of this node's evidence may be shown. */
+  readonly descWithoutEvidence?: string;
+  /** Set by authorizedWorld only: the description key that replaces `map.nl.<id>` because its evidence was withheld. */
+  readonly descKey?: string;
 }
 
 export interface WorldEdge {
