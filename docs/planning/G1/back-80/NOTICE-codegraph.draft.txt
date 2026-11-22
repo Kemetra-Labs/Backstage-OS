@@ -1,0 +1,379 @@
+==============================================================================
+DRAFT FOR LEGAL REVIEW - NOT LEGAL ADVICE - NOT APPROVED FOR DISTRIBUTION
+==============================================================================
+Third-party notices for CodeGraph 1.6.4 as redistributed by Kemetra
+Jira BACK-80. Prepared 2026-11-22 by an engineering licence inventory; see
+docs/planning/G1/back-80/inventory.csv for the evidence behind every line.
+
+Covers the npm packages, byte-identical to the registry tarballs whose
+SHA-512 digests appear in their npm provenance attestations:
+  @colbymchenry/codegraph-linux-x64@1.6.4  (vendored node ELF, lib/)
+  @colbymchenry/codegraph-win32-x64@1.6.4  (vendored node.exe, lib/)
+  @colbymchenry/codegraph@1.6.4            (npm shim, dist/ type files)
+
+Open points for legal review are marked [REVIEW].
+
+------------------------------------------------------------------------------
+PART A. CodeGraph
+------------------------------------------------------------------------------
+CodeGraph 1.6.4 (github.com/colbymchenry/codegraph, tag v1.6.4, commit 461a5d8)
+License: MIT. NOTE: none of the three npm packages ships this LICENSE file;
+it is reproduced here from the tagged source.
+
+MIT License
+
+Copyright (c) 2026 Colby Mchenry
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Includes CodeGraph's patches to tree-sitter-cobol, tree-sitter-vbnet and
+tree-sitter-swift (docs/grammars/*.patch), under CodeGraph's MIT licence.
+
+------------------------------------------------------------------------------
+PART B. Node.js v24.22.1 (bin 'node' / 'node.exe')
+------------------------------------------------------------------------------
+The bundles contain the unmodified official Node.js v24.22.1 binaries
+(sha256 linux e32e2d16..., win d702daa8...; identical to nodejs.org builds).
+Node.js is MIT-licensed and bundles third-party components under MIT,
+Apache-2.0 (OpenSSL 3.5.9, swc, simdjson, LIEF, caja), BSD-3-Clause (V8,
+zstd, ...), Unicode-3.0 (ICU), Zlib, ISC, BlueOak-1.0.0, CC0-1.0 and others.
+
+OBLIGATION: ship the complete Node.js LICENSE file verbatim alongside the
+binary, for example as third_party/node-v24.22.1-LICENSE.txt.
+  Source: https://raw.githubusercontent.com/nodejs/node/v24.22.1/LICENSE
+  sha256 5888dbb9a1d2b18f2c3e6c5f6af1b39de658372b402a0577b002777f14c62ace  (2946 lines; identical to LICENSE inside the
+  official linux-x64 archive, and the same text modulo CRLF in win-x64)
+Neither CodeGraph bundle ships this file today. [REVIEW]
+
+------------------------------------------------------------------------------
+PART C. Native extraction kernel lib/kernel/codegraph-kernel.node
+------------------------------------------------------------------------------
+Rust cdylib built from codegraph-kernel (MIT, Part A). Statically linked Rust
+crates (cargo tree -e normal,no-proc-macro for x86_64-unknown-linux-gnu and
+x86_64-pc-windows-msvc, codegraph-kernel/Cargo.lock @ v1.6.4). Where a crate is
+dual- or triple-licensed, MIT is elected.
+
+Under MIT (elected where dual-licensed):
+  aho-corasick 1.1.4 [Unlicense OR MIT] - Copyright (c) 2015 Andrew Gallant
+  bitflags 2.13.1 [MIT OR Apache-2.0] - Copyright (c) 2014 The Rust Project Developers
+  block-buffer 0.10.4 [MIT OR Apache-2.0] - Copyright (c) 2018-2019 The RustCrypto Project Developers
+  cfg-if 1.0.4 [MIT OR Apache-2.0] - Copyright (c) 2014 Alex Crichton
+  cpufeatures 0.2.17 [MIT OR Apache-2.0] - Copyright (c) 2020-2025 The RustCrypto Project Developers
+  crypto-common 0.1.7 [MIT OR Apache-2.0] - Copyright (c) 2021 RustCrypto Developers
+  ctor 1.0.9 [Apache-2.0 OR MIT] - Matt Mastracci
+  digest 0.10.7 [MIT OR Apache-2.0] - Copyright (c) 2017 Artyom Pavlov
+  futures 0.3.32 [MIT OR Apache-2.0] - Copyright (c) 2016 Alex Crichton; Copyright (c) 2017 The Tokio Authors
+  futures-channel 0.3.32 [MIT OR Apache-2.0] - Copyright (c) 2016 Alex Crichton; Copyright (c) 2017 The Tokio Authors
+  futures-core 0.3.32 [MIT OR Apache-2.0] - Copyright (c) 2016 Alex Crichton; Copyright (c) 2017 The Tokio Authors
+  futures-executor 0.3.32 [MIT OR Apache-2.0] - Copyright (c) 2016 Alex Crichton; Copyright (c) 2017 The Tokio Authors
+  futures-io 0.3.32 [MIT OR Apache-2.0] - Copyright (c) 2016 Alex Crichton; Copyright (c) 2017 The Tokio Authors
+  futures-sink 0.3.32 [MIT OR Apache-2.0] - Copyright (c) 2016 Alex Crichton; Copyright (c) 2017 The Tokio Authors
+  futures-task 0.3.32 [MIT OR Apache-2.0] - Copyright (c) 2016 Alex Crichton; Copyright (c) 2017 The Tokio Authors
+  futures-util 0.3.32 [MIT OR Apache-2.0] - Copyright (c) 2016 Alex Crichton; Copyright (c) 2017 The Tokio Authors
+  generic-array 0.14.7 [MIT] - Copyright (c) 2015 Bartłomiej Kamiński
+  libc 0.2.186 [MIT OR Apache-2.0] - Copyright (c) The Rust Project Developers
+  memchr 2.8.3 [Unlicense OR MIT] - Copyright (c) 2015 Andrew Gallant
+  napi 3.10.5 [MIT] - Copyright (c) 2020-present LongYinan (napi-rs)
+  napi-sys 3.2.3 [MIT] - Copyright (c) 2020-present LongYinan (napi-rs)
+  nohash-hasher 0.2.0 [Apache-2.0 OR MIT] - Copyright 2018 Parity Technologies (UK) Ltd.
+  pin-project-lite 0.2.17 [Apache-2.0 OR MIT] - pin-project-lite authors (taiki-e)
+  regex 1.13.1 [MIT OR Apache-2.0] - Copyright (c) 2014 The Rust Project Developers
+  regex-automata 0.4.16 [MIT OR Apache-2.0] - Copyright (c) 2014 The Rust Project Developers
+  regex-syntax 0.8.11 [MIT OR Apache-2.0] - Copyright (c) 2014 The Rust Project Developers
+  rustc-hash 2.1.3 [Apache-2.0 OR MIT] - The Rust Project Developers
+  sha2 0.10.9 [MIT OR Apache-2.0] - Copyright (c) 2006-2009 Graydon Hoare; Copyright (c) 2009-2013 Mozilla Foundation; Copyright (c) 2016 Artyom Pavlov
+  slab 0.4.12 [MIT] - Copyright (c) 2019 Carl Lerche
+  streaming-iterator 0.1.9 [MIT OR Apache-2.0] - Copyright (c) 2016 Steven Fackler
+  tree-sitter 0.25.10 [MIT] - Copyright (c) 2018-2024 Max Brunsfeld
+  tree-sitter-c 0.24.2 [MIT] - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-c-sharp 0.23.5 [MIT] - Copyright (c) 2014-2023 Max Brunsfeld, Damien Guard, Amaan Qureshi, and contributors.
+  tree-sitter-cpp 0.23.4 [MIT] - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-go 0.23.4 [MIT] - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-java 0.23.5 [MIT] - Copyright (c) 2017 Ayman Nadeem
+  tree-sitter-javascript 0.25.0 [MIT] - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-language 0.1.7 [MIT] - Copyright (c) 2018 Max Brunsfeld
+  tree-sitter-luau 1.2.0 [MIT] - Copyright (c) 2023 Amaan Qureshi
+  tree-sitter-php 0.24.2 [MIT] - Copyright (c) 2017 Josh Vera, GitHub; Copyright (c) 2019 Max Brunsfeld, Amaan Qureshi, Christian Frøystad, Caleb White
+  tree-sitter-python 0.23.6 [MIT] - Copyright (c) 2016 Max Brunsfeld
+  tree-sitter-r 1.2.0 [MIT] - Copyright (c) 2025 tree-sitter-r authors
+  tree-sitter-ruby 0.23.1 [MIT] - Copyright (c) 2016 Rob Rix
+  tree-sitter-rust 0.24.2 [MIT] - Copyright (c) 2017 Maxim Sokolov
+  tree-sitter-typescript 0.23.2 [MIT] - Copyright (c) 2017 Max Brunsfeld
+  typenum 1.20.1 [MIT OR Apache-2.0] - Copyright (c) 2014 Paho Lurie-Gregg; Copyright 2014 Paho Lurie-Gregg
+  windows-link 0.2.1 [MIT OR Apache-2.0] - Copyright (c) Microsoft Corporation.
+  Rust standard library (std/core/alloc, rustc 1.100.0) [MIT OR Apache-2.0] -
+    Copyright (c) The Rust Project Contributors; std's registry deps (addr2line,
+    adler2, gimli, hashbrown, libc, memchr, miniz_oxide, object, rustc-demangle,
+    cfg-if) MIT-or-Apache/Zlib; compiler_builtins [MIT AND Apache-2.0 WITH
+    LLVM-exception AND (MIT OR Apache-2.0)].  [REVIEW: Rust ships COPYRIGHT-library.html
+    per release; consider attaching it instead of this summary]
+Vendored grammar C compiled into the kernel (codegraph-kernel/grammars):
+  tree-sitter-kotlin @ d6af96d2e23e [MIT] - Copyright (c) 2019 fwcd
+  tree-sitter-lua @ v0.4.1 [MIT] - Copyright (c) 2021 Munif Tanjim
+  tree-sitter-scala @ v0.26.2 [MIT] - Copyright (c) 2018 Max Brunsfeld and GitHub
+  tree-sitter-dart @ 0038280b774b [MIT] - Copyright (c) 2020-2023 UserNobody14 and others
+  tree-sitter-swift @ 0.7.4 crate tarball + CodeGraph scanner patch [MIT] - Copyright (c) 2021 alex-pinkus
+  (kotlin's vendored directory ships no LICENSE file; upstream fwcd/tree-sitter-kotlin is MIT)
+
+Under ISC:
+  libloading 0.9.0 [ISC] - Copyright (c) 2015, Simonas Kazlauskas
+
+GCC 11.4 (Linux build) objects are covered by the GCC Runtime Library Exception 3.1. [REVIEW]
+The kernel dynamically links the host's libgcc_s/libc (Linux) and VCRUNTIME140/UCRT (Windows);
+these are NOT bundled.
+
+------------------------------------------------------------------------------
+PART D. WebAssembly grammars (wasm fallback parser)
+------------------------------------------------------------------------------
+Packaged by tree-sitter-wasms 0.1.13 (Unlicense: public-domain dedication) and by
+CodeGraph (lib/dist/extraction/wasm). Each grammar keeps its upstream licence:
+
+Under MIT:
+  tree-sitter-wasms/out/tree-sitter-bash.wasm (0.20.5) - Copyright (c) 2017 Max Brunsfeld
+  tree-sitter-wasms/out/tree-sitter-c.wasm (0.20.8) - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-wasms/out/tree-sitter-c_sharp.wasm (0.20.0) - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-wasms/out/tree-sitter-cpp.wasm (0.20.5) - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-wasms/out/tree-sitter-css.wasm (0.20.0) - Copyright (c) 2018 Max Brunsfeld
+  tree-sitter-wasms/out/tree-sitter-dart.wasm (github.com/UserNobody14/tree-sitter-dart/d4d8f3e337d8be23be2) - Copyright (c) 2020-2023 UserNobody14 and others
+  tree-sitter-wasms/out/tree-sitter-elisp.wasm (1.5.0) - Copyright (c) 2021 Wilfred Hughes
+  tree-sitter-wasms/out/tree-sitter-elm.wasm (4.5.0) - Copyright (c) 2018 Kolja Lampe
+  tree-sitter-wasms/out/tree-sitter-embedded_template.wasm (0.20.0) - Copyright (c) 2018 Max Brunsfeld, GitHub
+  tree-sitter-wasms/out/tree-sitter-go.wasm (0.20.0) - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-wasms/out/tree-sitter-html.wasm (0.20.4) - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-wasms/out/tree-sitter-java.wasm (0.20.2) - Copyright (c) 2017 Ayman Nadeem
+  tree-sitter-wasms/out/tree-sitter-javascript.wasm (0.20.4) - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-wasms/out/tree-sitter-json.wasm (0.20.2) - Copyright (c) 2014 Max Brunsfeld
+  tree-sitter-wasms/out/tree-sitter-kotlin.wasm (0.3.8) - Copyright (c) 2019 fwcd
+  tree-sitter-wasms/out/tree-sitter-lua.wasm (2.1.3) - Copyright (c) 2022 Ademir José Ferreira Júnior
+  tree-sitter-wasms/out/tree-sitter-objc.wasm (2.1.0) - Copyright (c) 2023 Amaan Qureshi <amaanq12@gmail.com>
+  tree-sitter-wasms/out/tree-sitter-ocaml.wasm (0.20.4) - Copyright (c) 2020 Max Brunsfeld and Pieter Goetschalckx
+  tree-sitter-wasms/out/tree-sitter-php.wasm (0.22.8) - Copyright (c) 2017 Josh Vera, GitHub
+  tree-sitter-wasms/out/tree-sitter-python.wasm (0.21.0) - Copyright (c) 2016 Max Brunsfeld
+  tree-sitter-wasms/out/tree-sitter-ql.wasm (1.0.0) - Copyright (c) 2019-2024 GitHub, Inc.
+  tree-sitter-wasms/out/tree-sitter-rescript.wasm (github.com/rescript-lang/tree-sitter-rescript/6376fa028f31aa) - Copyright (c) 2021 Victor Nakoryakov
+  tree-sitter-wasms/out/tree-sitter-ruby.wasm (0.20.1) - Copyright (c) 2016 Rob Rix
+  tree-sitter-wasms/out/tree-sitter-rust.wasm (0.20.4) - Copyright (c) 2017 Maxim Sokolov
+  tree-sitter-wasms/out/tree-sitter-scala.wasm (0.19.0) - Copyright (c) 2018 Max Brunsfeld and GitHub
+  tree-sitter-wasms/out/tree-sitter-solidity.wasm (github.com/JoranHonig/tree-sitter-solidity/b239a95f94cfcc6e7) - Copyright (c) 2020 Joran Honig
+  tree-sitter-wasms/out/tree-sitter-swift.wasm (0.4.3) - Copyright (c) 2021 alex-pinkus
+  tree-sitter-wasms/out/tree-sitter-systemrdl.wasm (0.7.0) - Copyright (c) 2019-2021 Aliaksei Chapyzhenka
+  tree-sitter-wasms/out/tree-sitter-tlaplus.wasm (1.5.0) - Copyright 2020 Andrew Helwer
+  tree-sitter-wasms/out/tree-sitter-toml.wasm (0.5.1) - Copyright (c) Ika <ikatyang@gmail.com> (https://github.com/ikatyang)
+  tree-sitter-wasms/out/tree-sitter-tsx.wasm (0.20.5) - Copyright (c) 2017 GitHub
+  tree-sitter-wasms/out/tree-sitter-typescript.wasm (0.20.5) - Copyright (c) 2017 GitHub
+  tree-sitter-wasms/out/tree-sitter-vue.wasm (github.com/tree-sitter-grammars/tree-sitter-vue/7e48557b903a) - Copyright (c) Ika <ikatyang@gmail.com> (https://github.com/ikatyang)
+  tree-sitter-wasms/out/tree-sitter-yaml.wasm (0.5.0) - Copyright (c) Ika <ikatyang@gmail.com> (https://github.com/ikatyang)
+  tree-sitter-wasms/out/tree-sitter-zig.wasm (1.1.2) - Copyright (c) 2024 Amaan Qureshi <amaanq12@gmail.com>
+  lib/dist/extraction/wasm/tree-sitter-arkts.wasm (npm tree-sitter-arkts 0.2.0) - Copyright (c) 2026-present richerfu
+  lib/dist/extraction/wasm/tree-sitter-c.wasm (v0.24.2) - Copyright (c) 2014 Max Brunsfeld
+  lib/dist/extraction/wasm/tree-sitter-c_sharp.wasm (v0.23.5) - Copyright (c) 2014-2023 Max Brunsfeld, Damien Guard, Amaan Qureshi, and contributors
+  lib/dist/extraction/wasm/tree-sitter-cfml.wasm (revision NOT stated) - Copyright (c) 2014 Max Brunsfeld / Copyright (c) 2014 Gareth Edwards & Gavin Baumanis
+  lib/dist/extraction/wasm/tree-sitter-cfquery.wasm (revision NOT stated) - Copyright (c) 2014 Max Brunsfeld / Copyright (c) 2014 Gareth Edwards & Gavin Baumanis
+  lib/dist/extraction/wasm/tree-sitter-cfscript.wasm (revision NOT stated) - Copyright (c) 2014 Max Brunsfeld / Copyright (c) 2014 Gareth Edwards & Gavin Baumanis
+  lib/dist/extraction/wasm/tree-sitter-cobol.wasm (e99dbdc3d800 + CodeGraph patch) - Copyright (c) 2016 Max Brunsfeld
+  lib/dist/extraction/wasm/tree-sitter-cpp.wasm (v0.23.4) - Copyright (c) 2014 Max Brunsfeld
+  lib/dist/extraction/wasm/tree-sitter-dart.wasm (0038280b774b) - Copyright (c) 2020-2023 UserNobody14 and others
+  lib/dist/extraction/wasm/tree-sitter-go.wasm (v0.23.4) - Copyright (c) 2014 Max Brunsfeld
+  lib/dist/extraction/wasm/tree-sitter-java.wasm (v0.23.5) - Copyright (c) 2017 Ayman Nadeem
+  lib/dist/extraction/wasm/tree-sitter-javascript.wasm (v0.25.0) - Copyright (c) 2014 Max Brunsfeld
+  lib/dist/extraction/wasm/tree-sitter-kotlin.wasm (d6af96d2e23e) - Copyright (c) 2019 fwcd
+  lib/dist/extraction/wasm/tree-sitter-lua.wasm (v0.4.1) - Copyright (c) 2021 Munif Tanjim
+  lib/dist/extraction/wasm/tree-sitter-luau.wasm (v1.2.0) - Copyright (c) 2023 Amaan Qureshi
+  lib/dist/extraction/wasm/tree-sitter-nix.wasm (3d0173d) - Copyright (c) 2019 Charles Strahan
+  lib/dist/extraction/wasm/tree-sitter-pascal.wasm (revision NOT stated) - Copyright (c) 2018 Benjamin Gray
+  lib/dist/extraction/wasm/tree-sitter-php.wasm (v0.24.2) - Copyright (c) 2017 Josh Vera, GitHub; (c) 2019 Max Brunsfeld, Amaan Qureshi, Christian Frøystad, Caleb White
+  lib/dist/extraction/wasm/tree-sitter-python.wasm (v0.23.6) - Copyright (c) 2016 Max Brunsfeld
+  lib/dist/extraction/wasm/tree-sitter-r.wasm (v1.2.0) - Copyright (c) 2025 tree-sitter-r authors
+  lib/dist/extraction/wasm/tree-sitter-ruby.wasm (v0.23.1) - Copyright (c) 2016 Rob Rix
+  lib/dist/extraction/wasm/tree-sitter-rust.wasm (v0.24.2) - Copyright (c) 2017 Maxim Sokolov
+  lib/dist/extraction/wasm/tree-sitter-scala.wasm (v0.26.2) - Copyright (c) 2018 Max Brunsfeld and GitHub
+  lib/dist/extraction/wasm/tree-sitter-swift.wasm (0.7.4 crate tarball + CodeGraph patch) - Copyright (c) 2021 alex-pinkus
+  lib/dist/extraction/wasm/tree-sitter-tsx.wasm (v0.23.2) - Copyright (c) 2017 Max Brunsfeld
+  lib/dist/extraction/wasm/tree-sitter-typescript.wasm (v0.23.2) - Copyright (c) 2017 Max Brunsfeld
+  lib/dist/extraction/wasm/tree-sitter-vbnet.wasm (538b7087bf80 + CodeGraph patch) - Copyright (c) 2025 Govind Banura
+  [REVIEW] pascal, cfml, cfquery and cfscript: the vendor states no source revision.
+  They were identified by content (Isopod/tree-sitter-pascal, cfmleditor/tree-sitter-cfml).
+  Both repos were MIT in every commit, but the cfml copyright line changed in 2026-03,
+  so both holders are listed.
+
+Under Apache-2.0 (ship the Apache License 2.0 text: https://www.apache.org/licenses/LICENSE-2.0.txt):
+  tree-sitter-wasms/out/tree-sitter-elixir.wasm (0.1.1) - The Elixir Team (see NOTICE below)
+  lib/dist/extraction/wasm/tree-sitter-erlang.wasm (revision NOT pinned ('0.19' per erlang.ts comment)) - WhatsApp/tree-sitter-erlang contributors (Apache LICENSE carries no copyright line; no NOTICE file)
+  lib/dist/extraction/wasm/tree-sitter-terraform.wasm (npm @tree-sitter-grammars/tree-sitter-hcl 1.2.0) - tree-sitter-grammars/tree-sitter-hcl contributors (Apache LICENSE carries no copyright line; no NOTICE file)
+
+NOTICE reproduced from elixir-lang/tree-sitter-elixir @ 11426c5 (Apache-2.0 s.4(d)):
+  | LEGAL NOTICE INFORMATION
+  | ------------------------
+  | 
+  | All the files in this distribution are copyright to the terms below.
+  | 
+  | == All files in src/ except scanner.cc (generated by tree-sitter-cli)
+  | 
+  | Copyright (c) 2018-2021 Max Brunsfeld
+  | 
+  | The MIT License (MIT)
+  | 
+  | Permission is hereby granted, free of charge, to any person obtaining a copy
+  | of this software and associated documentation files (the "Software"), to deal
+  | in the Software without restriction, including without limitation the rights
+  | to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  | copies of the Software, and to permit persons to whom the Software is
+  | furnished to do so, subject to the following conditions:
+  | 
+  | The above copyright notice and this permission notice shall be included in all
+  | copies or substantial portions of the Software.
+  | 
+  | THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  | IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  | FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  | AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  | LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  | OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  | SOFTWARE.
+  | 
+  | == Some file fragments in test/corpus/
+  | 
+  | Copyright (c) 2021 Anantha Kumaran
+  | 
+  | MIT License
+  | 
+  | Permission is hereby granted, free of charge, to any person obtaining a copy
+  | of this software and associated documentation files (the "Software"), to deal
+  | in the Software without restriction, including without limitation the rights
+  | to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  | copies of the Software, and to permit persons to whom the Software is
+  | furnished to do so, subject to the following conditions:
+  | 
+  | The above copyright notice and this permission notice shall be included in all
+  | copies or substantial portions of the Software.
+  | 
+  | THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  | IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  | FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  | AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  | LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  | OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  | SOFTWARE.
+  | 
+  | == All other files
+  | 
+  | Copyright 2021 The Elixir Team
+  | 
+  | Licensed under the Apache License, Version 2.0 (the "License");
+  | you may not use this file except in compliance with the License.
+  | You may obtain a copy of the License at
+  | 
+  |    https://www.apache.org/licenses/LICENSE-2.0
+  | 
+  | Unless required by applicable law or agreed to in writing, software
+  | distributed under the License is distributed on an "AS IS" BASIS,
+  | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  | See the License for the specific language governing permissions and
+  | limitations under the License.
+
+------------------------------------------------------------------------------
+PART E. JavaScript packages
+------------------------------------------------------------------------------
+lib/node_modules (each ships its own licence file in the bundle):
+  @clack/core 1.3.0 [MIT] - Copyright (c) Nate Moore
+  @clack/prompts 1.3.0 [MIT] - Copyright (c) Nate Moore
+  commander 14.0.3 [MIT] - Copyright (c) 2011 TJ Holowaychuk
+  fast-string-truncated-width 3.0.3 [MIT] - Copyright (c) 2024-present Fabio Spampinato
+  fast-string-width 3.0.2 [MIT] - Copyright (c) 2024-present Fabio Spampinato
+  fast-wrap-ansi 0.2.0 [MIT] - Copyright (c) 2025 James Garbutt
+  ignore 7.0.14 [MIT] - Copyright (c) 2013 Kael Zhang, contributors
+  jsonc-parser 3.3.1 [MIT] - Copyright (c) Microsoft
+  picomatch 4.0.7 [MIT] - Copyright (c) 2017-present, Jon Schlinkert
+  sisteransi 1.0.5 [MIT] - Copyright (c) 2018 Terkel Gjervig Nielsen
+  tree-sitter-wasms 0.1.13 [Unlicense] - public-domain dedication
+  web-tree-sitter 0.25.10 [MIT] - Copyright (c) 2018-2024 Max Brunsfeld
+
+Inlined in lib/dist/viewer/assets/index-*.js (Svelte UI bundle; NO licence text shipped). [REVIEW: list is
+the lockfile dependency closure, an upper bound of what the minified bundle contains]
+  svelte 5.56.10 [MIT]
+  @xyflow/svelte 1.6.5 [MIT]
+  @xyflow/system 0.0.81 [MIT]
+  @svelte-put/shortcut 4.2.0 [MIT]
+  clsx 2.1.1 [MIT]
+  esm-env 1.2.2 [MIT]
+  devalue 5.9.4 [MIT]
+  d3-color 3.1.0 [ISC]
+  d3-dispatch 3.0.1 [ISC]
+  d3-drag 3.0.0 [ISC]
+  d3-ease 3.0.1 [BSD-3-Clause]
+  d3-interpolate 3.0.1 [ISC]
+  d3-selection 3.0.0 [ISC]
+  d3-timer 3.0.1 [ISC]
+  d3-transition 3.0.1 [ISC]
+  d3-zoom 3.0.0 [ISC]
+  d3-ease 3.0.1: Copyright 2010-2021 Mike Bostock; Copyright 2001 Robert Penner [BSD-3-Clause; ship its LICENSE text]
+  Copyright lines read from each npm tarball's LICENSE: svelte - (c) 2016-2025 Svelte Contributors;
+  @xyflow/svelte, @xyflow/system - (c) 2019-2025 webkid GmbH; @svelte-put/shortcut - (c) 2023-2024
+  Quang Phan; clsx - (c) Luke Edwards; esm-env - 2022 Benjamin McCann; devalue - (c) 2018-19 devalue
+  contributors; d3-color 2010-2022, other d3-* 2010-2021 - Mike Bostock (ISC).
+
+Fonts in lib/dist/viewer/assets (SIL Open Font License 1.1; no Reserved Font Name declared):
+  @fontsource-variable/archivo (Archivo woff2) 5.3.0 - Copyright 2020 The Archivo Project Authors
+  @fontsource/ibm-plex-mono (IBM Plex Mono woff/woff2) 5.3.0 - Copyright 2017 IBM Corp.
+  OBLIGATION: ship the OFL-1.1 text (https://openfontlicense.org) with the fonts; the fonts may
+  not be sold on their own.
+
+------------------------------------------------------------------------------
+LICENCE TEXTS
+------------------------------------------------------------------------------
+MIT License (applies to every [MIT] entry above with that entry's copyright line):
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+ISC License (applies to every [ISC] entry above with that entry's copyright line):
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+To ship as separate files (not reproduced here): Node.js LICENSE (Part B), Apache License 2.0,
+BSD-3-Clause text for d3-ease, SIL OFL 1.1, and the Unlicense text for tree-sitter-wasms.
+
+==============================================================================
+END OF DRAFT - requires legal review before any redistribution
+==============================================================================
