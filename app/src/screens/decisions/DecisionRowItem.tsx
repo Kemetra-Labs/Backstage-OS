@@ -21,7 +21,7 @@ export function DecisionRowItem({ row, historical }: { readonly row: DecisionRow
         <li>{c.project}: <Text s={`{${row.projectName}}`} /></li>
         <li>{c.age} {formatAge(row.ageMinutes, lang)}</li>
       </ul>
-      <p className="note" data-part="evidence"><Text s={c.evidenceSummary(e.read, e.notRead, e.restricted, copy.freshness[e.worst])} /></p>
+      <p className="note" data-part="evidence"><Text s={c.evidenceSummary(e.read, e.notRead, copy.freshness[e.worst])} /></p>
       <p className="note" data-part="unknowns">{c.unknownsLine(row.unknownsCount)}</p>
       <a className="btn btn-quiet btn-link" href={hrefFor({ name: 'decision', id: row.id })}>
         <Text s={historical ? c.openRecord(row.id) : c.openProposal(row.id)} />

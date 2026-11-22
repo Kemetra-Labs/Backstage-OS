@@ -68,7 +68,7 @@ test('inbox: pending sorted, rows complete, historical record separate and label
   await expect(row.locator('.sev')).toBeVisible();
   await expect(row).toContainText('Retail Tower OS');
   await expect(row).toContainText('min ago');
-  await expect(row.locator('[data-part="evidence"]')).toContainText(/\d+ read, \d+ not read, \d+ restricted\. Worst freshness: (current|stale|unknown)\./);
+  await expect(row.locator('[data-part="evidence"]')).toContainText(/\d+ read, \d+ not read\. Worst freshness: (current|stale|unknown)\./);
   await expect(row.locator('[data-part="unknowns"]')).toContainText('Unknowns: 2');
   await expect(row.getByRole('link', { name: 'Open proposal DEC-DEMO-3' })).toBeVisible();
   const hist = page.getByTestId('dec-historical');
@@ -189,7 +189,7 @@ test('detail: future approval panel lists what is missing and says it is not a c
   await expect(f.locator('a, button')).toHaveCount(0);
 });
 
-test('detail: observed list shows provenance, not-read and restricted items, and no confidence number', async ({ page }) => {
+test('detail: observed list shows provenance and not-read items, and no confidence number', async ({ page }) => {
   await load(page, detail('DEC-DEMO-5'), { persona: 'owner' });
   const rows = page.locator('[data-evidence]');
   expect(await rows.count()).toBeGreaterThan(0);
@@ -313,3 +313,16 @@ test('keyboard: every link on the detail page is reachable and shows a focus rin
   expect(ring.style).toBe('solid');
   expect(ring.width).toBeGreaterThan(0);
 });
+
+// BACK-76 (M05-D05-B): the inbox and every detail never mention restricted evidence, for any persona or language.
+for (const lang of LANGS) {
+  for (const persona of PERSONAS) {
+    test(`no restricted wording ${lang}/${persona}: inbox and every detail`, async ({ page }) => {
+      for (const route of [INBOX, ...DETAIL_IDS.map(detail)]) {
+        await load(page, route, { persona, lang });
+        await expect(page.locator('[data-decision], [data-evidence]').first()).toBeVisible();
+        expect(await page.locator('main').innerText()).not.toMatch(/restricted|مقيّد|مقيد/i);
+      }
+    });
+  }
+}
