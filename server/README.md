@@ -65,4 +65,3 @@ Delete `server/`, then revert the `CLAUDE.md` bullet, the root `NOTICE`, the roo
 - BACK-55 (database), BACK-56 (authentication), BACK-58 (secrets).
 - Correlation helper: deferred because it needs `@opentelemetry/api`.
 - TypeScript 7 (native compiler): `ts-jest` 29 needs the JavaScript compiler API, so the toolchain stays on TypeScript 6.0.3 (BACK-75).
-- A CI job for `server/` (BACK-72 / BACK-67).
