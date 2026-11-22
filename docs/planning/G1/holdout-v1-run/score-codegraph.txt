@@ -1,0 +1,63 @@
+G1 SCORE REPORT v1 (counts only)
+engine: codegraph 1.6.4
+envelope schema: INVALID (6 errors)
+  schema error: $.nodes[28].id: 'src/ingest/registry.py::expose::wrap' does not match pattern
+  schema error: $.nodes[39].id: 'src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel::add' does not match pattern
+  schema error: $.nodes[40].id: 'src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel::close' does not match pattern
+  schema error: $.edges[64].from: 'src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel::add' does not match pattern
+  schema error: $.edges[155].from: 'src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel::add' does not match pattern
+  schema error: $.edges[156].from: 'src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel::close' does not match pattern
+contract errors: none
+
+Edge type   expected    TP    FN    FP
+----------  --------  ----  ----  ----
+imports           33    33     0     0
+calls             30    23     7     4
+contains          51    50     1     0
+TOTAL            114   106     8     4
+Missed (FN): 8
+  E039 calls src/packages/ledger/src/period.ts src/packages/ledger/src/audit.ts::auditTrail
+  E041 calls src/packages/atlas/src/summary.ts::default src/packages/atlas/src/text.ts::normalize
+  E042 calls src/packages/atlas/src/summary.ts::default src/packages/ledger/src/money.ts::roundCents
+  E043 calls src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel src/packages/ledger/src/journal.ts::postEntry
+  E045 calls src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel src/packages/atlas/src/summary.ts::default
+  E054 calls src/ingest/endpoints.py src/ingest/registry.py::plugin
+  E058 calls src/vault/models.py::Record.save src/vault/base.py::BaseModel.save
+  E087 contains src/packages/atlas/src/summary.ts src/packages/atlas/src/summary.ts::default
+HARD: false observed edges: 3
+  calls src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel::add -> src/packages/ledger/src/journal.ts::postEntry @ src/packages/atlas/src/LedgerPanel.tsx:11 [observed]
+  calls src/packages/atlas/src/summary.ts -> src/packages/atlas/src/text.ts::normalize @ src/packages/atlas/src/summary.ts:6 [observed]
+  calls src/packages/atlas/src/summary.ts -> src/packages/ledger/src/money.ts::roundCents @ src/packages/atlas/src/summary.ts:6 [observed]
+HARD: overclaimed (observed label on an inferred truth): 0
+HARD: invalid claims (observed/inferred without target, unknown naming a target): 0
+Reported: false inferred edges: 1
+  calls src/packages/ledger/src/entry.ts::BaseEntry.describe -> src/packages/ledger/src/credit.ts::CreditEntry.describe @ src/packages/ledger/src/entry.ts:9 [inferred]
+Reported: understated (inferred label on an observed truth): 2
+  E051 calls src/ingest/clean.py::clean_label -> src/ingest/legacy.py::trim @ src/ingest/clean.py:7 [inferred]
+  E034 calls src/packages/ledger/src/credit.ts::CreditEntry.describe -> src/packages/ledger/src/entry.ts::BaseEntry.describe @ src/packages/ledger/src/credit.ts:6 [inferred]
+Reported: derived through a barrel (R2): 0
+Reported: form mismatches: 6
+  E017 expected form require, got import
+  E018 expected form require, got import
+  E019 expected form require, got import
+  E006 expected form reexport, got import
+  E007 expected form reexport, got import
+  E008 expected form reexport, got import
+Reported: surplus edges (same type/from/to as a matched truth edge, other line): 0
+Annotation: wrong-relation-type edges at a truth location (also counted as false observed/inferred): 0
+HARD: negatives hit: 0; negatives defined: 23
+Line provenance of matched edges: exact=106 off_by_n=0 missing=0
+Unknown handling (ground-truth unknown edges):
+  E064 imports src/packages/atlas/src/App.tsx:8 -> marked_unknown
+  E065 imports src/packages/atlas/src/views/lookup.ts:3 -> marked_unknown
+  E066 imports src/packages/atlas/src/legacy/bridge.js:7 -> marked_unknown
+  E067 imports src/ingest/plugin_host.py:6 -> marked_unknown
+  E068 imports src/ingest/plugin_host.py:10 -> marked_unknown
+  E069 calls src/packages/atlas/src/LedgerPanel.tsx:12 -> marked_unknown
+  E070 calls src/ingest/probe.py:10 -> marked_unknown
+  summary: marked_unknown=7
+Coverage by language (tp/expected): javascript=8/8, python=52/54, tsx=9/11, typescript=37/41
+Files seen/total: {"files_seen": 35, "files_total": 36}; external_refs: 0
+Languages with zero extracted nodes: (none)
+Ignored: {"alias_resolved": 0, "duplicate_ignored": 0, "engine_unknown_edges": 61, "external_ignored": 0, "intrafile_ignored": 5, "names_folded": 0, "null_target_ignored": 0, "unlisted_contains_ignored": 6}
+VERDICT no_false_observed_overclaimed_invalid_or_negative_hits: FAIL (false observed = 3, overclaimed = 0, negatives hit = 0, invalid claims = 0, unknown claimed as observed = 0, schema errors = 6, contract errors = 0)
