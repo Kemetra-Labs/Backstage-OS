@@ -1,29 +1,18 @@
-// The single canonical synthetic fixture for INV-DEMO-7. Sources and E-1..E-7 come from the V1 fixture; E-8 and E-9 are
-// declared here with the values V2 uses. Every value is invented.
-import type { EvidenceReference, Observation, SourceAuthority } from '../contract/types';
+// The single canonical synthetic fixture for INV-DEMO-7. Every value is invented.
+// For now it collects the existing records instead of copying them: sources and E-1..E-7 from the V1 fixture, E-8 and E-9
+// (GitHub probe, Port's last good read) from the V2 fixture. A later S3b step inverts this so V1 and V2 import from here.
+import type { EvidenceReference } from '../contract/types';
+import { WORLD as V2_WORLD } from '../design-lab/v2/fixtures/world';
 import { EVIDENCE, SOURCES } from '../fixture/inv-demo-7';
 import type { DomainFixture } from './types';
 
-const ghTarget = { kind: 'component', id: 'component:github', label: 'GitHub API (synthetic)' } as const;
-const portTarget = { kind: 'component', id: 'component:port-catalog', label: 'Port catalogue (synthetic)' } as const;
-
-const obs = (id: string, target: Observation['target'], src: SourceAuthority, at: string): Observation => ({
-  id, target, source: src, observedAt: at, ingestedAt: at, environment: 'ci',
-});
-
-/** E-8: a current Observed read of GitHub itself. */
-const ghProbe: EvidenceReference = {
-  id: 'E-8', classification: 'observed', freshness: 'current', visibility: 'all',
-  observation: obs('O-8', ghTarget, SOURCES.github, '2026-11-16T14:03:00Z'),
+const fromV2 = (id: string): EvidenceReference => {
+  const e = V2_WORLD.evidenceById[id];
+  if (!e) throw new Error(`canonical fixture: V2 fixture has no ${id}`);
+  return e;
 };
 
-/** E-9: Port's last good read, a day old. */
-const portLast: EvidenceReference = {
-  id: 'E-9', classification: 'observed', freshness: 'stale', visibility: 'all',
-  observation: obs('O-9', portTarget, SOURCES.port, '2026-11-15T13:09:00Z'),
-};
-
-const evidenceList: readonly EvidenceReference[] = [...Object.values(EVIDENCE), ghProbe, portLast];
+const evidenceList: readonly EvidenceReference[] = [...Object.values(EVIDENCE), fromV2('E-8'), fromV2('E-9')];
 
 export const DOMAIN: DomainFixture = {
   investigationId: 'INV-DEMO-7',
