@@ -49,6 +49,7 @@ describe('requestIdFrom', () => {
   it('rejects CR/LF, too long, too short, arrays and undefined', () => {
     const bad: Array<string | string[] | undefined> = [
       'abc\r\nSet-Cookie: x=1',
+      'req-1234abcd\n',
       'a'.repeat(65),
       'short',
       ['req-1234abcd', 'req-5678efgh'],
