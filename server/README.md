@@ -9,7 +9,7 @@ The `x-kawalys-demo-persona` header is a **display switch, not authorization**: 
 
 ## Commands
 
-Node 24 is required (`.nvmrc`, `engines`). Run from `server/`.
+Node 24 is required (`.nvmrc`, `engines`). Run from `server/`. The suite also passes on Node 22 (npm prints an EBADENGINE warning) until the CI job in BACK-74 pins Node 24.
 
 ```bash
 npm ci
@@ -42,8 +42,10 @@ messages are fixed:
 - 401 and 403 are reported as 404 `not_found` (policy M05-D05-B), so there is no `forbidden` code.
 - A record the persona may not see is indistinguishable from an absent one (`E-5` for a non-technical
   persona looks the same as an unknown id).
-- `x-request-id` is accepted only if it matches `^[A-Za-z0-9-]{8,64}$`; otherwise a fresh UUID is
-  generated. The id is echoed in the `x-request-id` response header and in the envelope.
+- An inbound `x-request-id` is echoed only if it is a single value of 8-64 characters from
+  `[A-Za-z0-9-]`. Otherwise (CR/LF, too short, too long, other characters, repeated header, missing)
+  a fresh UUID is used. The id is echoed in the `x-request-id` response header and in the envelope,
+  and is only ever returned to the caller who sent it.
 
 ## Provenance
 

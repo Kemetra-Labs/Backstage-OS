@@ -1,6 +1,6 @@
 # Backstage-OS (Kemetra Mission Control prototype)
 
-Static, vanilla HTML/CSS/JS **review prototype**. Demo data only: no backend, auth, AI calls or real GitHub/Jira/Sentry/Datadog/Port access. Never present anything in the UI as live telemetry. Jira home: project `BACK` (BACK-1 epic, BACK-2 UX planning, BACK-4 prototype QA). Read [README.md](README.md) for structure.
+Static, vanilla HTML/CSS/JS **review prototype**. Demo data only: no backend (beyond the synthetic BFF in server/), auth, AI calls or real GitHub/Jira/Sentry/Datadog/Port access. Never present anything in the UI as live telemetry. Jira home: project `BACK` (BACK-1 epic, BACK-2 UX planning, BACK-4 prototype QA). Read [README.md](README.md) for structure.
 
 ## Hard rules
 - **Script order in `index.html` is load-bearing.** Later files (`war.js`, `v3.js`–`v5.js`) deliberately override earlier globals (`mapSVG`, `warGraph`, `projectCard`, `SCREENS.home`, …). Find the *last* definition before editing; never reorder `<script>` tags.

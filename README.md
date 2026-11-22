@@ -50,7 +50,7 @@ earlier file. Do not reorder the `<script>` tags.
 
 ## Scope
 
-Prototype only. Out of scope: backend or control plane, source-system adapters (MCP/REST/webhooks), AI provider
+Prototype only. Out of scope: backend or control plane (the synthetic BFF in server/ is the only exception; see server/README.md), source-system adapters (MCP/REST/webhooks), AI provider
 calls, agent execution, authentication and permissions, deployment.
 
 ## Synthetic BFF (server/)

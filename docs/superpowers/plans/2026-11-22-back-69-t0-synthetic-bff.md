@@ -25,7 +25,7 @@
 
 ## Review Focus
 
-1. Inbound `x-request-id` carrying CR/LF, a long token or a secret-like value: must not be echoed; a fresh UUID is used instead. (Task 3 test `requestIdFrom rejects ...`; Task 4 HTTP test.)
+1. Inbound `x-request-id` carrying CR/LF, an over-long or non-[A-Za-z0-9-] value: must not be echoed; a fresh UUID is used instead. (Task 3 test `requestIdFrom rejects ...`; Task 4 HTTP test.)
 2. A thrown plain `Error("db password=...")`: response is 500 `internal_error` with the fixed message, no stack, no original text. (Task 4.)
 3. Unknown route `GET /nope`: our 404 envelope, not Nest's default `Cannot GET /nope` text. (Task 4.)
 4. Restricted `E-5` for Owner vs absent `E-999`: identical status, body (minus `request_id`), `content-type` and `content-length`. (Task 4.)
