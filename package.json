@@ -1,6 +1,7 @@
 {
   "name": "backstage-os-prototype",
   "private": true,
+  "license": "Apache-2.0",
   "version": "0.0.0",
   "description": "Static Mission Control prototype with Playwright QA (BACK-4)",
   "scripts": {

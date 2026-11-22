@@ -1,0 +1,8 @@
+Backstage-OS (Kemetra Mission Control prototype, Kawalys)
+Copyright 2026 Kemetra-Labs
+
+Licensed under the Apache License, Version 2.0. See LICENSE. Some files carry their own licences, which take precedence for those files: .claude/skills/* (see each SOURCE.md and LICENSE) and app/src/design-lab/v2/assets/fonts/ (SIL Open Font License 1.1).
+
+This product includes software from Retail Tower Backend Core
+(https://github.com/Kemetra-Labs/Retail-Tower-Erp), Copyright 2026 Kemetra-Labs,
+licensed under the Apache License, Version 2.0. See server/THIRD_PARTY.md.
