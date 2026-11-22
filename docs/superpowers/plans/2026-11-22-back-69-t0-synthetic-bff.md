@@ -6,7 +6,7 @@
 
 **Architecture:** `server/` is a standalone npm package, isolated from the static prototype (root) and the React app (`app/`); nothing imports across. Retail Tower's pure `envelope.ts` and its tests are copied verbatim with a provenance header. A Kawalys wrapper (`safe-error.ts`) is the only way the app builds an envelope: fixed messages per code, no `details`, sanitized request ids. A global Nest exception filter routes every failure (including unknown routes and body-parser errors) through that wrapper.
 
-**Tech Stack:** Node 24 (ADR-002 v2 PS-02; local runner has Node 22, see Global Constraints), NestJS 11.1.19 + Express adapter, TypeScript 5.9.3, Jest 29.7.0 + ts-jest 29.2.5, supertest.
+**Tech Stack:** Node 24 (ADR-002 v2 PS-02; local runner has Node 22, see Global Constraints), NestJS 11.2.11 + Express adapter, TypeScript 5.9.3, Jest 29.7.0 + ts-jest 29.2.5, supertest.
 
 **Spec:** Jira BACK-69 (description + owner comment 18363), ADR-002 v2 (Confluence 89423937), Retail Tower reuse matrix row #11 (Confluence 89423971). Owner T0 authorization and choices given in session on 22 Nov 2026: implement T0; backend in `server/`; add Apache-2.0 LICENSE/NOTICE to the repo; commit, push branch and open a PR, never merge.
 
@@ -14,7 +14,7 @@
 
 - Donor: `Kemetra-Labs/Retail-Tower-Erp` at `dea1adc386ad6e8129e7342c873c74ea6f9e5b0c` (verified identical to RT `main` `510706c` for the two files). Never modify Retail Tower.
 - Copy only `services/backend-core/packages/shared/src/errors/envelope.ts` and `services/backend-core/packages/shared/__tests__/errors/envelope.spec.ts`. No `@data-pulse-2/*` import, no other RT file. `correlation.ts` is deferred (needs `@opentelemetry/api`).
-- Pinned versions: `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `@nestjs/testing` = `11.1.19`; `typescript` `5.9.3`; `jest` `29.7.0`; `ts-jest` `29.2.5`; `@types/jest` `29.5.14`. Exact versions, no ranges.
+- Pinned versions: `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `@nestjs/testing` = `11.2.11` (ruled 22 Nov: 11.1.19 pulls multer <=2.4.0 with 2 high advisories; ADR-002 v2 fixes the Nest 11 line, not the patch); `typescript` `5.9.3`; `jest` `29.7.0`; `ts-jest` `29.2.5`; `@types/jest` `29.5.14`. Exact versions, no ranges.
 - Node: `server/.nvmrc` = `24`; `engines.node` = `">=24"` is NOT set (local runner is 22.23.5). Record Node 24 run as PASS/FAIL/NOT RUN honestly.
 - Synthetic only: no DB, auth provider, Descope, connectors, network calls, secrets, env files, queues, deploy. Server binds `127.0.0.1` only.
 - A display persona header is not authorization. Every doc and code comment that mentions it says so.
@@ -56,7 +56,7 @@
   licensed under the Apache License, Version 2.0. See server/THIRD_PARTY.md.
   ```
 - [ ] **Step 2:** In `CLAUDE.md` replace the bullet `No customer data, secrets, backend or MCP connection added to the prototype.` with: `No customer data, secrets or MCP connection added to the prototype. The only backend is the synthetic Kawalys BFF in server/ (BACK-69 T0): no DB, auth provider, connectors, network calls or secrets; nothing in index.html, js/, css/ or app/ calls it yet.` Keep `Customers never sign in ...` sentence.
-- [ ] **Step 3:** Create `server/package.json` (`"private": true`, `"license": "Apache-2.0"`, name `kawalys-bff`) and run `cd server && npm install --save-exact @nestjs/common@11.1.19 @nestjs/core@11.1.19 @nestjs/platform-express@11.1.19 reflect-metadata rxjs && npm install --save-exact -D @nestjs/testing@11.1.19 typescript@5.9.3 jest@29.7.0 ts-jest@29.2.5 @types/jest@29.5.14 @types/node@24 supertest @types/supertest`. Expected: lockfile written, `npm audit` summary recorded (not fixed).
+- [ ] **Step 3:** Create `server/package.json` (`"private": true`, `"license": "Apache-2.0"`, name `kawalys-bff`) and run `cd server && npm install --save-exact @nestjs/common@11.2.11 @nestjs/core@11.2.11 @nestjs/platform-express@11.2.11 reflect-metadata rxjs && npm install --save-exact -D @nestjs/testing@11.2.11 typescript@5.9.3 jest@29.7.0 ts-jest@29.2.5 @types/jest@29.5.14 @types/node@24 supertest @types/supertest`. Expected: lockfile written, `npm audit` summary recorded (not fixed).
 - [ ] **Step 4:** `server/test/smoke.spec.ts`: `it('runs on Node >= 22', () => expect(Number(process.versions.node.split('.')[0])).toBeGreaterThanOrEqual(22))`. Run `cd server && npm run check`. Expected: typecheck clean (empty `src/index.ts` exporting nothing is acceptable for now), 1 test PASS.
 - [ ] **Step 5:** Try Node 24: `cd server && npx -y node@24 --version`. If it prints `v24.*`, record that command for Task 5; if it fails, record NOT RUN with the error.
 - [ ] **Step 6:** Commit `chore: add Apache-2.0 licence and scaffold synthetic Kawalys BFF (BACK-69)`.
