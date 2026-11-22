@@ -207,14 +207,32 @@ def normalize(graph, fixture_dir, cmd, generated_at, stderr_text="", module_suff
 #   V5  `contains` / `method` links: line = the child node's definition line, line_source=derived (R7); the
 #       engine's own link line is not used. A calls link without a source_location is not emitted and is counted.
 #   V6  Targets that are engine-marked external nodes are counted in external_refs, not emitted (R5, R8).
-#   V7  Graphify has no unknown class: no unknown edge is ever emitted. form is not reported by the engine, so
-#       every non-reexport statement defaults to form=import; the count is recorded as an omission.
+#   V7  Graphify has no unknown class: apart from V10, no unknown edge is ever emitted. form is not reported by the
+#       engine, so every non-reexport statement outside V10 defaults to form=import; the count is an omission.
 #   V8  coverage: files_total from the scope walk (as tree_hash), files_seen = module nodes in the output.
 #   V9  (BACK-78, D1) When basenames collide, Graphify labels a module with a path suffix ('vault/models.py').
 #       A code node at L1 whose label holds a '/' and equals a trailing path suffix of its source_file is a module,
 #       provided that suffix matches exactly one file among the scope walk and the graph's source_files. If it
 #       matches more than one, the node stays dropped and is recorded as an ambiguous omission; nothing is guessed.
 #       The v0 path (N1, bare basename only) is unchanged.
+#   V10 (BACK-79, D2) Graphify represents `import('./x')` with two links: an EXTRACTED `imports_from` link at the call
+#       line and a `dynamic_import` link (0.9.114: no line) to the same target. R5 makes every dynamic import unknown.
+#       The pair key is (module of the mapped source, module of the mapped target). The companions of a key are its
+#       `imports_from` links and its `imports` links to a module (the V1 statement links) that carry a line.
+#       a) Decided by line where possible: a `dynamic_import` that carries a line converts only the companions of
+#          its key at that line.
+#       b) A line-less `dynamic_import` converts every remaining companion line of its key. If the key has more
+#          remaining companion lines than line-less `dynamic_import` links, a static and a dynamic import of one
+#          target in one module cannot be told apart by line: all of those lines become unknown (the weaker label,
+#          never an upgrade, as V4) and the count is recorded as an omission.
+#       c) A converted companion is emitted once per (from, line) as `imports` with basis unknown, form dynamic,
+#          to null, its own file and line, and the target named only in target_hint. No observed or inferred import
+#          is emitted for it, and symbol `imports` links into that target on that line are not emitted (counted).
+#       d) A `dynamic_import` with no companion is emitted as an unknown dynamic import from its own source, with its
+#          line if it has one and with no line otherwise (R7 lets an unknown edge omit the line).
+#       e) Only a key that carries a `dynamic_import` is affected: a static import of the same target from another
+#          module stays observed. A `dynamic_import` to an engine-marked external node is counted in external_refs
+#          (V6). The v0 path still drops `dynamic_import` and is unchanged.
 # ----------------------------------------------------------------------------------------------------------
 _IMPORT_RELS = ("imports_from", "imports", "re_exports")
 _RANK = {"observed": 0, "inferred": 1}
@@ -238,6 +256,63 @@ def _add_name(edge, name):
         names.append(name)
 
 
+def _dynamic_imports(recs, dyn_links):
+    """V10 (BACK-79 D2). Returns the import records left for V1-V3, the unknown dynamic edges, and counts."""
+    stats = {"companions": 0, "edges": 0, "orphans": 0, "symbols": 0, "ambiguous": 0}
+    if not dyn_links:
+        return recs, [], stats
+    by_key = {}
+    for d in dyn_links:
+        by_key.setdefault((_module_of(d[1]), _module_of(d[3])), []).append(d)
+    comp_lines = {}
+    for rel, e, s, line, tgt in recs:
+        if rel in ("imports_from", "imports") and "::" not in tgt and (_module_of(s), tgt) in by_key:
+            comp_lines.setdefault((_module_of(s), tgt), set()).add(line)
+    convert, orphans = set(), []  # convert: (source module, target module, line)
+    for key, dyns in by_key.items():
+        lines = comp_lines.get(key, set())
+        taken = set()
+        for d in dyns:  # V10 a) decided by line
+            if d[2] is not None and d[2] in lines:
+                taken.add(d[2])
+            elif d[2] is not None:
+                orphans.append(d)
+        lineless = [d for d in dyns if d[2] is None]
+        rest = lines - taken
+        if lineless and rest:  # V10 b)
+            taken |= rest
+            if len(rest) > len(lineless):
+                stats["ambiguous"] += len(rest)
+        elif lineless:
+            orphans.extend(lineless)  # V10 d)
+        convert |= {(key[0], key[1], ln) for ln in taken}
+    kept, out, seen = [], [], {}
+    for r in recs:
+        rel, e, s, line, tgt = r
+        mod_key = (_module_of(s), _module_of(tgt), line)
+        if rel == "re_exports" or mod_key not in convert:
+            kept.append(r)
+        elif "::" in tgt:
+            stats["symbols"] += 1
+        else:
+            stats["companions"] += 1
+            if (s, line, mod_key[1]) not in seen:
+                seen[(s, line, mod_key[1])] = True
+                out.append({"type": "imports", "form": "dynamic", "from": s, "to": None,
+                            "target_hint": f"dynamic import() of {mod_key[1]} (Graphify dynamic_import with a companion "
+                                           f"{rel} link at this line); R5: always unknown (BACK-79 D2)",
+                            "file": e["source_file"], "line": line, "basis": "unknown",
+                            "engine_native_id": f"{e['source']}|{rel}|{e['target']}"})
+    for e, s, line, tgt in orphans:
+        out.append({"type": "imports", "form": "dynamic", "from": s, "to": None,
+                    "target_hint": f"dynamic import() of {_module_of(tgt)} (Graphify dynamic_import with no companion "
+                                   "import link); R5: always unknown (BACK-79 D2)",
+                    "file": e["source_file"], "line": line, "basis": "unknown",
+                    "engine_native_id": f"{e['source']}|{e['relation']}|{e['target']}"})
+    stats["edges"], stats["orphans"] = len(out) - len(orphans), len(orphans)
+    return kept, out, stats
+
+
 def normalize_v1(graph, fixture_dir, cmd, generated_at, stderr_text=""):
     # reused for the node mapping only; module_suffix=True applies V9 (BACK-78 D1)
     base = normalize(graph, fixture_dir, cmd, generated_at, stderr_text, module_suffix=True)
@@ -248,7 +323,7 @@ def normalize_v1(graph, fixture_dir, cmd, generated_at, stderr_text=""):
                  if "non-callable symbol" in o["reason"] or o["reason"].startswith("engine warning")
                  or "(BACK-78 D1)" in o["reason"]]
     out, recs, dropped, ext_refs, no_line = [], [], {}, set(), 0
-    reexport_targets = set()
+    reexport_targets, dyn_links = set(), []
     rel_type = {"contains": "contains", "method": "contains", "calls": "calls", "indirect_call": "calls"}
 
     def drop(key):
@@ -260,6 +335,14 @@ def normalize_v1(graph, fixture_dir, cmd, generated_at, stderr_text=""):
         tn = nodes_in.get(e["target"])
         tgt = idmap.get(e["target"])
         ext = tgt is None and tn is not None and tn.get("external")
+        if rel == "dynamic_import":  # V10 (BACK-79 D2): resolved after all links are read
+            if s is None or (tgt is None and not ext):
+                drop("unmapped-endpoint:" + rel)
+            elif ext:
+                ext_refs.add((s, line, tn["label"]))
+            else:
+                dyn_links.append((e, s, line, tgt))
+            continue
         if rel not in rel_type and rel not in _IMPORT_RELS:
             drop(rel)
             continue
@@ -292,6 +375,8 @@ def normalize_v1(graph, fixture_dir, cmd, generated_at, stderr_text=""):
         basis = "inferred" if rel == "indirect_call" else basis_of(e)
         out.append({"type": "calls", "from": s, "to": tgt, "file": e["source_file"], "line": line, "basis": basis,
                     "engine_native_id": f"{e['source']}|{rel}|{e['target']}"})
+
+    recs, dyn_out, dyn_stats = _dynamic_imports(recs, dyn_links)
 
     stmts = {}  # (from, line, to, via) -> statement edge; insertion order = link order
 
@@ -336,6 +421,7 @@ def normalize_v1(graph, fixture_dir, cmd, generated_at, stderr_text=""):
         else:
             unattached += 1
     out.extend(stmts.values())
+    out.extend(dyn_out)
 
     for rel, cnt in sorted(dropped.items()):
         omissions.append({"what": f"{cnt} Graphify edge(s) of relation {rel}",
@@ -347,6 +433,19 @@ def normalize_v1(graph, fixture_dir, cmd, generated_at, stderr_text=""):
     if unattached:
         omissions.append({"what": f"{unattached} Graphify symbol import(s)",
                           "reason": "no statement edge at the same file and line; not emitted"})
+    if dyn_links:
+        omissions.append({"what": f"{len(dyn_links)} Graphify dynamic_import link(s)",
+                          "reason": f"R5: a dynamic import() is always unknown. {dyn_stats['companions']} companion "
+                                    f"import link(s) emitted as {dyn_stats['edges']} unknown dynamic import(s) that keep "
+                                    f"their line; {dyn_stats['orphans']} dynamic_import link(s) with no companion emitted "
+                                    f"as unknown; {dyn_stats['symbols']} symbol import(s) on those lines not emitted; no "
+                                    "observed or inferred import is emitted for them (V10, BACK-79 D2)"})
+    if dyn_stats["ambiguous"]:
+        omissions.append({"what": f"{dyn_stats['ambiguous']} import line(s) of a module that also dynamic-imports the "
+                                  "same target",
+                          "reason": "the dynamic_import link has no line, so the static and the dynamic import cannot "
+                                    "be told apart by line; all were emitted as unknown, never upgraded (V10 b, "
+                                    "BACK-79 D2)"})
     if no_line:
         omissions.append({"what": f"{no_line} Graphify edge(s) without a source line",
                           "reason": "the engine reports no line; an observed or inferred edge needs one, so it is not "
@@ -360,8 +459,9 @@ def normalize_v1(graph, fixture_dir, cmd, generated_at, stderr_text=""):
     n_default = sum(1 for e in out if e["type"] == "imports" and e["form"] == "import")
     if n_default:
         omissions.append({"what": f"{n_default} import edge(s)",
-                          "reason": "the engine does not report require or dynamic form; form defaulted to import "
-                                    "(re-export form is derived from relation re_exports)"})
+                          "reason": "the engine does not report require form, and dynamic form only through "
+                                    "dynamic_import links (V10); form defaulted to import (re-export form is derived "
+                                    "from relation re_exports)"})
     cfg = hashlib.sha256((cmd + "|GRAPHIFY_BACKEND=none|code-only").encode()).hexdigest()
     return {
         "envelope_version": "kawalys.graph.v1",

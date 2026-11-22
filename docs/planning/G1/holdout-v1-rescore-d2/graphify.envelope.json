@@ -1,0 +1,1958 @@
+{
+  "envelope_version": "kawalys.graph.v1",
+  "source": {
+    "scope": "fixture-copy",
+    "revision": "c17bb1c50fd1c9173a850e5862dba1f75f63d392822daa5cc91119fb673bfde8",
+    "fixture_version": "g1-01-v0"
+  },
+  "engine": {
+    "name": "graphify",
+    "version": "0.9.114",
+    "config_digest": "8a2365078f4ddf88b0d26b46aa4e9e8cc4b02053f7c6d8562bc875862896667b"
+  },
+  "generated_at": "2026-11-22T20:10:49Z",
+  "nodes": [
+    {
+      "id": "src/ingest/_purechecksum.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/_purechecksum.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_purechecksum"
+    },
+    {
+      "id": "src/ingest/_purechecksum.py::checksum",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/_purechecksum.py",
+      "line": 4,
+      "engine_native_id": "src_ingest_purechecksum_checksum"
+    },
+    {
+      "id": "src/ingest/_speedups.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/_speedups.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_speedups"
+    },
+    {
+      "id": "src/ingest/_speedups.py::checksum",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/_speedups.py",
+      "line": 4,
+      "engine_native_id": "src_ingest_speedups_checksum"
+    },
+    {
+      "id": "src/ingest/clean.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/clean.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_clean"
+    },
+    {
+      "id": "src/ingest/clean.py::clean_label",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/clean.py",
+      "line": 6,
+      "engine_native_id": "src_ingest_clean_clean_label"
+    },
+    {
+      "id": "src/ingest/clean.py::clean_rows",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/clean.py",
+      "line": 10,
+      "engine_native_id": "src_ingest_clean_clean_rows"
+    },
+    {
+      "id": "src/ingest/compat.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/compat.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_compat"
+    },
+    {
+      "id": "src/ingest/compat.py::fingerprint",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/compat.py",
+      "line": 15,
+      "engine_native_id": "src_ingest_compat_fingerprint"
+    },
+    {
+      "id": "src/ingest/endpoints.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/endpoints.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_endpoints"
+    },
+    {
+      "id": "src/ingest/endpoints.py::close_ledger",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/endpoints.py",
+      "line": 8,
+      "engine_native_id": "src_ingest_endpoints_close_ledger"
+    },
+    {
+      "id": "src/ingest/endpoints.py::echo",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/endpoints.py",
+      "line": 13,
+      "engine_native_id": "src_ingest_endpoints_echo"
+    },
+    {
+      "id": "src/ingest/legacy.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/legacy.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_legacy"
+    },
+    {
+      "id": "src/ingest/legacy.py::trim",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/legacy.py",
+      "line": 5,
+      "engine_native_id": "src_ingest_legacy_trim"
+    },
+    {
+      "id": "src/ingest/models.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/models.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_models"
+    },
+    {
+      "id": "src/ingest/models.py::Record",
+      "kind": "class",
+      "language": "python",
+      "file": "src/ingest/models.py",
+      "line": 6,
+      "engine_native_id": "src_ingest_models_record"
+    },
+    {
+      "id": "src/ingest/models.py::Record.key",
+      "kind": "method",
+      "language": "python",
+      "file": "src/ingest/models.py",
+      "line": 10,
+      "engine_native_id": "src_ingest_models_record_key"
+    },
+    {
+      "id": "src/ingest/plugin_host.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/plugin_host.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_plugin_host"
+    },
+    {
+      "id": "src/ingest/plugin_host.py::activate",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/plugin_host.py",
+      "line": 5,
+      "engine_native_id": "src_ingest_plugin_host_activate"
+    },
+    {
+      "id": "src/ingest/plugin_host.py::activate_legacy",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/plugin_host.py",
+      "line": 9,
+      "engine_native_id": "src_ingest_plugin_host_activate_legacy"
+    },
+    {
+      "id": "src/ingest/plugins/__init__.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/plugins/__init__.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_plugins_init"
+    },
+    {
+      "id": "src/ingest/plugins/csv_sink.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_plugins_csv_sink"
+    },
+    {
+      "id": "src/ingest/plugins/csv_sink.py::run",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 5,
+      "engine_native_id": "src_ingest_plugins_csv_sink_run"
+    },
+    {
+      "id": "src/ingest/probe.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/probe.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_probe"
+    },
+    {
+      "id": "src/ingest/probe.py::check_health",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/probe.py",
+      "line": 9,
+      "engine_native_id": "src_ingest_probe_check_health"
+    },
+    {
+      "id": "src/ingest/registry.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/registry.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_registry"
+    },
+    {
+      "id": "src/ingest/registry.py::expose",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/registry.py",
+      "line": 13,
+      "engine_native_id": "src_ingest_registry_expose"
+    },
+    {
+      "id": "src/ingest/registry.py::plugin",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/registry.py",
+      "line": 8,
+      "engine_native_id": "src_ingest_registry_plugin"
+    },
+    {
+      "id": "src/ingest/registry.py::wrap",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/registry.py",
+      "line": 14,
+      "engine_native_id": "src_ingest_registry_expose_wrap"
+    },
+    {
+      "id": "src/ingest/textkit.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/ingest/textkit.py",
+      "line": 1,
+      "engine_native_id": "src_ingest_textkit"
+    },
+    {
+      "id": "src/ingest/textkit.py::clamp",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/textkit.py",
+      "line": 9,
+      "engine_native_id": "src_ingest_textkit_clamp"
+    },
+    {
+      "id": "src/ingest/textkit.py::slugify",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/textkit.py",
+      "line": 5,
+      "engine_native_id": "src_ingest_textkit_slugify"
+    },
+    {
+      "id": "src/ingest/textkit.py::trim",
+      "kind": "function",
+      "language": "python",
+      "file": "src/ingest/textkit.py",
+      "line": 13,
+      "engine_native_id": "src_ingest_textkit_trim"
+    },
+    {
+      "id": "src/packages/atlas/src/App.tsx",
+      "kind": "module",
+      "language": "tsx",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 1,
+      "engine_native_id": "src_packages_atlas_src_app"
+    },
+    {
+      "id": "src/packages/atlas/src/App.tsx::mount",
+      "kind": "function",
+      "language": "tsx",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 11,
+      "engine_native_id": "src_packages_atlas_src_app_mount"
+    },
+    {
+      "id": "src/packages/atlas/src/App.tsx::openMonthly",
+      "kind": "function",
+      "language": "tsx",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 7,
+      "engine_native_id": "src_packages_atlas_src_app_openmonthly"
+    },
+    {
+      "id": "src/packages/atlas/src/LedgerPanel.tsx",
+      "kind": "module",
+      "language": "tsx",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 1,
+      "engine_native_id": "src_packages_atlas_src_ledgerpanel"
+    },
+    {
+      "id": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "kind": "function",
+      "language": "tsx",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 9,
+      "engine_native_id": "src_packages_atlas_src_ledgerpanel_ledgerpanel"
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/bridge.js",
+      "kind": "module",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 1,
+      "engine_native_id": "src_packages_atlas_src_legacy_bridge"
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/bridge.js::exportRows",
+      "kind": "function",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 6,
+      "engine_native_id": "src_packages_atlas_src_legacy_bridge_exportrows"
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/csv.js",
+      "kind": "module",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/csv.js",
+      "line": 1,
+      "engine_native_id": "src_packages_atlas_src_legacy_csv"
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/debug-panel.js",
+      "kind": "module",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/debug-panel.js",
+      "line": 1,
+      "engine_native_id": "src_packages_atlas_src_legacy_debug_panel"
+    },
+    {
+      "id": "src/packages/atlas/src/legacy/debug-panel.js::show",
+      "kind": "function",
+      "language": "javascript",
+      "file": "src/packages/atlas/src/legacy/debug-panel.js",
+      "line": 3,
+      "engine_native_id": "src_packages_atlas_src_legacy_debug_panel_show"
+    },
+    {
+      "id": "src/packages/atlas/src/server/health.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/server/health.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_atlas_src_server_health"
+    },
+    {
+      "id": "src/packages/atlas/src/server/health.ts::HealthReply",
+      "kind": "class",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/server/health.ts",
+      "line": 2,
+      "engine_native_id": "src_packages_atlas_src_server_health_healthreply"
+    },
+    {
+      "id": "src/packages/atlas/src/server/health.ts::healthHandler",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/server/health.ts",
+      "line": 7,
+      "engine_native_id": "src_packages_atlas_src_server_health_healthhandler"
+    },
+    {
+      "id": "src/packages/atlas/src/summary.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_atlas_src_summary"
+    },
+    {
+      "id": "src/packages/atlas/src/text.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_atlas_src_text"
+    },
+    {
+      "id": "src/packages/atlas/src/text.ts::initials",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 6,
+      "engine_native_id": "src_packages_atlas_src_text_initials"
+    },
+    {
+      "id": "src/packages/atlas/src/text.ts::normalize",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 2,
+      "engine_native_id": "src_packages_atlas_src_text_normalize"
+    },
+    {
+      "id": "src/packages/atlas/src/views/lookup.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/views/lookup.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_atlas_src_views_lookup"
+    },
+    {
+      "id": "src/packages/atlas/src/views/lookup.ts::resolveView",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/views/lookup.ts",
+      "line": 2,
+      "engine_native_id": "src_packages_atlas_src_views_lookup_resolveview"
+    },
+    {
+      "id": "src/packages/atlas/src/views/monthly.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_atlas_src_views_monthly"
+    },
+    {
+      "id": "src/packages/atlas/src/views/monthly.ts::render",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 4,
+      "engine_native_id": "src_packages_atlas_src_views_monthly_render"
+    },
+    {
+      "id": "src/packages/ledger/src/audit.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/audit.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_ledger_src_audit"
+    },
+    {
+      "id": "src/packages/ledger/src/audit.ts::auditTrail",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/audit.ts",
+      "line": 4,
+      "engine_native_id": "src_packages_ledger_src_audit_audittrail"
+    },
+    {
+      "id": "src/packages/ledger/src/audit.ts::auditedNames",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/audit.ts",
+      "line": 8,
+      "engine_native_id": "src_packages_ledger_src_audit_auditednames"
+    },
+    {
+      "id": "src/packages/ledger/src/credit.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_ledger_src_credit"
+    },
+    {
+      "id": "src/packages/ledger/src/credit.ts::CreditEntry",
+      "kind": "class",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 4,
+      "engine_native_id": "src_packages_ledger_src_credit_creditentry"
+    },
+    {
+      "id": "src/packages/ledger/src/credit.ts::CreditEntry.describe",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 5,
+      "engine_native_id": "src_packages_ledger_src_credit_creditentry_describe"
+    },
+    {
+      "id": "src/packages/ledger/src/entry.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_ledger_src_entry"
+    },
+    {
+      "id": "src/packages/ledger/src/entry.ts::BaseEntry",
+      "kind": "class",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 2,
+      "engine_native_id": "src_packages_ledger_src_entry_baseentry"
+    },
+    {
+      "id": "src/packages/ledger/src/entry.ts::BaseEntry.amount",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 5,
+      "engine_native_id": "src_packages_ledger_src_entry_baseentry_amount"
+    },
+    {
+      "id": "src/packages/ledger/src/entry.ts::BaseEntry.constructor",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 3,
+      "engine_native_id": "src_packages_ledger_src_entry_baseentry_constructor"
+    },
+    {
+      "id": "src/packages/ledger/src/entry.ts::BaseEntry.describe",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 9,
+      "engine_native_id": "src_packages_ledger_src_entry_baseentry_describe"
+    },
+    {
+      "id": "src/packages/ledger/src/index.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/index.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_ledger_src_index"
+    },
+    {
+      "id": "src/packages/ledger/src/journal.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_ledger_src_journal"
+    },
+    {
+      "id": "src/packages/ledger/src/journal.ts::postEntry",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 5,
+      "engine_native_id": "src_packages_ledger_src_journal_postentry"
+    },
+    {
+      "id": "src/packages/ledger/src/journal.ts::previewEntry",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 11,
+      "engine_native_id": "src_packages_ledger_src_journal_previewentry"
+    },
+    {
+      "id": "src/packages/ledger/src/money.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/money.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_ledger_src_money"
+    },
+    {
+      "id": "src/packages/ledger/src/money.ts::normalize",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/money.ts",
+      "line": 8,
+      "engine_native_id": "src_packages_ledger_src_money_normalize"
+    },
+    {
+      "id": "src/packages/ledger/src/money.ts::roundCents",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/money.ts",
+      "line": 4,
+      "engine_native_id": "src_packages_ledger_src_money_roundcents"
+    },
+    {
+      "id": "src/packages/ledger/src/period.ts",
+      "kind": "module",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 1,
+      "engine_native_id": "src_packages_ledger_src_period"
+    },
+    {
+      "id": "src/packages/ledger/src/period.ts::PeriodCloser",
+      "kind": "class",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 5,
+      "engine_native_id": "src_packages_ledger_src_period_periodcloser"
+    },
+    {
+      "id": "src/packages/ledger/src/period.ts::PeriodCloser.close",
+      "kind": "method",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 6,
+      "engine_native_id": "src_packages_ledger_src_period_periodcloser_close"
+    },
+    {
+      "id": "src/packages/ledger/src/period.ts::closePeriod",
+      "kind": "function",
+      "language": "typescript",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 11,
+      "engine_native_id": "src_packages_ledger_src_period_closeperiod"
+    },
+    {
+      "id": "src/tsconfig.json",
+      "kind": "module",
+      "language": "unknown",
+      "file": "src/tsconfig.json",
+      "line": 1,
+      "engine_native_id": "src_tsconfig"
+    },
+    {
+      "id": "src/vault/__init__.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/vault/__init__.py",
+      "line": 1,
+      "engine_native_id": "src_vault_init"
+    },
+    {
+      "id": "src/vault/base.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/vault/base.py",
+      "line": 1,
+      "engine_native_id": "src_vault_base"
+    },
+    {
+      "id": "src/vault/base.py::BaseModel",
+      "kind": "class",
+      "language": "python",
+      "file": "src/vault/base.py",
+      "line": 4,
+      "engine_native_id": "src_vault_base_basemodel"
+    },
+    {
+      "id": "src/vault/base.py::BaseModel.__init__",
+      "kind": "method",
+      "language": "python",
+      "file": "src/vault/base.py",
+      "line": 5,
+      "engine_native_id": "src_vault_base_basemodel_init"
+    },
+    {
+      "id": "src/vault/base.py::BaseModel.describe",
+      "kind": "method",
+      "language": "python",
+      "file": "src/vault/base.py",
+      "line": 11,
+      "engine_native_id": "src_vault_base_basemodel_describe"
+    },
+    {
+      "id": "src/vault/base.py::BaseModel.save",
+      "kind": "method",
+      "language": "python",
+      "file": "src/vault/base.py",
+      "line": 8,
+      "engine_native_id": "src_vault_base_basemodel_save"
+    },
+    {
+      "id": "src/vault/models.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/vault/models.py",
+      "line": 1,
+      "engine_native_id": "src_vault_models"
+    },
+    {
+      "id": "src/vault/models.py::Record",
+      "kind": "class",
+      "language": "python",
+      "file": "src/vault/models.py",
+      "line": 5,
+      "engine_native_id": "src_vault_models_record"
+    },
+    {
+      "id": "src/vault/models.py::Record.save",
+      "kind": "method",
+      "language": "python",
+      "file": "src/vault/models.py",
+      "line": 6,
+      "engine_native_id": "src_vault_models_record_save"
+    },
+    {
+      "id": "src/vault/store.py",
+      "kind": "module",
+      "language": "python",
+      "file": "src/vault/store.py",
+      "line": 1,
+      "engine_native_id": "src_vault_store"
+    },
+    {
+      "id": "src/vault/store.py::persist",
+      "kind": "function",
+      "language": "python",
+      "file": "src/vault/store.py",
+      "line": 8,
+      "engine_native_id": "src_vault_store_persist"
+    }
+  ],
+  "edges": [
+    {
+      "type": "calls",
+      "from": "src/ingest/clean.py::clean_label",
+      "to": "src/ingest/textkit.py::clamp",
+      "file": "src/ingest/clean.py",
+      "line": 7,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_clean_clean_label|calls|src_ingest_textkit_clamp"
+    },
+    {
+      "type": "calls",
+      "from": "src/ingest/clean.py::clean_label",
+      "to": "src/ingest/textkit.py::slugify",
+      "file": "src/ingest/clean.py",
+      "line": 7,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_clean_clean_label|calls|src_ingest_textkit_slugify"
+    },
+    {
+      "type": "calls",
+      "from": "src/ingest/endpoints.py::close_ledger",
+      "to": "src/ingest/clean.py::clean_label",
+      "file": "src/ingest/endpoints.py",
+      "line": 9,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_endpoints_close_ledger|calls|src_ingest_clean_clean_label"
+    },
+    {
+      "type": "calls",
+      "from": "src/ingest/endpoints.py::echo",
+      "to": "src/ingest/models.py::Record",
+      "file": "src/ingest/endpoints.py",
+      "line": 14,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_endpoints_echo|calls|src_ingest_models_record"
+    },
+    {
+      "type": "calls",
+      "from": "src/ingest/plugins/csv_sink.py::run",
+      "to": "src/ingest/textkit.py::slugify",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 6,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_plugins_csv_sink_run|calls|src_ingest_textkit_slugify"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "to": "src/packages/ledger/src/journal.ts::postEntry",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 11,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_ledgerpanel_ledgerpanel|calls|src_packages_ledger_src_journal_postentry"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "to": "src/packages/atlas/src/text.ts::initials",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 15,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_ledgerpanel_ledgerpanel|calls|src_packages_atlas_src_text_initials"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/atlas/src/legacy/bridge.js::exportRows",
+      "to": "src/packages/ledger/src/money.ts::roundCents",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 8,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_legacy_bridge_exportrows|calls|src_packages_ledger_src_money_roundcents"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/atlas/src/text.ts::initials",
+      "to": "src/packages/atlas/src/text.ts::normalize",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 7,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_text_initials|calls|src_packages_atlas_src_text_normalize"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/atlas/src/views/monthly.ts::render",
+      "to": "src/packages/atlas/src/text.ts::normalize",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 5,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_views_monthly_render|calls|src_packages_atlas_src_text_normalize"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/ledger/src/entry.ts::BaseEntry.describe",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry.amount",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 10,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_entry_baseentry_describe|calls|src_packages_ledger_src_entry_baseentry_amount"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/ledger/src/journal.ts::postEntry",
+      "to": "src/packages/ledger/src/credit.ts::CreditEntry",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 6,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_journal_postentry|calls|src_packages_ledger_src_credit_creditentry"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/ledger/src/journal.ts::postEntry",
+      "to": "src/packages/ledger/src/money.ts::roundCents",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 7,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_journal_postentry|calls|src_packages_ledger_src_money_roundcents"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/ledger/src/journal.ts::previewEntry",
+      "to": "src/packages/ledger/src/money.ts::roundCents",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 12,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_journal_previewentry|calls|src_packages_ledger_src_money_roundcents"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/ledger/src/period.ts::closePeriod",
+      "to": "src/packages/ledger/src/period.ts::PeriodCloser",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 12,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_period_closeperiod|calls|src_packages_ledger_src_period_periodcloser"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/ledger/src/period.ts::PeriodCloser.close",
+      "to": "src/packages/ledger/src/journal.ts::postEntry",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 7,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_period_periodcloser_close|calls|src_packages_ledger_src_journal_postentry"
+    },
+    {
+      "type": "calls",
+      "from": "src/vault/models.py::Record.save",
+      "to": "src/vault/base.py::BaseModel.save",
+      "file": "src/vault/models.py",
+      "line": 7,
+      "basis": "observed",
+      "engine_native_id": "src_vault_models_record_save|calls|src_vault_base_basemodel_save"
+    },
+    {
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/ingest/compat.py::fingerprint",
+      "file": "src/vault/store.py",
+      "line": 11,
+      "basis": "observed",
+      "engine_native_id": "src_vault_store_persist|calls|src_ingest_compat_fingerprint"
+    },
+    {
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/ingest/clean.py::clean_label",
+      "file": "src/vault/store.py",
+      "line": 9,
+      "basis": "observed",
+      "engine_native_id": "src_vault_store_persist|calls|src_ingest_clean_clean_label"
+    },
+    {
+      "type": "calls",
+      "from": "src/vault/store.py::persist",
+      "to": "src/vault/models.py::Record",
+      "file": "src/vault/store.py",
+      "line": 9,
+      "basis": "observed",
+      "engine_native_id": "src_vault_store_persist|calls|src_vault_models_record"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/clean.py",
+      "to": "src/ingest/clean.py::clean_rows",
+      "file": "src/ingest/clean.py",
+      "line": 10,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_clean|contains|src_ingest_clean_clean_rows"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/clean.py",
+      "to": "src/ingest/clean.py::clean_label",
+      "file": "src/ingest/clean.py",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_clean|contains|src_ingest_clean_clean_label"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/compat.py",
+      "to": "src/ingest/compat.py::fingerprint",
+      "file": "src/ingest/compat.py",
+      "line": 15,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_compat|contains|src_ingest_compat_fingerprint"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/endpoints.py::echo",
+      "file": "src/ingest/endpoints.py",
+      "line": 13,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_endpoints|contains|src_ingest_endpoints_echo"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/endpoints.py::close_ledger",
+      "file": "src/ingest/endpoints.py",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_endpoints|contains|src_ingest_endpoints_close_ledger"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/legacy.py",
+      "to": "src/ingest/legacy.py::trim",
+      "file": "src/ingest/legacy.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_legacy|contains|src_ingest_legacy_trim"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/models.py",
+      "to": "src/ingest/models.py::Record",
+      "file": "src/ingest/models.py",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_models|contains|src_ingest_models_record"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/plugin_host.py",
+      "to": "src/ingest/plugin_host.py::activate",
+      "file": "src/ingest/plugin_host.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_plugin_host|contains|src_ingest_plugin_host_activate"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/plugin_host.py",
+      "to": "src/ingest/plugin_host.py::activate_legacy",
+      "file": "src/ingest/plugin_host.py",
+      "line": 9,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_plugin_host|contains|src_ingest_plugin_host_activate_legacy"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/plugins/csv_sink.py",
+      "to": "src/ingest/plugins/csv_sink.py::run",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_plugins_csv_sink|contains|src_ingest_plugins_csv_sink_run"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/probe.py",
+      "to": "src/ingest/probe.py::check_health",
+      "file": "src/ingest/probe.py",
+      "line": 9,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_probe|contains|src_ingest_probe_check_health"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/_purechecksum.py",
+      "to": "src/ingest/_purechecksum.py::checksum",
+      "file": "src/ingest/_purechecksum.py",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_purechecksum|contains|src_ingest_purechecksum_checksum"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/registry.py",
+      "to": "src/ingest/registry.py::expose",
+      "file": "src/ingest/registry.py",
+      "line": 13,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_registry|contains|src_ingest_registry_expose"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/registry.py",
+      "to": "src/ingest/registry.py::plugin",
+      "file": "src/ingest/registry.py",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_registry|contains|src_ingest_registry_plugin"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/_speedups.py",
+      "to": "src/ingest/_speedups.py::checksum",
+      "file": "src/ingest/_speedups.py",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_speedups|contains|src_ingest_speedups_checksum"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/textkit.py",
+      "to": "src/ingest/textkit.py::trim",
+      "file": "src/ingest/textkit.py",
+      "line": 13,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_textkit|contains|src_ingest_textkit_trim"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/textkit.py",
+      "to": "src/ingest/textkit.py::slugify",
+      "file": "src/ingest/textkit.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_textkit|contains|src_ingest_textkit_slugify"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/textkit.py",
+      "to": "src/ingest/textkit.py::clamp",
+      "file": "src/ingest/textkit.py",
+      "line": 9,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_textkit|contains|src_ingest_textkit_clamp"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/atlas/src/App.tsx",
+      "to": "src/packages/atlas/src/App.tsx::mount",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 11,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_app|contains|src_packages_atlas_src_app_mount"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/atlas/src/App.tsx",
+      "to": "src/packages/atlas/src/App.tsx::openMonthly",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 7,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_app|contains|src_packages_atlas_src_app_openmonthly"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 9,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_ledgerpanel|contains|src_packages_atlas_src_ledgerpanel_ledgerpanel"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/atlas/src/server/health.ts",
+      "to": "src/packages/atlas/src/server/health.ts::HealthReply",
+      "file": "src/packages/atlas/src/server/health.ts",
+      "line": 2,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_server_health|contains|src_packages_atlas_src_server_health_healthreply"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/atlas/src/server/health.ts",
+      "to": "src/packages/atlas/src/server/health.ts::healthHandler",
+      "file": "src/packages/atlas/src/server/health.ts",
+      "line": 7,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_server_health|contains|src_packages_atlas_src_server_health_healthhandler"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/atlas/src/text.ts",
+      "to": "src/packages/atlas/src/text.ts::normalize",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 2,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_text|contains|src_packages_atlas_src_text_normalize"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/atlas/src/text.ts",
+      "to": "src/packages/atlas/src/text.ts::initials",
+      "file": "src/packages/atlas/src/text.ts",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_text|contains|src_packages_atlas_src_text_initials"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/atlas/src/views/lookup.ts",
+      "to": "src/packages/atlas/src/views/lookup.ts::resolveView",
+      "file": "src/packages/atlas/src/views/lookup.ts",
+      "line": 2,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_views_lookup|contains|src_packages_atlas_src_views_lookup_resolveview"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/atlas/src/views/monthly.ts",
+      "to": "src/packages/atlas/src/views/monthly.ts::render",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_views_monthly|contains|src_packages_atlas_src_views_monthly_render"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/audit.ts",
+      "to": "src/packages/ledger/src/audit.ts::auditTrail",
+      "file": "src/packages/ledger/src/audit.ts",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_audit|contains|src_packages_ledger_src_audit_audittrail"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/audit.ts",
+      "to": "src/packages/ledger/src/audit.ts::auditedNames",
+      "file": "src/packages/ledger/src/audit.ts",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_audit|contains|src_packages_ledger_src_audit_auditednames"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/credit.ts",
+      "to": "src/packages/ledger/src/credit.ts::CreditEntry",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_credit|contains|src_packages_ledger_src_credit_creditentry"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/entry.ts",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 2,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_entry|contains|src_packages_ledger_src_entry_baseentry"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/journal.ts",
+      "to": "src/packages/ledger/src/journal.ts::previewEntry",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 11,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_journal|contains|src_packages_ledger_src_journal_previewentry"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/journal.ts",
+      "to": "src/packages/ledger/src/journal.ts::postEntry",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_journal|contains|src_packages_ledger_src_journal_postentry"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/money.ts",
+      "to": "src/packages/ledger/src/money.ts::roundCents",
+      "file": "src/packages/ledger/src/money.ts",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_money|contains|src_packages_ledger_src_money_roundcents"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/money.ts",
+      "to": "src/packages/ledger/src/money.ts::normalize",
+      "file": "src/packages/ledger/src/money.ts",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_money|contains|src_packages_ledger_src_money_normalize"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/period.ts",
+      "to": "src/packages/ledger/src/period.ts::closePeriod",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 11,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_period|contains|src_packages_ledger_src_period_closeperiod"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/period.ts",
+      "to": "src/packages/ledger/src/period.ts::PeriodCloser",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_period|contains|src_packages_ledger_src_period_periodcloser"
+    },
+    {
+      "type": "contains",
+      "from": "src/vault/base.py",
+      "to": "src/vault/base.py::BaseModel",
+      "file": "src/vault/base.py",
+      "line": 4,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_vault_base|contains|src_vault_base_basemodel"
+    },
+    {
+      "type": "contains",
+      "from": "src/vault/models.py",
+      "to": "src/vault/models.py::Record",
+      "file": "src/vault/models.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_vault_models|contains|src_vault_models_record"
+    },
+    {
+      "type": "contains",
+      "from": "src/vault/store.py",
+      "to": "src/vault/store.py::persist",
+      "file": "src/vault/store.py",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_vault_store|contains|src_vault_store_persist"
+    },
+    {
+      "type": "contains",
+      "from": "src/ingest/models.py::Record",
+      "to": "src/ingest/models.py::Record.key",
+      "file": "src/ingest/models.py",
+      "line": 10,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_ingest_models_record|method|src_ingest_models_record_key"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/credit.ts::CreditEntry",
+      "to": "src/packages/ledger/src/credit.ts::CreditEntry.describe",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_credit_creditentry|method|src_packages_ledger_src_credit_creditentry_describe"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/entry.ts::BaseEntry",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry.constructor",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 3,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_entry_baseentry|method|src_packages_ledger_src_entry_baseentry_constructor"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/entry.ts::BaseEntry",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry.amount",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_entry_baseentry|method|src_packages_ledger_src_entry_baseentry_amount"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/entry.ts::BaseEntry",
+      "to": "src/packages/ledger/src/entry.ts::BaseEntry.describe",
+      "file": "src/packages/ledger/src/entry.ts",
+      "line": 9,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_entry_baseentry|method|src_packages_ledger_src_entry_baseentry_describe"
+    },
+    {
+      "type": "contains",
+      "from": "src/packages/ledger/src/period.ts::PeriodCloser",
+      "to": "src/packages/ledger/src/period.ts::PeriodCloser.close",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_period_periodcloser|method|src_packages_ledger_src_period_periodcloser_close"
+    },
+    {
+      "type": "contains",
+      "from": "src/vault/base.py::BaseModel",
+      "to": "src/vault/base.py::BaseModel.describe",
+      "file": "src/vault/base.py",
+      "line": 11,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_vault_base_basemodel|method|src_vault_base_basemodel_describe"
+    },
+    {
+      "type": "contains",
+      "from": "src/vault/base.py::BaseModel",
+      "to": "src/vault/base.py::BaseModel.__init__",
+      "file": "src/vault/base.py",
+      "line": 5,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_vault_base_basemodel|method|src_vault_base_basemodel_init"
+    },
+    {
+      "type": "contains",
+      "from": "src/vault/base.py::BaseModel",
+      "to": "src/vault/base.py::BaseModel.save",
+      "file": "src/vault/base.py",
+      "line": 8,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_vault_base_basemodel|method|src_vault_base_basemodel_save"
+    },
+    {
+      "type": "contains",
+      "from": "src/vault/models.py::Record",
+      "to": "src/vault/models.py::Record.save",
+      "file": "src/vault/models.py",
+      "line": 6,
+      "line_source": "derived",
+      "basis": "observed",
+      "engine_native_id": "src_vault_models_record|method|src_vault_models_record_save"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/ledger/src/journal.ts::postEntry",
+      "to": "src/packages/ledger/src/credit.ts::CreditEntry.describe",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 8,
+      "basis": "inferred",
+      "engine_native_id": "src_packages_ledger_src_journal_postentry|calls|src_packages_ledger_src_credit_creditentry_describe"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/atlas/src/App.tsx",
+      "to": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 5,
+      "basis": "inferred",
+      "engine_native_id": "src_packages_atlas_src_app|indirect_call|src_packages_atlas_src_ledgerpanel_ledgerpanel"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/atlas/src/legacy/bridge.js",
+      "to": "src/packages/atlas/src/legacy/bridge.js::exportRows",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 12,
+      "basis": "inferred",
+      "engine_native_id": "src_packages_atlas_src_legacy_bridge|indirect_call|src_packages_atlas_src_legacy_bridge_exportrows"
+    },
+    {
+      "type": "calls",
+      "from": "src/packages/atlas/src/legacy/debug-panel.js",
+      "to": "src/packages/atlas/src/legacy/debug-panel.js::show",
+      "file": "src/packages/atlas/src/legacy/debug-panel.js",
+      "line": 7,
+      "basis": "inferred",
+      "engine_native_id": "src_packages_atlas_src_legacy_debug_panel|indirect_call|src_packages_atlas_src_legacy_debug_panel_show"
+    },
+    {
+      "type": "calls",
+      "from": "src/ingest/registry.py::expose",
+      "to": "src/ingest/registry.py::wrap",
+      "file": "src/ingest/registry.py",
+      "line": 17,
+      "basis": "inferred",
+      "engine_native_id": "src_ingest_registry_expose|indirect_call|src_ingest_registry_expose_wrap"
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/ingest/clean.py",
+      "to": "src/ingest/legacy.py",
+      "file": "src/ingest/clean.py",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_clean|imports_from|src_ingest_legacy"
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/ingest/clean.py",
+      "to": "src/ingest/textkit.py",
+      "file": "src/ingest/clean.py",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_clean|imports_from|src_ingest_textkit"
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/ingest/compat.py",
+      "to": "src/vault/models.py",
+      "file": "src/ingest/compat.py",
+      "line": 10,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_compat|imports_from|src_vault_models",
+      "names": [
+        "Record"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/ingest/compat.py",
+      "to": "src/ingest/_speedups.py",
+      "file": "src/ingest/compat.py",
+      "line": 5,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_compat|imports_from|src_ingest_speedups",
+      "names": [
+        "checksum"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/ingest/compat.py",
+      "to": "src/ingest/_purechecksum.py",
+      "file": "src/ingest/compat.py",
+      "line": 7,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_compat|imports_from|src_ingest_purechecksum",
+      "names": [
+        "checksum"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/clean.py",
+      "file": "src/ingest/endpoints.py",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_endpoints|imports_from|src_ingest_clean",
+      "names": [
+        "clean_label"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/models.py",
+      "file": "src/ingest/endpoints.py",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_endpoints|imports_from|src_ingest_models",
+      "names": [
+        "Record"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/ingest/endpoints.py",
+      "to": "src/ingest/registry.py",
+      "file": "src/ingest/endpoints.py",
+      "line": 4,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_endpoints|imports_from|src_ingest_registry",
+      "names": [
+        "expose",
+        "plugin"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/ingest/plugins/csv_sink.py",
+      "to": "src/ingest/textkit.py",
+      "file": "src/ingest/plugins/csv_sink.py",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_ingest_plugins_csv_sink|imports_from|src_ingest_textkit",
+      "names": [
+        "slugify"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/atlas/src/App.tsx",
+      "to": "src/packages/atlas/src/LedgerPanel.tsx",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_app|imports_from|src_packages_atlas_src_ledgerpanel"
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/ledger/src/journal.ts",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_ledgerpanel|imports_from|src_packages_ledger_src_journal",
+      "names": [
+        "postEntry"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/ledger/src/index.ts",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_ledgerpanel|imports_from|src_packages_ledger_src_index"
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/atlas/src/summary.ts",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 4,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_ledgerpanel|imports_from|src_packages_atlas_src_summary"
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/atlas/src/LedgerPanel.tsx",
+      "to": "src/packages/atlas/src/text.ts",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 5,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_ledgerpanel|imports_from|src_packages_atlas_src_text",
+      "names": [
+        "initials"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/atlas/src/legacy/bridge.js",
+      "to": "src/packages/ledger/src/money.ts",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_legacy_bridge|imports_from|src_packages_ledger_src_money",
+      "names": [
+        "roundCents"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/atlas/src/legacy/bridge.js",
+      "to": "src/packages/atlas/src/legacy/csv.js",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_legacy_bridge|imports_from|src_packages_atlas_src_legacy_csv"
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/atlas/src/summary.ts",
+      "to": "src/packages/atlas/src/text.ts",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 1,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_summary|imports_from|src_packages_atlas_src_text",
+      "names": [
+        "normalize"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/atlas/src/summary.ts",
+      "to": "src/packages/ledger/src/money.ts",
+      "file": "src/packages/atlas/src/summary.ts",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_summary|imports_from|src_packages_ledger_src_money",
+      "names": [
+        "roundCents"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/atlas/src/views/monthly.ts",
+      "to": "src/packages/atlas/src/text.ts",
+      "file": "src/packages/atlas/src/views/monthly.ts",
+      "line": 1,
+      "basis": "observed",
+      "engine_native_id": "src_packages_atlas_src_views_monthly|imports_from|src_packages_atlas_src_text",
+      "names": [
+        "normalize"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/ledger/src/credit.ts",
+      "to": "src/packages/ledger/src/entry.ts",
+      "file": "src/packages/ledger/src/credit.ts",
+      "line": 1,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_credit|imports_from|src_packages_ledger_src_entry",
+      "names": [
+        "BaseEntry"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/ledger/src/journal.ts",
+      "to": "src/packages/ledger/src/credit.ts",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 1,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_journal|imports_from|src_packages_ledger_src_credit",
+      "names": [
+        "CreditEntry"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/ledger/src/journal.ts",
+      "to": "src/packages/ledger/src/money.ts",
+      "file": "src/packages/ledger/src/journal.ts",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_journal|imports_from|src_packages_ledger_src_money",
+      "names": [
+        "roundCents"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/ledger/src/period.ts",
+      "to": "src/packages/ledger/src/audit.ts",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 1,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_period|imports_from|src_packages_ledger_src_audit",
+      "names": [
+        "auditTrail"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/packages/ledger/src/period.ts",
+      "to": "src/packages/ledger/src/journal.ts",
+      "file": "src/packages/ledger/src/period.ts",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_period|imports_from|src_packages_ledger_src_journal",
+      "names": [
+        "postEntry"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/vault/models.py",
+      "to": "src/vault/base.py",
+      "file": "src/vault/models.py",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_vault_models|imports_from|src_vault_base",
+      "names": [
+        "BaseModel"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/vault/store.py",
+      "to": "src/ingest/compat.py",
+      "file": "src/vault/store.py",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_vault_store|imports_from|src_ingest_compat",
+      "names": [
+        "fingerprint"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/vault/store.py",
+      "to": "src/ingest/clean.py",
+      "file": "src/vault/store.py",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "src_vault_store|imports_from|src_ingest_clean",
+      "names": [
+        "clean_label"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/vault/store.py",
+      "to": "src/vault/models.py",
+      "file": "src/vault/store.py",
+      "line": 4,
+      "basis": "observed",
+      "engine_native_id": "src_vault_store|imports_from|src_vault_models",
+      "names": [
+        "Record"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "reexport",
+      "from": "src/packages/ledger/src/index.ts",
+      "to": "src/packages/ledger/src/journal.ts",
+      "file": "src/packages/ledger/src/index.ts",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_index|re_exports|src_packages_ledger_src_journal",
+      "names": [
+        "postEntry"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "reexport",
+      "from": "src/packages/ledger/src/index.ts",
+      "to": "src/packages/ledger/src/credit.ts",
+      "file": "src/packages/ledger/src/index.ts",
+      "line": 3,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_index|re_exports|src_packages_ledger_src_credit"
+    },
+    {
+      "type": "imports",
+      "form": "reexport",
+      "from": "src/packages/ledger/src/index.ts",
+      "to": "src/packages/ledger/src/money.ts",
+      "file": "src/packages/ledger/src/index.ts",
+      "line": 4,
+      "basis": "observed",
+      "engine_native_id": "src_packages_ledger_src_index|re_exports|src_packages_ledger_src_money"
+    },
+    {
+      "type": "imports",
+      "form": "import",
+      "from": "src/vault/__init__.py",
+      "to": "src/vault/models.py",
+      "file": "src/vault/__init__.py",
+      "line": 2,
+      "basis": "observed",
+      "engine_native_id": "src_vault_init|re_exports|src_vault_models",
+      "names": [
+        "Record"
+      ]
+    },
+    {
+      "type": "imports",
+      "form": "dynamic",
+      "from": "src/packages/atlas/src/App.tsx::openMonthly",
+      "to": null,
+      "target_hint": "dynamic import() of src/packages/atlas/src/views/monthly.ts (Graphify dynamic_import with a companion imports_from link at this line); R5: always unknown (BACK-79 D2)",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 8,
+      "basis": "unknown",
+      "engine_native_id": "src_packages_atlas_src_app_openmonthly|imports_from|src_packages_atlas_src_views_monthly"
+    }
+  ],
+  "omissions": [
+    {
+      "what": "src/packages/ledger/src/money.ts::LEDGER_CURRENCY",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/ingest/__init__.py::ingest/__init__.py",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/packages/atlas/src/App.tsx::routes",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::compilerOptions",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::allowJs",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::baseUrl",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::experimentalDecorators",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::jsx",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::module",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::moduleResolution",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::paths",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::strict",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::target",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::include",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::~atlas/*",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/tsconfig.json::@ledger",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/packages/ledger/src/audit.ts::audited",
+      "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"
+    },
+    {
+      "what": "src/packages/atlas/src/legacy/csv.js,",
+      "reason": "engine warning: file yielded no symbols"
+    },
+    {
+      "what": "2 Graphify edge(s) of relation inherits",
+      "reason": "no envelope edge type or endpoint is not an envelope node (not mapped)"
+    },
+    {
+      "what": "17 Graphify edge(s) of relation rationale_for",
+      "reason": "no envelope edge type or endpoint is not an envelope node (not mapped)"
+    },
+    {
+      "what": "4 Graphify edge(s) of relation references",
+      "reason": "no envelope edge type or endpoint is not an envelope node (not mapped)"
+    },
+    {
+      "what": "16 Graphify edge(s) of relation unmapped-endpoint:contains",
+      "reason": "no envelope edge type or endpoint is not an envelope node (not mapped)"
+    },
+    {
+      "what": "1 Graphify edge(s) of relation unmapped-endpoint:imports",
+      "reason": "no envelope edge type or endpoint is not an envelope node (not mapped)"
+    },
+    {
+      "what": "1 Graphify dynamic_import link(s)",
+      "reason": "R5: a dynamic import() is always unknown. 1 companion import link(s) emitted as 1 unknown dynamic import(s) that keep their line; 0 dynamic_import link(s) with no companion emitted as unknown; 0 symbol import(s) on those lines not emitted; no observed or inferred import is emitted for them (V10, BACK-79 D2)"
+    },
+    {
+      "what": "29 import edge(s)",
+      "reason": "the engine does not report require form, and dynamic form only through dynamic_import links (V10); form defaulted to import (re-export form is derived from relation re_exports)"
+    }
+  ],
+  "coverage": {
+    "files_seen": 35,
+    "files_total": 36
+  },
+  "external_refs": 9
+}
