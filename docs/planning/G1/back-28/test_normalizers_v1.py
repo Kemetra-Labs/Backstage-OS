@@ -270,6 +270,75 @@ class GraphifyV1(unittest.TestCase):
         self.assertEqual(edge(env, "imports", syn.SVC, 6), [])
         self.assertEqual([e for e in env["edges"] if e["from"] == self.SVC_M], [])
 
+    # BACK-79 D2: Graphify models `import('./x')` as an EXTRACTED imports_from link at the call line plus a line-less
+    # dynamic_import link for the same (source module, target) pair. SYNTHETIC inputs, not taken from the hold-out.
+    SHELL, MON, YEAR = "src/web/shell.tsx", "src/web/views/monthly.ts", "src/web/views/yearly.ts"
+
+    def _d2_graph(self, extra_links=()):
+        g = syn.graphify_base()
+        g["nodes"] += [syn.gnode("m_shell", "shell.tsx", self.SHELL, "L1"),
+                       syn.gnode("s_open", "openMonthly()", self.SHELL, "L7", _callable=True),
+                       syn.gnode("m_mon", "monthly.ts", self.MON, "L1"),
+                       syn.gnode("s_render", "render()", self.MON, "L3", _callable=True),
+                       syn.gnode("m_year", "yearly.ts", self.YEAR, "L1")]
+        g["links"] += [syn.glink("m_shell", "s_open", "contains", self.SHELL, "L7"),
+                       # shell.tsx:8 `const { render } = await import('./views/monthly')` inside openMonthly
+                       syn.glink("s_open", "m_mon", "imports_from", self.SHELL, "L8"),
+                       syn.glink("s_open", "s_render", "imports", self.SHELL, "L8"),
+                       syn.glink("m_shell", "m_mon", "dynamic_import", self.SHELL, None),
+                       # a dynamic_import with no companion import link at all
+                       syn.glink("m_shell", "m_year", "dynamic_import", self.SHELL, None),
+                       # orders.ts:5 a plain static import of the same target from ANOTHER module
+                       syn.glink("m_ord", "m_mon", "imports_from", syn.ORD, "L5")] + list(extra_links)
+        return g
+
+    def test_d2_dynamic_import_companion_becomes_unknown_dynamic_and_keeps_its_line(self):
+        env = graphify_v1(self._d2_graph())
+        (e,) = edge(env, "imports", self.SHELL + "::openMonthly", 8)
+        self.assertEqual((e["to"], e["basis"], e["form"], e["file"]), (None, "unknown", "dynamic", self.SHELL))
+        self.assertIn(self.MON, e["target_hint"])
+        claims = [x for x in env["edges"] if x["type"] == "imports" and x["file"] == self.SHELL
+                  and x["basis"] != "unknown"]
+        self.assertEqual(claims, [], "no observed or inferred import may come from the dynamic import() (R5)")
+        (orphan,) = edge(env, "imports", self.SHELL, None)
+        self.assertEqual((orphan["to"], orphan["basis"], orphan["form"]), (None, "unknown", "dynamic"))
+        self.assertIn(self.YEAR, orphan["target_hint"])
+        self.assertFalse(omitted(env, "relation dynamic_import"), "dynamic_import is mapped, not dropped")
+        self.assertTrue(omitted(env, "BACK-79 D2"))
+        self.assertEqual(score.validate_schema(env, score.load_json(score.SCHEMA_V1_PATH)), [])
+        self.assertEqual(score.contract_errors(env), [])
+        v0 = ng.normalize(self._d2_graph(), FIXTURE, "synthetic", TS, STDERR)  # v0 mapping is unchanged
+        self.assertEqual([x["basis"] for x in v0["edges"] if x["from"] == self.SHELL + "::openMonthly"
+                          and x["to"] == self.MON], ["observed"])
+
+    def test_d2_negative_static_import_of_the_same_target_from_another_module_stays_observed(self):
+        env = graphify_v1(self._d2_graph())
+        (e,) = edge(env, "imports", syn.ORD, 5)
+        self.assertEqual((e["to"], e["basis"], e["form"]), (self.MON, "observed", "import"))
+        self.assertFalse(omitted(env, "cannot be told apart"))
+        base = graphify_v1()
+        self.assertEqual([x for x in base["edges"] if x["basis"] == "unknown"], [], "no dynamic_import, no unknown")
+
+    def test_d2_same_module_static_and_dynamic_import_is_decided_by_line(self):
+        static = syn.glink("m_shell", "m_mon", "imports_from", self.SHELL, "L2")  # shell.tsx:2 static import
+        # line-less dynamic_import: L2 and L8 cannot be told apart, so both are unknown and the case is disclosed
+        env = graphify_v1(self._d2_graph([static]))
+        self.assertEqual([x["basis"] for x in env["edges"] if x["type"] == "imports" and x["file"] == self.SHELL
+                          and x["line"] in (2, 8)], ["unknown", "unknown"])
+        self.assertTrue(omitted(env, "cannot be told apart"))
+        # a dynamic_import that carries a line decides it: only L8 is dynamic, L2 stays an observed static import
+        g = self._d2_graph([static])
+        for link in g["links"]:
+            if link["relation"] == "dynamic_import" and link["target"] == "m_mon":
+                link["source_location"] = "L8"
+        env = graphify_v1(g)
+        (s,) = edge(env, "imports", self.SHELL, 2)
+        self.assertEqual((s["to"], s["basis"], s["form"]), (self.MON, "observed", "import"))
+        (d,) = edge(env, "imports", self.SHELL + "::openMonthly", 8)
+        self.assertEqual((d["to"], d["basis"], d["form"]), (None, "unknown", "dynamic"))
+        self.assertFalse(omitted(env, "cannot be told apart"))
+        self.assertEqual(score.contract_errors(env), [])
+
 
 # ---------------------------------------------------------------------------------------------- CodeGraph
 class CodegraphV1(CodegraphCase):

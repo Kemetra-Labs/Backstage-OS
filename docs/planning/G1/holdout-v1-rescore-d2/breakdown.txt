@@ -1,0 +1,16 @@
+case class | truth edges (obs/inf/unk) | negatives | Graphify tp/fn, label, neg hit, unknown | CodeGraph tp/fn, label, neg hit, unknown
+path_alias | 7 (7/0/0) | 1 | 6/1 FN E042; neg hit 0 | 6/1 FN E042; neg hit 0
+all_star_import | 5 (5/0/0) | 2 | 4/1 FN E051; neg hit 0 | 5/0; understated E051; neg hit 0
+conditional_import | 4 (4/0/0) | 2 | 3/1 FN E019; neg hit 0 | 4/0; neg hit 0
+decorator | 5 (5/0/0) | 0 | 2/3 FN E039,E052,E054; neg hit 0 | 3/2 FN E039,E054; neg hit 0
+inheritance | 8 (4/4/0) | 2 | 4/4 FN E034,E037,E061,E062; neg hit 0 | 7/1 FN E058; understated E034; neg hit 0
+default_export | 8 (8/0/0) | 1 | 6/2 FN E045,E048; neg hit 1 (N23) | 7/1 FN E045; neg hit 0
+reexport_barrel | 4 (4/0/0) | 0 | 4/0; neg hit 0 | 4/0; neg hit 0
+cross_package_collision | 8 (8/0/0) | 8 | 7/1 FN E041; neg hit 0 | 7/1 FN E041; neg hit 0
+unknown_dynamic | 5 (0/0/5) | 2 | 0/0; neg hit 0; E064=marked_unknown, E065=silent, E066=silent, E067=silent, E068=silent | 0/0; neg hit 0; E064=marked_unknown, E065=marked_unknown, E066=marked_unknown, E067=marked_unknown, E068=marked_unknown
+unknown_http_cross_runtime | 2 (0/0/2) | 3 | 0/0; neg hit 0; E069=silent, E070=silent | 0/0; neg hit 0; E069=marked_unknown, E070=marked_unknown
+omission_coverage | 3 (3/0/0) | 3 | 3/0; neg hit 0 | 3/0; neg hit 0
+negative_comment | 0 (0/0/0) | 2 | 0/0; neg hit 0 | 0/0; neg hit 0
+negative_string | 0 (0/0/0) | 2 | 0/0; neg hit 0 | 0/0; neg hit 0
+negative_shadow | 0 (0/0/0) | 2 | 0/0; neg hit 1 (N05) | 0/0; neg hit 0
+(no case tag) | 65 (64/1/0) | 0 | 60/5 FN E056,E087,E094,E095,E096; neg hit 0 | 64/1 FN E087; neg hit 0
