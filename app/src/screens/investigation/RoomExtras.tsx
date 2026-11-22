@@ -1,5 +1,4 @@
 import { useApp } from '../../app/AppContext';
-import { WORLD } from '../../fixture/world';
 import { summaryFor } from '../../view/investigationView';
 import { ContextPanel, DecisionPanel, MissingPanel } from './panels';
 import { TimelinePanel } from './TimelinePanel';
@@ -9,8 +8,8 @@ import { TimelinePanel } from './TimelinePanel';
  * fact or source elements, so the room's own truth assertions keep counting exactly what they counted before.
  */
 export function RoomExtras({ id }: { readonly id: string }) {
-  const { persona } = useApp();
-  const s = summaryFor(WORLD, id, persona);
+  const { persona, world } = useApp();
+  const s = summaryFor(world, id, persona);
   if (!s) return null;
   return (
     <>

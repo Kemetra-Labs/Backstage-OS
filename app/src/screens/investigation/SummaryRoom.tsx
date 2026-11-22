@@ -5,7 +5,6 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
-import { WORLD } from '../../fixture/world';
 import { formatAge } from '../../i18n/segments';
 import { INVESTIGATION } from '../../i18n/screens/investigation';
 import { hrefFor } from '../../nav/routes';
@@ -39,8 +38,8 @@ export function CaseNotFound({ id }: { readonly id: string }) {
  * hand-written health, and every evidence item opens in the Evidence Explorer rather than a drawer.
  */
 export function SummaryRoom({ id }: { readonly id: string }) {
-  const { persona, lang, copy } = useApp();
-  const s = summaryFor(WORLD, id, persona);
+  const { persona, lang, copy, world } = useApp();
+  const s = summaryFor(world, id, persona);
   if (!s) return <CaseNotFound id={id} />;
   const c = INVESTIGATION[lang];
   const { investigation: inv, project, component, decision, conflict } = s;

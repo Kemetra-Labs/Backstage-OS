@@ -1,7 +1,6 @@
 // Pure derivations for the Evidence Explorer (BACK-11). Persona redaction comes from evidenceViewFor only.
 import type { EvidenceReference, Persona } from '../contract/types';
 import type { Decision, InvestigationSummary, World, WorldComponent, WorldProject } from '../contract/world';
-import { INV_DEMO_7 } from '../fixture/inv-demo-7';
 import { evidenceViewFor } from './evidence';
 import type { EvidenceView } from './viewFor';
 import { componentById, contextOfEvidence, evidenceById, investigationById, projectById } from './world';
@@ -47,8 +46,8 @@ export function explorerFor(
   w: World,
   id: string,
   persona: Persona,
-  from?: string,
-  raw: { readonly evidenceId: string; readonly text: string } = INV_DEMO_7.rawOutput,
+  from: string | undefined,
+  raw: { readonly evidenceId: string; readonly text: string },
 ): ExplorerView | undefined {
   const ref = evidenceById(w, id);
   if (!ref) return undefined;

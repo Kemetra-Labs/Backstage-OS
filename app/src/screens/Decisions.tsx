@@ -1,6 +1,6 @@
+import { useApp } from '../app/AppContext';
 import { Text } from '../components/Text';
 import { useMemo, useState } from 'react';
-import { WORLD } from '../fixture/world';
 import { PROJECT_FILTERS, inboxView, type ProjectFilter } from '../view/decisionView';
 import { projectById } from '../view/world';
 import { Panel } from '../components/Panel';
@@ -15,12 +15,13 @@ import '../styles/screens/decisions.css';
 /** Decision Inbox (BACK-13): pending proposals and one clearly separate synthetic historical record. Display only. */
 export function Decisions() {
   const { persona, lang, shell, c } = useDecisionsUi();
+  const { world } = useApp();
   const [filter, setFilter] = useState<ProjectFilter>('all');
-  const view = useMemo(() => inboxView(WORLD, filter, persona, lang), [filter, persona, lang]);
+  const view = useMemo(() => inboxView(world, filter, persona, lang), [world, filter, persona, lang]);
   const options = PROJECT_FILTERS.map((f) =>
     f === 'all'
       ? { value: f, label: c.filterAll }
-      : { value: f, label: projectById(WORLD, f)?.name ?? f, lang: 'en' },
+      : { value: f, label: projectById(world, f)?.name ?? f, lang: 'en' },
   );
 
   return (

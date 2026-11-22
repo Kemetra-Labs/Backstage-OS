@@ -126,7 +126,7 @@ test('arabic: the map keeps left-to-right topology and ids are isolated', async 
 
 // ---- truth and state --------------------------------------------------------------------------------------------
 for (const persona of PERSONAS) {
-  test(`RT ${persona}: six map nodes, api-gateway is the only healthy one, inventory reads unknown`, async ({ page }) => {
+  test(`RT ${persona}: six map nodes, api-gateway is the only healthy one, inventory reads unknown, payments ${persona === 'technical' ? 'degraded' : 'unknown (its only basis is withheld)'}`, async ({ page }) => {
     await load(page, { persona, route: '/project/RT' });
     await expect(page.locator('[data-testid="dep-graph"] [data-node]')).toHaveCount(6);
     for (const id of ['pos', 'api-gateway', 'stock-sync', 'payments', 'inventory', 'reporting']) {
@@ -137,7 +137,9 @@ for (const persona of PERSONAS) {
     // Claimed healthy, last read stale: the contract says unknown.
     await expect(page.locator('[data-node="inventory"] [data-health="unknown"]')).toBeVisible();
     await expect(page.locator('[data-node="inventory"]')).not.toContainText(/^Healthy$/);
-    await expect(page.locator('[data-node="payments"] [data-health="degraded"]')).toBeVisible();
+    // payments rests only on E-12 (Technical-only): degraded for Technical, unknown, never healthy, for the others.
+    await expect(page.locator(`[data-node="payments"] [data-health="${persona === 'technical' ? 'degraded' : 'unknown'}"]`)).toBeVisible();
+    await expect(page.locator('[data-node="payments"] [data-health="healthy"]')).toHaveCount(0);
     for (const id of ['pos', 'stock-sync', 'reporting']) await expect(page.locator(`[data-node="${id}"] [data-health="unknown"]`)).toBeVisible();
   });
 }
@@ -187,12 +189,14 @@ test('selected component shows linked evidence with truth labels, and unread evi
   await expect(inspect).toHaveAttribute('href', /^#\/evidence\/E-\d/);
 });
 
-test('restricted evidence is shown as restricted to Owner and in full to Technical', async ({ page }) => {
-  await load(page, { persona: 'owner', route: '/project/RT/inventory' });
-  const row = page.locator('[data-evidence="E-5"]');
-  await expect(row).toContainText('Restricted to Technical');
-  await expect(row.locator('.truth')).toHaveCount(0);
-  await expect(row.getByRole('link')).toHaveCount(0);
+test('restricted evidence is absent for Owner and Nontechnical and shown in full to Technical', async ({ page }) => {
+  for (const persona of ['owner', 'nontechnical'] as const) {
+    await load(page, { persona, route: '/project/RT/inventory' });
+    await expect(page.locator('[data-evidence="E-5"]')).toHaveCount(0);
+    await expect(page.locator('main')).not.toContainText('Restricted to Technical');
+    await expect(page.locator('main')).not.toContainText('E-5');
+    await expect(page.locator('[data-node], [data-health]').first()).toBeVisible();
+  }
   await load(page, { persona: 'technical', route: '/project/RT/inventory' });
   await expect(page.locator('[data-evidence="E-5"] [data-truth="observed"]')).toBeVisible();
   await expect(page.locator('[data-evidence="E-5"]')).toContainText('stale');
@@ -238,7 +242,7 @@ test('narrow screens show the table instead of the map, with no view toggle', as
 });
 
 test('filters: environment and layer narrow the map; filtering to nothing says so and can be cleared', async ({ page }) => {
-  await load(page, { route: '/project/RT' });
+  await load(page, { route: '/project/RT', persona: 'technical' });
   const env = page.getByRole('group', { name: 'Environment' });
   const layer = page.getByRole('group', { name: 'Layer' });
   await expect(env.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
@@ -258,6 +262,10 @@ test('filters: environment and layer narrow the map; filtering to nothing says s
   // Risks are product-wide: filters never hide them.
   await env.getByRole('button', { name: 'Staging' }).click();
   await expect(page.locator('[data-risk-component]')).toHaveCount(4);
+  // Owner: payments rests only on withheld evidence, so it is one more unknown (5), still product-wide.
+  await load(page, { route: '/project/RT', persona: 'owner' });
+  await page.getByRole('group', { name: 'Environment' }).getByRole('button', { name: 'Staging' }).click();
+  await expect(page.locator('[data-risk-component]')).toHaveCount(5);
 });
 
 test('sources: provider, connectivity, freshness and age in words; not set up and unavailable say so', async ({ page }) => {
@@ -299,7 +307,7 @@ test('top-bar source strip names the product its sources belong to, in both lang
 });
 
 test('risks and unknowns: unknown components with reasons, unconfirmed links and sources not current; never green', async ({ page }) => {
-  await load(page, { route: '/project/RT' });
+  await load(page, { route: '/project/RT', persona: 'technical' });
   const risks = page.getByTestId('risks-panel');
   await expect(risks.locator('[data-risk-component]')).toHaveCount(4);
   await expect(risks.locator('[data-risk-component="inventory"]')).toHaveAttribute('data-reason', 'stale');
@@ -313,6 +321,18 @@ test('risks and unknowns: unknown components with reasons, unconfirmed links and
   for (const p of ['datadog', 'port', 'sentry']) await expect(risks.locator(`[data-risk-source="${p}"]`)).toBeVisible();
   await expect(risks.locator('[data-health="healthy"]')).toHaveCount(0);
   await expect(risks.getByRole('link', { name: 'inventory' })).toHaveAttribute('href', '#/project/RT/inventory');
+});
+
+test('risks and unknowns for Owner and Nontechnical: payments is an unknown with no evidence read, and names no withheld record', async ({ page }) => {
+  for (const persona of ['owner', 'nontechnical'] as const) {
+    await load(page, { route: '/project/RT', persona });
+    const risks = page.getByTestId('risks-panel');
+    await expect(risks.locator('[data-risk-component]')).toHaveCount(5);
+    await expect(risks.locator('[data-risk-component="payments"]')).toContainText('Health unknown');
+    await expect(risks.locator('[data-risk-component="payments"]')).not.toHaveAttribute('data-reason', 'stale');
+    await expect(risks.locator('[data-health="healthy"]')).toHaveCount(0);
+    await expect(risks).not.toContainText('E-12');
+  }
 });
 
 test('Seshat-BI: empty map, sources not set up, links back, nothing shown as healthy', async ({ page }) => {

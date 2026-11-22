@@ -3,7 +3,6 @@ import { HealthTriad } from '../../components/HealthTriad';
 import { Panel } from '../../components/Panel';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
-import { WORLD } from '../../fixture/world';
 import { INVESTIGATION } from '../../i18n/screens/investigation';
 import { hrefFor } from '../../nav/routes';
 import { evidenceTitleFor } from '../../view/evidence';
@@ -17,7 +16,7 @@ interface Props {
 }
 
 function Signal({ title, items, investigationId }: { readonly title: string; readonly items: readonly EvidenceView[]; readonly investigationId?: string }) {
-  const { persona, lang, copy } = useApp();
+  const { persona, lang, copy, world } = useApp();
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
   const c = INVESTIGATION[lang];
   return (
@@ -27,7 +26,7 @@ function Signal({ title, items, investigationId }: { readonly title: string; rea
         {items.map((e) => (
           <li key={e.id} className="row-item" data-signal={e.id}>
             <TruthChip label={e.label} style={style} copy={copy} />
-            <span><Text s={evidenceTitleFor(WORLD, e.id, persona, lang)} /></span>
+            <span><Text s={evidenceTitleFor(world, e.id, persona, lang)} /></span>
             <span className="note"><Text s={evidenceStatusText(e, copy, lang)} /></span>
             <a className="btn btn-quiet btn-link" href={hrefFor(investigationId ? { name: 'evidence', id: e.id, from: investigationId } : { name: 'evidence', id: e.id })}>
               <Text s={c.inspect(e.id)} />

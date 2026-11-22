@@ -249,6 +249,10 @@ test('demo search finds the story and hides technical-only evidence from Owner',
   await expect(page).toHaveURL(/#\/investigation\/INV-DEMO-7$/);
   await box.fill('E-12');
   await expect(page.locator('.search-pop')).toContainText(/No match/);
+  const withheldPop = await page.locator('.search-pop').innerText();
+  await box.fill('E-999');
+  await expect(page.locator('.search-pop')).toContainText(/No match/);
+  expect(withheldPop.replace('E-12', 'E-999')).toBe(await page.locator('.search-pop').innerText());
   await box.press('Escape');
   await expect(page.locator('.search-pop')).toHaveCount(0);
 });
