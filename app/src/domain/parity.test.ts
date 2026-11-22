@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { EvidenceReference, Persona } from '../contract/types';
 import { WORLD as V1_WORLD } from '../fixture/world';
-import { EVIDENCE, NODES, SOURCES } from '../fixture/inv-demo-7';
+import { EVIDENCE, INV_DEMO_7, SOURCES } from '../fixture/inv-demo-7';
 import { authorizedWorld } from '../design-lab/v2/logic/authorize';
+import { nodeStatus } from '../design-lab/v2/logic/status';
 import { WORLD } from '../design-lab/v2/fixtures/world';
 import type { WorldNode } from '../design-lab/v2/types';
+import { authorizedWorld as v1Authorized } from '../view/authorize';
 import { evidenceViewFor } from '../view/evidence';
+import { triadOf } from '../view/world';
 import { DOMAIN } from './fixture';
 import { scopeFixture } from './scope';
 import { toV1EdgeKind, toV1Evidence, toV1Nodes } from './toV1';
@@ -26,10 +29,6 @@ const byId = <T extends { id: string }>(xs: readonly T[], id: string): T => {
 const edgeKey = (e: { a: string; b: string }): string => e.a + e.b;
 
 describe('canonical fixture parity', () => {
-  it('toV1 nodes equal the V1 inv-demo-7 nodes', () => {
-    expect(toV1Nodes(DOMAIN)).toEqual(NODES);
-  });
-
   it('toV1 evidence equals the V1 evidence', () => {
     expect(toV1Evidence(DOMAIN)).toEqual(Object.values(EVIDENCE));
   });
@@ -38,22 +37,80 @@ describe('canonical fixture parity', () => {
     expect(DOMAIN.sources).toEqual(Object.values(SOURCES));
   });
 
-  it('toV2 nodes equal the V2 nodes for the shared components', () => {
-    const nodes = toV2Nodes(DOMAIN);
-    for (const id of SHARED) expect(byId(nodes, id)).toEqual(slice(byId(WORLD.nodes, id)));
-  });
-
   it('toV2 evidence equals the V2 evidenceById', () => {
     expect(toV2EvidenceById(DOMAIN)).toEqual(WORLD.evidenceById);
   });
 
-  it('toV2 dependencies equal the V2 dep edges between shared components', () => {
-    const expected = WORLD.edges
+  it('the V2 dep edges between shared components are the canonical dependencies', () => {
+    const expected = [...toV2Edges(DOMAIN)].sort((x, y) => edgeKey(x).localeCompare(edgeKey(y)));
+    const actual = WORLD.edges
       .filter((e) => e.cls === 'dep' && isShared(e.a) && isShared(e.b))
       .map((e) => ({ a: e.a, b: e.b, truth: e.truth, evidence: e.evidence }))
       .sort((x, y) => edgeKey(x).localeCompare(edgeKey(y)));
-    const actual = [...toV2Edges(DOMAIN)].sort((x, y) => edgeKey(x).localeCompare(edgeKey(y)));
     expect(actual).toEqual(expected);
+  });
+
+  // Same facts through both consumers, as each consumer derives them (V1 triadOf on its world, V2 nodeStatus on its world),
+  // against what the canonical model says once it is scoped for the persona. Language never enters these facts.
+  const all: Persona[] = ['owner', 'technical', 'nontechnical'];
+  for (const p of all) {
+    it(`V1 and V2 give the same health, freshness, failing check and basis for ${p}`, () => {
+      const canon = toV1Nodes(scopeFixture(DOMAIN, p));
+      const v1rt = byId(v1Authorized(V1_WORLD, p).projects, 'RT');
+      const w2 = authorizedWorld(WORLD, p);
+      for (const c of canon) {
+        const want = { health: triadOf(c.state).health, freshness: triadOf(c.state).freshness, check: c.check === 'failing', basis: c.state.basis.map((b) => b.id) };
+        const k1 = byId(v1rt.components, c.id);
+        const got1 = { health: triadOf(k1.state).health, freshness: triadOf(k1.state).freshness, check: k1.checkFailing === true, basis: k1.state.basis.map((b) => b.id) };
+        const k2 = byId(w2.nodes, c.id);
+        const st2 = nodeStatus(k2);
+        const got2 = { health: st2.health, freshness: st2.freshness, check: st2.checkFailing, basis: k2.state.basis.map((b) => b.id) };
+        expect(got1, `V1 ${p}/${c.id}`).toEqual(want);
+        expect(got2, `V2 ${p}/${c.id}`).toEqual(want);
+        expect(k2.evidence, `V2 evidence ids ${p}/${c.id}`).toEqual(scopeFixture(DOMAIN, p).components.find((x) => x.id === c.id)!.evidence);
+      }
+    });
+
+    it(`V1 and V2 list the same canonical evidence ids for ${p}`, () => {
+      const scoped = scopeFixture(DOMAIN, p);
+      const canonV1 = toV1Evidence(scoped).map((e) => e.id).sort();
+      const inCanon = new Set(Object.keys(DOMAIN.evidence));
+      const v1ids = Object.keys(v1Authorized(V1_WORLD, p).evidence).filter((id) => inCanon.has(id)).sort();
+      expect(v1ids).toEqual(canonV1);
+      expect(Object.keys(authorizedWorld(WORLD, p).evidenceById).sort()).toEqual(Object.keys(scoped.evidence).sort());
+    });
+
+    it(`source provenance for the five sources is the same object through V1 and V2 for ${p}`, () => {
+      for (const s of DOMAIN.sources) {
+        const v2 = WORLD.sources.find((m) => m.provider === s.provider);
+        expect(v2?.source, `V2 ${s.provider}`).toBe(s);
+        expect(INV_DEMO_7.sources, `V1 ${s.provider}`).toContain(s);
+      }
+    });
+  }
+
+  it('Unknown is never Healthy for a lay persona where the basis is withheld, in either consumer', () => {
+    for (const p of ['owner', 'nontechnical'] as const) {
+      expect(triadOf(byId(byId(v1Authorized(V1_WORLD, p).projects, 'RT').components, 'inventory').state).health).toBe('unknown');
+      expect(nodeStatus(byId(authorizedWorld(WORLD, p).nodes, 'inventory')).health).toBe('unknown');
+    }
+    expect(triadOf(byId(byId(V1_WORLD.projects, 'RT').components, 'inventory').state).health).toBe('unknown');
+  });
+
+  // Withheld-only scenario. Inventory's whole basis and evidence is the Technical-only E-5, so for a lay persona every
+  // consumer-held structure for the overlap must carry no trace of E-5 or its observation O-5: ids, counts, edges, sources.
+  it('no trace of E-5 or O-5 in what either consumer holds for a lay persona', () => {
+    for (const p of ['owner', 'nontechnical'] as const) {
+      const v1 = JSON.stringify(v1Authorized(V1_WORLD, p));
+      const v2 = JSON.stringify(authorizedWorld(WORLD, p));
+      const f = JSON.stringify(scopeFixture(DOMAIN, p));
+      for (const [name, json] of [['V1 world', v1], ['V2 world', v2], ['canonical', f]] as const) {
+        expect(json, `${name} ${p}`).not.toMatch(/"E-5"|"O-5"/);
+      }
+    }
+    // Positive control: Technical still holds it, so the checks above are not vacuous.
+    expect(JSON.stringify(authorizedWorld(WORLD, 'technical'))).toMatch(/"E-5"/);
+    expect(JSON.stringify(v1Authorized(V1_WORLD, 'technical'))).toMatch(/"E-5"/);
   });
 
   const scoped: Persona[] = ['owner', 'nontechnical'];
