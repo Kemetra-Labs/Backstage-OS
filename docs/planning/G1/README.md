@@ -11,5 +11,6 @@ Executed on 2026-11-21 with the owner's approval given in chat: install and exec
 | BACK-29 / BACK-77 / BACK-78 | Hold-out fixture v1 and engine pass: [holdout-v1/](holdout-v1/README.md), [holdout-v1-run/](holdout-v1-run/REPORT.md), [holdout-v1-rescore/](holdout-v1-rescore/REPORT.md) | Both engines FAIL strict v1; CodeGraph 107/114, no invented relations |
 | BACK-23 decision | [back-23/DECISION-2026-11-22.md](back-23/DECISION-2026-11-22.md) | **Owner picked CodeGraph as RepositoryAnalyzer (22 Nov 2026)**, conditional on licence sign-off BACK-80 |
 | BACK-81 decision | [back-23/DECISION-DIAGRAM-RENDERER.md](back-23/DECISION-DIAGRAM-RENDERER.md) | **Owner approved option A for DiagramRenderer (22 Nov 2026)**: keep the in-house SVG renderers, no new dependency. React Flow not adopted; re-open trigger recorded |
+| BACK-82 supersession | [back-23/DECISION-2026-11-23-REACT-FLOW-PILOT.md](back-23/DECISION-2026-11-23-REACT-FLOW-PILOT.md) | **Owner instructed adopting React Flow (22 Nov 2026)** for one bounded slice: a read-only, flag-gated (`?renderer=flow`) dependency-map pilot with `DepGraph` as default and fallback. Supersedes the BACK-81 preference for this slice only; the BACK-81 record is unchanged |
 
 Not run anywhere in G1: languages other than TS, TSX, JS and Python; WebKit; real devices; screen readers; private or real source code.

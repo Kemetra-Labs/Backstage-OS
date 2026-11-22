@@ -44,6 +44,14 @@ export interface ProjectCopy {
     readonly clearFilters: string;
     readonly caseOn: (id: string) => string;
   };
+  /** BACK-82: copy for the opt-in React Flow renderer (?renderer=flow), including the strings the library would otherwise speak in English. */
+  readonly flow: {
+    readonly loading: string;
+    readonly fallback: string;
+    readonly hint: string;
+    readonly nodeDesc: string;
+    readonly edgeDesc: string;
+  };
   readonly layer: Readonly<Record<'standard' | 'plain', Readonly<Record<ComponentLayer, string>>>>;
   readonly selected: {
     readonly title: string;
@@ -120,6 +128,13 @@ const en: ProjectCopy = {
     noMatchBody: 'The current filters hide every component. Components that are hidden are not healthy or unhealthy, only not shown.',
     clearFilters: 'Clear filters',
     caseOn: (id) => `Case {${id}}`,
+  },
+  flow: {
+    loading: 'Loading the interactive map…',
+    fallback: 'The interactive map could not load, so the standard map is shown. The table lists every dependency either way.',
+    hint: 'Use Tab to move between components and Enter to select one. Escape clears the selection. Scroll the map sideways when it is wider than its panel.',
+    nodeDesc: 'Press Enter to select this component and see its evidence.',
+    edgeDesc: 'A dependency between two components. The table lists every dependency with its basis.',
   },
   layer: {
     standard: { client: 'Client app', edge: 'Edge', service: 'Service', data: 'Data', integration: 'Integration' },
@@ -206,6 +221,13 @@ const ar: ProjectCopy = {
     noMatchBody: 'عوامل التصفية الحالية تخفي كل المكونات. المكونات المخفية ليست سليمة ولا معطلة، فقط غير معروضة.',
     clearFilters: 'مسح عوامل التصفية',
     caseOn: (id) => `الحالة {${id}}`,
+  },
+  flow: {
+    loading: 'جارٍ تحميل الخريطة التفاعلية…',
+    fallback: 'تعذر تحميل الخريطة التفاعلية، لذا تظهر الخريطة المعتادة. الجدول يسرد كل اعتمادية في الحالتين.',
+    hint: 'استخدم {Tab} للتنقل بين المكونات و{Enter} لاختيار أحدها. يمسح {Escape} الاختيار. مرّر الخريطة جانبًا إذا كانت أعرض من لوحتها.',
+    nodeDesc: 'اضغط {Enter} لاختيار هذا المكوّن ورؤية أدلته.',
+    edgeDesc: 'اعتمادية بين مكوّنين. يسرد الجدول كل اعتمادية مع أساسها.',
   },
   layer: {
     standard: { client: 'تطبيق العميل', edge: 'الحافة', service: 'خدمة', data: 'بيانات', integration: 'تكامل' },
