@@ -7,6 +7,7 @@ import { effectiveFreshness, resolveLabel } from '../../../contract/rules';
 import { Age, Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip, TruthChip, Tx } from '../components/ui';
 import { useV2 } from '../context';
 import { WORLD } from '../fixtures/world';
+import { authorizedWorld } from '../logic/authorize';
 import { evidenceOf, nodeChip, type NodeChipKind } from '../logic/evidence';
 import {
   CANVAS, MAP_FILTERS, ZOOM_MAX, ZOOM_MIN, HOME_VIEW, filterSet, focusView, kindCounts, linkCounts, neighbours, nextByDirection, scopeSet,
@@ -21,7 +22,7 @@ const NODE_ICON: Readonly<Record<string, IconName>> = {
   sentry: 'radar', port: 'book', 'seshat-bi': 'chart',
 };
 const ND = (id: string) => `map.nd.${id}` as K;
-const NL = (id: string) => `map.nl.${id}` as K;
+const NL = (node: Pick<WorldNode, 'id' | 'descKey'>) => (node.descKey ?? `map.nl.${node.id}`) as K;
 const FILTER_KEY: Readonly<Record<MapFilter, K>> = {
   all: 'map.f.all', products: 'map.f.products', projects: 'map.f.projects', services: 'map.f.services', risks: 'map.f.risks',
 };
@@ -56,7 +57,7 @@ function useChipText() {
 
 export function MissionMap() {
   const { route, go, open, t, copy } = useV2();
-  const w = WORLD;
+  const w = authorizedWorld(WORLD, route.persona);
   const chipText = useChipText();
   const selId = route.node ?? (route.scope === 'all' ? 'retail-tower' : route.scope);
   const sel = w.nodes.find((n) => n.id === selId) ?? w.nodes[0]!;
@@ -384,8 +385,8 @@ export function MissionMap() {
 }
 
 function Neighbourhood({ node }: { readonly node: WorldNode }) {
-  const { t } = useV2();
-  const w = WORLD;
+  const { t, route } = useV2();
+  const w = authorizedWorld(WORLD, route.persona);
   const deps = w.edges.filter((e) => e.cls === 'dep');
   const out = deps.filter((e) => e.a === node.id);
   const inn = deps.filter((e) => e.b === node.id);
@@ -411,8 +412,8 @@ interface InspProps {
 }
 
 function Inspector({ node, tab, setTab, isScope, onCenter, onOpen }: InspProps) {
-  const { copy, t } = useV2();
-  const w = WORLD;
+  const { copy, t, route } = useV2();
+  const w = authorizedWorld(WORLD, route.persona);
   const chip = nodeChip(node, w.sources);
   const chipText = useChipText();
   const refs = evidenceOf(w, node.evidence);
@@ -457,7 +458,7 @@ function Inspector({ node, tab, setTab, isScope, onCenter, onOpen }: InspProps) 
   return (
     <>
       <InspHead node={node} chipKind={chip.kind} tone={chip.tone} chipText={chipText} isScope={isScope} />
-      <p className="kv2-insp-desc"><T k={NL(node.id)} /></p>
+      <p className="kv2-insp-desc"><T k={NL(node)} /></p>
       <dl className="kv2-stats">
         <div><dt><T k="map.stat.projects" /></dt><dd>{nb.filter((n) => n.kind === 'project').length}</dd></div>
         <div><dt><T k="map.stat.services" /></dt><dd>{nb.filter((n) => n.kind === 'service').length}</dd></div>

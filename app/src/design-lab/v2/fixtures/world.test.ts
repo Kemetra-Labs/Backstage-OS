@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveHealth, resolveLabel, effectiveFreshness } from '../../../contract/rules';
 import { INV_DEMO_7 } from '../../../fixture/inv-demo-7';
+import { authorizedWorld } from '../logic/authorize';
 import { evidenceView, nodeChip } from '../logic/evidence';
 import { isRiskNode, nodeStatus, sourceCounts, sourceStatus } from '../logic/status';
 import { NOW, WORLD } from './world';
@@ -115,6 +116,14 @@ describe('persona-safe evidence', () => {
       expect(evidenceView(e5, p)).toMatchObject({ restricted: true, label: 'unknown', provider: null });
     }
     expect(evidenceView(e5, 'technical').restricted).toBe(false);
+  });
+
+  it('is defence in depth only: screens pass Owner and Nontechnical an authorized world that holds no Technical-only record (BACK-30)', () => {
+    for (const p of ['owner', 'nontechnical'] as const) {
+      const scoped = authorizedWorld(w, p);
+      expect(Object.values(scoped.evidenceById).some((r) => r.visibility === 'technical')).toBe(false);
+      expect(scoped.evidenceById['E-5']).toBeUndefined();
+    }
   });
 
   it('reveals targets and external ids to Technical only', () => {

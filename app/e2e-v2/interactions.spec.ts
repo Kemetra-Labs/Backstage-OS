@@ -62,7 +62,7 @@ test.describe('Mission Map', () => {
     await page.getByRole('button', { name: 'List', exact: true }).click();
     await expect(page.getByRole('table', { name: 'Systems on the map' })).toBeVisible();
     await expect(page.getByRole('table', { name: 'Systems on the map' }).locator('tbody tr')).toHaveCount(10);
-    await expect(page.getByRole('table', { name: 'Links between systems' }).locator('tbody tr')).toHaveCount(11);
+    await expect(page.getByRole('table', { name: 'Links between systems' }).locator('tbody tr')).toHaveCount(10); // Owner: 11 links minus d4 (BACK-30)
     await expect(page.getByRole('table', { name: 'Links between systems' })).toContainText('No evidence for this link');
     await page.getByRole('table', { name: 'Systems on the map' }).getByRole('button', { name: 'Jira' }).click();
     await expect(page.locator('.kv2-insp-head h2')).toContainText('Jira');
@@ -304,16 +304,18 @@ test.describe('review regressions', () => {
     await expect(page).toHaveURL(/evt=R-3/);
   });
 
-  test('a stale-backed link is flagged, and restricted evidence is not described to Owner', async ({ page }) => {
+  test('a stale-backed link is flagged for Technical, and Owner is given neither the link nor a note that it exists (BACK-30)', async ({ page }) => {
     await load(page, { screen: 'mission-map' });
+    await expect(page.locator('.kv2-edge[data-cls="dep"][data-stale]')).toHaveCount(0);
+    await load(page, { screen: 'mission-map', persona: 'technical' });
     await expect(page.locator('.kv2-edge[data-cls="dep"][data-stale]')).toHaveCount(1);
     await page.getByRole('button', { name: 'List', exact: true }).click();
     const links = page.getByRole('table', { name: 'Links between systems' });
-    await expect(links).toContainText('Based on evidence restricted to Technical');
+    await expect(links).toContainText('Inventory errors were reported in Sentry');
+    await load(page, { screen: 'mission-map', persona: 'owner' }); // same page, so the list view stays selected
+    await expect(links).toBeVisible(); // without this the two negative checks below would pass if the table had gone away
+    await expect(links).not.toContainText('restricted to Technical');
     await expect(links).not.toContainText('Inventory errors were reported in Sentry');
-    await load(page, { screen: 'mission-map', persona: 'technical' });
-    await page.getByRole('button', { name: 'List', exact: true }).click();
-    await expect(page.getByRole('table', { name: 'Links between systems' })).toContainText('Inventory errors were reported in Sentry');
   });
 
   test('at 375px the closed side navigation is not focusable, and Escape closes it', async ({ page }) => {

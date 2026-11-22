@@ -70,7 +70,7 @@ export const NODES: readonly WorldNode[] = [
   { id: 'khepri', kind: 'product', title: 'Khepri', x: 170, y: 150, state: state('healthy', []), evidence: [] },
   { id: 'stock-sync', kind: 'project', title: 'stock-sync', x: 500, y: 120, state: state('unknown', [EVIDENCE.runtime]), check: 'failing', evidence: ['E-1', 'E-2', 'E-3', 'E-6'] },
   { id: 'pos', kind: 'project', title: 'POS client', x: 300, y: 300, state: state('unknown', []), evidence: [] },
-  { id: 'inventory', kind: 'project', title: 'Inventory service', x: 700, y: 305, state: state('healthy', [EVIDENCE.sentryErrors], 'reachable', 'stale'), evidence: ['E-5'] },
+  { id: 'inventory', kind: 'project', title: 'Inventory service', x: 700, y: 305, state: state('healthy', [EVIDENCE.sentryErrors], 'reachable', 'stale'), evidence: ['E-5'], descWithoutEvidence: 'map.nl.inventory.none' },
   { id: 'github', kind: 'service', title: 'GitHub', x: 830, y: 140, provider: 'github', state: svc('github'), evidence: ['E-1', 'E-2', 'E-8'] },
   { id: 'jira', kind: 'service', title: 'Jira', x: 850, y: 420, provider: 'jira', state: svc('jira'), evidence: ['E-3', 'E-4'] },
   { id: 'sentry', kind: 'service', title: 'Sentry', x: 925, y: 255, provider: 'sentry', state: svc('sentry'), evidence: ['E-5'] },

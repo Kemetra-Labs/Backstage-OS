@@ -84,7 +84,7 @@ export function Inspector({ w, node, tab, setTab, isScope, onOpen }: Props) {
     body = (
       <>
         <Head node={node} w={w} isScope={isScope} />
-        <p className="kv2-insp-desc"><T k={NL(node.id)} /></p>
+        <p className="kv2-insp-desc"><T k={NL(node)} /></p>
         <dl className="kv2-stats">
           <div><dt><T k="map.stat.projects" /></dt><dd>{nb.filter((n) => n.kind === 'project').length}</dd></div>
           <div><dt><T k="map.stat.services" /></dt><dd>{nb.filter((n) => n.kind === 'service').length}</dd></div>

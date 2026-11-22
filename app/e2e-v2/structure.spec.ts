@@ -55,7 +55,12 @@ test('truth map: exactly one node reads Healthy, and claimed-healthy nodes read 
   const healthy = await page.locator('.kv2-node').evaluateAll((els) => els.filter((e) => /healthy/i.test(e.querySelector('.kv2-chip')?.textContent ?? '') && !/unknown/i.test(e.querySelector('.kv2-chip')?.textContent ?? '')).map((e) => e.getAttribute('data-node')));
   expect(healthy).toEqual(['github']);
   for (const id of ['khepri', 'jira', 'seshat-bi']) await expect(page.locator(`[data-node="${id}"] .kv2-chip`)).toContainText(/unknown/i);
-  for (const id of ['sentry', 'inventory']) await expect(page.locator(`[data-node="${id}"] .kv2-chip`)).toContainText(/stale/i);
+  await expect(page.locator('[data-node="sentry"] .kv2-chip')).toContainText(/stale/i);
+  // BACK-30: Inventory's only basis is Technical-only evidence, so Owner sees unknown, not stale. Technical still sees stale.
+  await expect(page.locator('[data-node="inventory"] .kv2-chip')).toContainText(/unknown/i);
+  await load(page, { screen: 'mission-map', persona: 'technical' });
+  await expect(page.locator('[data-node="inventory"] .kv2-chip')).toContainText(/stale/i);
+  await load(page, { screen: 'mission-map' });
   await expect(page.locator('[data-node="port"] .kv2-chip')).toContainText(/unavailable/i);
   await expect(page.locator('#kpi-risks')).toContainText('3');
   await expect(page.locator('#kpi-issues')).toContainText('2');

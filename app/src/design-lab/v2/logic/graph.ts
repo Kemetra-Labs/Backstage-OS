@@ -43,12 +43,15 @@ export function neighbours(id: string, edges: readonly WorldEdge[]): readonly st
 
 /**
  * Nodes in scope: the scope node and everything within two links of it (a product, its components, and the services
- * those components use), or everything for 'all'. Out-of-scope nodes are dimmed, never removed.
+ * those components use), or everything for 'all'. Out-of-scope nodes are dimmed, never removed. A node with no link
+ * at all cannot be placed inside or outside a scope, so it stays in every scope: a source that lost its only (restricted)
+ * link must not silently drop out of view (BACK-30), and unknown is never hidden.
  */
 export function scopeSet(scope: string, w: World): ReadonlySet<string> {
   if (scope === 'all' || !w.nodes.some((n) => n.id === scope)) return new Set(w.nodes.map((n) => n.id));
   const first = neighbours(scope, w.edges);
-  return new Set([scope, ...first, ...first.flatMap((id) => neighbours(id, w.edges))]);
+  const unattached = w.nodes.filter((n) => neighbours(n.id, w.edges).length === 0).map((n) => n.id);
+  return new Set([scope, ...first, ...first.flatMap((id) => neighbours(id, w.edges)), ...unattached]);
 }
 
 export function filterSet(f: MapFilter, w: World): ReadonlySet<string> {
