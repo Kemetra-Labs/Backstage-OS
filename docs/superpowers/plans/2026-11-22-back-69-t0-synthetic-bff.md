@@ -15,7 +15,7 @@
 - Donor: `Kemetra-Labs/Retail-Tower-Erp` at `dea1adc386ad6e8129e7342c873c74ea6f9e5b0c` (verified identical to RT `main` `510706c` for the two files). Never modify Retail Tower.
 - Copy only `services/backend-core/packages/shared/src/errors/envelope.ts` and `services/backend-core/packages/shared/__tests__/errors/envelope.spec.ts`. No `@data-pulse-2/*` import, no other RT file. `correlation.ts` is deferred (needs `@opentelemetry/api`).
 - Pinned versions: `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `@nestjs/testing` = `11.2.11` (ruled 22 Nov: 11.1.19 pulls multer <=2.4.0 with 2 high advisories; ADR-002 v2 fixes the Nest 11 line, not the patch); `typescript` `5.9.3`; `jest` `29.7.0`; `ts-jest` `29.2.5`; `@types/jest` `29.5.14`. Exact versions, no ranges.
-- Node: `server/.nvmrc` = `24`; `engines.node` = `">=24"` is NOT set (local runner is 22.23.5). Record Node 24 run as PASS/FAIL/NOT RUN honestly.
+- Node: `server/.nvmrc` = `24` and `engines.node` = `">=24"` (owner approved runtime/language updates 22 Nov). Local default is 22.23.5, so the Node 24 suite runs via `npx -y node@24`; record PASS/FAIL/NOT RUN honestly.
 - Synthetic only: no DB, auth provider, Descope, connectors, network calls, secrets, env files, queues, deploy. Server binds `127.0.0.1` only.
 - A display persona header is not authorization. Every doc and code comment that mentions it says so.
 - Unknown is never Healthy: the process route reports `process: "up"`, never `healthy`.
