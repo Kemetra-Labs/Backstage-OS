@@ -94,7 +94,7 @@ No `prefers-color-scheme`, `prefers-contrast` or `forced-colors` anywhere in `ap
 
 ## 8. V1 and V2 world models, field by field
 
-Answers the 22 Nov amendment to BACK-65 item 4 (inventory of entity, graph, evidence, time, source and permission fields, with ownership and semantic differences). Read from `app/src/contract/types.ts`, `app/src/contract/world.ts`, `app/src/fixture/world.ts`, `app/src/fixture/inv-demo-7.ts`, `V2/types.ts`, `V2/fixtures/world.ts` at `e72d34d`. By code reading only: nothing was run and no mapping was tested. **This table chooses no canonical world** (owner decision D-6).
+Answers the 22 Nov amendment to BACK-65 item 4 (inventory of entity, graph, evidence, time, source and permission fields, with ownership and semantic differences). Read from `app/src/contract/types.ts`, `app/src/contract/world.ts`, `app/src/fixture/world.ts`, `app/src/fixture/inv-demo-7.ts`, `V2/types.ts`, `V2/fixtures/world.ts` at `e72d34d`. By code reading only: nothing was run and no mapping was tested. **This table chooses no canonical world** (owner decision D-6). *Update 2026-11-22:* the owner has since decided D-6.2/B. Neither world is canonical; both become inputs to a new independent Domain & Evidence Model ([README §4](README.md#4-data-and-trust-contracts)). This mapping is the input to that model's ID-mapping ADR, which is still open.
 
 | Concern | V1 (`contract/world.ts`, `fixture/world.ts`) | V2 (`V2/types.ts`, `V2/fixtures/world.ts`) | Shared | Semantic difference / risk |
 |---|---|---|---|---|
