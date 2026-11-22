@@ -29,6 +29,28 @@ test.describe('layout', () => {
     }
   }
 
+  // BACK-67: the first-load settle animation starts every node displaced outward. A plain check races that animation (it flaked at
+  // 1180 px on CI), so freeze each node animation at its first frame and at its end and require both to sit inside the canvas.
+  for (const width of [962, 1000, 1100, 1180, 1440]) {
+    test(`map en @${width}px: nodes and cards stay inside the canvas, also on the first frame of the intro`, async ({ page }) => {
+      await loadBc(page, { lang: 'en', width, view: 'map' });
+      for (const at of ['start', 'end'] as const) {
+        const outside = await page.evaluate((frame) => {
+          for (const a of document.getAnimations()) {
+            a.pause();
+            if (a.effect?.getTiming().iterations === 1) a.currentTime = frame === 'start' ? 0 : (a.effect.getComputedTiming().endTime as number);
+          }
+          const c = document.querySelector('.kv2-bc-canvas')!.getBoundingClientRect();
+          return [...document.querySelectorAll<HTMLElement>('.kv2-bc-node, .kv2-bc-node .kv2-bc-card')].flatMap((e) => {
+            const r = e.getBoundingClientRect();
+            return r.left < c.left - 0.5 || r.right > c.right + 0.5 ? [`${e.className.slice(0, 24)} ${Math.round(r.left)}..${Math.round(r.right)} of ${Math.round(c.left)}..${Math.round(c.right)}`] : [];
+          });
+        }, at);
+        expect(outside, at).toEqual([]);
+      }
+    });
+  }
+
   test('the V2 map is untouched without ?concept=bc', async ({ page }) => {
     await page.goto('/v2.html#/mission-map?persona=owner&lang=en');
     await expect(page.locator('.kv2-map')).toBeVisible();
