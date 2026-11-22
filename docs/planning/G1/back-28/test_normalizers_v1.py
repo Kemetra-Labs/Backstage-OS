@@ -232,6 +232,44 @@ class GraphifyV1(unittest.TestCase):
             want.pop("generated_at")
             self.assertEqual(outs["v0"], want)
 
+    # BACK-78 D1: module labels that are path suffixes (Graphify's form when basenames collide). SYNTHETIC inputs.
+    SVC_M, JOB_M, OLD_M = "src/svc/models.py", "src/jobs/models.py", "src/old/svc/models.py"
+
+    def _d1_graph(self, extra_nodes=()):
+        g = syn.graphify_base()
+        g["nodes"] += [syn.gnode("m_svcm", "svc/models.py", self.SVC_M, "L1"),
+                       syn.gnode("m_jobm", "jobs/models.py", self.JOB_M, "L1"),
+                       syn.gnode("s_item", "Item", self.SVC_M, "L4", _callable_class=True)] + list(extra_nodes)
+        g["links"] += [syn.glink("m_svc", "m_svcm", "imports_from", syn.SVC, "L6"),
+                       syn.glink("m_svc", "s_item", "imports", syn.SVC, "L6"),
+                       syn.glink("m_svcm", "s_item", "contains", self.SVC_M, "L4")]
+        return g
+
+    def test_d1_path_suffix_module_label_is_recognized_when_unique(self):
+        env = graphify_v1(self._d1_graph())
+        mods = {n["id"] for n in env["nodes"] if n["kind"] == "module"}
+        self.assertTrue({self.SVC_M, self.JOB_M} <= mods)
+        (e,) = edge(env, "imports", syn.SVC, 6, self.SVC_M)
+        self.assertEqual((e["form"], e["names"], e["basis"]), ("import", ["Item"], "observed"))
+        self.assertTrue(edge(env, "contains", self.SVC_M, 4, self.SVC_M + "::Item"))
+        self.assertEqual(env["coverage"]["files_seen"], 11)
+        self.assertFalse(omitted(env, "ambiguous"))
+        self.assertEqual(score.validate_schema(env, score.load_json(score.SCHEMA_V1_PATH)), [])
+        v0 = ng.normalize(self._d1_graph(), FIXTURE, "synthetic", TS, STDERR)  # v0 N1 is unchanged: still dropped
+        self.assertFalse({self.SVC_M, self.JOB_M} & {n["id"] for n in v0["nodes"]})
+
+    def test_d1_negative_ambiguous_path_suffix_stays_dropped_and_is_reported(self):
+        other = syn.gnode("m_oldm", "old/svc/models.py", self.OLD_M, "L1")  # a 2nd file ending in svc/models.py
+        env = graphify_v1(self._d1_graph(extra_nodes=[other]))
+        ids = {n["id"] for n in env["nodes"]}
+        self.assertNotIn(self.SVC_M, ids, "svc/models.py matches two files: never guessed")
+        self.assertIn(self.OLD_M, ids)
+        self.assertIn(self.JOB_M, ids)
+        (o,) = omitted(env, "ambiguous")
+        self.assertEqual(o["what"], self.SVC_M + "::svc/models.py")
+        self.assertEqual(edge(env, "imports", syn.SVC, 6), [])
+        self.assertEqual([e for e in env["edges"] if e["from"] == self.SVC_M], [])
+
 
 # ---------------------------------------------------------------------------------------------- CodeGraph
 class CodegraphV1(CodegraphCase):
@@ -368,6 +406,66 @@ class CodegraphV1(CodegraphCase):
         want = gold("v0-codegraph.synthetic.json")
         want.pop("generated_at")
         self.assertEqual(outs["v0"], want)
+
+    # BACK-78 D4: nested functions fold into the innermost enclosing listed symbol. SYNTHETIC inputs.
+    def _d4_db(self, name, nodes, edges, unresolved=()):
+        import sqlite3
+        db = os.path.join(self.tmp.name, name)
+        syn.build_codegraph_db(db)
+        con = sqlite3.connect(db)
+        con.executemany("insert into nodes values(?,?,?,?,?,'typescript',?)", nodes)
+        con.executemany("insert into edges(source,target,kind,metadata,line,col) values(?,?,?,?,?,0)", edges)
+        con.executemany("insert into unresolved_refs(from_node_id,reference_name,reference_kind,line,col,file_path,"
+                        "language,status) values(?,?,'calls',?,0,?,'typescript','unresolved')", unresolved)
+        con.commit()
+        con.close()
+        return db
+
+    def test_d4_nested_functions_fold_into_the_enclosing_symbol(self):
+        meta = '{"resolvedBy":"import","confidence":0.95}'
+        db = self._d4_db("cg-nested.db",
+                         [("fn:helper", "function", "helper", "buildOrder::helper", syn.ORD, 16),
+                          ("fn:inner", "function", "inner", "buildOrder::helper::inner", syn.ORD, 18)],
+                         [("fn:helper", "fn:total", "calls", meta, 17),      # outgoing: folds to buildOrder
+                          ("fn:helper", "fn:total", "calls", meta, 9),       # duplicates buildOrder:9 -> merged
+                          ("fn:inner", "class:cart", "calls", meta, 19),     # nested twice: folds to buildOrder
+                          ("fn:build", "fn:helper", "contains", None, None),  # into the nested node
+                          ("fn:helper", "fn:inner", "contains", None, None),
+                          ("fn:build", "fn:helper", "calls", meta, 22)],      # into the nested node
+                         [("fn:helper", "later", 17, syn.ORD)])
+        env = self.cg_v1(db)
+        ids = {n["id"] for n in env["nodes"]}
+        self.assertFalse({"src/web/orders.ts::buildOrder::helper", "src/web/orders.ts::buildOrder::helper::inner"} & ids)
+        self.assertEqual([i for i in ids if i.count("::") > 1], [])
+        self.assertEqual(len(edge(env, "calls", self.FN, 17, "src/web/pricing.ts::computeTotal")), 1)
+        self.assertEqual(len(edge(env, "calls", self.FN, 9, "src/web/pricing.ts::computeTotal")), 1, "deduped")
+        self.assertEqual(len(edge(env, "calls", self.FN, 19, self.CART)), 1)
+        self.assertEqual([e for e in env["edges"] if e["from"] == e["to"]], [], "no self-edges")
+        self.assertEqual([e for e in env["edges"] if "helper" in (e["to"] or "") or "helper" in e["from"]], [])
+        (u,) = [e for e in env["edges"] if e.get("target_hint") == "later"]
+        self.assertEqual((u["from"], u["line"], u["basis"]), (self.FN, 17, "unknown"))
+        (o,) = omitted(env, "BACK-78 D4")
+        self.assertEqual(o["what"], "2 CodeGraph nested function node(s)")
+        self.assertEqual(score.validate_schema(env, score.load_json(score.SCHEMA_V1_PATH)), [])
+        self.assertEqual(score.contract_errors(env), [])
+
+    def test_d4_negative_class_methods_are_not_folded(self):
+        meta = '{"resolvedBy":"import","confidence":0.95}'
+        db = self._d4_db("cg-method.db",
+                         [("fn:classfn", "function", "helper", "Cart::helper", syn.PRI, 9)],  # parent is a class
+                         [("method:add", "fn:total", "calls", meta, 8),
+                          ("fn:classfn", "fn:total", "calls", meta, 10)])
+        env = self.cg_v1(db)
+        ids = {n["id"] for n in env["nodes"]}
+        self.assertIn("src/web/pricing.ts::Cart.addItem", ids)
+        self.assertIn("src/web/pricing.ts::Cart::helper", ids, "parent is a class: v1 behaviour unchanged")
+        self.assertTrue(edge(env, "calls", "src/web/pricing.ts::Cart.addItem", 8, "src/web/pricing.ts::computeTotal"))
+        self.assertTrue(edge(env, "contains", self.CART, 7, "src/web/pricing.ts::Cart.addItem"))
+        self.assertEqual(edge(env, "calls", self.CART, 8), [], "a method's call is never moved to its class")
+        self.assertFalse(omitted(env, "BACK-78 D4"))
+        base = self.cg_v1()
+        self.assertEqual([n["id"] for n in base["nodes"]],
+                         [n["id"] for n in env["nodes"] if n["id"] != "src/web/pricing.ts::Cart::helper"])
 
 
 if __name__ == "__main__":

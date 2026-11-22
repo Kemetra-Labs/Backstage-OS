@@ -87,16 +87,41 @@ def basis_of(edge):
     return "inferred"
 
 
-def normalize(graph, fixture_dir, cmd, generated_at, stderr_text=""):
+def _candidate_files(graph, fixture_dir):
+    """Every file a path-suffix module label could name: the scope walk plus each code node's source_file."""
+    files = {n.get("source_file") for n in graph["nodes"] if n.get("file_type") == "code" and n.get("source_file")}
+    src = os.path.join(fixture_dir, "src")
+    for root, dirs, names in os.walk(src):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        files.update(os.path.relpath(os.path.join(root, f), fixture_dir).replace(os.sep, "/")
+                     for f in names if not f.endswith(".pyc"))
+    return files
+
+
+def _suffix_match(label, sf, candidates):
+    """BACK-78 D1: 'unique' when `label` (holding a '/') is a trailing path suffix of `sf` and of no other candidate
+    file, 'ambiguous' when it is a suffix of `sf` and of another file too, else None."""
+    if "/" not in label or not (sf == label or sf.endswith("/" + label)):
+        return None
+    hits = {f for f in candidates | {sf} if f == label or f.endswith("/" + label)}
+    return "unique" if hits == {sf} else "ambiguous"
+
+
+def normalize(graph, fixture_dir, cmd, generated_at, stderr_text="", module_suffix=False):
+    """v0 mapping. `module_suffix` is used only by the v1 path (BACK-78 D1); the v0 default leaves N1 unchanged."""
     nodes_in = {n["id"]: n for n in graph["nodes"]}
     links = graph["links"]
     owner = {e["target"]: e["source"] for e in links if e["relation"] == "method"}
     omissions, out_nodes, idmap = [], [], {}
+    candidates = _candidate_files(graph, fixture_dir) if module_suffix else set()
 
     def is_module(n):
         sf = n.get("source_file") or ""
-        return (n.get("file_type") == "code" and sf and n.get("label") == os.path.basename(sf)
-                and n.get("source_location") == "L1")
+        if not (n.get("file_type") == "code" and sf and n.get("source_location") == "L1"):
+            return False
+        if n.get("label") == os.path.basename(sf):
+            return True
+        return module_suffix and _suffix_match(n.get("label") or "", sf, candidates) == "unique"
 
     for n in graph["nodes"]:
         sf = n.get("source_file")
@@ -114,6 +139,11 @@ def normalize(graph, fixture_dir, cmd, generated_at, stderr_text=""):
             kind = "method"
         elif n.get("_callable"):
             nid, kind = f"{sf}::{label.rstrip('()')}", "function"
+        elif module_suffix and n.get("source_location") == "L1" and _suffix_match(label, sf, candidates) == "ambiguous":
+            omissions.append({"what": f"{sf}::{label}",
+                              "reason": "module label is a path suffix that matches more than one file; ambiguous, "
+                                        "not mapped (BACK-78 D1)"})
+            continue
         else:
             omissions.append({"what": f"{sf}::{label}",
                               "reason": "Graphify non-callable symbol has no envelope node kind (not mapped)"})
@@ -180,6 +210,11 @@ def normalize(graph, fixture_dir, cmd, generated_at, stderr_text=""):
 #   V7  Graphify has no unknown class: no unknown edge is ever emitted. form is not reported by the engine, so
 #       every non-reexport statement defaults to form=import; the count is recorded as an omission.
 #   V8  coverage: files_total from the scope walk (as tree_hash), files_seen = module nodes in the output.
+#   V9  (BACK-78, D1) When basenames collide, Graphify labels a module with a path suffix ('vault/models.py').
+#       A code node at L1 whose label holds a '/' and equals a trailing path suffix of its source_file is a module,
+#       provided that suffix matches exactly one file among the scope walk and the graph's source_files. If it
+#       matches more than one, the node stays dropped and is recorded as an ambiguous omission; nothing is guessed.
+#       The v0 path (N1, bare basename only) is unchanged.
 # ----------------------------------------------------------------------------------------------------------
 _IMPORT_RELS = ("imports_from", "imports", "re_exports")
 _RANK = {"observed": 0, "inferred": 1}
@@ -204,12 +239,14 @@ def _add_name(edge, name):
 
 
 def normalize_v1(graph, fixture_dir, cmd, generated_at, stderr_text=""):
-    base = normalize(graph, fixture_dir, cmd, generated_at, stderr_text)  # reused for the node mapping only
+    # reused for the node mapping only; module_suffix=True applies V9 (BACK-78 D1)
+    base = normalize(graph, fixture_dir, cmd, generated_at, stderr_text, module_suffix=True)
     nodes_in = {n["id"]: n for n in graph["nodes"]}
     idmap = {n["engine_native_id"]: n["id"] for n in base["nodes"]}
     node_line = {n["id"]: n["line"] for n in base["nodes"]}
     omissions = [o for o in base["omissions"]
-                 if "non-callable symbol" in o["reason"] or o["reason"].startswith("engine warning")]
+                 if "non-callable symbol" in o["reason"] or o["reason"].startswith("engine warning")
+                 or "(BACK-78 D1)" in o["reason"]]
     out, recs, dropped, ext_refs, no_line = [], [], {}, set(), 0
     reexport_targets = set()
     rel_type = {"contains": "contains", "method": "contains", "calls": "calls", "indirect_call": "calls"}

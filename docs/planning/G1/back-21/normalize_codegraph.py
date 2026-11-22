@@ -171,6 +171,13 @@ def normalize(db_path, fixture_dir, cmd, generated_at):
 #       which would misclassify path aliases): external_refs is 0 and the unresolved count is an omission.
 #   V6  coverage: files_seen from the `files` table (file nodes if the table is absent), files_total from the scope
 #       walk.
+#   V7  (BACK-78, D4) Nested functions are not nodes. A function or method node whose qualified_name parent
+#       ('Outer' in 'Outer::inner') is a function or method node in the same file is nested. It is not emitted;
+#       its outgoing edges (calls, instantiates, contains, unresolved calls/imports) are folded into its innermost
+#       listed enclosing symbol that is emitted ('LedgerPanel::add' -> LedgerPanel, 'a::b::c' -> a). Edges INTO a
+#       nested function are not emitted (re-targeting them would assert a relation the engine did not report);
+#       folded edges that become self-edges are dropped, and a folded edge equal to another edge is merged into it
+#       (the weaker basis wins). Class methods ('Class::method', parent kind class/interface) are unchanged.
 # ----------------------------------------------------------------------------------------------------------
 def basis_of_v1(row):
     meta = json.loads(row["metadata"]) if row["metadata"] else {}
@@ -189,16 +196,46 @@ def scope_file_count(fixture_dir):
     return n
 
 
+def nested_folds(con):
+    """BACK-78 D4: {nested node id: innermost enclosing emitted node id} for function/method nodes whose
+    qualified_name parent is a function or method in the same file. A parent that is itself nested resolves to its
+    own enclosing node, so the result always names a node that is emitted."""
+    rows = list(con.execute("select id, kind, qualified_name, file_path from nodes"))
+    by_qn = {(r[3], r[2]): r for r in rows}
+    callable_kinds = ("function", "method")
+
+    def parent(r):
+        if r[1] not in callable_kinds or "::" not in (r[2] or ""):
+            return None
+        p = by_qn.get((r[3], r[2].rsplit("::", 1)[0]))
+        return p if p is not None and p[1] in callable_kinds else None
+
+    folds = {}
+    for r in rows:
+        p, seen = parent(r), set()
+        while p is not None and parent(p) is not None and p[0] not in seen:  # climb to the innermost emitted one
+            seen.add(p[0])
+            p = parent(p)
+        if p is not None:
+            folds[r[0]] = p[0]
+    return folds
+
+
 def normalize_v1(db_path, fixture_dir, cmd, generated_at):
     base = normalize(db_path, fixture_dir, cmd, generated_at)  # reused for the node mapping only
-    idmap = {n["engine_native_id"]: n["id"] for n in base["nodes"]}
-    node_line = {n["id"]: n["line"] for n in base["nodes"]}
-    omissions = [o for o in base["omissions"] if "node(s) of kind" in o["what"]]
     con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     con.row_factory = sqlite3.Row
+    folds = nested_folds(con)  # V7
+    idmap = {n["engine_native_id"]: n["id"] for n in base["nodes"]}
+    node_line = {n["id"]: n["line"] for n in base["nodes"]}
+    nodes_out = [n for n in base["nodes"] if n["engine_native_id"] not in folds]
+    src_map = dict(idmap)
+    src_map.update({k: idmap[v] for k, v in folds.items() if v in idmap})
+    omissions = [o for o in base["omissions"] if "node(s) of kind" in o["what"]]
     files = {r["id"]: r["file_path"] for r in con.execute("select id, file_path from nodes")}
     out, stmts, syms, dropped = [], {}, [], {}
-    no_line = exact_match = 0
+    no_line = 0
+    folded, into_nested = set(), 0  # V7: indices in `out` of folded edges; edges into a nested node not emitted
     type_of = {"contains": "contains", "calls": "calls", "instantiates": "calls", "imports": "imports"}
 
     def drop(key):
@@ -209,15 +246,21 @@ def normalize_v1(db_path, fixture_dir, cmd, generated_at):
         if t is None:
             drop(r["kind"])
             continue
-        s, d = idmap.get(r["source"]), idmap.get(r["target"])
+        s, d = src_map.get(r["source"]), idmap.get(r["target"])
         if s is None or d is None:
             drop("unmapped-endpoint:" + r["kind"])
             continue
+        if r["target"] in folds:  # V7: never re-targeted
+            into_nested += 1
+            continue
+        is_folded = r["source"] in folds
         native = f"{r['source']}|{r['kind']}|{r['target']}"
         if t == "contains":  # V4: the child's native start_line only; a NULL start_line means no edge
             if node_line[d] is None:
                 no_line += 1
                 continue
+            if is_folded:
+                folded.add(len(out))
             out.append({"type": "contains", "from": s, "to": d, "file": files[r["source"]], "line": node_line[d],
                         "line_source": "derived", "basis": basis_of_v1(r), "engine_native_id": native})
             continue
@@ -226,10 +269,11 @@ def normalize_v1(db_path, fixture_dir, cmd, generated_at):
             continue
         basis = basis_of_v1(r)
         if t == "calls":
-            if basis == "observed" and (json.loads(r["metadata"]) if r["metadata"] else {}).get("resolvedBy") == "exact-match":
-                exact_match += 1
+            if is_folded:
+                folded.add(len(out))
             out.append({"type": "calls", "from": s, "to": d, "file": files[r["source"]], "line": r["line"],
-                        "basis": basis, "engine_native_id": native})
+                        "basis": basis, "engine_native_id": native,
+                        "_exact": (json.loads(r["metadata"]) if r["metadata"] else {}).get("resolvedBy") == "exact-match"})
         elif "::" in d:
             syms.append((s, r["line"], d))
         else:  # V1 statement edge
@@ -261,10 +305,12 @@ def normalize_v1(db_path, fixture_dir, cmd, generated_at):
         if r["reference_kind"] not in ("calls", "imports"):
             unk_other[r["reference_kind"]] = unk_other.get(r["reference_kind"], 0) + 1
             continue
-        src = idmap.get(r["from_node_id"])
+        src = src_map.get(r["from_node_id"])
         if src is None:
             unk_other["unmapped-source"] = unk_other.get("unmapped-source", 0) + 1
             continue
+        if r["from_node_id"] in folds:
+            folded.add(len(out))
         unk += 1
         u = {"type": r["reference_kind"], "from": src, "to": None, "target_hint": r["reference_name"],
              "file": r["file_path"], "line": r["line"], "basis": "unknown",
@@ -272,6 +318,8 @@ def normalize_v1(db_path, fixture_dir, cmd, generated_at):
         if u["type"] == "imports":
             u["form"] = "import"  # contract_errors requires form on every imports edge; defaulted and disclosed below
         out.append(u)
+    out, self_edges, merged, unk = _fold_cleanup(out, folded, unk)
+    exact_match = sum(1 for e in out if e.pop("_exact", False) and e["basis"] == "observed")
     try:
         files_seen = con.execute("select count(*) from files").fetchone()[0]
     except sqlite3.OperationalError:
@@ -295,6 +343,11 @@ def normalize_v1(db_path, fixture_dir, cmd, generated_at):
     if unattached:
         omissions.append({"what": f"{unattached} CodeGraph symbol import(s)",
                           "reason": "no file-level import edge at the same line; not emitted"})
+    if folds:
+        omissions.append({"what": f"{len(folds)} CodeGraph nested function node(s)",
+                          "reason": "nested functions are not nodes; their outgoing edges are folded into the innermost "
+                                    f"enclosing symbol ({self_edges} self-edge(s) dropped, {merged} duplicate(s) "
+                                    f"merged, {into_nested} edge(s) into a nested function not emitted) (BACK-78 D4)"})
     if exact_match:
         omissions.append({"what": f"{exact_match} CodeGraph calls edge(s) resolved by exact-match",
                           "reason": "name-only resolution kept observed (BACK-28 owner decision 1), to be revisited "
@@ -314,12 +367,43 @@ def normalize_v1(db_path, fixture_dir, cmd, generated_at):
         "source": {"scope": "fixture-copy", "revision": tree_hash(fixture_dir), "fixture_version": "g1-01-v0"},
         "engine": {"name": "codegraph", "version": "1.6.4", "config_digest": cfg},
         "generated_at": generated_at,
-        "nodes": base["nodes"],
+        "nodes": nodes_out,
         "edges": out,
         "omissions": omissions,
         "coverage": {"files_seen": files_seen, "files_total": scope_file_count(fixture_dir)},
         "external_refs": 0,
     }
+
+
+def _fold_key(e):
+    return (e["type"], e["from"], e["to"], e["file"], e["line"], e.get("target_hint"))
+
+
+def _fold_cleanup(out, folded, unk):
+    """V7: drop folded self-edges and merge each folded edge that duplicates another edge into that edge (the weaker
+    basis wins; nothing is upgraded). Edges that were not folded keep their order and are never touched."""
+    rank = {"observed": 0, "inferred": 1, "unknown": 2}
+    first = {}
+    for i, e in enumerate(out):
+        if i not in folded:
+            first.setdefault(_fold_key(e), i)
+    keep, self_edges, merged = [], 0, 0
+    for i, e in enumerate(out):
+        if i in folded:
+            if e["from"] == e["to"]:
+                self_edges += 1
+                unk -= e["basis"] == "unknown"
+                continue
+            j = first.get(_fold_key(e))
+            if j is not None and j != i:
+                if rank[e["basis"]] > rank[out[j]["basis"]]:
+                    out[j]["basis"] = e["basis"]
+                merged += 1
+                unk -= e["basis"] == "unknown"
+                continue
+            first[_fold_key(e)] = i
+        keep.append(e)
+    return keep, self_edges, merged, unk
 
 
 def main():

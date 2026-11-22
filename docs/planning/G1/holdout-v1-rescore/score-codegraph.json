@@ -1,0 +1,168 @@
+{
+  "contract": "v1",
+  "contract_errors": [],
+  "coverage_by_language": {
+    "javascript": {
+      "expected": 8,
+      "tp": 8
+    },
+    "python": {
+      "expected": 54,
+      "tp": 52
+    },
+    "tsx": {
+      "expected": 11,
+      "tp": 10
+    },
+    "typescript": {
+      "expected": 41,
+      "tp": 37
+    }
+  },
+  "derived": [],
+  "engine_node_counts": {
+    "javascript": 6,
+    "python": 44,
+    "tsx": 5,
+    "typescript": 33
+  },
+  "external_refs": 0,
+  "false_inferred": [
+    "calls src/packages/ledger/src/entry.ts::BaseEntry.describe -> src/packages/ledger/src/credit.ts::CreditEntry.describe @ src/packages/ledger/src/entry.ts:9 [inferred]"
+  ],
+  "false_observed": [
+    "calls src/packages/atlas/src/summary.ts -> src/packages/atlas/src/text.ts::normalize @ src/packages/atlas/src/summary.ts:6 [observed]",
+    "calls src/packages/atlas/src/summary.ts -> src/packages/ledger/src/money.ts::roundCents @ src/packages/atlas/src/summary.ts:6 [observed]"
+  ],
+  "files": {
+    "files_seen": 35,
+    "files_total": 36
+  },
+  "form_mismatch": [
+    "E017 expected form require, got import",
+    "E018 expected form require, got import",
+    "E019 expected form require, got import",
+    "E006 expected form reexport, got import",
+    "E007 expected form reexport, got import",
+    "E008 expected form reexport, got import"
+  ],
+  "ignored": {
+    "alias_resolved": 0,
+    "duplicate_ignored": 0,
+    "engine_unknown_edges": 61,
+    "external_ignored": 0,
+    "intrafile_ignored": 4,
+    "names_folded": 0,
+    "null_target_ignored": 0,
+    "unlisted_contains_ignored": 3
+  },
+  "invalid_claims": [],
+  "languages_zero_nodes": [],
+  "line_provenance": {
+    "exact": 107,
+    "missing": 0,
+    "off_by_n": []
+  },
+  "missed": [
+    "E039 calls src/packages/ledger/src/period.ts src/packages/ledger/src/audit.ts::auditTrail",
+    "E041 calls src/packages/atlas/src/summary.ts::default src/packages/atlas/src/text.ts::normalize",
+    "E042 calls src/packages/atlas/src/summary.ts::default src/packages/ledger/src/money.ts::roundCents",
+    "E045 calls src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel src/packages/atlas/src/summary.ts::default",
+    "E054 calls src/ingest/endpoints.py src/ingest/registry.py::plugin",
+    "E058 calls src/vault/models.py::Record.save src/vault/base.py::BaseModel.save",
+    "E087 contains src/packages/atlas/src/summary.ts src/packages/atlas/src/summary.ts::default"
+  ],
+  "negatives_hit": [],
+  "negatives_total": 23,
+  "overclaimed": [],
+  "schema_errors": [],
+  "surplus_statements": [],
+  "table": {
+    "calls": {
+      "expected": 30,
+      "fn": 6,
+      "fp": 3,
+      "tp": 24
+    },
+    "contains": {
+      "expected": 51,
+      "fn": 1,
+      "fp": 0,
+      "tp": 50
+    },
+    "imports": {
+      "expected": 33,
+      "fn": 0,
+      "fp": 0,
+      "tp": 33
+    }
+  },
+  "type_mismatch": [],
+  "understated": [
+    "E051 calls src/ingest/clean.py::clean_label -> src/ingest/legacy.py::trim @ src/ingest/clean.py:7 [inferred]",
+    "E034 calls src/packages/ledger/src/credit.ts::CreditEntry.describe -> src/packages/ledger/src/entry.ts::BaseEntry.describe @ src/packages/ledger/src/credit.ts:6 [inferred]"
+  ],
+  "unknown": [
+    {
+      "edge": "E064",
+      "file": "src/packages/atlas/src/App.tsx",
+      "line": 8,
+      "status": "marked_unknown",
+      "type": "imports"
+    },
+    {
+      "edge": "E065",
+      "file": "src/packages/atlas/src/views/lookup.ts",
+      "line": 3,
+      "status": "marked_unknown",
+      "type": "imports"
+    },
+    {
+      "edge": "E066",
+      "file": "src/packages/atlas/src/legacy/bridge.js",
+      "line": 7,
+      "status": "marked_unknown",
+      "type": "imports"
+    },
+    {
+      "edge": "E067",
+      "file": "src/ingest/plugin_host.py",
+      "line": 6,
+      "status": "marked_unknown",
+      "type": "imports"
+    },
+    {
+      "edge": "E068",
+      "file": "src/ingest/plugin_host.py",
+      "line": 10,
+      "status": "marked_unknown",
+      "type": "imports"
+    },
+    {
+      "edge": "E069",
+      "file": "src/packages/atlas/src/LedgerPanel.tsx",
+      "line": 12,
+      "status": "marked_unknown",
+      "type": "calls"
+    },
+    {
+      "edge": "E070",
+      "file": "src/ingest/probe.py",
+      "line": 10,
+      "status": "marked_unknown",
+      "type": "calls"
+    }
+  ],
+  "verdict": {
+    "contract_errors": 0,
+    "criterion": "no_false_observed_overclaimed_invalid_or_negative_hits",
+    "false_observed": 2,
+    "invalid_claims": 0,
+    "negatives_hit": 0,
+    "overclaimed": 0,
+    "preview": false,
+    "result": "FAIL",
+    "schema_errors": 0,
+    "unknown_claimed": 0
+  }
+}
