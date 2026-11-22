@@ -183,6 +183,27 @@ Questions for the reviewer on all rows: is anything here too hard to read, and d
 - Diacritics: `bc.matrix.sub` carries tanween ("كلٌّ"), `bc.never` has "تُقرأ" and `bc.chip.notset` has "مُعد". Do you want diacritics in none, some or all strings?
 - Abbreviations and symbols: "د" for minutes and "×" for "times" appear in captions and in the accessible names of age bars. Do they read well aloud?
 
+## Addendum, 22 Nov 2026: V1 strings changed by BACK-73, BACK-76 and BACK-26
+
+These V1 strings (in `app/`, not `bc.ts`) were reworded or added after the packet above was written. They need the same native review. The English is the source; the Arabic was written alongside it and has not been reviewed. Screens: open the V1 app (`npm run dev` in `app/`, then add `?persona=owner&lang=ar` before the hash) on the routes shown.
+
+| # | Where (file:line) | Screen | English | Arabic | Why it changed | Reviewer verdict | Proposed edit |
+|---|---|---|---|---|---|---|---|
+| A1 | `app/src/fixture/world.ts:267` (DEC-DEMO-5 context) | `#/decisions/DEC-DEMO-5` | Checks pass, but staging errors rose. The linked work item could not be read. | الفحوص ناجحة، لكن الأخطاء ارتفعت في بيئة التجهيز. تعذرت قراءة عنصر العمل المرتبط. | BACK-73: "after a deploy" rested on Technical-only evidence | | |
+| A2 | `app/src/fixture/world.ts:269` (DEC-DEMO-5 hypothesis) and `app/src/i18n/screens/investigation.ts:152,154` (INV-DEMO-9, Owner and Nontechnical) | `#/decisions/DEC-DEMO-5`, `#/investigation/INV-DEMO-9` | Staging errors rose. The cause is not established yet. | ارتفعت الأخطاء في بيئة التجهيز. لم يُحدَّد السبب بعد. | BACK-73: the deploy correlation rested on Technical-only evidence | | |
+| A3 | `app/src/i18n/strings.ts:277` (Owner runtime health line) | `#/project/KH` (Owner) | Runtime health is unknown: runtime monitoring is not set up and error monitoring data is stale. | صحة التشغيل مجهولة: مراقبة التشغيل غير مُعدة وبيانات مراقبة الأخطاء قديمة. | BACK-73: "recent errors" implied a withheld record; the source fact stays | | |
+| A4 | `app/src/i18n/screens/decisions.ts:140` (row evidence summary) | `#/decisions` | Evidence: 2 read, 1 not read. Worst freshness: stale. | الأدلة: 2 مقروء، 1 غير مقروء. أسوأ حداثة: قديم. | BACK-76: the "restricted" count was removed | | |
+| A5 | `app/src/i18n/screens/decisions.ts:148` (Observed note) | `#/decisions/DEC-DEMO-3` | Evidence behind this proposal. Items not read stay listed. | الأدلة وراء هذا المقترح. العناصر غير المقروءة تبقى مذكورة. | BACK-76: "or restricted" was removed | | |
+| A6 | `app/src/i18n/shell.ts:148` (DepGraph note, plural forms) | Not shown with today's fixtures (hardening, BACK-26); review the text only | 1 link / N links not drawn on the map — see the table | 1: رابط واحد غير مرسوم على الخريطة — راجع الجدول · 2: رابطان غير مرسومين على الخريطة — راجع الجدول · 3–10: N روابط غير مرسومة على الخريطة — راجع الجدول · 11+: N رابطًا غير مرسوم على الخريطة — راجع الجدول | BACK-26: new note | | |
+
+Questions for the reviewer on the addendum:
+
+- A2 and A3: is "بيئة التجهيز" the right term for "staging" here, and does "بيانات مراقبة الأخطاء" read naturally?
+- A4: the counts use the singular adjective after the number ("2 مقروء"). Should they agree in number, or is a label style ("مقروء: 2") better?
+- A6: are the dual and plural forms right, including the 11+ form with tanween?
+
+The sign-off below covers both the B+C strings and this addendum. Record addendum verdicts in the table above.
+
 ## Sign-off
 
 Complete this block when the review is done. Until it is filled, BACK-31 stays open and `bc.ts` keeps its "not reviewed" header.
