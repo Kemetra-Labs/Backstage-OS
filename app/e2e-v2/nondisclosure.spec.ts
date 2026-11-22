@@ -345,3 +345,27 @@ test('V2 map: switching the display persona from Technical to Owner drops E-5 an
   await expect(page.locator('#mapinsp-panel .kv2-insp-desc')).toHaveText(mapText('map.nl.inventory.none', 'en'));
   expect(squash(await page.locator('#mapinsp-panel').innerText())).not.toContain(mapText('map.nl.inventory', 'en'));
 });
+
+// BACK-66 C-16: the Flight Deck hides mission ids from Nontechnical, so the shell search must not reveal them either.
+test.describe('BACK-66 C-16 search shows mission ids only where the Deck does', () => {
+  for (const lang of LANGS) {
+    test(`Nontechnical ${lang}: "MSN" finds nothing; a mission is still found by its title`, async ({ page }) => {
+      await load(page, { screen: 'mission-map', persona: 'nontechnical', lang });
+      const box = page.locator('.kv2-search input');
+      await box.fill('MSN');
+      await expect(page.locator('.kv2-search-list li[role="option"]')).toHaveCount(1);
+      await expect(page.locator('.kv2-search-list li[aria-disabled="true"]')).toHaveCount(1);
+      const title = (TABLE['ms.fresh'] as readonly [string, string])[lang === 'ar' ? 1 : 0];
+      await box.fill(title.slice(0, 6));
+      await expect(page.locator('.kv2-search-list li[aria-disabled="true"]')).toHaveCount(0);
+      await expect(page.locator('.kv2-search-list')).not.toContainText('MSN-');
+    });
+  }
+
+  test('Owner: "MSN" still finds missions by id', async ({ page }) => {
+    await load(page, { screen: 'mission-map', persona: 'owner', lang: 'en' });
+    await page.locator('.kv2-search input').fill('MSN');
+    await expect(page.locator('.kv2-search-list li[aria-disabled="true"]')).toHaveCount(0);
+    await expect(page.locator('.kv2-search-list')).toContainText('MSN-DEMO-1');
+  });
+});

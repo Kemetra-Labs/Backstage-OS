@@ -119,6 +119,25 @@ jobs:
         working-directory: app
         run: npm run e2e:v2
 
+      # The synthetic Kawalys BFF in server/ (BACK-69) requires Node 24; everything above stays on Node 22.
+      # These steps run last so switching Node cannot affect the root or app/ steps (BACK-74).
+      - uses: actions/setup-node@v4
+        if: steps.changes.outputs.docs_only != 'true'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server dependencies
+        if: steps.changes.outputs.docs_only != 'true'
+        working-directory: server
+        run: bash ../.github/scripts/npm-ci.sh
+
+      - name: Server typecheck and tests (Node 24)
+        if: steps.changes.outputs.docs_only != 'true'
+        working-directory: server
+        run: node --version && npm run check
+
       - name: Upload test results on failure
         if: failure()
         uses: actions/upload-artifact@v4

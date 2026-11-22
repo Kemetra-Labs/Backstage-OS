@@ -16,7 +16,7 @@ export interface DecisionsCopy {
   readonly priority: string;
   readonly project: string;
   readonly age: string;
-  readonly evidenceSummary: (read: number, notRead: number, restricted: number, worst: string) => string;
+  readonly evidenceSummary: (read: number, notRead: number, worst: string) => string;
   readonly unknownsLine: (n: number) => string;
   readonly openProposal: (id: string) => string;
   readonly openRecord: (id: string) => string;
@@ -72,15 +72,15 @@ const en: DecisionsCopy = {
   priority: 'Priority',
   project: 'Project',
   age: 'Opened',
-  evidenceSummary: (read, notRead, restricted, worst) =>
-    `Evidence: ${read} read, ${notRead} not read, ${restricted} restricted. Worst freshness: ${worst}.`,
+  evidenceSummary: (read, notRead, worst) =>
+    `Evidence: ${read} read, ${notRead} not read. Worst freshness: ${worst}.`,
   unknownsLine: (n) => (n === 0 ? 'Unknowns: none recorded' : `Unknowns: ${n}`),
   openProposal: (id) => `Open proposal {${id}}`,
   openRecord: (id) => `Open record {${id}}`,
   detailTitle: 'Decision detail',
   contextTitle: 'Context',
   observedTitle: 'Observed facts',
-  observedNote: 'Evidence behind this proposal. Items not read or restricted stay listed.',
+  observedNote: 'Evidence behind this proposal. Items not read stay listed.',
   hypothesesTitle: 'Hypotheses',
   hypothesesNone: 'No hypothesis recorded.',
   unknownsTitle: 'Unknowns',
@@ -137,15 +137,15 @@ const ar: DecisionsCopy = {
   priority: 'الأولوية',
   project: 'المشروع',
   age: 'فُتح',
-  evidenceSummary: (read, notRead, restricted, worst) =>
-    `الأدلة: ${read} مقروء، ${notRead} غير مقروء، ${restricted} مقيّد. أسوأ حداثة: ${worst}.`,
+  evidenceSummary: (read, notRead, worst) =>
+    `الأدلة: ${read} مقروء، ${notRead} غير مقروء. أسوأ حداثة: ${worst}.`,
   unknownsLine: (n) => (n === 0 ? 'المجهولات: لا شيء مسجل' : `المجهولات: ${n}`),
   openProposal: (id) => `فتح المقترح {${id}}`,
   openRecord: (id) => `فتح السجل {${id}}`,
   detailTitle: 'تفاصيل القرار',
   contextTitle: 'السياق',
   observedTitle: 'وقائع مرصودة',
-  observedNote: 'الأدلة وراء هذا المقترح. العناصر غير المقروءة أو المقيّدة تبقى مذكورة.',
+  observedNote: 'الأدلة وراء هذا المقترح. العناصر غير المقروءة تبقى مذكورة.',
   hypothesesTitle: 'فرضيات',
   hypothesesNone: 'لا فرضية مسجلة.',
   unknownsTitle: 'مجهولات',
