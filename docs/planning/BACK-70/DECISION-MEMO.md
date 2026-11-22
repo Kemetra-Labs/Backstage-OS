@@ -4,7 +4,7 @@ Status: **read-only evaluation, owner decision pending.** No code, CI, dependenc
 Baseline: GitHub `main` at `0b6cb4b02d28beed7f7cfdb475d7a459a026f36e` (re-verified 2026-11-22: local `HEAD` = `origin/main`). The BACK-65 inventory (PR #36, `a1e01a3`) was read at `e72d34d`; since then only PR #37 (BACK-66) changed app code: `V2/logic/authorize.ts`, `V2/types.ts`, three V2 screens, `V2/navigation/{Shell,hits}`, and V2 tests.
 Context: [BACK-70](https://rahmaqanater.atlassian.net/browse/BACK-70) · parent [BACK-65](https://rahmaqanater.atlassian.net/browse/BACK-65) · [BACK-65 plan](../BACK-65/README.md) and [inventory](../BACK-65/INVENTORY.md) · [Convergence review + D-6.2/B](https://rahmaqanater.atlassian.net/wiki/spaces/KMC/pages/89391147) · [R2 decision pack](https://rahmaqanater.atlassian.net/wiki/spaces/KMC/pages/89456817)
 
-**Newer than the in-repo BACK-65 docs.** `../BACK-65/README.md` (§4, §8 D-6) and `INVENTORY.md` still show D-6 as an open owner choice and list the slice order in their §6 table. Both were superseded on 22 Nov 2026 on Confluence: the owner ratified **D-6.2/B** (an independent canonical Domain & Evidence Model) and the corrected delivery order S1→S2→S3→S3b→S4→S5→S6–S9→S10 (page 89391147 §3). This memo follows the Confluence records. The README has not been updated to match; that is a separate docs change.
+**Authority used here:** on 22 Nov 2026 the owner ratified **D-6.2/B** (an independent canonical Domain & Evidence Model) and the corrected delivery order S1→S2→S3→S3b→S4→S5→S6–S9→S10 (page 89391147 §3). The BACK-65 README and INVENTORY are annotated with these updates in the same PR.
 Prefixes: `S/`=`app/src/screens/`, `V/`=`app/src/view/`, `V2/`=`app/src/design-lab/v2/`.
 
 ## 0. Recommendation
@@ -35,7 +35,7 @@ Conclusion: B is not forbidden if read narrowly, but every part of it that diffe
 | Shell | V1 `shell/{AppShell 35, TopBar 59, Sidebar 48, DemoSearch 48}` adapted; V2 Shell patterns (menu focus return, Esc, RTL off-canvas) reused | New shell composed from both | About 190 lines either way. B rewrites what A adapts. |
 | Router | Extend V1 grammar (D-2 option A, recommended in review) | Undefined; needs its own D-2 | B reopens D-2. |
 | Domain model | D-6.2/B model + typed projections (S3b) | Same | none |
-| Gate order | S1→S2→S3→S3b→S4→S5→S6–S9→S10 (corrected order, page 89391147 §3; the README §6 table has fewer S3b/S5 dependencies) | Same gates, cannot skip any | none |
+| Gate order | S1→S2→S3→S3b→S4→S5→S6–S9→S10 (corrected order, page 89391147 §3; see the note above the README §6 table) | Same gates, cannot skip any | none |
 | V1 screens | KEEP V1 (Home, Portfolio, Investigation, Evidence, Decisions) | Reused, so the same | none |
 | V1 "untouched" claim | Broken deliberately by S2 (V1 leak fix) | Also broken: 20 V1 files import `WORLD` directly (§3), so reusing V1 screens on a canonical world means editing them, unless they are rewritten | none (B's claim does not hold) |
 | Governance | Within BACK-65 as reviewed | Needs BACK-65 decision/plan amendment (BACK-70 acceptance) plus an APP-01 change | B adds work |
