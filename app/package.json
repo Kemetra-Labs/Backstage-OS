@@ -17,6 +17,7 @@
     "e2e:v2": "vite build --config vite.v2.config.ts && playwright test -c playwright.v2.config.ts"
   },
   "dependencies": {
+    "@xyflow/react": "13.0.2",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

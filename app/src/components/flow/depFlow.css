@@ -1,0 +1,32 @@
+/* BACK-82: React Flow variant of the dependency map. Scoped under .depflow; node, legend and swatch classes (dg-*) are
+   shared with DepGraph so the two renderers look alike. The canvas is always left to right (dir="ltr"), like DepGraph, and a
+   map wider than its panel scrolls sideways in .depflow-scroll. */
+.depflow-wrap { display: grid; gap: 10px; min-width: 0; }
+.depflow-scroll { overflow-x: auto; min-width: 0; padding-bottom: 4px; }
+.depflow { position: relative; max-width: none; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg-2); }
+
+.depflow .react-flow { --xy-background-color: transparent; --xy-node-border-radius: var(--r-md); background: transparent; }
+.depflow .react-flow__pane { cursor: default; }
+.depflow .react-flow__node { cursor: default; padding: 0; border: 0; background: transparent; box-shadow: none; }
+/* React Flow sets pointer-events: none on a node wrapper that is neither selectable nor draggable, which would let clicks
+   fall through to the pane; the button inside is the only interactive part, so it takes pointer events back. */
+.depflow .react-flow__node button.dg-node { width: 100%; pointer-events: auto; }
+
+/* connection handles exist only so React Flow can anchor edges; they are never interactive or visible */
+.depflow .kwf-handle { opacity: 0; pointer-events: none; width: 1px; height: 1px; min-width: 0; min-height: 0; border: 0; }
+
+/* edge certainty by line style, same encoding as DepGraph: solid declared, dashed provisional, dotted suspected */
+.depflow .kwf-edge .react-flow__edge-path { stroke-width: 2; fill: none; }
+.depflow .kwf-authored .react-flow__edge-path { stroke: var(--ink-2); }
+.depflow .kwf-provisional .react-flow__edge-path { stroke: var(--cor); stroke-dasharray: 6 5; }
+.depflow .kwf-hypothesis .react-flow__edge-path { stroke: var(--hyp); stroke-dasharray: 2 5; stroke-linecap: round; }
+
+.depflow button.dg-node:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* the library's own attribution link, restyled for the dark theme (kept visible) */
+.depflow .react-flow__attribution { background: var(--surface-2); color: var(--ink-2); font-size: 11px; margin: 0; }
+.depflow .react-flow__attribution a { color: var(--ink-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .depflow *, .depflow *::before, .depflow *::after { animation: none !important; transition: none !important; }
+}

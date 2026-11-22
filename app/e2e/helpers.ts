@@ -9,7 +9,7 @@ export const PERSONAS = ['owner', 'technical', 'nontechnical'] as const;
 /** Strings that must never reach any persona's screen (raw CI/PR ids, assertion text, inert demo hosts). */
 export const BANNED = ['integration-tests', '#DEMO-4471', 'PR #DEMO-88', 'AssertionError', 'example.invalid', 'DEMO-4468', 'DEMO-5120', 'DEMO-311'];
 
-export interface LoadQuery { lang?: string; persona?: string; width?: number }
+export interface LoadQuery { lang?: string; persona?: string; width?: number; /** BACK-82: ?renderer=flow opts into the React Flow map. */ renderer?: string }
 
 /**
  * Opens a hash route with the viewport and query set, and resolves once the h1 is visible.
@@ -25,6 +25,7 @@ export async function openRoute(page: Page, route: string, q: LoadQuery = {}) {
   const params = new URLSearchParams();
   if (q.lang) params.set('lang', q.lang);
   if (q.persona) params.set('persona', q.persona);
+  if (q.renderer) params.set('renderer', q.renderer);
   await page.goto(`/?${params.toString()}#${route}`);
   await expect(page.locator('h1')).toBeVisible();
   return errors;

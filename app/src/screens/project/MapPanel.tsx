@@ -3,10 +3,12 @@ import { DepGraph, DepTable, type GraphNode } from '../../components/DepGraph';
 import { Panel } from '../../components/Panel';
 import { Segmented } from '../../components/Segmented';
 import { StateBlock } from '../../components/StateBlock';
+import { DepFlow } from '../../components/flow/DepFlow';
 import { Text } from '../../components/Text';
 import type { WorldProject } from '../../contract/world';
 import { PROJECT_COPY } from '../../i18n/screens/project';
 import { hrefFor } from '../../nav/routes';
+import { rendererFrom } from '../../view/rendererFlag';
 import {
   layersOf, mapFor, segLabel, type EnvFilter, type Filters, type LayerFilter,
 } from '../../view/projectView';
@@ -45,6 +47,10 @@ export function MapPanel({ project, selectedId, filters, onFilters, mode, onMode
       id === selectedId ? { name: 'project', projectId: project.id } : { name: 'project', projectId: project.id, componentId: id },
     );
   };
+
+  const clear = () => { window.location.hash = hrefFor({ name: 'project', projectId: project.id }); };
+  // BACK-82: ?renderer=flow opts into the React Flow map; without it, or on any failure, DepGraph is drawn.
+  const renderer = rendererFrom(window.location.search);
 
   const nodes: readonly GraphNode[] = model.nodes.map((n) => ({
     id: n.id,
@@ -104,7 +110,9 @@ export function MapPanel({ project, selectedId, filters, onFilters, mode, onMode
 
       {model.nodes.length > 0 && effective === 'map' && (
         <>
-          <DepGraph nodes={nodes} edges={model.edges} selectedId={selectedId ?? null} onSelect={select} label={t.label} />
+          {renderer === 'flow'
+            ? <DepFlow nodes={nodes} edges={model.edges} selectedId={selectedId ?? null} onSelect={select} onClear={clear} label={t.label} />
+            : <DepGraph nodes={nodes} edges={model.edges} selectedId={selectedId ?? null} onSelect={select} label={t.label} />}
           <details className="proj-details">
             <summary>{shell.map.tableCaption}</summary>
             <DepTable nodes={nodes} edges={model.edges} />
