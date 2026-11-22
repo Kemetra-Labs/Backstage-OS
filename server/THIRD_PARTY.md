@@ -16,7 +16,7 @@ Apache-2.0, Copyright 2026 Kemetra-Labs. See the donor files at the pinned SHA:
 - [LICENSE](https://github.com/Kemetra-Labs/Retail-Tower-Erp/blob/dea1adc386ad6e8129e7342c873c74ea6f9e5b0c/LICENSE)
 - [services/backend-core/NOTICE](https://github.com/Kemetra-Labs/Retail-Tower-Erp/blob/dea1adc386ad6e8129e7342c873c74ea6f9e5b0c/services/backend-core/NOTICE)
 
-This repository now has its own Apache-2.0 `LICENSE` at the root; the root `NOTICE` points here.
+This repository has its own Apache-2.0 `LICENSE` at the root; the root `NOTICE` points here.
 
 ## Independence
 
@@ -24,4 +24,4 @@ No runtime dependency on `@data-pulse-2/*`, no shared credentials, Retail Tower 
 
 ## Rollback
 
-Delete `server/src/errors/envelope.ts` and its test (`server/test/errors/envelope.spec.ts`).
+Delete `server/src/errors/envelope.ts` and its test (`server/test/errors/envelope.spec.ts`), this `THIRD_PARTY.md` file, and the Retail Tower paragraph in the root `NOTICE`.
