@@ -50,5 +50,11 @@ earlier file. Do not reorder the `<script>` tags.
 
 ## Scope
 
-Prototype only. Out of scope: backend or control plane, source-system adapters (MCP/REST/webhooks), AI provider
+Prototype only. Out of scope: backend or control plane (the synthetic BFF in server/ is the only exception; see server/README.md), source-system adapters (MCP/REST/webhooks), AI provider
 calls, agent execution, authentication and permissions, deployment.
+
+## Synthetic BFF (server/)
+
+`server/` holds a small NestJS service that returns synthetic data only (BACK-69, T0). It has no database,
+authentication, connectors, network calls or secrets, and nothing in this prototype or `app/` calls it yet.
+It needs Node 24. See [server/README.md](server/README.md) for commands, routes, error behaviour and rollback.
