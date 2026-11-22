@@ -47,11 +47,11 @@ describe('decisionLabel', () => {
 
 describe('summariseEvidence', () => {
   const refs = [ev('E-1'), ev('E-5'), ev('E-6'), ev('E-7')];
-  it('counts restricted for Owner and never hides them', () => {
+  it('counts restricted for Owner and never hides them (raw, unprojected input: defence in depth)', () => {
     const s = summariseEvidence(refs, 'owner');
     expect(s).toMatchObject({ total: 4, read: 1, notRead: 2, restricted: 1, worst: 'unknown' });
   });
-  it('Technical sees the restricted item as read', () => {
+  it('Technical sees the restricted item as read (raw, unprojected input: defence in depth)', () => {
     expect(summariseEvidence(refs, 'technical')).toMatchObject({ read: 2, notRead: 2, restricted: 0 });
   });
   it('reports stale and current honestly, and unknown for an empty list', () => {
@@ -121,7 +121,7 @@ describe('decisionDetailView', () => {
     expect(v?.investigationId).toBeUndefined();
   });
 
-  it('restricted evidence is listed as restricted for lay personas and in full for Technical', () => {
+  it('restricted evidence is listed as restricted for lay personas and in full for Technical (raw, unprojected input: defence in depth)', () => {
     const lay = decisionDetailView(WORLD, 'DEC-DEMO-5', 'owner', 'en');
     expect(lay?.observed.every((r) => !r.restricted)).toBe(true);
     const row = (p: Persona) => decisionDetailView(WORLD, 'DEC-DEMO-5', p, 'en')?.observed.length;

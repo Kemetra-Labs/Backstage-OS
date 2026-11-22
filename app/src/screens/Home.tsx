@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { useApp } from '../app/AppContext';
 import { Panel } from '../components/Panel';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { WORLD } from '../fixture/world';
 import { HOME_COPY } from '../i18n/screens/home';
 import { hrefFor } from '../nav/routes';
 import { homeView, type HomeSignals } from '../view/homeView';
@@ -38,11 +37,11 @@ function Signals({ s }: { readonly s: HomeSignals }) {
   );
 }
 
-/** Command Home (BACK-1): one executive read of the whole mission control. Every number comes from WORLD. */
+/** Command Home (BACK-1): one executive read of the whole mission control. Every number comes from world. */
 export function Home() {
-  const { shell, lang, persona } = useApp();
+  const { shell, lang, persona, world } = useApp();
   const h = HOME_COPY[lang];
-  const v = useMemo(() => homeView(WORLD, persona), [persona]);
+  const v = useMemo(() => homeView(world, persona), [world, persona]);
   return (
     <>
       <ScreenHeader title={shell.nav.home} lede={h.lede[persona]} />

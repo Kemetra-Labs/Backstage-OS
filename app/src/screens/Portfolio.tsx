@@ -3,7 +3,6 @@ import { useApp } from '../app/AppContext';
 import { Panel } from '../components/Panel';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Segmented } from '../components/Segmented';
-import { WORLD } from '../fixture/world';
 import { PORTFOLIO_COPY } from '../i18n/screens/portfolio';
 import { portfolioView, type ProductFilter } from '../view/portfolioView';
 import '../styles/screens/portfolio.css';
@@ -12,10 +11,10 @@ import { ProductEntry } from './portfolio/ProductEntry';
 
 /** Portfolio / Mission Overview (BACK-11): one entry per product and an evidence-linked attention list. */
 export function Portfolio() {
-  const { shell, lang, persona } = useApp();
+  const { shell, lang, persona, world } = useApp();
   const c = PORTFOLIO_COPY[lang];
   const [filter, setFilter] = useState<ProductFilter>('all');
-  const v = useMemo(() => portfolioView(WORLD, persona, lang, filter), [persona, lang, filter]);
+  const v = useMemo(() => portfolioView(world, persona, lang, filter), [world, persona, lang, filter]);
   return (
     <>
       <ScreenHeader title={shell.nav.portfolio} lede={c.lede[persona]} />

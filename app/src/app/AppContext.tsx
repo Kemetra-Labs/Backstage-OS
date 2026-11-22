@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
-import type { Lang, Persona } from '../contract/types';
+import type { InvestigationData, Lang, Persona } from '../contract/types';
+import type { World } from '../contract/world';
 import type { Copy } from '../i18n/strings';
 import type { ShellCopy } from '../i18n/shell';
 import type { Route } from '../nav/routes';
@@ -12,6 +13,9 @@ export interface AppState {
   readonly copy: Copy;
   readonly shell: ShellCopy;
   readonly route: Route;
+  /** Persona-projected demo data: a display switch, not authorization. Screens read these, never the fixtures. */
+  readonly world: World;
+  readonly investigation: InvestigationData;
   readonly setPersona: (p: Persona) => void;
   readonly setLang: (l: Lang) => void;
 }

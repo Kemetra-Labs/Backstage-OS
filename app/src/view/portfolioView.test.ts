@@ -53,7 +53,7 @@ describe('portfolioView', () => {
     expect(v.attentionEmpty).toBeNull();
   });
 
-  it('restricts technical-only evidence for owner and nontechnical, with no provider or age', () => {
+  it('restricts technical-only evidence for owner and nontechnical, with no provider or age (raw, unprojected input: defence in depth)', () => {
     for (const persona of ['owner', 'nontechnical'] as const) {
       const rows = portfolioView(WORLD, persona, 'en').attention.flatMap((a) => a.evidence);
       const restricted = rows.filter((r) => r.view.restricted);

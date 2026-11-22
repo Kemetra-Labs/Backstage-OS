@@ -6,7 +6,6 @@ import { Panel } from '../components/Panel';
 import { StateBlock } from '../components/StateBlock';
 import { Text } from '../components/Text';
 import { TruthChip } from '../components/TruthChip';
-import { WORLD } from '../fixture/world';
 import { EVIDENCE } from '../i18n/screens/evidence';
 import { hrefFor } from '../nav/routes';
 import { explorerFor } from '../view/explorerView';
@@ -38,9 +37,9 @@ function ExplorerHeader({ id, crumbs, children }: HeaderProps) {
 
 /** Evidence Explorer: one evidence item, what is known about it, what cites it and its neighbours in the case. */
 export function Evidence({ id, from }: { readonly id: string; readonly from?: string }) {
-  const { persona, lang, copy, shell } = useApp();
+  const { persona, lang, copy, shell, world, investigation: demo } = useApp();
   const c = EVIDENCE[lang];
-  const ex = explorerFor(WORLD, id, persona, from);
+  const ex = explorerFor(world, id, persona, from, demo.rawOutput);
   const portfolio = copy.crumbs[0] ?? '';
 
   if (!ex) {
@@ -72,7 +71,7 @@ export function Evidence({ id, from }: { readonly id: string; readonly from?: st
       <ExplorerHeader id={id} crumbs={crumbTrail(labels, hrefs)}>
         <div className="case explorer-lead">
           <TruthChip label={view.label} style={style} copy={copy} />
-          <p className="case-title" data-testid="evidence-title"><Text s={evidenceTitleFor(WORLD, id, persona, lang)} /></p>
+          <p className="case-title" data-testid="evidence-title"><Text s={evidenceTitleFor(world, id, persona, lang)} /></p>
           {investigation && (
             <p>
               <a className="btn btn-quiet btn-link" href={hrefFor({ name: 'investigation', id: investigation.id })} data-testid="back-link">
