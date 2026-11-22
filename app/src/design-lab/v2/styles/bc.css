@@ -61,7 +61,11 @@
   position: relative; z-index: 1; direction: ltr; container-type: inline-size; inline-size: min(100cqw, calc(100cqh * 1000 / 860)); aspect-ratio: 1000 / 860;
   background: radial-gradient(ellipse 26% 30.23% at 50% 58.14%, color-mix(in srgb, var(--kv2-cyan) 40%, transparent), transparent);
 }
-/* --pad insets the drawing on narrow canvases so the outermost cards never clip; nodes use the same inset (see .kv2-bc-node). */
+/* --pad insets the drawing so the outermost cards never clip; nodes use the same inset (see .kv2-bc-node). The outermost node sits
+   8.4% in from the edge and its card is up to 150 px wide (75 px each side), so the inset must make up the difference plus a 20 px
+   margin for the intro's outward start offset: pad >= (95 + 20 - 0.084 W) / 0.832, rounded to 108px - 10.1cqw. It reaches 0 on
+   canvases of about 1070 px and wider, and the breakpoints below set fixed insets for narrower ones. */
+.kv2-bc-node, .kv2-bc-svg, .kv2-bc-mk { --pad: clamp(0px, calc(108px - 10.1cqw), 76px); }
 .kv2-bc-svg { position: absolute; inset-block: 0; inset-inline-start: var(--pad, 0px); inline-size: calc(100% - 2 * var(--pad, 0px)); block-size: 100%; }
 .kv2-bc-orbit { fill: none; stroke: var(--kv2-cyan); stroke-dasharray: 3 7; vector-effect: non-scaling-stroke; }
 .kv2-bc-orbit-inner { stroke-opacity: 0.55; }

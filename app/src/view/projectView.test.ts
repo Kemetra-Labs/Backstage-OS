@@ -151,7 +151,7 @@ describe('selected component evidence', () => {
     expect(rows[1]?.title).toContain('integration-tests');
   });
 
-  it('gives Owner and Nontechnical redacted titles and restricted items as restricted', () => {
+  it('gives Owner and Nontechnical redacted titles and restricted items as restricted (raw, unprojected input: defence in depth)', () => {
     for (const persona of ['owner', 'nontechnical'] as const) {
       const text = linkedEvidence(WORLD, RT, comp('stock-sync'), persona, 'en').map((r) => r.title).join(' ');
       expect(text).not.toContain('integration-tests');

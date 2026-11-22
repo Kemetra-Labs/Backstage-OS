@@ -3,7 +3,6 @@ import { useApp } from '../app/AppContext';
 import { L } from '../components/L';
 import { ScreenHeader } from '../components/ScreenHeader';
 import type { WorldComponent, WorldProject } from '../contract/world';
-import { WORLD } from '../fixture/world';
 import { PROJECT_COPY } from '../i18n/screens/project';
 import { hrefFor } from '../nav/routes';
 import { DEFAULT_FILTERS, deliveryRows, risksFor, sourceRows, type Filters } from '../view/projectView';
@@ -24,7 +23,8 @@ interface Props {
 
 /** Project Intelligence (BACK-12): dependency map, selected component, CI evidence, risks and unknowns. */
 export function Project({ projectId, componentId }: Props) {
-  const project = projectById(WORLD, projectId);
+  const { world } = useApp();
+  const project = projectById(world, projectId);
   if (!project) return <ProjectNotFound projectId={projectId} />;
   const component = componentId === undefined ? undefined : componentById(project, componentId);
   if (componentId !== undefined && !component) {

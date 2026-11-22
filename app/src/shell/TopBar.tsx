@@ -2,7 +2,6 @@ import { useApp } from '../app/AppContext';
 import { needsDemoMarker } from '../contract/rules';
 import type { Persona } from '../contract/types';
 import { SOURCES } from '../fixture/inv-demo-7';
-import { WORLD } from '../fixture/world';
 import { SourceChip } from '../components/SourceChip';
 import { Segmented } from '../components/Segmented';
 import { Text } from '../components/Text';
@@ -10,8 +9,6 @@ import { DemoSearch } from './DemoSearch';
 
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];
 const STRIP_SOURCES = Object.values(SOURCES);
-/** The product these sources belong to, read from the data so the label cannot name the wrong one. */
-const STRIP_PRODUCT = WORLD.projects.find((p) => STRIP_SOURCES.every((s) => p.sources.includes(s)))?.name;
 
 interface Props {
   readonly menuOpen: boolean;
@@ -20,7 +17,9 @@ interface Props {
 
 /** Brand, demo marker, search, the two demo switches and the workspace source strip (connectivity + freshness). */
 export function TopBar({ menuOpen, onMenu }: Props) {
-  const { persona, lang, copy, shell, setPersona, setLang } = useApp();
+  const { persona, lang, copy, shell, world, setPersona, setLang } = useApp();
+  /** The product these sources belong to, read from the data so the label cannot name the wrong one. */
+  const stripProduct = world.projects.find((p) => STRIP_SOURCES.every((s) => p.sources.includes(s)))?.name;
   return (
     <header className="topbar">
       <div className="top-row">
@@ -49,7 +48,7 @@ export function TopBar({ menuOpen, onMenu }: Props) {
       </div>
       {/* These chips are one product's sources only; the label names it, so they never read as the whole workspace. */}
       <section className="sources" aria-labelledby="topbar-sources-label">
-        {STRIP_PRODUCT && <p id="topbar-sources-label" className="sources-label"><Text s={shell.sourcesFor(STRIP_PRODUCT)} /></p>}
+        {stripProduct && <p id="topbar-sources-label" className="sources-label"><Text s={shell.sourcesFor(stripProduct)} /></p>}
         <ul>
           {STRIP_SOURCES.map((s) => <SourceChip key={s.provider} source={s} copy={copy} lang={lang} />)}
         </ul>

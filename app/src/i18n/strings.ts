@@ -121,7 +121,7 @@ const en: Copy = {
       nontechnical: 'A likely reason was found. It is not confirmed yet.',
     },
     unknown: {
-      owner: 'Runtime health is unknown: runtime monitoring is not set up and recent errors are stale.',
+      owner: 'Runtime health is unknown: runtime monitoring is not set up and error monitoring data is stale.',
       technical: 'Runtime health unknown: {Datadog} not set up, {Sentry} stale 9 h, {Port} unavailable.',
       nontechnical: 'We do not know yet if the live service is affected. Some information is missing.',
     },
@@ -274,7 +274,7 @@ const ar: Copy = {
       nontechnical: 'وُجد سبب مرجّح، لم يتأكد بعد.',
     },
     unknown: {
-      owner: 'صحة التشغيل مجهولة: مراقبة التشغيل غير مُعدة والأخطاء الأخيرة قديمة.',
+      owner: 'صحة التشغيل مجهولة: مراقبة التشغيل غير مُعدة وبيانات مراقبة الأخطاء قديمة.',
       technical: 'صحة التشغيل مجهولة: {Datadog} غير مُعد، و{Sentry} قديم منذ 9 س، و{Port} غير متاح.',
       nontechnical: 'لا نعرف بعد إن كانت الخدمة المباشرة متأثرة. بعض المعلومات غير متوفرة.',
     },

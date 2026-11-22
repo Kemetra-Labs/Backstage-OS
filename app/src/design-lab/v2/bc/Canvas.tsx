@@ -94,7 +94,7 @@ function Node({ n, w, p, selected, dim, onSelect, refFn, intro }: NodeProps) {
     '--fx': (p.x / BC_CANVAS.w).toFixed(4),
     '--fy': (p.y / BC_CANVAS.h).toFixed(4),
     '--orb-d': `${hub ? HUB_ORB : ORB[n.kind]}px`,
-    ...(intro ? { '--vx': (dx * 8).toFixed(2), '--vy': (dy * 8).toFixed(2), '--delay': `${SETTLE_DELAY[orbitOf(n)]}ms` } : {}),
+    ...(intro ? { '--vx': (dx * 4).toFixed(2), '--vy': (dy * 4).toFixed(2), '--delay': `${SETTLE_DELAY[orbitOf(n)]}ms` } : {}),
   } as CSSProperties;
   return (
     <button

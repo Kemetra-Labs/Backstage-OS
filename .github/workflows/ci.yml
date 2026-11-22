@@ -19,7 +19,8 @@ jobs:
     name: Playwright (chromium + webkit)
     runs-on: ubuntu-latest
     # The root suite plus the app/ typecheck, unit and e2e suites took about 17 minutes on chromium + webkit.
-    timeout-minutes: 30
+    # The V2 lab suite (chromium only, about 330 tests) adds a few minutes; 40 keeps headroom (BACK-67).
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -107,6 +108,14 @@ jobs:
         if: steps.changes.outputs.docs_only != 'true'
         working-directory: app
         run: npm run e2e
+
+      # The V2 visual lab and the B+C pilot (app/e2e-v2, including the restricted-evidence non-disclosure specs).
+      # Chromium only: playwright.v2.config.ts defines no WebKit project, so this step proves nothing about V2 on WebKit.
+      # Failure artifacts land in app/test-results/v2, inside the upload path below (BACK-67).
+      - name: Run app V2 Playwright tests (chromium)
+        if: steps.changes.outputs.docs_only != 'true'
+        working-directory: app
+        run: npm run e2e:v2
 
       - name: Upload test results on failure
         if: failure()

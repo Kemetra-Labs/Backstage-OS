@@ -102,15 +102,16 @@ test('Owner sees observed-at but no target, rule, id or link; Nontechnical sees 
   await expect(page.locator('[data-field="source"]')).toBeVisible();
 });
 
-test('E-12 is restricted for Owner and Nontechnical, visible for Technical', async ({ page }) => {
+test('E-12 does not exist for Owner and Nontechnical (same not-found state as an unknown id), visible for Technical', async ({ page }) => {
   for (const persona of ['owner', 'nontechnical'] as const) {
     await load(page, '/evidence/E-12', { persona });
-    await expect(page.locator('h1')).toContainText('E-12'); // it still exists
-    await expect(page.locator('[data-state="restricted"]')).toBeVisible();
-    await expect(page.locator('[data-state="restricted"]')).toContainText('Restricted to Technical');
+    await expect(page.locator('[data-state="error"]')).toContainText('Evidence not found');
+    await expect(page.locator('[data-state="restricted"]')).toHaveCount(0);
     await expect(page.locator('[data-field="source"]')).toHaveCount(0);
-    await expect(page.locator('[data-testid="evidence-title"]')).toContainText('Restricted to Technical');
-    await expect(page.locator('[data-testid="evidence-title"]')).not.toContainText('payments');
+    await expect(page.locator('[data-testid="evidence-title"]')).toHaveCount(0);
+    const body = await page.locator('body').innerText();
+    expect(body).not.toContain('Restricted to Technical');
+    expect(body).not.toContain('payments');
   }
   await load(page, '/evidence/E-12', { persona: 'technical' });
   await expect(page.locator('[data-state="restricted"]')).toHaveCount(0);
@@ -199,11 +200,16 @@ test('Nontechnical gets the product link but not the component name', async ({ p
   await expect(side.locator('a[href="#/project/RT/stock-sync"]')).toHaveCount(0);
 });
 
-test('sibling index lists the other evidence, restricted and unread included, and inspecting one navigates', async ({ page }) => {
+test('sibling index lists the other evidence and unread items; E-5 is absent for Owner, present for Technical; inspecting one navigates', async ({ page }) => {
+  await load(page, E1, { persona: 'technical' });
+  const techSib = page.getByTestId('sibling-evidence');
+  for (const id of ['E-2', 'E-3', 'E-4', 'E-5', 'E-6', 'E-7']) await expect(techSib.locator(`[data-sibling="${id}"]`)).toBeVisible();
+  await expect(techSib.locator('[data-sibling="E-5"]')).not.toContainText('Restricted to Technical');
   await load(page, E1, { persona: 'owner' });
   const sib = page.getByTestId('sibling-evidence');
-  for (const id of ['E-2', 'E-3', 'E-4', 'E-5', 'E-6', 'E-7']) await expect(sib.locator(`[data-sibling="${id}"]`)).toBeVisible();
-  await expect(sib.locator('[data-sibling="E-5"]')).toContainText('Restricted to Technical');
+  for (const id of ['E-2', 'E-3', 'E-4', 'E-6', 'E-7']) await expect(sib.locator(`[data-sibling="${id}"]`)).toBeVisible();
+  await expect(sib.locator('[data-sibling="E-5"]')).toHaveCount(0);
+  await expect(sib).not.toContainText('Restricted to Technical');
   await expect(sib.locator('[data-sibling="E-6"]')).toContainText('Not read');
   await expect(sib.locator('[data-sibling="E-1"]')).toHaveCount(0);
   await sib.locator('a[href="#/evidence/E-2?from=INV-DEMO-7"]').click();

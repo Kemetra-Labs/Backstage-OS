@@ -4,7 +4,6 @@ import { Panel } from '../../components/Panel';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import type { InvestigationSummary } from '../../contract/world';
-import { WORLD } from '../../fixture/world';
 import { EVIDENCE } from '../../i18n/screens/evidence';
 import { hrefFor } from '../../nav/routes';
 import type { ExplorerView } from '../../view/explorerView';
@@ -69,7 +68,7 @@ export function Supporting({ ex }: { readonly ex: ExplorerView }) {
 
 /** The other evidence in the same case, as neutral inspect links. Restricted and unread items stay listed. */
 export function Siblings({ ex, investigation }: { readonly ex: ExplorerView; readonly investigation: InvestigationSummary }) {
-  const { lang, persona, copy } = useApp();
+  const { lang, persona, copy, world } = useApp();
   const c = EVIDENCE[lang].siblings;
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
   return (
@@ -81,7 +80,7 @@ export function Siblings({ ex, investigation }: { readonly ex: ExplorerView; rea
           {ex.siblings.map((s) => (
             <li key={s.id} className="row-item" data-sibling={s.id}>
               <TruthChip label={s.label} style={style} copy={copy} />
-              <span><Text s={evidenceTitleFor(WORLD, s.id, persona, lang)} /></span>
+              <span><Text s={evidenceTitleFor(world, s.id, persona, lang)} /></span>
               <span className="note"><Text s={evidenceStatusText(s, copy, lang)} /></span>
               {link(hrefFor({ name: 'evidence', id: s.id, from: investigation.id }), c.inspect(s.id))}
             </li>
