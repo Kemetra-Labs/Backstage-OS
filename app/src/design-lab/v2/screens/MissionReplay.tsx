@@ -84,10 +84,13 @@ export function MissionReplay() {
   const firstOf = (s: ReplayStage) => events.findIndex((e) => e.stage === s);
   const gaps = gapsAt(idx, events);
   const milestones = useMemo(() => milestonesAt(idx, events), [idx, events]);
-  const hypIdx = firstOf('hypothesis');
-  const proposedIdx = firstOf('proposed');
-  const ingestedIdx = firstOf('ingested');
-  const corIdx = events.findIndex((e) => e.label === 'correlated');
+  // A stage or label with no remaining row is never reached. Using -1 would make `idx >= x` true from the first row and show
+  // that stage's content (hypotheses, the proposal, a gap item) before anything supports it, which the scoped world can now cause.
+  const reachedAt = (i: number): number => (i < 0 ? Number.POSITIVE_INFINITY : i);
+  const hypIdx = reachedAt(firstOf('hypothesis'));
+  const proposedIdx = reachedAt(firstOf('proposed'));
+  const ingestedIdx = reachedAt(firstOf('ingested'));
+  const corIdx = reachedAt(events.findIndex((e) => e.label === 'correlated'));
   const introducedAt = (id: string): number => {
     const i = events.findIndex((e) => e.evidence === id);
     return i >= 0 ? i : ingestedIdx;

@@ -227,7 +227,9 @@ for (const persona of UNAUTHORIZED) {
         await expect(events).toHaveText(String(mine.events));
       });
 
-      test('Shell search: E-5 is not searchable, and an authorized target (Sentry) still is', async ({ page }) => {
+      // With the shipped fixture no search label carries E-5, so this passes on the old code too. It guards the user-visible result
+      // (no E-5 hit, Sentry still found); the scoping itself is proven by the buildHits unit tests on a constructed world.
+      test('Shell search: no E-5 hit, and an authorized target (Sentry) is still found (scoping itself: buildHits unit tests)', async ({ page }) => {
         await load(page, { screen: 'mission-map', persona, lang });
         const box = page.locator('.kv2-search input');
         await box.fill('E-5');
