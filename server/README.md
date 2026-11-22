@@ -13,10 +13,12 @@ Node 24 is required (`.nvmrc`, `engines`). Run from `server/`. CI runs `npm run 
 
 ```bash
 npm ci
-npm run check    # typecheck + Jest
+npm run check    # typecheck + Jest (NestJS 12, TypeScript 6.0.3, Jest 30)
 npm run build    # emits dist/
 npm start        # node dist/main.js
 ```
+
+NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental-vm-modules`, `useESM` in `jest.config.js`). The build still emits CommonJS, which loads NestJS through Node's `require(esm)`.
 
 `KAWALYS_BFF_PORT` sets the port (default `8787`). The server binds `127.0.0.1` only.
 
@@ -62,5 +64,4 @@ Delete `server/`, then revert the `CLAUDE.md` bullet, the root `NOTICE`, the roo
 - BACK-47 exit criteria for anything beyond this T0.
 - BACK-55 (database), BACK-56 (authentication), BACK-58 (secrets).
 - Correlation helper: deferred because it needs `@opentelemetry/api`.
-- NestJS 12 / TypeScript 6 upgrade.
-- A CI job for `server/` (BACK-72 / BACK-67).
+- TypeScript 7 (native compiler): `ts-jest` 29 needs the JavaScript compiler API, so the toolchain stays on TypeScript 6.0.3 (BACK-75).
