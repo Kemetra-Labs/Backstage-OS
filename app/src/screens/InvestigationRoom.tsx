@@ -1,6 +1,6 @@
+import { useApp } from '../app/AppContext';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Lang, Persona } from '../contract/types';
-import { INV_DEMO_7 } from '../fixture/inv-demo-7';
 import { formatAge } from '../i18n/segments';
 import type { Copy } from '../i18n/strings';
 import { viewFor } from '../view/viewFor';
@@ -10,7 +10,6 @@ import { Ledger } from '../components/Ledger';
 import { StageMap } from '../components/StageMap';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Text } from '../components/Text';
-import { WORLD } from '../fixture/world';
 import { INVESTIGATION } from '../i18n/screens/investigation';
 import { hrefFor } from '../nav/routes';
 import { crumbTrail } from '../view/investigationView';
@@ -30,7 +29,8 @@ type CopyState = 'idle' | 'copied' | 'failed';
  * Everything shown comes from the persona view; the screen never reads the fixture fields itself.
  */
 export function InvestigationRoom({ persona, lang, copy }: Props) {
-  const view = viewFor(persona, INV_DEMO_7);
+  const { world, investigation } = useApp();
+  const view = viewFor(persona, investigation);
   const [openId, setOpenId] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const opener = useRef<HTMLButtonElement | null>(null);
@@ -60,7 +60,7 @@ export function InvestigationRoom({ persona, lang, copy }: Props) {
   };
 
   const { meta } = view;
-  const summary = investigationById(WORLD, meta.id);
+  const summary = investigationById(world, meta.id);
   const explorerText = INVESTIGATION[lang].openExplorer;
   // Portfolio and the product are links; the case itself is the current page.
   const crumbHrefs = [

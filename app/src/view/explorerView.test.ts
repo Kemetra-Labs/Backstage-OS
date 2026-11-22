@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { INV_DEMO_7 } from '../fixture/inv-demo-7';
 import { WORLD } from '../fixture/world';
 import { explorerFor, resolveInvestigation } from './explorerView';
 
@@ -14,11 +15,11 @@ describe('resolveInvestigation', () => {
 
 describe('explorerFor', () => {
   it('is undefined for an unknown id', () => {
-    expect(explorerFor(WORLD, 'E-999', 'owner')).toBeUndefined();
+    expect(explorerFor(WORLD, 'E-999', 'owner', undefined, INV_DEMO_7.rawOutput)).toBeUndefined();
   });
 
   it('E-1: context, siblings, supporting entities and raw output for Technical only', () => {
-    const t = explorerFor(WORLD, 'E-1', 'technical', 'INV-DEMO-7');
+    const t = explorerFor(WORLD, 'E-1', 'technical', 'INV-DEMO-7', INV_DEMO_7.rawOutput);
     expect(t?.investigation?.id).toBe('INV-DEMO-7');
     expect(t?.project?.id).toBe('RT');
     expect(t?.component?.id).toBe('stock-sync');
@@ -26,20 +27,20 @@ describe('explorerFor', () => {
     expect(t?.decisions.map((d) => d.id)).toContain('DEC-DEMO-3');
     expect(t?.view.rawOutput).toContain('AssertionError');
     for (const p of ['owner', 'nontechnical'] as const) {
-      const v = explorerFor(WORLD, 'E-1', p, 'INV-DEMO-7');
+      const v = explorerFor(WORLD, 'E-1', p, 'INV-DEMO-7', INV_DEMO_7.rawOutput);
       expect(v?.view.rawOutput).toBeUndefined();
       expect(v?.view.url).toBeUndefined();
     }
   });
 
   it('only E-1 carries raw output', () => {
-    expect(explorerFor(WORLD, 'E-2', 'technical')?.view.rawOutput).toBeUndefined();
+    expect(explorerFor(WORLD, 'E-2', 'technical', undefined, INV_DEMO_7.rawOutput)?.view.rawOutput).toBeUndefined();
   });
 
   it('E-12 is restricted for Owner and Nontechnical and readable for Technical', () => {
-    expect(explorerFor(WORLD, 'E-12', 'owner')?.view.restricted).toBe(true);
-    expect(explorerFor(WORLD, 'E-12', 'nontechnical')?.view.restricted).toBe(true);
-    const t = explorerFor(WORLD, 'E-12', 'technical');
+    expect(explorerFor(WORLD, 'E-12', 'owner', undefined, INV_DEMO_7.rawOutput)?.view.restricted).toBe(true);
+    expect(explorerFor(WORLD, 'E-12', 'nontechnical', undefined, INV_DEMO_7.rawOutput)?.view.restricted).toBe(true);
+    const t = explorerFor(WORLD, 'E-12', 'technical', undefined, INV_DEMO_7.rawOutput);
     expect(t?.view.restricted).toBeUndefined();
     expect(t?.view.provider).toBe('sentry');
     // Not cited by any case: context comes from the component that reads it.
@@ -50,23 +51,23 @@ describe('explorerFor', () => {
   });
 
   it('unread evidence keeps its reason and has no observed fields', () => {
-    const e24 = explorerFor(WORLD, 'E-24', 'owner');
+    const e24 = explorerFor(WORLD, 'E-24', 'owner', undefined, INV_DEMO_7.rawOutput);
     expect(e24?.view.notReadReason).toBe('unavailable');
     expect(e24?.view.observedAt).toBeUndefined();
     expect(e24?.view.label).toBe('unknown');
-    expect(explorerFor(WORLD, 'E-31', 'owner')?.view.notReadReason).toBe('not_configured');
-    expect(explorerFor(WORLD, 'E-31', 'owner')?.project?.id).toBe('SB');
+    expect(explorerFor(WORLD, 'E-31', 'owner', undefined, INV_DEMO_7.rawOutput)?.view.notReadReason).toBe('not_configured');
+    expect(explorerFor(WORLD, 'E-31', 'owner', undefined, INV_DEMO_7.rawOutput)?.project?.id).toBe('SB');
   });
 
   it('E-23 is correlated with its rule for Technical, restricted for the others', () => {
-    const t = explorerFor(WORLD, 'E-23', 'technical');
+    const t = explorerFor(WORLD, 'E-23', 'technical', undefined, INV_DEMO_7.rawOutput);
     expect(t?.view.label).toBe('correlated');
     expect(t?.view.rule).toMatch(/Deploy time/);
-    expect(explorerFor(WORLD, 'E-23', 'owner')?.view.rule).toBeUndefined();
+    expect(explorerFor(WORLD, 'E-23', 'owner', undefined, INV_DEMO_7.rawOutput)?.view.rule).toBeUndefined();
   });
 
   it('finds the proposal that cites an item', () => {
-    const e41 = explorerFor(WORLD, 'E-41', 'owner');
+    const e41 = explorerFor(WORLD, 'E-41', 'owner', undefined, INV_DEMO_7.rawOutput);
     expect(e41?.decisions.map((d) => d.id)).toEqual(['DEC-DEMO-1']);
     expect(e41?.view.label).toBe('approved');
   });
@@ -76,10 +77,10 @@ describe('explorerFor', () => {
       ...WORLD,
       projects: WORLD.projects.map((p) => ({ ...p, components: [], delivery: [], attention: [], health: { ...p.health, basis: [] } })),
     };
-    expect(explorerFor(world, 'E-41', 'owner')?.project?.id).toBe('RT');
+    expect(explorerFor(world, 'E-41', 'owner', undefined, INV_DEMO_7.rawOutput)?.project?.id).toBe('RT');
   });
 
   it('a from that points at another case does not leak into the crumbs', () => {
-    expect(explorerFor(WORLD, 'E-22', 'owner', 'INV-DEMO-7')?.investigation?.id).toBe('INV-DEMO-9');
+    expect(explorerFor(WORLD, 'E-22', 'owner', 'INV-DEMO-7', INV_DEMO_7.rawOutput)?.investigation?.id).toBe('INV-DEMO-9');
   });
 });

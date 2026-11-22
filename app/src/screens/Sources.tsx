@@ -1,7 +1,6 @@
 import { useApp } from '../app/AppContext';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Text } from '../components/Text';
-import { WORLD } from '../fixture/world';
 import { SOURCES_COPY } from '../i18n/screens/sources';
 import { affectedBy, productSources, providersInUse } from '../view/sourceView';
 import '../styles/screens/sources.css';
@@ -12,9 +11,9 @@ import { StatePanel } from './sources/StatePanel';
 
 /** Source health (demo only): connectivity and freshness per product. Target health lives on the product pages. */
 export function Sources() {
-  const { shell, lang, persona, copy: shared } = useApp();
+  const { shell, lang, persona, copy: shared, world } = useApp();
   const copy = SOURCES_COPY[lang];
-  const products = productSources(WORLD);
+  const products = productSources(world);
   return (
     <>
       <ScreenHeader title={shell.nav.sources} lede={<Text s={copy.lede} />} />
@@ -28,7 +27,7 @@ export function Sources() {
         unavailable={affectedBy(products, 'unavailable')}
         notConfigured={affectedBy(products, 'not_configured')}
       />
-      <IntegrationsPanel copy={copy} shared={shared} persona={persona} providers={providersInUse(WORLD)} />
+      <IntegrationsPanel copy={copy} shared={shared} persona={persona} providers={providersInUse(world)} />
     </>
   );
 }

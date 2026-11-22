@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../app/AppContext';
-import { WORLD } from '../fixture/world';
 import { buildIndex, search } from '../nav/search';
 
 /** Searches the synthetic world only. Results are plain route links; nothing is fetched. */
 export function DemoSearch() {
-  const { persona, lang, shell } = useApp();
-  const index = useMemo(() => buildIndex(WORLD), []);
+  const { persona, lang, shell, world } = useApp();
+  const index = useMemo(() => buildIndex(world), [world]);
   const [q, setQ] = useState('');
   const results = search(index, q, persona, lang);
   const open = q.trim().length >= 2;

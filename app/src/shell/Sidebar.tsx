@@ -1,5 +1,4 @@
 import { useApp } from '../app/AppContext';
-import { WORLD } from '../fixture/world';
 import type { NavKey } from '../i18n/shell';
 import { hrefFor, sectionOf, type Route } from '../nav/routes';
 
@@ -17,7 +16,7 @@ const DEMO: ReadonlyArray<{ key: NavKey; route: Route }> = [
 
 /** Main navigation. On wide screens a fixed column; on narrow screens a panel opened from the top bar's menu. */
 export function Sidebar({ open }: { readonly open: boolean }) {
-  const { route, shell } = useApp();
+  const { route, shell, world } = useApp();
   const section = sectionOf(route);
   const projectId = route.name === 'project' ? route.projectId : null;
 
@@ -34,7 +33,7 @@ export function Sidebar({ open }: { readonly open: boolean }) {
       <ul className="side-list">{MAIN.map((m) => link(m.key, m.route))}</ul>
       <p className="side-group" aria-hidden="true">{shell.projectsLabel}</p>
       <ul className="side-list" aria-label={shell.projectsLabel}>
-        {WORLD.projects.map((p) => (
+        {world.projects.map((p) => (
           <li key={p.id}>
             <a href={hrefFor({ name: 'project', projectId: p.id })} aria-current={projectId === p.id ? 'page' : undefined} data-nav-project={p.id}>
               <bdi dir="ltr">{p.name}</bdi>

@@ -6,7 +6,6 @@ import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import type { WorldComponent, WorldProject } from '../../contract/world';
-import { WORLD } from '../../fixture/world';
 import { PROJECT_COPY } from '../../i18n/screens/project';
 import { formatAge } from '../../i18n/segments';
 import { hrefFor } from '../../nav/routes';
@@ -56,7 +55,7 @@ interface Props {
 
 /** The component picked in the URL: its triad, facts, linked evidence and related attention. */
 export function ComponentPanel({ project, component }: Props) {
-  const { copy, lang, persona, shell } = useApp();
+  const { copy, lang, persona, shell, world } = useApp();
   const t = PROJECT_COPY[lang].selected;
   const layerWords = PROJECT_COPY[lang].layer[persona === 'nontechnical' ? 'plain' : 'standard'];
 
@@ -68,7 +67,7 @@ export function ComponentPanel({ project, component }: Props) {
     );
   }
 
-  const evidence = linkedEvidence(WORLD, project, component, persona, lang);
+  const evidence = linkedEvidence(world, project, component, persona, lang);
   const attention = attentionFor(project, component);
   return (
     <Panel id="proj-selected" title={t.title} testId="selected-panel">

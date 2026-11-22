@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppContext, type AppState } from './app/AppContext';
 import type { Lang, Persona } from './contract/types';
+import { INV_DEMO_7 } from './fixture/inv-demo-7';
+import { WORLD } from './fixture/world';
+import { authorizedInvestigation, authorizedWorld } from './view/authorize';
 import { COPY } from './i18n/strings';
 import { SHELL } from './i18n/shell';
 import type { Route } from './nav/routes';
@@ -51,6 +54,9 @@ export function App() {
   const copy = COPY[lang];
   const shell = SHELL[lang];
 
+  const world = useMemo(() => authorizedWorld(WORLD, persona), [persona]);
+  const investigation = useMemo(() => authorizedInvestigation(INV_DEMO_7, persona), [persona]);
+
   const setPersona = useCallback((p: Persona) => setState((s) => ({ ...s, persona: p })), []);
   const setLang = useCallback((l: Lang) => setState((s) => ({ ...s, lang: l })), []);
 
@@ -75,8 +81,8 @@ export function App() {
   }, [lang, title]);
 
   const value = useMemo<AppState>(
-    () => ({ persona, lang, copy, shell, route, setPersona, setLang }),
-    [persona, lang, copy, shell, route, setPersona, setLang],
+    () => ({ persona, lang, copy, shell, route, world, investigation, setPersona, setLang }),
+    [persona, lang, copy, shell, route, world, investigation, setPersona, setLang],
   );
 
   return (
