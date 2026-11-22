@@ -1,0 +1,70 @@
+G1 SCORE REPORT v1 (counts only)
+engine: graphify 0.9.114
+envelope schema: VALID
+contract errors: none
+
+Edge type   expected    TP    FN    FP
+----------  --------  ----  ----  ----
+imports           33    27     6     1
+calls             30    17    13     2
+contains          51    45     6     0
+TOTAL            114    89    25     3
+Missed (FN): 25
+  E019 imports src/packages/atlas/src/legacy/bridge.js src/packages/atlas/src/legacy/debug-panel.js
+  E023 imports src/ingest/endpoints.py src/ingest/models.py
+  E028 imports src/ingest/compat.py src/vault/models.py
+  E029 imports src/vault/__init__.py src/vault/models.py
+  E030 imports src/vault/models.py src/vault/base.py
+  E033 imports src/vault/store.py src/vault/models.py
+  E034 calls src/packages/ledger/src/credit.ts::CreditEntry.describe src/packages/ledger/src/entry.ts::BaseEntry.describe
+  E037 calls src/packages/ledger/src/journal.ts::postEntry src/packages/ledger/src/entry.ts::BaseEntry.amount
+  E039 calls src/packages/ledger/src/period.ts src/packages/ledger/src/audit.ts::auditTrail
+  E041 calls src/packages/atlas/src/summary.ts::default src/packages/atlas/src/text.ts::normalize
+  E042 calls src/packages/atlas/src/summary.ts::default src/packages/ledger/src/money.ts::roundCents
+  E045 calls src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel src/packages/atlas/src/summary.ts::default
+  E048 calls src/packages/atlas/src/legacy/bridge.js::exportRows src/packages/atlas/src/legacy/csv.js::toCsv
+  E051 calls src/ingest/clean.py::clean_label src/ingest/legacy.py::trim
+  E052 calls src/ingest/endpoints.py src/ingest/registry.py::expose
+  E054 calls src/ingest/endpoints.py src/ingest/registry.py::plugin
+  E056 calls src/ingest/endpoints.py::echo src/ingest/models.py::Record.key
+  E061 calls src/vault/store.py::persist src/vault/base.py::BaseModel.describe
+  E062 calls src/vault/store.py::persist src/vault/models.py::Record.save
+  E087 contains src/packages/atlas/src/summary.ts src/packages/atlas/src/summary.ts::default
+  E094 contains src/packages/atlas/src/legacy/bridge.js src/packages/atlas/src/legacy/bridge.js::exportRows
+  E095 contains src/packages/atlas/src/legacy/csv.js src/packages/atlas/src/legacy/csv.js::toCsv
+  E096 contains src/packages/atlas/src/legacy/debug-panel.js src/packages/atlas/src/legacy/debug-panel.js::show
+  E097 contains src/ingest/models.py src/ingest/models.py::Record
+  E119 contains src/vault/models.py src/vault/models.py::Record
+HARD: false observed edges: 2
+  calls src/packages/ledger/src/journal.ts::previewEntry -> src/packages/ledger/src/money.ts::roundCents @ src/packages/ledger/src/journal.ts:12 [observed]
+  imports src/packages/atlas/src/App.tsx::openMonthly -> src/packages/atlas/src/views/monthly.ts @ src/packages/atlas/src/App.tsx:8 [observed]
+HARD: overclaimed (observed label on an inferred truth): 0
+HARD: invalid claims (observed/inferred without target, unknown naming a target): 0
+Reported: false inferred edges: 1
+  calls src/packages/atlas/src/App.tsx -> src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel @ src/packages/atlas/src/App.tsx:5 [inferred]
+Reported: understated (inferred label on an observed truth): 0
+Reported: derived through a barrel (R2): 0
+Reported: form mismatches: 2
+  E017 expected form require, got import
+  E018 expected form require, got import
+Reported: surplus edges (same type/from/to as a matched truth edge, other line): 0
+Annotation: wrong-relation-type edges at a truth location (also counted as false observed/inferred): 0
+HARD: negatives hit: 3; negatives defined: 23
+  N05: calls src/packages/ledger/src/journal.ts::previewEntry -> src/packages/ledger/src/money.ts::roundCents @ src/packages/ledger/src/journal.ts:12 [observed] (shadowed name: roundCents here is the parameter, not the import)
+  N23: calls src/packages/atlas/src/App.tsx -> src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel @ src/packages/atlas/src/App.tsx:5 [inferred] (referenced as a value in the routes table (App.tsx:5), never called (Ruling 10))
+  N20: imports src/packages/atlas/src/App.tsx::openMonthly -> src/packages/atlas/src/views/monthly.ts @ src/packages/atlas/src/App.tsx:8 [observed] (reachable only through a dynamic import(): no observed or inferred imports edge may target it)
+Line provenance of matched edges: exact=89 off_by_n=0 missing=0
+Unknown handling (ground-truth unknown edges):
+  E064 imports src/packages/atlas/src/App.tsx:8 -> claimed_observed
+  E065 imports src/packages/atlas/src/views/lookup.ts:3 -> silent
+  E066 imports src/packages/atlas/src/legacy/bridge.js:7 -> silent
+  E067 imports src/ingest/plugin_host.py:6 -> silent
+  E068 imports src/ingest/plugin_host.py:10 -> silent
+  E069 calls src/packages/atlas/src/LedgerPanel.tsx:12 -> silent
+  E070 calls src/ingest/probe.py:10 -> silent
+  summary: claimed_observed=1, silent=6
+Coverage by language (tp/expected): javascript=3/8, python=41/54, tsx=10/11, typescript=35/41
+Files seen/total: {"files_seen": 31, "files_total": 36}; external_refs: 8
+Languages with zero extracted nodes: (none)
+Ignored: {"alias_resolved": 0, "duplicate_ignored": 0, "engine_unknown_edges": 0, "external_ignored": 0, "intrafile_ignored": 6, "names_folded": 0, "null_target_ignored": 0, "unlisted_contains_ignored": 3}
+VERDICT no_false_observed_overclaimed_invalid_or_negative_hits: FAIL (false observed = 2, overclaimed = 0, negatives hit = 3, invalid claims = 0, unknown claimed as observed = 1, schema errors = 0, contract errors = 0)

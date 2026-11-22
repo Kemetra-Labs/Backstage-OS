@@ -1,0 +1,50 @@
+== harness-venv(psutil): s00_start vs s01_after_harness
+3 change(s) across 46202 -> 46202 tracked files
+CHANGED ~/.claude.json
+REMOVED ~/.claude/backups/.claude.json.backup.1795373089580
+ADDED   ~/.claude/backups/.claude.json.backup.1795378152554
+
+== install-graphify: s02_pre_graphify_install vs s03_post_graphify_install
+0 change(s) across 46202 -> 46202 tracked files
+
+== install-codegraph: s04_pre_codegraph_install vs s05_post_codegraph_install
+0 change(s) across 46202 -> 46202 tracked files
+
+== graphify-run1: graphify-run1.pre vs graphify-run1.post
+0 change(s) across 46202 -> 46202 tracked files
+
+== graphify-run2: graphify-run2.pre vs graphify-run2.post
+0 change(s) across 46202 -> 46202 tracked files
+
+== codegraph-run1: codegraph-run1.pre vs codegraph-run1.post
+0 change(s) across 46202 -> 46202 tracked files
+
+== codegraph-run2: codegraph-run2.pre vs codegraph-run2.post
+0 change(s) across 46202 -> 46202 tracked files
+
+== installs-end..runs-end(incl.gaps): s05_post_codegraph_install vs s06_after_runs
+7 change(s) across 46202 -> 46202 tracked files
+CHANGED ~/.cache/claude-cli-nodejs/-home-user-Backstage-OS/mcp-logs-Cloudflare-Developer-Platform/2026-11-22T20-06-47-777Z.jsonl
+CHANGED ~/.claude.json
+REMOVED ~/.claude/backups/.claude.json.backup.1795373393015
+REMOVED ~/.claude/backups/.claude.json.backup.1795373908081
+ADDED   ~/.claude/backups/.claude.json.backup.1795378234347
+ADDED   ~/.claude/backups/.claude.json.backup.1795378297442
+CHANGED ~/.claude/projects/-home-user-Backstage-OS/bba4bcb2-e704-54c0-9b55-2cf259a2d7c4/subagents/agent-a01af32b7bfd56d97.jsonl
+
+== whole-session(first..last): s00_start vs s99_final
+13 change(s) across 46202 -> 46202 tracked files
+CHANGED ~/.cache/claude-cli-nodejs/-home-user-Backstage-OS/mcp-logs-Cloudflare-Developer-Platform/2026-11-22T20-06-47-777Z.jsonl
+CHANGED ~/.claude.json
+REMOVED ~/.claude/backups/.claude.json.backup.1795373089580
+REMOVED ~/.claude/backups/.claude.json.backup.1795373393015
+REMOVED ~/.claude/backups/.claude.json.backup.1795373908081
+REMOVED ~/.claude/backups/.claude.json.backup.1795378006115
+REMOVED ~/.claude/backups/.claude.json.backup.1795378070852
+ADDED   ~/.claude/backups/.claude.json.backup.1795378152554
+ADDED   ~/.claude/backups/.claude.json.backup.1795378234347
+ADDED   ~/.claude/backups/.claude.json.backup.1795378297442
+ADDED   ~/.claude/backups/.claude.json.backup.1795378359285
+ADDED   ~/.claude/backups/.claude.json.backup.1795378432482
+CHANGED ~/.claude/projects/-home-user-Backstage-OS/bba4bcb2-e704-54c0-9b55-2cf259a2d7c4/subagents/agent-a01af32b7bfd56d97.jsonl
+
