@@ -6,7 +6,7 @@ Companion to [README.md](README.md). Read from GitHub `main` at `e72d34d` by sta
 
 | Surface | Entry | Role | CI |
 |---|---|---|---|
-| Root static prototype | `index.html`, `js/*.js` (about 1990 lines), `css/app.css` (761) | Vanilla review prototype (BACK-4). Script order is load-bearing. | Required check: root `playwright test`, chromium + webkit |
+| Root static prototype | `index.html`, `js/*.js` (about 2000 lines), `css/app.css` (761) | Vanilla review prototype (BACK-4). Script order is load-bearing. | Required check: root `playwright test`, chromium + webkit |
 | V1 React app | `app/index.html` → `app/src/main.tsx` | Nine hash routes, one shell, React 19.3.1 pinned (README says 18, stale) | `npm run check` + `npm run e2e` |
 | V2 lab and B+C pilot | `app/v2.html` → `V2/main.tsx` | Isolated visual lab; B+C via `?concept=bc` | **Not in CI** |
 
@@ -98,8 +98,8 @@ Answers the 22 Nov amendment to BACK-65 item 4 (inventory of entity, graph, evid
 
 | Concern | V1 (`contract/world.ts`, `fixture/world.ts`) | V2 (`V2/types.ts`, `V2/fixtures/world.ts`) | Shared | Semantic difference / risk |
 |---|---|---|---|---|
-| Entity: container | `WorldProject` id `RT`/`KH`/`SB` (`ProjectId` union), name, summary, sources, health, environments | `WorldNode` kind `product`, id `retail-tower`, `khepri`, `seshat-bi` | none | Different id vocabularies for the same products; one-to-one mapping **not verified**. |
-| Entity: component | `WorldComponent` id, `layer` (client/edge/service/data/integration), `environment`, grid `pos {col,row}`, `checkFailing` | `WorldNode` kind `project` (`stock-sync`, `pos`, `inventory`) or `service` (`github`, `jira`, `sentry`, `port`), `x`/`y`, `provider`, `check` | `DisplayState` from `contract/types` | V2 mixes projects and provider services as nodes; V1 keeps providers in `sources`. |
+| Entity: container | `WorldProject` id `RT`/`KH`/`SB` (`ProjectId` union), name, summary, sources, health, environments | `WorldNode` kind `product`, id `retail-tower`, `khepri` (`seshat-bi` is a `service` node with no `provider`) | none | Different id vocabularies for the same products; one-to-one mapping **not verified**. |
+| Entity: component | `WorldComponent` id, `layer` (client/edge/service/data/integration), `environment`, grid `pos {col,row}`, `checkFailing` | `WorldNode` kind `project` (`stock-sync`, `pos`, `inventory`) or `service` (`github`, `jira`, `sentry`, `port`, `seshat-bi`), `x`/`y`, `provider`, `check` | `DisplayState` from `contract/types` | V2 mixes projects and provider services as nodes; V1 keeps providers in `sources`. |
 | Entity: spatial | grid `pos`, columns left to right in both languages | free `x`/`y`; B+C derives orbit layout (`fixtures/orbit-layout.ts`) | none | Layout is presentation, but each model owns its own coordinates. |
 | Graph edge | `WorldEdge {from,to,kind: authored|provisional|hypothesis, basis: EvidenceReference[]}` | `WorldEdge {id,a,b,cls: group|dep, truth: TruthLabel|unknown, basisKey (i18n key), evidence: string[]}` | none | Two certainty vocabularies (`kind` vs `truth`) and V2 adds a `group` class that V1 does not have; V2 `basisKey` points at copy, V1 carries the evidence objects. |
 | Evidence item | `EvidenceReference` (id, classification, freshness, visibility, observation, notReadReason, rule), ids `E-11`…`E-41` plus INV-DEMO-7's `E-1`…`E-7`; titles in `World.evidenceText` and `i18n/strings.ts` | the same type; adds `E-8`, `E-9`; stored in `evidenceById`; reads `EVIDENCE` from `fixture/inv-demo-7.ts` | `EvidenceReference`, `EVIDENCE`, `SOURCES`, `INV_DEMO_7` | The one real shared core. V2 references evidence by id string; V1 by object. |
