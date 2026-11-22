@@ -9,7 +9,7 @@ The `x-kawalys-demo-persona` header is a **display switch, not authorization**: 
 
 ## Commands
 
-Node 24 is required (`.nvmrc`, `engines`). Run from `server/`. The suite also passes on Node 22 (npm prints an EBADENGINE warning) until the CI job in BACK-74 pins Node 24.
+Node 24 is required (`.nvmrc`, `engines`). Run from `server/`. CI runs `npm run check` here on Node 24, in the required job (BACK-74). The suite also passes on Node 22 locally (npm prints an EBADENGINE warning).
 
 ```bash
 npm ci

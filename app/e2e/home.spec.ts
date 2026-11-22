@@ -66,11 +66,18 @@ test('home: simulated agent events are marked and activity is newest first', asy
   expect(minutes).toEqual([...minutes].sort((a, b) => a - b));
 });
 
-test('home: Owner sees restricted evidence counted, Technical sees it unrestricted', async ({ page }) => {
-  await load(page, { persona: 'owner' });
-  await expect(page.locator('[data-investigation="INV-DEMO-7"]')).toContainText('restricted to Technical');
-  await expect(page.locator('[data-attention="ATT-RT-1"]')).not.toContainText('Restricted to Technical');
+test('home: Owner and Nontechnical see no restricted count or evidence for withheld items, Technical sees the full count', async ({ page }) => {
+  for (const persona of ['owner', 'nontechnical'] as const) {
+    await load(page, { persona });
+    const inv = page.locator('[data-investigation="INV-DEMO-7"]');
+    await expect(inv).toBeVisible();
+    await expect(inv).not.toContainText('restricted');
+    await expect(inv).toContainText('6 evidence items'); // E-5 is not counted for this persona
+    await expect(page.locator('[data-attention="ATT-RT-1"]')).not.toContainText('Restricted to Technical');
+    await expect(page.locator('main')).not.toContainText('restricted to Technical');
+  }
   await load(page, { persona: 'technical' });
+  await expect(page.locator('[data-investigation="INV-DEMO-7"]')).toContainText('7 evidence items');
   await expect(page.locator('[data-investigation="INV-DEMO-7"]')).not.toContainText('restricted to Technical');
   await expect(page.locator('[data-attention="ATT-RT-1"] [data-evidence-chip="E-1"]')).toBeVisible();
 });

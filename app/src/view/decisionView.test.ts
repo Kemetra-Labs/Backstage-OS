@@ -47,12 +47,13 @@ describe('decisionLabel', () => {
 
 describe('summariseEvidence', () => {
   const refs = [ev('E-1'), ev('E-5'), ev('E-6'), ev('E-7')];
-  it('counts restricted for Owner and never hides them', () => {
+  it('leaves a Technical-only item out of every Owner count and reports no restricted count (raw, unprojected input: defence in depth)', () => {
     const s = summariseEvidence(refs, 'owner');
-    expect(s).toMatchObject({ total: 4, read: 1, notRead: 2, restricted: 1, worst: 'unknown' });
+    expect(s).toEqual({ total: 3, read: 1, notRead: 2, worst: 'unknown' });
+    expect(s).not.toHaveProperty('restricted');
   });
-  it('Technical sees the restricted item as read', () => {
-    expect(summariseEvidence(refs, 'technical')).toMatchObject({ read: 2, notRead: 2, restricted: 0 });
+  it('Technical counts the Technical-only item as read (raw, unprojected input: defence in depth)', () => {
+    expect(summariseEvidence(refs, 'technical')).toMatchObject({ total: 4, read: 2, notRead: 2 });
   });
   it('reports stale and current honestly, and unknown for an empty list', () => {
     expect(summariseEvidence([ev('E-1')], 'owner').worst).toBe('current');
@@ -62,7 +63,7 @@ describe('summariseEvidence', () => {
   it('totals always add up', () => {
     for (const p of PERSONAS) {
       const s = summariseEvidence(refs, p);
-      expect(s.read + s.notRead + s.restricted).toBe(s.total);
+      expect(s.read + s.notRead).toBe(s.total);
     }
   });
 });
@@ -121,7 +122,7 @@ describe('decisionDetailView', () => {
     expect(v?.investigationId).toBeUndefined();
   });
 
-  it('restricted evidence is listed as restricted for lay personas and in full for Technical', () => {
+  it('restricted evidence is listed as restricted for lay personas and in full for Technical (raw, unprojected input: defence in depth)', () => {
     const lay = decisionDetailView(WORLD, 'DEC-DEMO-5', 'owner', 'en');
     expect(lay?.observed.every((r) => !r.restricted)).toBe(true);
     const row = (p: Persona) => decisionDetailView(WORLD, 'DEC-DEMO-5', p, 'en')?.observed.length;

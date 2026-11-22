@@ -47,7 +47,7 @@ describe('evidenceTimeline', () => {
     expect(timed[0]?.id).toBe('E-1');
     expect(timed.map((r) => r.id)).toContain('E-5');
   });
-  it('lists unread and restricted items apart, never with a time', () => {
+  it('lists unread and restricted items apart, never with a time (raw, unprojected input: defence in depth)', () => {
     const owner = evidenceTimeline(refs, 'owner');
     expect(owner.untimed.map((r) => r.id).sort()).toEqual(['E-5', 'E-6', 'E-7']);
     expect(owner.timed.map((r) => r.id)).not.toContain('E-5');
@@ -63,7 +63,7 @@ describe('evidenceTimeline', () => {
 });
 
 describe('evidenceStatusText', () => {
-  it('says restricted, not read, or provider and freshness in words', () => {
+  it('says restricted, not read, or provider and freshness in words (raw, unprojected input: defence in depth)', () => {
     const c = COPY.en;
     expect(evidenceStatusText(evidenceViewFor('owner', ev('E-5')), c, 'en')).toBe('Restricted to Technical');
     expect(evidenceStatusText(evidenceViewFor('owner', ev('E-6')), c, 'en')).toBe('Not read: source not set up');

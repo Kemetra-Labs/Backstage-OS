@@ -31,6 +31,8 @@ export interface ShellCopy {
     readonly kind: string;
     readonly basis: string;
     readonly noBasis: string;
+    /** Note shown on the map when N links have an endpoint that is not a node (not drawn). */
+    readonly undrawn: (n: number) => string;
     readonly direction: string;
     readonly selected: string;
   };
@@ -87,6 +89,7 @@ const en: ShellCopy = {
     kind: 'Link',
     basis: 'Basis',
     noBasis: 'no evidence',
+    undrawn: (n) => `${n === 1 ? '1 link' : `${n} links`} not drawn on the map — see the table`,
     direction: 'Data flows left to right in both languages.',
     selected: 'selected',
   },
@@ -142,6 +145,11 @@ const ar: ShellCopy = {
     kind: 'الرابط',
     basis: 'الأساس',
     noBasis: 'لا دليل',
+    undrawn: (n) =>
+      n === 1 ? 'رابط واحد غير مرسوم على الخريطة — راجع الجدول'
+      : n === 2 ? 'رابطان غير مرسومين على الخريطة — راجع الجدول'
+      : n <= 10 ? `${n} روابط غير مرسومة على الخريطة — راجع الجدول`
+      : `${n} رابطًا غير مرسوم على الخريطة — راجع الجدول`,
     direction: 'تتدفق البيانات من اليسار إلى اليمين في اللغتين.',
     selected: 'محدد',
   },

@@ -3,6 +3,7 @@ import { useApp } from '../app/AppContext';
 import { resolveLabel } from '../contract/rules';
 import type { EvidenceReference } from '../contract/types';
 import type { EdgeKind } from '../contract/world';
+import { splitEdges } from './depGraphEdges';
 import { Text } from './Text';
 import { TruthChip } from './TruthChip';
 import type { Triad } from '../view/world';
@@ -47,6 +48,7 @@ export function DepGraph({ nodes, edges, selectedId, onSelect, label }: Props) {
   const cols = Math.max(1, ...nodes.map((n) => n.col + 1));
   const rows = Math.max(1, ...nodes.map((n) => n.row + 1));
   const at = new Map(nodes.map((n) => [n.id, n]));
+  const { drawn, undrawn } = splitEdges(edges, new Set(at.keys()));
 
   return (
     <div className="depgraph-wrap">
@@ -58,13 +60,12 @@ export function DepGraph({ nodes, edges, selectedId, onSelect, label }: Props) {
           style={{ gridTemplateColumns: `repeat(${cols}, minmax(132px, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(112px, 1fr))`, minWidth: cols * 140 }}
         >
           <svg className="depgraph-edges" viewBox={`0 0 ${cols * CELL} ${rows * CELL}`} preserveAspectRatio="none" aria-hidden="true">
-            {edges.map((e) => {
-              const a = at.get(e.from);
-              const b = at.get(e.to);
-              if (!a || !b) return null;
+            {drawn.map((e, i) => {
+              const a = at.get(e.from)!;
+              const b = at.get(e.to)!;
               return (
                 <line
-                  key={`${e.from}-${e.to}`}
+                  key={`${e.from}-${e.to}-${e.kind}-${i}`}
                   className={`dg-edge dg-${e.kind}`}
                   x1={a.col * CELL + CELL - 6} y1={a.row * CELL + CELL / 2}
                   x2={b.col * CELL + 6} y2={b.row * CELL + CELL / 2}
@@ -102,6 +103,9 @@ export function DepGraph({ nodes, edges, selectedId, onSelect, label }: Props) {
           <li key={k}><span className={`dg-swatch dg-${k}`} aria-hidden="true" />{shell.edge[k]}: {shell.edgeNote[k]}</li>
         ))}
       </ul>
+      {undrawn.length > 0 && (
+        <p className="note" data-testid="dep-graph-undrawn" data-count={undrawn.length}>{shell.map.undrawn(undrawn.length)}</p>
+      )}
       <p className="note">{shell.map.direction} <span className="vh">{label}</span></p>
     </div>
   );
@@ -120,8 +124,8 @@ export function DepTable({ nodes, edges, caption }: { readonly nodes: readonly G
           <tr><th scope="col">{shell.map.from}</th><th scope="col">{shell.map.to}</th><th scope="col">{shell.map.kind}</th><th scope="col">{shell.map.basis}</th></tr>
         </thead>
         <tbody>
-          {edges.map((e) => (
-            <tr key={`${e.from}-${e.to}`} data-edge={`${e.from}->${e.to}`}>
+          {edges.map((e, i) => (
+            <tr key={`${e.from}-${e.to}-${e.kind}-${i}`} data-edge={`${e.from}->${e.to}`}>
               <td><bdi dir="ltr" className="ltr">{name(e.from)}</bdi></td>
               <td><bdi dir="ltr" className="ltr">{name(e.to)}</bdi></td>
               <td>{shell.edge[e.kind]}</td>

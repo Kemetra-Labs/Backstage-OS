@@ -1,4 +1,4 @@
-import { WORLD } from '../fixture/world';
+import { useApp } from '../app/AppContext';
 import { formatAge } from '../i18n/segments';
 import { hrefFor } from '../nav/routes';
 import { decisionDetailView } from '../view/decisionView';
@@ -17,7 +17,8 @@ import '../styles/screens/decisions.css';
 /** Decision detail (BACK-13). Everything is display: no option is selectable and nothing here decides. */
 export function DecisionDetail({ id }: { readonly id: string }) {
   const { persona, lang, copy, shell, c, style } = useDecisionsUi();
-  const v = decisionDetailView(WORLD, id, persona, lang);
+  const { world } = useApp();
+  const v = decisionDetailView(world, id, persona, lang);
   const inbox = { label: shell.nav.decisions, href: hrefFor({ name: 'decisions' }) };
 
   if (!v) {

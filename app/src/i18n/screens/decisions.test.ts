@@ -53,8 +53,17 @@ describe('decisions copy', () => {
     expect(c.pendingCount(2)).toBe('2 proposals');
     expect(c.unknownsLine(0)).toContain('none recorded');
     expect(c.unknownsLine(2)).toBe('Unknowns: 2');
-    expect(c.evidenceSummary(1, 2, 3, 'stale')).toBe('Evidence: 1 read, 2 not read, 3 restricted. Worst freshness: stale.');
+    expect(c.evidenceSummary(1, 2, 'stale')).toBe('Evidence: 1 read, 2 not read. Worst freshness: stale.');
     expect(DECISIONS_COPY.ar.pendingCount(2)).toContain('2');
+  });
+
+  it('never mentions restricted evidence, in English or Arabic (BACK-76, M05-D05-B)', () => {
+    for (const lang of ['en', 'ar'] as const) {
+      const c = DECISIONS_COPY[lang];
+      for (const text of [c.evidenceSummary(1, 2, 'stale'), c.observedNote]) {
+        expect(text).not.toMatch(/restricted|مقيّد|مقيد/i);
+      }
+    }
   });
 
   it('says plainly that nothing is built or decided here', () => {

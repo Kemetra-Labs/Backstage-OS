@@ -41,24 +41,22 @@ export function decisionLabel(d: Decision): DisplayLabel {
 }
 
 export interface EvidenceSummary {
+  /** Items this persona may see. A Technical-only item never counts for another persona (M05-D05-B, BACK-76). */
   readonly total: number;
   readonly read: number;
   readonly notRead: number;
-  /** Restricted items are counted, never hidden and never treated as zero. */
-  readonly restricted: number;
   /** Worst freshness among items this persona can see; unknown when none is visible. */
   readonly worst: Freshness;
 }
 
 export function summariseEvidence(refs: readonly EvidenceReference[], persona: Persona): EvidenceSummary {
-  const restricted = refs.filter((r) => r.visibility === 'technical' && persona !== 'technical');
-  const visible = refs.filter((r) => !restricted.includes(r));
+  // The projected world never holds a withheld item; this filter guards raw, unprojected input.
+  const visible = refs.filter((r) => persona === 'technical' || r.visibility !== 'technical');
   const notRead = visible.filter((r) => r.observation === null).length;
   return {
-    total: refs.length,
+    total: visible.length,
     read: visible.length - notRead,
     notRead,
-    restricted: restricted.length,
     worst: worstFreshness(visible.map(effectiveFreshness)),
   };
 }

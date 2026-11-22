@@ -46,20 +46,25 @@ for (const lang of LANGS) {
       // Counts for the unconfigured product are "not read", never 0.
       await expect(sb.locator('[data-count="attention"]')).not.toHaveText('0');
       await expect(sb.locator('[data-count="attention"]')).toHaveText(lang === 'ar' ? 'غير مقروء' : 'Not read');
-      await expect(page.getByTestId('product-RT').locator('[data-count="attention"]')).toHaveText('2');
+      // ATT-RT-2 rests only on withheld evidence, so it is not counted for Owner and Nontechnical.
+      await expect(page.getByTestId('product-RT').locator('[data-count="attention"]')).toHaveText(persona === 'technical' ? '2' : '1');
     });
   }
 }
 
-test('portfolio: attention items carry truth chips and provenance, restricted ones say restricted', async ({ page }) => {
+test('portfolio: attention items carry truth chips and provenance; the item resting on withheld evidence is absent for Owner and Nontechnical', async ({ page }) => {
+  for (const persona of ['owner', 'nontechnical'] as const) {
+    await load(page, { persona });
+    await expect(page.locator('[data-attention="ATT-RT-2"]')).toHaveCount(0);
+    await expect(page.locator('[data-provenance="restricted"]')).toHaveCount(0);
+    await expect(page.locator('main')).not.toContainText('Restricted to Technical');
+    await expect(page.locator('main')).not.toContainText('E-12');
+  }
   await load(page, { persona: 'owner' });
   const item = page.locator('[data-attention="ATT-RT-1"]');
   await expect(item.locator('[data-evidence-row]')).toHaveCount(2);
   await expect(item.locator('[data-evidence-row] [data-truth]')).toHaveCount(2);
   await expect(item.locator('[data-provenance="read"]').first()).toContainText('GitHub');
-  const payments = page.locator('[data-attention="ATT-RT-2"]');
-  await expect(payments.locator('[data-provenance="restricted"]')).toHaveText('Restricted to Technical');
-  await expect(payments.locator('[data-evidence-row] a')).toHaveCount(0);
 
   await load(page, { persona: 'technical' });
   await expect(page.locator('[data-attention="ATT-RT-2"] [data-provenance="read"]')).toContainText('Sentry');

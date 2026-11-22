@@ -2,7 +2,6 @@ import { useApp } from '../../app/AppContext';
 import { Panel } from '../../components/Panel';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
-import { WORLD } from '../../fixture/world';
 import { INVESTIGATION } from '../../i18n/screens/investigation';
 import { hrefFor } from '../../nav/routes';
 import { evidenceTitleFor } from '../../view/evidence';
@@ -16,7 +15,7 @@ interface Props {
 
 /** Evidence for a summary case. Each item opens in the Evidence Explorer; there is no drawer here. */
 export function EvidenceLinks({ items, investigationId }: Props) {
-  const { persona, lang, copy } = useApp();
+  const { persona, lang, copy, world } = useApp();
   const c = INVESTIGATION[lang];
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
   return (
@@ -25,7 +24,7 @@ export function EvidenceLinks({ items, investigationId }: Props) {
         {items.map((e) => (
           <li key={e.id} className={`evidence-item${e.notReadReason || e.restricted ? ' not-read' : ''}`} data-evidence-row={e.id}>
             <TruthChip label={e.label} style={style} copy={copy} />
-            <span className="evidence-text"><Text s={evidenceTitleFor(WORLD, e.id, persona, lang)} /></span>
+            <span className="evidence-text"><Text s={evidenceTitleFor(world, e.id, persona, lang)} /></span>
             <span className="evidence-status"><Text s={evidenceStatusText(e, copy, lang)} /></span>
             <a className="btn btn-quiet btn-link" href={hrefFor({ name: 'evidence', id: e.id, from: investigationId })}>
               <Text s={c.inspect(e.id)} />

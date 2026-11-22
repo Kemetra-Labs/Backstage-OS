@@ -21,7 +21,7 @@ describe('evidenceViewFor', () => {
     expect(evidenceViewFor('owner', ev('E-1')).observedAt).toBeDefined();
     expect(evidenceViewFor('nontechnical', ev('E-1')).observedAt).toBeUndefined();
   });
-  it('technical-only evidence is restricted for other personas', () => {
+  it('technical-only evidence is restricted for other personas (raw, unprojected input: defence in depth)', () => {
     expect(evidenceViewFor('owner', ev('E-12'))).toEqual({ id: 'E-12', label: 'unknown', freshness: 'unknown', ageMinutes: null, inert: true, restricted: true });
     expect(evidenceViewFor('technical', ev('E-12')).restricted).toBeUndefined();
   });

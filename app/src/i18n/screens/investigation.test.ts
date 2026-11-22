@@ -61,6 +61,13 @@ describe('persona redaction and truth in copy', () => {
       expect(c.hypothesis.text.technical).toContain('DEMO-311');
     }
   });
+  it('Owner and Nontechnical hypothesis does not state the withheld deploy/timing correlation (E-23), in either language', () => {
+    const LEAK = /deploy|recent change|timing|عملية نشر|تغيير حديث|التوقيت|نشر/i;
+    for (const lang of ['en', 'ar'] as const) {
+      for (const p of ['owner', 'nontechnical'] as const) expect(INVESTIGATION[lang].summary.hypothesis.text[p], `${lang}/${p}`).not.toMatch(LEAK);
+    }
+    expect(INVESTIGATION.en.summary.hypothesis.text.technical).toMatch(/deploy/i);
+  });
   it('customer impact stays unknown for every persona', () => {
     for (const s of Object.values(INVESTIGATION.en.summary.impact.text)) expect(s).toMatch(/^Unknown, not evidenced/);
     for (const s of Object.values(INVESTIGATION.ar.summary.impact.text)) expect(s).toMatch(/^مجهول، لا دليل عليه/);
