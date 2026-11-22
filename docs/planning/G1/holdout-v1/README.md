@@ -21,7 +21,10 @@ All data is synthetic. There are no real names, no secrets and no live endpoints
   - the existing `../fixture/score.py`;
   - `verify.py`.
 - The ground truth was derived twice: once to write it, and again file by file against `cat -n` of every source. The two passes were reconciled with no difference in edges. The second pass added one `omissions` entry, for inheritance.
-- Limit: both passes are by the same author. No independent second annotator was used (see Limitations).
+- Second annotation: blind independent pass by a second annotator, 121/121 key edges found; 2 corrections and 2 ambiguities applied 22 Nov 2026.
+  - Corrections: `E008` gets `names: ["*"]` (A1); new negative `N23`, no call into `LedgerPanel` from the `routes` value reference (A2).
+  - Ambiguities: unknown imports `E064`-`E068` now also name their `enclosing_symbol` (C1, Ruling 16); the basis of `super` calls stays open for the owner (C2, Ruling 3).
+  - The annotator's other extras (constructor nodes, redundant negatives) were reviewed and not adopted. No edge's existence, endpoints, line or basis changed.
 
 ## Layout
 
@@ -54,7 +57,7 @@ The extra keys are ignored by the schema: `id`, `v1_form`, `specifier`, `evidenc
 | Edges, observed | 109: 33 imports (27 `import`, 3 `reexport`, 3 `require`), 25 calls, 51 contains |
 | Edges, inferred | 5 calls (receiver typing or inherited-method lookup) |
 | Edges, unknown | 7: 5 imports (dynamic or variable loading), 2 calls (HTTP cross-runtime) |
-| Negatives (explicit "must not exist") | 22 (8 imports, 14 calls): 2 comment, 2 string, 2 shadowed name, 8 cross-package collision (one also a comment, one also TYPE_CHECKING), 2 override, 1 `__all__` exclusion, 1 TYPE_CHECKING-only call, 3 cross-runtime, 2 dynamic-only module |
+| Negatives (explicit "must not exist") | 23 (8 imports, 15 calls): 2 comment, 2 string, 2 shadowed name, 8 cross-package collision (one also a comment, one also TYPE_CHECKING), 2 override, 1 `__all__` exclusion, 1 TYPE_CHECKING-only call, 3 cross-runtime, 2 dynamic-only module, 1 value reference never called |
 | External import statements (`external_refs`) | 8 |
 | Coverage | files_seen = files_total = 35. `src/tsconfig.json` is listed in `omissions` as configuration |
 
@@ -88,7 +91,7 @@ Paths are shortened: `ledger/` means `src/packages/ledger/src/`, `atlas/` means 
 | Default export, class | `ledger/journal.ts:1`, `:6` | E002 imports → `ledger/credit.ts`; E035 calls → `ledger/credit.ts::CreditEntry` |
 | Default re-exported by name | `ledger/index.ts:3` | E007 imports/reexport → `ledger/credit.ts` |
 | Anonymous default function | `atlas/LedgerPanel.tsx:4`, `:16` (`makeSummary`) | E013 imports → `atlas/summary.ts`; E045 calls → `atlas/summary.ts::default` |
-| Default component | `atlas/App.tsx:2` | E015 imports → `atlas/LedgerPanel.tsx`. The route table at `:5` only references it, so there is no call |
+| Default component | `atlas/App.tsx:2` | E015 imports → `atlas/LedgerPanel.tsx`. The route table at `:5` only references it, so there is no call: NOT `*` calls → `atlas/LedgerPanel.tsx::LedgerPanel` (N23, Ruling 10) |
 | CommonJS default | `atlas/legacy/bridge.js:3`, `:9` | E018 imports/require → `atlas/legacy/csv.js`; E048 calls → `csv.js::toCsv` |
 | Barrel re-exports | `ledger/index.ts:2`-`:4` | E006, E007, E008, imports/reexport → `journal.ts`, `credit.ts`, `money.ts` |
 | Cross-package `normalize` | `atlas/summary.ts:6`; `atlas/views/monthly.ts:5` | E041, E046 → `atlas/text.ts::normalize`. NOT → `ledger/money.ts::normalize` (N08, N09) |
@@ -98,11 +101,11 @@ Paths are shortened: `ledger/` means `src/packages/ledger/src/`, `atlas/` means 
 | Commented-out import | `ledger/journal.ts:3` | NOT imports → `ledger/period.ts` (N01) |
 | Import-like string | `ingest/probe.py:6` | NOT imports → `ingest/plugin_host.py` (N04) |
 | Shadowed parameter | `ledger/journal.ts:12` | NOT `previewEntry` → `ledger/money.ts::roundCents` (N05) |
-| Dynamic `import()`, literal | `atlas/App.tsx:8` | UNKNOWN E064. R5 makes it unknown even with a literal. The `.render()` call on the same line goes through the loaded module and is covered by this unknown. NOT `*` imports → `atlas/views/monthly.ts` (N20) |
-| Dynamic `import()`, template | `atlas/views/lookup.ts:3` | UNKNOWN E065 |
-| `require(variable)` | `atlas/legacy/bridge.js:7` | UNKNOWN E066 (form `require`) |
-| `importlib.import_module` | `ingest/plugin_host.py:6` | UNKNOWN E067. NOT `*` imports → `ingest/plugins/csv_sink.py` (N21) |
-| `__import__(name)` | `ingest/plugin_host.py:10` | UNKNOWN E068 |
+| Dynamic `import()`, literal | `atlas/App.tsx:8` | UNKNOWN E064 (from the module; enclosing symbol `atlas/App.tsx::openMonthly`). R5 makes it unknown even with a literal. The `.render()` call on the same line goes through the loaded module and is covered by this unknown. NOT `*` imports → `atlas/views/monthly.ts` (N20) |
+| Dynamic `import()`, template | `atlas/views/lookup.ts:3` | UNKNOWN E065 (enclosing symbol `atlas/views/lookup.ts::resolveView`) |
+| `require(variable)` | `atlas/legacy/bridge.js:7` | UNKNOWN E066 (form `require`; enclosing symbol `atlas/legacy/bridge.js::exportRows`) |
+| `importlib.import_module` | `ingest/plugin_host.py:6` | UNKNOWN E067 (enclosing symbol `ingest/plugin_host.py::activate`). NOT `*` imports → `ingest/plugins/csv_sink.py` (N21) |
+| `__import__(name)` | `ingest/plugin_host.py:10` | UNKNOWN E068 (enclosing symbol `ingest/plugin_host.py::activate_legacy`) |
 | HTTP, TS to Python | `atlas/LedgerPanel.tsx:12` `fetch('/api/ledger/close')` | UNKNOWN E069, hint `ingest/endpoints.py::close_ledger`. NOT that call as observed or inferred (N18) |
 | HTTP, Python to TS | `ingest/probe.py:10` `urlopen(... "/healthz")` | UNKNOWN E070, hint `atlas/server/health.ts::healthHandler`. NOT (N19); NOT `*` calls → `healthHandler` (N22) |
 | Coverage: empty module | `ingest/__init__.py` (0 bytes) | module node; counts in files_total |
@@ -113,7 +116,7 @@ Paths are shortened: `ledger/` means `src/packages/ledger/src/`, `atlas/` means 
 | Coverage: parse stress | `ingest/probe.py:12`-`:18` (`match` with a walrus guard); `ledger/period.ts:4` (decorator before `export class`); `atlas/summary.ts:5` (anonymous default) | An engine that cannot parse a file must list it in `omissions` and report files_seen below 35. Dropping it silently is reported as `silent` or as missed edges |
 | Omission: config file | `src/tsconfig.json` | not a module. It is in the truth's `omissions` |
 
-`ground-truth.json` has the full list: 22 negatives, 8 external imports (`react`, `react-dom/client`, `dataclasses`, `typing` ×2, `importlib`, `json`, `urllib.request`) and the 10 `coverage_cases`.
+`ground-truth.json` has the full list: 23 negatives, 8 external imports (`react`, `react-dom/client`, `dataclasses`, `typing` ×2, `importlib`, `json`, `urllib.request`) and the 10 `coverage_cases`.
 
 ## Rulings (ambiguities and how the contract text resolved them)
 
@@ -124,6 +127,7 @@ Paths are shortened: `ledger/` means `src/packages/ledger/src/`, `atlas/` means 
 3. **`super` calls are observed.** `super.m()` / `super().m()` with single inheritance, where the base defines `m` directly, binds lexically to the `extends` clause or base list (R4).
    - A method call on an instance (`line.amount()`, `rec.save()`) needs receiver typing and, where the method is inherited, lookup. Those calls are **inferred**.
    - **Open (lenient on purpose).** An engine that labels a `super` call inferred is only `understated` (R4: underclaiming is reported, not failed).
+   - **Owner to close before the engine pass.** The second annotator read R4 the other way (Python `super()` follows the MRO; method lookup on a known class is inferred elsewhere in this key). If the owner rules inferred, both `E034` (`ledger/credit.ts:6`) and `E058` (`vault/models.py:7`) become `v1_basis: "inferred"`. That turns an observed engine label into an overclaim hard fail, so it must be settled before any engine sees the sources.
 4. **`import('./views/monthly')` is unknown.** R5 says dynamic `import()` is *always* unknown. As the more specific rule, it overrides R4's "statically resolvable". The candidate is named in `target_hint` only. **Open:** flag it if the owner meant "always" only for non-literal specifiers.
 5. **`require(variable)`** has basis `unknown` and form `require`. Form describes the syntax (R3) and basis describes resolvability (R4). Form is not a match key, so this choice cannot fail an engine.
 6. **Conditional imports are observed.** These are try/except, `if TYPE_CHECKING:` and the env-flag ternary `require`. The statement is written and resolves statically, and R4 does not depend on whether the branch is reachable at runtime.
@@ -134,6 +138,7 @@ Paths are shortened: `ledger/` means `src/packages/ledger/src/`, `atlas/` means 
 9. **Default exports.** The node id is the declared name: `CreditEntry`, `LedgerPanel`, or `toCsv` for `module.exports = function toCsv`. An anonymous default function is `path::default`. A call goes to that node, whatever the local binding is called (`makeSummary`).
 10. **Not relations.** JSX element usage, value references (the `routes` table), type annotations and `extends` clauses are not `imports`, `calls` or `contains`. They are listed in the truth's `omissions`.
     - No fixture component is rendered as JSX, so no engine is penalised for that modelling choice.
+    - The `routes` value reference at `atlas/App.tsx:5` is guarded by negative N23, so an inferred call into `LedgerPanel` fails as well as an observed one.
 11. **Unknown sites are isolated.** No observed or inferred truth edge shares a `file:line` with an unknown. `score.py` matches unknowns on file plus line regardless of type (R5), so a shared line would make a correct edge "claim" the unknown.
 12. **`external_refs`** is the number of external or standard-library import statements, which is 8. R8 asks for a separate count but does not define it.
     - Builtin and external calls such as `fetch`, `urlopen`, `json.loads` and `useState`, and the decorator `@dataclass`, are out of scope. They are not counted again.
@@ -141,7 +146,11 @@ Paths are shortened: `ledger/` means `src/packages/ledger/src/`, `atlas/` means 
 14. **One file, not two.** v0 kept a separate `ground-truth.envelope.json`. Here `ground-truth.json` is itself the v1 envelope, so it can validate against the v1 schema directly.
     - Re-exports therefore use type `imports` with form `reexport`. The legacy type `reexports` would fail the v1 schema's type enum.
     - Consequence: `score.py` resolves `barrel::Name` *call* targets only from legacy `reexports` edges (`build_alias`), so it would not resolve them here. The fixture has **no calls through a barrel**: the barrel is consumed only for a constant. **Open scorer note:** a later hold-out with barrel calls needs that alias built from `form: reexport` too. That is a `score.py` change, outside this ticket.
-15. **Re-export of a default** (`export { default as CreditEntry } from './credit'`) is one `reexport` edge to `credit.ts`, with `names: ["default"]`.
+15. **Re-export of a default** (`export { default as CreditEntry } from './credit'`) is one `reexport` edge to `credit.ts`, with `names: ["default"]`. `export * from` carries `names: ["*"]`, as the Python star imports do (Ruling 2).
+16. **Unknown imports: module or enclosing symbol.** R1 says an imports edge starts at the importing module, while R5 says an unknown matches on file + line + enclosing symbol.
+    - The key keeps `from` at the module (R1) and adds `enclosing_symbol` on `E064`-`E068`. The v1 schema and `score.py` accept the extra field and ignore it. `verify.py` checks that it is the innermost enclosing symbol.
+    - Ruling: an engine unknown edge **without a line** should match on either the module or the enclosing symbol.
+    - **Open scorer note:** today's `score.py` matches a line-less unknown on `from` only. An engine that writes the enclosing function and omits the line is scored `silent`, which is reported only, not a hard fail, but understates it. Honouring `enclosing_symbol` is a `score.py` change and needs separate approval.
 
 ## Language and runtime limitations (no claim of universal support)
 
@@ -153,7 +162,7 @@ Paths are shortened: `ledger/` means `src/packages/ledger/src/`, `atlas/` means 
   - No namespace-package edge cases, `importlib.resources`, `sys.path` edits or `.pyi` stubs.
   - No consumer imports through a package `__init__` re-export.
 - **Cross-runtime.** Both HTTP links are unknown by contract, with a candidate in `target_hint`. Nothing here tests route matching (R5 defers that to a separate gate). There are no queues or RPC.
-- **Size and authorship.** 35 modules and 121 edges is a small sample. The ground truth has one author, checked by a second pass from the same author and by `verify.py`, not by an independent annotator.
+- **Size and authorship.** 35 modules and 121 edges is a small sample. The ground truth has one author and two derivation passes, checked by `verify.py` and by one blind independent second annotator (all 121 key edges found).
   - A result on this fixture is evidence about these cases only, not about real repositories.
 
 ## Execution procedure for the later engine pass (needs its own approval: section 6 item 3)

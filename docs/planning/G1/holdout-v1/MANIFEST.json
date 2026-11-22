@@ -14,13 +14,13 @@
   },
   "src_tree_sha256": "c17bb1c50fd1c9173a850e5862dba1f75f63d392822daa5cc91119fb673bfde8",
   "src_tree_hash_algorithm": "score.py tree_hash: sha256 over files under src/ sorted by relative posix path ('src/...'); per file the path in UTF-8, NUL, the bytes with CRLF turned into LF, NUL; __pycache__ and *.pyc excluded. Equals ground-truth.json fixture.tree_sha256 and source.revision.",
-  "tree_sha256": "4da2e1988976208b58d51132d683f924a412f06eb04368c0bc6a21df15670453",
+  "tree_sha256": "23308150467adee168a03cd7f84d5aa6975e71f7afba19e74363ee5b28cf8a63",
   "tree_hash_algorithm": "sha256 of the UTF-8 text made of one line per file, sorted by relative posix path (byte order): '<sha256 hex of the file bytes>  <relative path>\\n' (sha256sum format). Covers every file under holdout-v1/ except MANIFEST.json, __pycache__ and *.pyc. Shell check: find . -type f ! -name MANIFEST.json ! -path '*/__pycache__/*' ! -name '*.pyc' | sed 's|^\\./||' | LC_ALL=C sort | xargs sha256sum | sha256sum",
   "file_count": 40,
   "files": {
     ".gitattributes": "a79691a93b46e49ce460c26ef22afcc03d6eca1e63bf2edbc20e96159510f6c9",
-    "README.md": "15defdfb386eff71b50c4d47c99ff91eb66e0e8b85d49879363becf86d8cc223",
-    "ground-truth.json": "60b5c451c9e80fd7e119d8f3d6bc3edcea8315714a6467efdbfc39f12da77818",
+    "README.md": "fedd1b349ba9eb8a73a28e4b1b820dfec72dd73921eba879e2459ad6cfd9901a",
+    "ground-truth.json": "a23b9b180893728f409d2ae65b5a0942374f1e77858cf56da2279c7767bdbf48",
     "src/ingest/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "src/ingest/_purechecksum.py": "725e9058941412db87a663a33fcca7d92fd0dc94cce3bb885f9d42743ee7fc5d",
     "src/ingest/_speedups.py": "3bde06620d8bf2348f79b2344092a4c48761b02c270491df9a804a6b7a3f3827",
@@ -57,6 +57,6 @@
     "src/vault/base.py": "579edde4d63f6d7afe52d6b4d786ae1935b9a62cfc76b7d85370254fa97875a4",
     "src/vault/models.py": "07b0ac5a9231cc9b6b21fbca1796281ff3cddf91b4d13a1f3f36c671908359b2",
     "src/vault/store.py": "f0e3d1f42b5573923c7ec32e34eb6bafaf18821add3f1954625b84415bc77a4b",
-    "verify.py": "0c18a4f77213ab48580a96240a6ab92c928f930767a3e256044dbec7372f7188"
+    "verify.py": "df1efc674f7b48eb4611c8c05aed980ed0e85012c0911d6372c7eeac91bd594f"
   }
 }

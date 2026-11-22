@@ -63,7 +63,7 @@
     "imports": "R1: one imports edge per import statement, to the literal specifier's file after alias resolution; form import|reexport|require|dynamic (R3); names[] optional detail. v1_form repeats form because score.py reads v1_form.",
     "calls": "only cross-file calls are enumerated; a call starts at the innermost enclosing listed symbol (function, method, component); a decorator call starts at the scope that evaluates it (the module for top-level decorators); class instantiation is a call to the class",
     "basis": "R4: observed when the binding is static (import/require binding, destructuring, star import with a literal __all__, super in single inheritance); inferred when receiver typing or inherited-method lookup is needed; unknown for dynamic loading and HTTP (R5)",
-    "unknown": "to = null plus target_hint; no ground-truth observed or inferred edge shares a file:line with an unknown, so the R5 file+line match is unambiguous",
+    "unknown": "to = null plus target_hint; no ground-truth observed or inferred edge shares a file:line with an unknown, so the R5 file+line match is unambiguous; an unknown imports edge starts at the importing module (R1) and also names its enclosing_symbol (R5), see README Ruling 16",
     "contains": "module -> top-level function/class/component; class -> method; line = definition line; line_source derived (R7)",
     "negatives": "an engine edge with basis observed or inferred matching (type, from, to) is a hard fail (R8); from '*' matches any source"
   },
@@ -814,7 +814,9 @@
       "type": "imports",
       "form": "reexport",
       "v1_form": "reexport",
-      "names": [],
+      "names": [
+        "*"
+      ],
       "from": "src/packages/ledger/src/index.ts",
       "to": "src/packages/ledger/src/money.ts",
       "file": "src/packages/ledger/src/index.ts",
@@ -1731,6 +1733,7 @@
       "form": "dynamic",
       "v1_form": "dynamic",
       "from": "src/packages/atlas/src/App.tsx",
+      "enclosing_symbol": "src/packages/atlas/src/App.tsx::openMonthly",
       "to": null,
       "target_hint": "literal './views/monthly' -> candidate src/packages/atlas/src/views/monthly.ts; R5: dynamic import() is always unknown, even with a literal specifier",
       "file": "src/packages/atlas/src/App.tsx",
@@ -1748,6 +1751,7 @@
       "form": "dynamic",
       "v1_form": "dynamic",
       "from": "src/packages/atlas/src/views/lookup.ts",
+      "enclosing_symbol": "src/packages/atlas/src/views/lookup.ts::resolveView",
       "to": null,
       "target_hint": "template ./${kind} under src/packages/atlas/src/views/ (runtime value kind)",
       "file": "src/packages/atlas/src/views/lookup.ts",
@@ -1765,6 +1769,7 @@
       "form": "require",
       "v1_form": "require",
       "from": "src/packages/atlas/src/legacy/bridge.js",
+      "enclosing_symbol": "src/packages/atlas/src/legacy/bridge.js::exportRows",
       "to": null,
       "target_hint": "variable adapterName (runtime value)",
       "file": "src/packages/atlas/src/legacy/bridge.js",
@@ -1782,6 +1787,7 @@
       "form": "dynamic",
       "v1_form": "dynamic",
       "from": "src/ingest/plugin_host.py",
+      "enclosing_symbol": "src/ingest/plugin_host.py::activate",
       "to": null,
       "target_hint": "\"ingest.plugins.\" + name (runtime value); candidate src/ingest/plugins/csv_sink.py",
       "file": "src/ingest/plugin_host.py",
@@ -1799,6 +1805,7 @@
       "form": "dynamic",
       "v1_form": "dynamic",
       "from": "src/ingest/plugin_host.py",
+      "enclosing_symbol": "src/ingest/plugin_host.py::activate_legacy",
       "to": null,
       "target_hint": "variable dotted (runtime value)",
       "file": "src/ingest/plugin_host.py",
@@ -2829,6 +2836,21 @@
       "case": [
         "unknown_http_cross_runtime",
         "omission_coverage"
+      ]
+    },
+    {
+      "id": "N23",
+      "type": "calls",
+      "from": "*",
+      "to": "src/packages/atlas/src/LedgerPanel.tsx::LedgerPanel",
+      "reason": "referenced as a value in the routes table (App.tsx:5), never called (Ruling 10)",
+      "evidence": {
+        "file": "src/packages/atlas/src/App.tsx",
+        "line": 5,
+        "token": "view: LedgerPanel"
+      },
+      "case": [
+        "default_export"
       ]
     }
   ],

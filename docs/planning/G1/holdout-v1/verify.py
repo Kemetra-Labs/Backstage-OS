@@ -255,6 +255,8 @@ def check_ground_truth(gt, fails, score_mod):
                 need(e["from"] == enclosing(e["file"], e["line"], False), f"{tag}: from is not the enclosing symbol")
             else:
                 need(e["from"] == e["file"], f"{tag}: an imports edge starts at the importing module")
+                need(e.get("enclosing_symbol") == enclosing(e["file"], e["line"], False),
+                     f"{tag}: enclosing_symbol should be {enclosing(e['file'], e['line'], False)} (R5, Ruling 16)")
             if e["type"] == "imports":
                 need(resolve(e["evidence_token"], e["file"]) is None or e.get("form") == "dynamic",
                      f"{tag}: a resolvable non-dynamic specifier cannot be unknown")
