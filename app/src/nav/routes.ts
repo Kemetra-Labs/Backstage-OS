@@ -1,3 +1,5 @@
+import type { Provider } from '../contract/types';
+
 // Hash routes. No router library: nine screens, static build, and ?persona=&lang= stays in the search part untouched.
 export type Route =
   | { readonly name: 'home' }
@@ -9,7 +11,7 @@ export type Route =
   | { readonly name: 'decisions' }
   | { readonly name: 'decision'; readonly id: string }
   | { readonly name: 'agents' }
-  | { readonly name: 'sources' }
+  | { readonly name: 'sources'; readonly view?: 'observatory'; readonly src?: Provider }
   | { readonly name: 'notFound'; readonly path: string };
 
 export type RouteName = Route['name'];
@@ -17,6 +19,8 @@ export type RouteName = Route['name'];
 /** BACK-87: the scopes of the Mission Map lens (V2 map scope ids). `#/map/<scope>/<node>`; an unknown scope is notFound, never a guess. */
 export const MAP_SCOPES = ['all', 'retail-tower', 'khepri', 'seshat-bi'] as const;
 export type MapScope = (typeof MAP_SCOPES)[number];
+const PROVIDERS: readonly Provider[] = ['github', 'jira', 'confluence', 'sentry', 'datadog', 'port'];
+const isProvider = (v: string | undefined): v is Provider => v !== undefined && (PROVIDERS as readonly string[]).includes(v);
 const isMapScope = (v: string | undefined): v is MapScope => v !== undefined && (MAP_SCOPES as readonly string[]).includes(v);
 
 const ID = /^[A-Za-z0-9._-]{1,64}$/;
@@ -71,7 +75,11 @@ export function parseHash(hash: string): Route {
     case 'agents':
       return n === 1 ? { name: 'agents' } : notFound;
     case 'sources':
-      return n === 1 ? { name: 'sources' } : notFound;
+      // BACK-88: `#/sources` is the table view; `#/sources/observatory[/<provider>]` is the Observatory view of the same screen.
+      if (n === 1) return { name: 'sources' };
+      if (n === 2 && b === 'observatory') return { name: 'sources', view: 'observatory' };
+      if (n === 3 && b === 'observatory' && isProvider(c)) return { name: 'sources', view: 'observatory', src: c };
+      return notFound;
     default:
       return notFound;
   }
@@ -91,7 +99,7 @@ export function hrefFor(r: Route): string {
     case 'decisions': return '#/decisions';
     case 'decision': return `#/decisions/${enc(r.id)}`;
     case 'agents': return '#/agents';
-    case 'sources': return '#/sources';
+    case 'sources': return r.view ? (r.src ? `#/sources/observatory/${enc(r.src)}` : '#/sources/observatory') : '#/sources';
     case 'notFound': return '#/';
   }
 }

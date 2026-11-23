@@ -9,19 +9,9 @@ import { mapRoute, toV2 } from '../bridge/hostV2';
 import { V2Context } from '../design-lab/v2/context';
 import { fallbackNode, MissionMapBC } from '../design-lab/v2/screens/MissionMapBC';
 import { MAP_LENS_COPY } from '../i18n/screens/map';
-import { hrefFor, type Route } from '../nav/routes';
-import '../design-lab/v2/styles/tokens.css';
-import '../design-lab/v2/styles/embed-fonts.css';
-import '../design-lab/v2/styles/base.css';
-import '../design-lab/v2/styles/scope.css';
-import '../design-lab/v2/styles/map.css';
-import '../design-lab/v2/styles/bc.css';
-import '../design-lab/v2/styles/observatory.css';
-import '../design-lab/v2/styles/replay.css';
-import '../design-lab/v2/styles/deck.css';
-import '../styles/semantic.css';
-
-const navigate = (r: Route): void => { window.location.hash = hrefFor(r); };
+import { hrefFor } from '../nav/routes';
+import { navigate } from './hostNav';
+import './lensStyles';
 
 export default function MissionMapLens() {
   const { persona, lang, route } = useApp();

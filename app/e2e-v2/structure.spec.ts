@@ -276,8 +276,9 @@ test('isolation: V2 assets carry no V1 selectors and V1 assets carry no V2 selec
   expect(sheets.filter((s) => s !== 'inline').every((s) => s.startsWith(ORIGIN))).toBe(true);
   const rules = await page.evaluate(() => [...document.styleSheets].flatMap((s) => [...s.cssRules].map((r) => r.cssText)).join('\n'));
   expect(rules).not.toMatch(/\.topbar|\.brand-row|\.truth-observed|\.seg-btns|\.stage-map|\.ledger/);
-  // BACK-87: the Mission Map is mounted in the V1 app, so the map's sheets now ship in V1's dist, but only as the lazily loaded map
-  // chunk. The stylesheets V1's own entry links still carry no V2 selector or token, and the only files that do are that chunk.
+  // BACK-87/88: the Mission Map and the Source Observatory are mounted in the V1 app, so the lab's sheets now ship in V1's dist, but
+  // only as the CSS of lazily loaded lens chunks. The stylesheets V1's own entry links (index.html) still carry no V2 selector or
+  // token, and no sheet that does is linked from index.html.
   const v1Dir = path.resolve('dist/assets');
   const v1Css = (f: string): string => readFileSync(path.join(v1Dir, f), 'utf8');
   const entry = [...readFileSync(path.resolve('dist/index.html'), 'utf8').matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map((m) => path.basename(m[1]!));
@@ -288,7 +289,8 @@ test('isolation: V2 assets carry no V1 selectors and V1 assets carry no V2 selec
   }
   const withMapSheets = readdirSync(v1Dir).filter((f) => f.endsWith('.css') && /\.kv2-|--kv2-/.test(v1Css(f)));
   expect(withMapSheets.length).toBeGreaterThan(0);
-  for (const f of withMapSheets) expect(f, 'only the lazy map chunk may carry the map stylesheets').toMatch(/^MissionMapLens-/);
+  const html = readFileSync(path.resolve('dist/index.html'), 'utf8');
+  for (const f of withMapSheets) expect(html, `${f}: a lens sheet must not be linked from the V1 entry page`).not.toContain(f);
   const v2Dir = path.resolve('dist-v2/assets');
   const v2Css = readdirSync(v2Dir).filter((f) => f.endsWith('.css')).map((f) => readFileSync(path.join(v2Dir, f), 'utf8')).join('\n');
   expect(v2Css).toMatch(/--kv2-cyan/);

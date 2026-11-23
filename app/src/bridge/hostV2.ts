@@ -8,6 +8,7 @@ import type { V2 } from '../design-lab/v2/context';
 import { translate } from '../design-lab/v2/i18n/t';
 import { DEFAULT_ROUTE, type Route as V2Route } from '../design-lab/v2/navigation/route';
 import type { ScreenId } from '../design-lab/v2/types';
+import type { Provider } from '../contract/types';
 import { COPY } from '../i18n/strings';
 import { MAP_SCOPES, type MapScope, type Route } from '../nav/routes';
 import { toMapContext, toMapContextIn, type HostView, type MapContext } from './mapContext';
@@ -30,10 +31,15 @@ export function mapRoute(ctx: MapContext, patch: { readonly scope?: string; read
 }
 
 /** Where each of the lab's other screens lives in the host. The Observatory, Replay and Flight Deck are folded into these in later slices. */
-export function hostRouteFor(screen: ScreenId, ctx: MapContext, patch?: { readonly scope?: string; readonly node?: string | null }): Route {
+type Patch = { readonly scope?: string; readonly node?: string | null; readonly src?: Provider | null };
+
+/** The Sources screen's Observatory view, with the source when one is named. */
+export const observatoryRoute = (src?: Provider | null): Route => (src ? { name: 'sources', view: 'observatory', src } : { name: 'sources', view: 'observatory' });
+
+export function hostRouteFor(screen: ScreenId, ctx: MapContext, patch?: Patch): Route {
   switch (screen) {
     case 'mission-map': return mapRoute(ctx, patch ?? {});
-    case 'source-observatory': return { name: 'sources' };
+    case 'source-observatory': return observatoryRoute(patch?.src);
     case 'mission-replay': return { name: 'investigation', id: DOMAIN.investigationId };
     case 'agent-flight-deck': return { name: 'agents' };
   }
@@ -42,13 +48,18 @@ export function hostRouteFor(screen: ScreenId, ctx: MapContext, patch?: { readon
 /** The `useV2()` value for the host's state. `world` is for tests: by default the persona's authorized world is used. */
 export function toV2(view: HostView, nav: HostNav, world?: MapWorld): V2 {
   const ctx = world ? toMapContextIn(view, world) : toMapContext(view);
-  const route: V2Route = { ...DEFAULT_ROUTE, screen: 'mission-map', persona: ctx.persona, lang: ctx.lang, scope: ctx.scope, node: ctx.node };
+  const onSources = view.route.name === 'sources';
+  const route: V2Route = {
+    ...DEFAULT_ROUTE, screen: onSources ? 'source-observatory' : 'mission-map', persona: ctx.persona, lang: ctx.lang, scope: ctx.scope, node: ctx.node,
+    src: view.route.name === 'sources' && view.route.src ? view.route.src : DEFAULT_ROUTE.src,
+  };
   return {
     route,
     copy: COPY[view.lang],
     t: (key, vars) => translate(key, view.lang, view.persona, vars),
     // The lab replaced the history entry for a selection; in the host a selection is a navigation, so Back returns to the previous one.
-    go: (patch) => nav.navigate(mapRoute(ctx, patch)),
+    // On the Sources screen a change is the selected source; anywhere else it is the map's scope or node.
+    go: (patch) => nav.navigate(onSources && patch.src ? observatoryRoute(patch.src) : mapRoute(ctx, patch)),
     open: (screen, patch) => nav.navigate(hostRouteFor(screen, ctx, patch)),
   };
 }

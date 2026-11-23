@@ -159,7 +159,8 @@ test('Mission Map: the inspector actions are host navigations, not the lab\'s sc
   await expect(node(page, 'stock-sync')).toHaveAttribute('aria-pressed', 'true');
   await openRoute(page, '/map/all/github', { lang: 'en', persona: 'technical', width: 1440 });
   await page.getByRole('button', { name: 'Open in Source Observatory' }).first().click();
-  expect(await hash(page)).toBe('#/sources');
+  // The provider the inspector named travels with the navigation (BACK-88): the Observatory view of that source.
+  expect(await hash(page)).toBe('#/sources/observatory/github');
 });
 
 test('Mission Map: a verified system links to its Project Intelligence page, an unverified one says why not', async ({ page }) => {
