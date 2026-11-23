@@ -79,3 +79,85 @@ describe('replay time semantics', () => {
     }
   });
 });
+
+// BACK-89 (owner decision: processing order stays the replay order; source read time is shown beside it, never used to sort, and no
+// occurrence time is inferred). These cover the inputs the first slice did not: an empty replay, a replay with only some read times
+// (partial), and evidence that exists but was never read (unread: no observation, with or without a reason).
+type TimeWorld = Parameters<typeof replayTimeRows>[0];
+type Obs = { observation: { observedAt: string } | null; notReadReason?: string };
+const ev = (id: string, evidence: string | null, clock: string, kind: 'event' | 'gap' = 'event') =>
+  ({ id, clock, stage: 'observed', label: 'observed', evidence, kind, key: 'k' });
+const world = (replay: readonly ReturnType<typeof ev>[], evidenceById: Record<string, Obs>): TimeWorld =>
+  ({ replay, evidenceById }) as unknown as TimeWorld;
+const read = (iso: string): Obs => ({ observation: { observedAt: iso } });
+const orders = (w: TimeWorld) => replayTimeRows(w).map((r) => r.order);
+
+describe('replay time: zero, partial and unread inputs', () => {
+  it('zero: an empty replay has no rows, even when evidence exists', () => {
+    expect(replayTimeRows(world([], {}))).toEqual([]);
+    expect(replayTimeRows(world([], { x: read('2026-11-16T09:00:00Z') }))).toEqual([]);
+  });
+
+  it('partial: a lone read time has nothing to disagree with, and the events without one stay unknown', () => {
+    const w = world([ev('a', null, '10:00'), ev('b', 'x', '10:01'), ev('c', null, '10:02')], { x: read('2026-11-16T09:00:00Z') });
+    expect(orders(w)).toEqual(['unknown', 'consistent', 'unknown']);
+    expect(replayTimeRows(w).map((r) => r.observedAt)).toEqual([null, '2026-11-16T09:00:00Z', null]);
+  });
+
+  it('partial: equal read times are a tie, not a disagreement', () => {
+    const w = world([ev('a', 'x', '10:00'), ev('b', 'y', '10:01')], { x: read('2026-11-16T09:00:00Z'), y: read('2026-11-16T09:00:00Z') });
+    expect(orders(w)).toEqual(['consistent', 'consistent']);
+  });
+
+  it('partial: events without a read time are skipped when comparing, and never mark their neighbours', () => {
+    const agree = world([ev('a', 'x', '10:00'), ev('g', null, '10:01'), ev('b', 'y', '10:02')], { x: read('2026-11-16T09:00:00Z'), y: read('2026-11-16T09:30:00Z') });
+    expect(orders(agree)).toEqual(['consistent', 'unknown', 'consistent']);
+    const clash = world([ev('a', 'x', '10:00'), ev('g', null, '10:01'), ev('b', 'y', '10:02')], { x: read('2026-11-16T09:30:00Z'), y: read('2026-11-16T09:00:00Z') });
+    expect(orders(clash)).toEqual(['uncertain', 'unknown', 'uncertain']);
+  });
+
+  it('partial: only the events that take part in a disagreement are uncertain; the processing order is never changed', () => {
+    const w = world([ev('a', 'x', '10:00'), ev('b', 'y', '10:01'), ev('c', 'z', '10:02')], {
+      x: read('2026-11-16T09:00:00Z'), y: read('2026-11-16T09:30:00Z'), z: read('2026-11-16T09:10:00Z'),
+    });
+    expect(orders(w)).toEqual(['consistent', 'uncertain', 'uncertain']);
+    expect(replayTimeRows(w).map((r) => [r.id, r.step, r.processedAt])).toEqual([['a', 1, '10:00'], ['b', 2, '10:01'], ['c', 3, '10:02']]);
+  });
+
+  it('unread: evidence that was never read (no observation, whatever the reason) gives no time and does not make its neighbours uncertain', () => {
+    for (const reason of [undefined, 'unavailable', 'not_configured', 'restricted']) {
+      const unread: Obs = reason === undefined ? { observation: null } : { observation: null, notReadReason: reason };
+      const w = world([ev('a', 'x', '10:00'), ev('u', 'n', '10:01', 'gap'), ev('b', 'y', '10:02')], {
+        x: read('2026-11-16T09:00:00Z'), n: unread, y: read('2026-11-16T09:30:00Z'),
+      });
+      expect(replayTimeRows(w).map((r) => [r.observedAt, r.order]), String(reason)).toEqual([
+        ['2026-11-16T09:00:00Z', 'consistent'], [null, 'unknown'], ['2026-11-16T09:30:00Z', 'consistent'],
+      ]);
+    }
+  });
+
+  it('unread: when nothing was read, every event is unknown and the processing steps and clocks are untouched', () => {
+    const w = world([ev('a', 'x', '10:00'), ev('b', 'y', '10:01'), ev('c', null, '10:02')], { x: { observation: null }, y: { observation: null, notReadReason: 'unavailable' } });
+    expect(replayTimeRows(w)).toEqual([
+      { id: 'a', step: 1, processedAt: '10:00', observedAt: null, order: 'unknown' },
+      { id: 'b', step: 2, processedAt: '10:01', observedAt: null, order: 'unknown' },
+      { id: 'c', step: 3, processedAt: '10:02', observedAt: null, order: 'unknown' },
+    ]);
+  });
+
+  it('a row carries only the three times and the order status: no evidence id, reason or classification can leak through it', () => {
+    const w = world([ev('a', 'x', '10:00'), ev('b', 'n', '10:01', 'gap')], { x: read('2026-11-16T09:00:00Z'), n: { observation: null, notReadReason: 'restricted' } });
+    for (const r of replayTimeRows(w)) expect(Object.keys(r).sort()).toEqual(['id', 'observedAt', 'order', 'processedAt', 'step']);
+    expect(JSON.stringify(replayTimeRows(w))).not.toMatch(/restricted|"x"|"n"/);
+  });
+
+  it('the demo replay: its unread gap (R-5) has a row, no time and an unknown order for every persona', () => {
+    for (const p of PERSONAS) {
+      const r5 = by(p, 'R-5');
+      if (r5 === undefined) continue; // a persona whose authorized replay leaves it out has no row at all (checked above)
+      expect(r5.observedAt, p).toBeNull();
+      expect(r5.order, p).toBe('unknown');
+    }
+    expect(by('technical', 'R-5')).toBeDefined();
+  });
+});
