@@ -13,6 +13,11 @@ const ROOM = '/investigation/INV-DEMO-7';
 const lens = (page: Page) => page.locator('[data-testid="replay-lens"]');
 const story = (page: Page) => page.locator('[data-testid="story"] > li');
 const basisRows = (page: Page) => page.locator('[data-testid="replay-time-basis"] tbody tr');
+/** The number of replay events, read once the story has rendered (the lens is lazy and re-renders after a click or a persona switch). */
+const eventCount = async (page: Page): Promise<number> => {
+  await expect(story(page).first()).toBeVisible();
+  return story(page).count();
+};
 
 
 test('the canonical fixture has the restricted record this spec depends on', () => {
@@ -53,7 +58,7 @@ test('Replay: three times, kept apart: processing order, source read time, and a
   const table = page.locator('[data-testid="replay-time-basis"]');
   await expect(table).toContainText('not the order things happened');
   await expect(table).toContainText('is not recorded in the demo data');
-  expect(await basisRows(page).count()).toBe(await story(page).count());
+  await expect(basisRows(page)).toHaveCount(await eventCount(page));
   const rows = await basisRows(page).evaluateAll((trs) => trs.map((tr) => ({ order: tr.getAttribute('data-order'), cells: [...tr.children].map((c) => (c.textContent ?? '').trim()) })));
   // The CI failure was read at 14:02; the PR record was read at 13:27 yet is processed after it: order uncertain, never presented as sequence.
   const r2 = rows[1]!;
@@ -147,7 +152,7 @@ for (const lang of LANGS) {
           }
         }
         // The time table is built from the authorized replay only: one row per visible event, steps without a gap.
-        expect(await basisRows(page).count()).toBe(await story(page).count());
+        await expect(basisRows(page)).toHaveCount(await eventCount(page));
         const steps = await basisRows(page).evaluateAll((trs) => trs.map((tr) => (tr.children[0]?.textContent ?? '').trim()));
         expect(steps).toEqual(steps.map((_, i) => String(i + 1)));
       }
@@ -165,8 +170,9 @@ for (const lang of LANGS) {
       await expect(basisRows(page).first()).toBeVisible();
       const text = await surface(page);
       for (const id of RESTRICTED) if (p !== 'technical') expect(hasId(text, id) || text.includes(`"${id}"`), `${p}: ${id}`).toBe(false);
-      rows[p] = await basisRows(page).count();
-      expect(rows[p], `${p} rows equal events`).toBe(await story(page).count());
+      const n = await eventCount(page);
+      await expect(basisRows(page), `${p} rows equal events`).toHaveCount(n);
+      rows[p] = n;
     }
     expect(rows.owner).toBe(rows.nontechnical);
   });
