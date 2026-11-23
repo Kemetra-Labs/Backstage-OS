@@ -11,9 +11,15 @@
 //   - the audience is required and is the project id; there is one pinned issuer, no legacy forms;
 //   - the token-age default is Kawalys's own (the JWT is exchanged once for a Kawalys session, it is not
 //     the session), not RT's 8 h POS policy;
+//   - refusals now carry an allowlisted reason (a jose code plus a claim name, never values);
 //   - env names are KAWALYS_*-prefixed (auth.config.ts), so no RT configuration path is shared.
 import { createRemoteJWKSet, jwtVerify, type JWTPayload, type JWTVerifyGetKey, type JWTVerifyOptions } from "jose";
-import type { IdentityVerificationPort, VerifyResult } from "./identity-verification.port";
+import {
+  REFUSAL_CLAIMS,
+  type IdentityVerificationPort,
+  type RefusalClaim,
+  type VerifyResult,
+} from "./identity-verification.port";
 
 export const DESCOPE_PROVIDER_KEY = "descope";
 export const DESCOPE_API_BASE = "https://api.descope.com";
@@ -61,15 +67,28 @@ const REFUSED_CODES: ReadonlySet<string> = new Set([
   "ERR_JWKS_MULTIPLE_MATCHING_KEYS",
 ]);
 
-const REFUSED: VerifyResult = { kind: "refused" };
 const UNAVAILABLE: VerifyResult = { kind: "unavailable" };
+
+/** Codes for the refusal points that are Kawalys's own checks, not jose's. */
+const TOKEN_KIND = "KAWALYS_TOKEN_KIND";
+const IMPERSONATION = "KAWALYS_IMPERSONATION";
+const BAD_SUBJECT = "KAWALYS_BAD_SUBJECT";
+const BAD_INPUT = "KAWALYS_INPUT";
+
+const REFUSAL_CLAIM_SET: ReadonlySet<unknown> = new Set(REFUSAL_CLAIMS);
+
+function refused(code: string, claim?: RefusalClaim): VerifyResult {
+  return { kind: "refused", reason: claim === undefined ? { code } : { code, claim } };
+}
 
 class AbortedError extends Error {}
 
 function classify(err: unknown): VerifyResult {
-  // Only the fixed code is read; the message and payload can carry claims and are never touched.
-  const code = (err as { code?: unknown } | null)?.code;
-  return typeof code === "string" && REFUSED_CODES.has(code) ? REFUSED : UNAVAILABLE;
+  // Only the fixed code and the claim's name are read, and the name only if it is allowlisted. The message,
+  // payload and claim values can carry subjects and project ids and are never touched.
+  const { code, claim } = (err ?? {}) as { code?: unknown; claim?: unknown };
+  if (typeof code !== "string" || !REFUSED_CODES.has(code)) return UNAVAILABLE;
+  return REFUSAL_CLAIM_SET.has(claim) ? refused(code, claim as RefusalClaim) : refused(code);
 }
 
 function withAbort<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -100,7 +119,7 @@ export class DescopeVerifier implements IdentityVerificationPort {
 
   async verify(rawToken: string, signal: AbortSignal): Promise<VerifyResult> {
     if (signal.aborted) return UNAVAILABLE;
-    if (typeof rawToken !== "string" || rawToken.length === 0 || rawToken.length > MAX_TOKEN_CHARS) return REFUSED;
+    if (typeof rawToken !== "string" || rawToken.length === 0 || rawToken.length > MAX_TOKEN_CHARS) return refused(BAD_INPUT);
     let payload: JWTPayload;
     try {
       ({ payload } = await withAbort(jwtVerify(rawToken, this.options.jwks, this.verifyOptions), signal));
@@ -109,12 +128,12 @@ export class DescopeVerifier implements IdentityVerificationPort {
     }
     // Allowlist, not denylist: only a Descope session token (drn "DS", always present per Descope's
     // token-claims docs). Refresh tokens ("DSR"), access keys and other kinds are refused.
-    if (payload["drn"] !== SESSION_TOKEN_DRN || payload["token_type"] === "refresh") return REFUSED;
+    if (payload["drn"] !== SESSION_TOKEN_DRN || payload["token_type"] === "refresh") return refused(TOKEN_KIND);
     // Impersonation: Descope writes the impersonator into `act` (or `dact` when a JWT template overrides
     // `act`) while `sub` is the impersonated user. An impersonated owner session is never a Kawalys credential.
-    if (payload["act"] !== undefined || payload["dact"] !== undefined) return REFUSED;
+    if (payload["act"] !== undefined || payload["dact"] !== undefined) return refused(IMPERSONATION);
     const sub: unknown = payload.sub;
-    if (typeof sub !== "string" || sub.length === 0 || sub.length > MAX_SUBJECT_CHARS) return REFUSED;
+    if (typeof sub !== "string" || sub.length === 0 || sub.length > MAX_SUBJECT_CHARS) return refused(BAD_SUBJECT);
     // jose has already proven iss equals the pinned issuer, so the pinned value is the one recorded.
     return { kind: "verified", subject: { providerKey: DESCOPE_PROVIDER_KEY, issuer: this.options.issuer, subject: sub } };
   }

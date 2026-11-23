@@ -25,11 +25,15 @@ export interface AuthConfig {
   readonly descope: DescopeSettings | null;
   readonly owner: OwnerIdentity | null;
   readonly session: SessionSettings;
+  readonly signInLimitPerMinute: number;
+  /** The loopback owner-lab sign-in page (GET /auth/lab). Never true in production. */
+  readonly lab: boolean;
 }
 
 export const DEFAULT_MAX_TOKEN_AGE_SECONDS = 15 * 60;
 export const DEFAULT_SESSION_ABSOLUTE_TTL_SECONDS = 8 * 60 * 60;
 export const DEFAULT_SESSION_IDLE_TTL_SECONDS = 60 * 60;
+export const DEFAULT_SIGN_IN_LIMIT_PER_MINUTE = 10;
 
 const OWNER_SUBJECT_RE = /^[A-Za-z0-9_-]{1,128}$/;
 const ISSUER_URL_RE = /^https:\/\/\S{1,500}$/;
@@ -68,6 +72,14 @@ function loadDescope(env: Env): DescopeSettings | null {
   };
 }
 
+function loadLab(env: Env, production: boolean): boolean {
+  const raw = read(env, "KAWALYS_AUTH_LAB");
+  if (raw === "") return false;
+  if (raw !== "1") throw new AuthConfigError("KAWALYS_AUTH_LAB must be 1 (or unset)");
+  if (production) throw new AuthConfigError("KAWALYS_AUTH_LAB is refused in production");
+  return true;
+}
+
 function loadSession(env: Env): SessionSettings {
   const absoluteTtlSeconds = intFrom(
     env,
@@ -82,6 +94,8 @@ function loadSession(env: Env): SessionSettings {
 
 export function loadAuthConfig(env: Env): AuthConfig {
   const production = env["NODE_ENV"] === "production";
+  // Before the production completeness check, so a production lab flag is always reported as the lab error.
+  const lab = loadLab(env, production);
   const descope = loadDescope(env);
   const subject = read(env, "KAWALYS_OWNER_SUBJECT");
   if (subject !== "" && !OWNER_SUBJECT_RE.test(subject)) {
@@ -93,5 +107,6 @@ export function loadAuthConfig(env: Env): AuthConfig {
   }
   const owner: OwnerIdentity | null =
     descope !== null && subject !== "" ? { providerKey: DESCOPE_PROVIDER_KEY, issuer: descope.issuer, subject } : null;
-  return { production, descope, owner, session };
+  const signInLimitPerMinute = intFrom(env, "KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE", DEFAULT_SIGN_IN_LIMIT_PER_MINUTE, 1, 100);
+  return { production, descope, owner, session, signInLimitPerMinute, lab };
 }

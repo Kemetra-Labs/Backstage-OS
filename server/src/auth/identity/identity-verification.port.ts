@@ -10,9 +10,22 @@ export interface VerifiedSubject {
   readonly subject: string;
 }
 
+/** Registered claim names a refusal may name. The name only, never the value. */
+export const REFUSAL_CLAIMS = ["iss", "aud", "exp", "nbf", "iat", "sub", "drn"] as const;
+export type RefusalClaim = (typeof REFUSAL_CLAIMS)[number];
+
+/**
+ * Why a token was refused, safe for an operator log: a fixed code (a jose ERR_* value or a KAWALYS_* one) and,
+ * for a claim check, the claim's name. It never carries a claim value, a message, a subject or a project id.
+ */
+export interface RefusalReason {
+  readonly code: string;
+  readonly claim?: RefusalClaim;
+}
+
 export type VerifyResult =
   | { readonly kind: "verified"; readonly subject: VerifiedSubject }
-  | { readonly kind: "refused" } // the credential is not valid
+  | { readonly kind: "refused"; readonly reason?: RefusalReason } // the credential is not valid
   | { readonly kind: "unavailable" } // the provider could not be reached or answered badly
   | { readonly kind: "unconfigured" }; // no provider is configured
 

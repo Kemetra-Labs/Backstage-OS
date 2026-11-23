@@ -29,7 +29,8 @@ NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental
 | Route | Behaviour |
 | --- | --- |
 | `GET /process` | Public. Process liveness only: `{ service, process: "up", synthetic: true }`. Never says "healthy". |
-| `POST /auth/session` | Public. The only route that accepts a Descope session JWT (`Authorization: Bearer <jwt>`). On success: 200, `{ user: { id, role }, expires_at }` and the session cookie. |
+| `POST /auth/session` | Public. The only route that accepts a Descope session JWT (`Authorization: Bearer <jwt>`). On success: 200, `{ user: { id, role }, expires_at }` and the session cookie. Over `KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE` attempts in 60 s it answers 429 `rate_limited` without checking the token. |
+| `GET /auth/lab` | Public, **owner lab only**. Exists only when `KAWALYS_AUTH_LAB=1` and `KAWALYS_DESCOPE_PROJECT_ID` is set (never in production); otherwise 404. A loopback sign-in page that runs the Descope `sign-in` flow and exchanges the session JWT at `POST /auth/session`. See [the lab runbook](../docs/planning/BACK-56/K-ID-1b-lab-runbook.md). |
 | `GET /auth/me` | Session required. The signed-in user. |
 | `DELETE /auth/session` | Session required. Revokes the current session and clears the cookie (204). |
 | `DELETE /auth/sessions` | Session required. Revokes every session of the signed-in user (204). |
@@ -99,8 +100,18 @@ exactly one configured owner identity (the issuer is part of the match) -> an op
 - **Transport**: one cookie, `__Host-kawalys_session`, `Secure; HttpOnly; SameSite=Strict; Path=/`, with `Cache-Control: no-store`
   on auth responses. A repeated session cookie is refused. No CORS is enabled and the session is never read from a header
   or query string.
-- **Errors**: every denial is the standard `not_found` envelope (policy M05-D05-B). The only log lines are fixed
-  operator messages for an outage or a missing configuration; never a token, claim or subject.
+- **Errors**: every denial is the standard `not_found` envelope (policy M05-D05-B), except the rate limit (429). The only log lines are fixed
+  operator messages for an outage or a missing configuration; never a token, claim value or subject. In lab mode only, a refused token also logs
+  `identity token refused: <code>` plus ` claim=<name>` when known (the code and the claim's name, never a value); it prints under Nest's ERROR label,
+  which is not a server fault.
+- **Rate limit** (`src/auth/sign-in-rate-limiter.ts`): `POST /auth/session` allows `KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE` attempts (default 10) per 60 s
+  window, counted from the first attempt, and checks it before reading the token. State is process-local (a restart resets it). Behind loopback every
+  caller shares one address, so the limit is effectively global.
+- **Owner lab** (`src/auth/lab/`): with `KAWALYS_AUTH_LAB=1` the BFF serves `GET /auth/lab`, a one-page sign-in for the owner's own machine. It hosts
+  `@descope/web-component@4.6.3` (pinned with SRI) under a strict CSP, posts the session JWT to `/auth/session`, then calls the SDK `logout()` so Descope
+  revokes its refresh token and clears its own storage. Logout runs once the exchange settles (accepted or not), so a refused sign-in leaves no Descope token behind; still clear site data for the address after every
+  check as a backstop. This is a lab tool, not a product UI: English only, loopback only, refused in production. Procedure and evidence checklist:
+  [docs/planning/BACK-56/K-ID-1b-lab-runbook.md](../docs/planning/BACK-56/K-ID-1b-lab-runbook.md).
 - **No passwords** are stored or handled. There is no sign-up and no team management.
 
 Configuration (names only; none is a secret):
@@ -113,6 +124,8 @@ Configuration (names only; none is a secret):
 | `KAWALYS_DESCOPE_MAX_TOKEN_AGE_SECONDS` | Optional, 60-3600, default 900. |
 | `KAWALYS_SESSION_ABSOLUTE_TTL_SECONDS` | Optional, 300-86400, default 28800. |
 | `KAWALYS_SESSION_IDLE_TTL_SECONDS` | Optional, 60 up to the absolute TTL, default 3600. |
+| `KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE` | Optional integer 1-100, default 10: sign-in attempts per 60 s window on `POST /auth/session`; over it, 429 `rate_limited`. A set but malformed value refuses to boot. |
+| `KAWALYS_AUTH_LAB` | Optional. `1` enables `GET /auth/lab` (needs `KAWALYS_DESCOPE_PROJECT_ID`) and the lab refusal log line. Any other non-empty value refuses to boot; `1` with `NODE_ENV=production` refuses to boot. Unset by default. |
 
 In production (`NODE_ENV=production`) the project id and owner subject are required, or the server refuses to boot. A
 set but malformed value always refuses to boot. Retail Tower's `DESCOPE_*` variables are never read.
@@ -121,9 +134,10 @@ Test doubles (a fake verifier, clock, store, directory) exist only under `test/`
 `createApp` refuses any override in production, and `main.ts` passes none.
 
 Still needed before a real sign-in (K-ID-1b): a separate Kawalys Descope project and a sign-in flow, the owner's user
-id, confirmation of the real token's `iss` and `aud` against this verifier, the TLS front for the `Secure` cookie, and
-an owner decision on session lifetimes and MFA. Not done here: rate limiting on `POST /auth/session` (the service is
-loopback-only today) and any UI.
+id, confirmation of the real token's `iss` and `aud` against this verifier, and
+an owner decision on session lifetimes and MFA. Not done here: any product sign-in UI (the owner lab page is a loopback lab tool only) and a real
+sign-in run (see the lab runbook). A TLS front for the `Secure` cookie is needed only for hosting beyond loopback, not for the loopback lab
+(browsers are expected to accept the cookie on `http://127.0.0.1`; not yet verified in a lab).
 
 ### Durable sessions and owner identity (BACK-55)
 
@@ -200,12 +214,12 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 
 ## Known limits
 
-- No rate limiting on `POST /auth/session` (the service binds loopback only).
+- Rate limiting on `POST /auth/session` is a process-local fixed window (one shared key behind loopback); a restart resets it.
 - A database failure in the auth or evidence path answers 500 `internal_error` (fixed body, nothing leaked), not 404.
 - Each evidence request resolves the workspace twice (in the directory recheck and in `WorkspaceGuard`); a performance cost only.
 - Database TLS is not enforced; migrations must use a direct connection, not a transaction-mode pooler.
 - Only the `owner` role exists; there is no sign-up, team management or administrator revocation of another user's grant.
-- No UI or prototype code calls the server.
+- No product UI or prototype code calls the server. The only page it serves is the owner lab (`GET /auth/lab`), off by default and refused in production.
 - Tests run against disposable local Docker Postgres and locally generated RS256 keys; no real database or Descope project has been used.
 
 ## Provenance
