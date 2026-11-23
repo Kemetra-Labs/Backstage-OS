@@ -2,8 +2,6 @@
 // evidence that is missing or unread, a mission that rests only on a withheld record, persona switches (including the memoised
 // projection), counts that must not reveal a withheld record, and Unknown staying Unknown. A mission's `events` figure is not defined
 // by the fixture, so nothing here reads it as a count. Persona is a display switch on synthetic data, not authorization.
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { leaks } from '../../e2e/lens-helpers';
 import type { Persona } from '../contract/types';
@@ -12,6 +10,7 @@ import { authorizedWorld } from '../design-lab/v2/logic/authorize';
 import { deckCounts, filterMissions, STATUS_ORDER } from '../design-lab/v2/logic/deck';
 import { evidenceOf } from '../design-lab/v2/logic/evidence';
 import type { Mission, World } from '../design-lab/v2/types';
+import { expectWorldReadOnlyThroughAuthorizedWorld } from './scopeGuard';
 
 const LAY: readonly Persona[] = ['owner', 'nontechnical'];
 const ALL: readonly Persona[] = ['technical', 'owner', 'nontechnical'];
@@ -121,11 +120,6 @@ describe('Flight Deck: evidence scoping, with a control', () => {
   });
 
   it('the screen and its lens read the world only through authorizedWorld, never the unscoped fixture directly', () => {
-    const src = readFileSync(join(__dirname, '../design-lab/v2/screens/AgentFlightDeck.tsx'), 'utf8');
-    const scoped = src.match(/authorizedWorld\(WORLD, route\.persona\)/g)?.length ?? 0;
-    expect(scoped).toBeGreaterThan(0);
-    // Every use of WORLD is the import or the argument of authorizedWorld(WORLD, route.persona): no screen path reads it unscoped.
-    expect(src.match(/\bWORLD\b/g)?.length, 'WORLD may only be imported and passed to authorizedWorld').toBe(1 + scoped);
-    expect(readFileSync(join(__dirname, 'AgentFlightDeckLens.tsx'), 'utf8')).not.toMatch(/\bWORLD\b/);
+    expectWorldReadOnlyThroughAuthorizedWorld('../design-lab/v2/screens/AgentFlightDeck.tsx', 'AgentFlightDeckLens.tsx');
   });
 });
