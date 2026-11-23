@@ -67,3 +67,27 @@ for (const lang of LANGS) {
     });
   }
 }
+
+// BACK-84: the scoped canonical fixture is decided per persona at runtime, so a switch on the same page must follow it in both
+// directions and leave nothing behind (no cached Technical world shown to Owner, no Owner world shown to Technical).
+test('V2 same-page persona switch on the withheld-only node: Technical, Owner, Technical, Owner', async ({ page }) => {
+  const [c] = WITHHELD_ONLY;
+  expect(c).toBeDefined();
+  await loadBc(page, { persona: 'technical', lang: 'en', node: c!.id, view: 'map', tab: 'evidence' });
+  const panel = page.locator('#bcinsp-panel');
+  for (const id of c!.evidence) await expect(panel, `technical ${id}`).toContainText(id);
+  const to = (from: string, next: string) => page.evaluate(([a, b]) => { location.hash = location.hash.replace(a!, b!); }, [from, next]);
+  let current = 'technical';
+  for (const next of ['owner', 'technical', 'owner'] as const) {
+    await to(current, next);
+    current = next;
+    if (next === 'technical') {
+      for (const id of c!.evidence) await expect(panel, `technical ${id}`).toContainText(id);
+    } else {
+      for (const id of c!.evidence) await expect(panel, `owner ${id}`).not.toContainText(id);
+      await expect(page.locator(`[data-node="${c!.id}"]`)).not.toHaveAttribute('data-tone', 'ok');
+      const text = await surface(page);
+      for (const token of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) expect(text.includes(token), `owner: "${token}"`).toBe(false);
+    }
+  }
+});

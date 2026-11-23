@@ -9,12 +9,24 @@ import type {
   ActivityEvent, ByPersonaL10n, Attention, Decision, DecisionOption, DeliveryItem, InvestigationSummary, World, WorldComponent, WorldEdge,
   WorldProject,
 } from '../contract/world';
+import { canonicalComponent, canonicalFor, evidenceVerdict } from '../domain/runtime';
+import { toV1ComponentFacts } from '../domain/toV1';
 
-/** True when this persona may not read the evidence item. */
+/** True when this persona may not read the evidence item. The rule for evidence the canonical fixture does not own. */
 export const isWithheld = (e: EvidenceReference, persona: Persona): boolean =>
   persona !== 'technical' && e.visibility === 'technical';
 
 type Keep = (e: EvidenceReference) => boolean;
+
+// BACK-84: the INV-DEMO-7 overlap (evidence E-1..E-9, components pos / stock-sync / inventory of project RT) is decided once, by
+// scopeFixture through domain/runtime. Every other record keeps this module's own rule. A structure outside the overlap that cites
+// an overlap record (the RT health basis, attention, delivery, edges, activity) is pruned through the same decision.
+const OVERLAP_PROJECT = 'RT';
+
+const keepFor = (persona: Persona): Keep => (e) => {
+  const v = evidenceVerdict(persona, e.id);
+  return v === 'foreign' ? !isWithheld(e, persona) : v === 'visible';
+};
 
 const worldMemo = new WeakMap<World, Map<Persona, World>>();
 const invMemo = new WeakMap<InvestigationData, Map<Persona, InvestigationData>>();
@@ -32,6 +44,12 @@ function scopeState(s: DisplayState, keep: Keep): DisplayState {
 }
 
 const scopeComponent = (c: WorldComponent, keep: Keep): WorldComponent => ({ ...c, state: scopeState(c.state, keep) });
+
+// An overlap component takes its state from the scoped canonical fixture; any other component is scoped by this module.
+function scopeProjectComponent(c: WorldComponent, keep: Keep, persona: Persona, projectId: string): WorldComponent {
+  const canon = projectId === OVERLAP_PROJECT ? canonicalComponent(persona, c.id) : undefined;
+  return canon ? { ...c, state: toV1ComponentFacts(canonicalFor(persona), canon.id).state } : scopeComponent(c, keep);
+}
 
 // Persona text variants can name a withheld record (a job name, a deploy id). An unauthorized persona gets its own variant under
 // every key, so no other persona's wording is present in the data it holds.
@@ -58,7 +76,7 @@ function scopeProject(p: WorldProject, keep: Keep, persona: Persona): WorldProje
   return {
     ...p,
     health: scopeState(p.health, keep),
-    components: p.components.map((c) => scopeComponent(c, keep)),
+    components: p.components.map((c) => scopeProjectComponent(c, keep, persona, p.id)),
     edges: scopeEdges(p.edges, keep),
     attention: scopeAttention(p.attention, keep, persona),
     delivery: scopeDelivery(p.delivery, keep),
@@ -86,7 +104,7 @@ const scopeActivity = (list: readonly ActivityEvent[], visibleId: (id: string) =
   list.filter((a) => a.evidenceId === undefined || visibleId(a.evidenceId));
 
 function buildWorld(w: World, persona: Persona): World {
-  const keep: Keep = (e) => !isWithheld(e, persona);
+  const keep = keepFor(persona);
   const evidence = Object.fromEntries(Object.entries(w.evidence).filter(([, e]) => keep(e)));
   const visibleId = (id: string): boolean => evidence[id] !== undefined;
   const evidenceText = Object.fromEntries(Object.entries(w.evidenceText).filter(([id]) => visibleId(id)).map(([id, t]) => [id, collapse(t, persona)]));
@@ -128,21 +146,24 @@ function scopeHypothesis(h: Hypothesis, keep: Keep): Hypothesis {
   };
 }
 
-const scopeNode = (n: MapNode, keep: Keep): MapNode => ({ ...n, state: scopeState(n.state, keep) });
+function scopeNode(n: MapNode, keep: Keep, persona: Persona): MapNode {
+  const canon = canonicalComponent(persona, n.id);
+  return { ...n, state: canon ? toV1ComponentFacts(canonicalFor(persona), canon.id).state : scopeState(n.state, keep) };
+}
 
 function buildInvestigation(inv: InvestigationData, persona: Persona): InvestigationData {
-  const keep: Keep = (e) => !isWithheld(e, persona);
+  const keep = keepFor(persona);
   const evidence = filterRefs(inv.evidence, keep);
   // rawOutput is required by the type, so it is kept only when the evidence it came from is readable. The shipped fixture
   // cites E-1, which is not Technical-only; a fixture whose raw output were withheld would need the type to allow absence.
   const rawRef = inv.evidence.find((e) => e.id === inv.rawOutput.evidenceId);
-  if (rawRef && isWithheld(rawRef, persona)) throw new Error('authorizedInvestigation: rawOutput evidence is withheld; rawOutput must become optional');
+  if (rawRef && !keep(rawRef)) throw new Error('authorizedInvestigation: rawOutput evidence is withheld; rawOutput must become optional');
   return {
     ...inv,
     evidence,
     facts: inv.facts.map((f) => scopeFact(f, keep)),
     hypothesis: scopeHypothesis(inv.hypothesis, keep),
-    nodes: inv.nodes.map((n) => scopeNode(n, keep)),
+    nodes: inv.nodes.map((n) => scopeNode(n, keep, persona)),
   };
 }
 
