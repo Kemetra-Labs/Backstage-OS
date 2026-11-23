@@ -32,11 +32,14 @@ export function mapRoute(ctx: MapContext, patch: { readonly scope?: string; read
   return node ? { name: 'map', scope, node } : { name: 'map', scope };
 }
 
+/** The Flight Deck view of the Agents screen, with a mission when one is named. */
+export const deckRoute = (msn?: string | null): Route => (msn ? { name: 'agents', view: 'deck', msn } : { name: 'agents', view: 'deck' });
+
 /** The Replay view of an investigation, at an event when one is named. */
 export const replayRoute = (id: string, evt?: string | null): Route => (evt ? { name: 'investigation', id, view: 'replay', evt } : { name: 'investigation', id, view: 'replay' });
 
 /** Where each of the lab's other screens lives in the host. The Observatory, Replay and Flight Deck are folded into these in later slices. */
-type Patch = { readonly scope?: string; readonly node?: string | null; readonly src?: Provider | null; readonly evt?: string | null };
+type Patch = { readonly scope?: string; readonly node?: string | null; readonly src?: Provider | null; readonly evt?: string | null; readonly msn?: string | null };
 
 /** The Sources screen's Observatory view, with the source when one is named. */
 export const observatoryRoute = (src?: Provider | null): Route => (src ? { name: 'sources', view: 'observatory', src } : { name: 'sources', view: 'observatory' });
@@ -46,7 +49,7 @@ export function hostRouteFor(screen: ScreenId, ctx: MapContext, patch?: Patch): 
     case 'mission-map': return mapRoute(ctx, patch ?? {});
     case 'source-observatory': return observatoryRoute(patch?.src);
     case 'mission-replay': return replayRoute(DOMAIN.investigationId, patch?.evt);
-    case 'agent-flight-deck': return { name: 'agents' };
+    case 'agent-flight-deck': return deckRoute(patch?.msn);
   }
 }
 
@@ -55,10 +58,12 @@ export function toV2(view: HostView, nav: HostNav, world?: MapWorld): V2 {
   const ctx = world ? toMapContextIn(view, world) : toMapContext(view);
   const onSources = view.route.name === 'sources';
   const replay = view.route.name === 'investigation' && view.route.view === 'replay' ? view.route : null;
+  const deck = view.route.name === 'agents' && view.route.view === 'deck' ? view.route : null;
   const route: V2Route = {
-    ...DEFAULT_ROUTE, screen: onSources ? 'source-observatory' : replay ? 'mission-replay' : 'mission-map', persona: ctx.persona, lang: ctx.lang, scope: ctx.scope, node: ctx.node,
+    ...DEFAULT_ROUTE, screen: onSources ? 'source-observatory' : replay ? 'mission-replay' : deck ? 'agent-flight-deck' : 'mission-map', persona: ctx.persona, lang: ctx.lang, scope: ctx.scope, node: ctx.node,
     src: view.route.name === 'sources' && view.route.src ? view.route.src : DEFAULT_ROUTE.src,
     evt: replay?.evt ?? null,
+    msn: deck?.msn ?? DEFAULT_ROUTE.msn,
   };
   return {
     route,
@@ -68,6 +73,7 @@ export function toV2(view: HostView, nav: HostNav, world?: MapWorld): V2 {
     // On the Sources screen a change is the selected source; anywhere else it is the map's scope or node.
     go: (patch) => {
       if (replay && 'evt' in patch) (nav.replace ?? nav.navigate)(replayRoute(replay.id, patch.evt));
+      else if (deck && patch.msn) nav.navigate(deckRoute(patch.msn));
       else nav.navigate(onSources && patch.src ? observatoryRoute(patch.src) : mapRoute(ctx, patch));
     },
     open: (screen, patch) => nav.navigate(hostRouteFor(screen, ctx, patch)),

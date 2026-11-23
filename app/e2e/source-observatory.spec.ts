@@ -48,7 +48,7 @@ for (const lang of LANGS) {
 
 test('Sources: the tables stay the default view and the Observatory is another view of the same screen', async ({ page }) => {
   await openRoute(page, '/sources', { lang: 'en', persona: 'owner', width: 1440 });
-  expect(await lens(page).count()).toBe(0);
+  await expect(lens(page)).toHaveCount(0);
   await expect(page.locator('.view-switch a[data-view="tables"]')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('#sidenav a[data-nav="sources"]')).toHaveAttribute('aria-current', 'page');
   expect(await page.locator('table').count()).toBeGreaterThan(0);
@@ -58,7 +58,7 @@ test('Sources: the tables stay the default view and the Observatory is another v
   await expect(page.locator('.view-switch a[data-view="observatory"]')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('#sidenav a[data-nav="sources"]')).toHaveAttribute('aria-current', 'page');
   await page.goBack();
-  expect(await lens(page).count()).toBe(0);
+  await expect(lens(page)).toHaveCount(0);
   expect(await page.locator('table').count()).toBeGreaterThan(0);
 });
 
@@ -89,7 +89,7 @@ test('Observatory: selecting a source is a navigation, so Back, Forward and deep
 test('Observatory: an unknown source is not found, never guessed', async ({ page }) => {
   await openRoute(page, '/sources/observatory/nope', { lang: 'en', persona: 'owner' });
   await expect(page.locator('h1')).toHaveText(/Page not found/);
-  expect(await lens(page).count()).toBe(0);
+  await expect(lens(page)).toHaveCount(0);
 });
 
 test('Observatory: the keyboard selects a source card, as a navigation', async ({ page }) => {

@@ -9,7 +9,7 @@ import { authorizedWorld } from '../design-lab/v2/logic/authorize';
 import { DEFAULT_ROUTE } from '../design-lab/v2/navigation/route';
 import { COPY } from '../i18n/strings';
 import { hrefFor, MAP_SCOPES, parseHash, type Route } from '../nav/routes';
-import { hostRouteFor, mapRoute, replayRoute, toV2 } from './hostV2';
+import { deckRoute, hostRouteFor, mapRoute, replayRoute, toV2 } from './hostV2';
 import { MAP_DEFAULT_SCOPE, toMapContext, type HostView } from './mapContext';
 
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];
@@ -81,7 +81,7 @@ describe('the host adapter builds the map\'s useV2 value from host state', () =>
       { name: 'sources', view: 'observatory', src: 'github' },
       { name: 'sources', view: 'observatory' },
       { name: 'investigation', id: DOMAIN.investigationId, view: 'replay' },
-      { name: 'agents' },
+      { name: 'agents', view: 'deck' },
       { name: 'map', scope: 'retail-tower', node: 'pos' },
       { name: 'map', scope: 'retail-tower', node: 'stock-sync' },
     ]);
@@ -108,12 +108,23 @@ describe('the host adapter builds the map\'s useV2 value from host state', () =>
     v2.go({ evt: 'R-5' });
     v2.open('agent-flight-deck');
     expect(replaced).toEqual([replayRoute('INV-DEMO-7', 'R-5')]);
-    expect(pushed).toEqual([{ name: 'agents' }]);
+    expect(pushed).toEqual([{ name: 'agents', view: 'deck' }]);
     // Without a replace hook the host falls back to a navigation rather than dropping the change.
     const n = nav();
     toV2(view('owner', 'en', '#/investigation/INV-DEMO-7/replay'), n).go({ evt: 'R-2' });
     expect(n.seen).toEqual([replayRoute('INV-DEMO-7', 'R-2')]);
     expect(toV2(view('owner', 'en', '#/investigation/INV-DEMO-7/replay'), nav()).route.evt).toBeNull();
+  });
+
+  it('on the Flight Deck view the route carries the mission, and a change is a navigation to that mission', () => {
+    const n = nav();
+    const v2 = toV2(view('owner', 'ar', '#/agents/deck/MSN-DEMO-2'), n);
+    expect(v2.route).toMatchObject({ screen: 'agent-flight-deck', msn: 'MSN-DEMO-2', persona: 'owner', lang: 'ar' });
+    v2.go({ msn: 'MSN-DEMO-3' });
+    v2.open('agent-flight-deck', { msn: 'MSN-DEMO-4' });
+    expect(n.seen).toEqual([deckRoute('MSN-DEMO-3'), deckRoute('MSN-DEMO-4')]);
+    expect(toV2(view('owner', 'en', '#/agents/deck'), nav()).route.msn).toBe(DEFAULT_ROUTE.msn);
+    expect(toV2(view('owner', 'en', '#/agents'), nav()).route.screen).toBe('mission-map');
   });
 
   it('every route it produces survives the host href and parser, and carries no restricted id', () => {

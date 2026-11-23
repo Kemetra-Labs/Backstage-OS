@@ -10,7 +10,7 @@ export type Route =
   | { readonly name: 'evidence'; readonly id: string; readonly from?: string }
   | { readonly name: 'decisions' }
   | { readonly name: 'decision'; readonly id: string }
-  | { readonly name: 'agents' }
+  | { readonly name: 'agents'; readonly view?: 'deck'; readonly msn?: string }
   | { readonly name: 'sources'; readonly view?: 'observatory'; readonly src?: Provider }
   | { readonly name: 'notFound'; readonly path: string };
 
@@ -77,7 +77,11 @@ export function parseHash(hash: string): Route {
       if (n === 1) return { name: 'decisions' };
       return n === 2 && b ? { name: 'decision', id: b } : notFound;
     case 'agents':
-      return n === 1 ? { name: 'agents' } : notFound;
+      // BACK-90: `#/agents` is the roster; `#/agents/deck[/<mission>]` is the Flight Deck view of the same screen.
+      if (n === 1) return { name: 'agents' };
+      if (n === 2 && b === 'deck') return { name: 'agents', view: 'deck' };
+      if (n === 3 && b === 'deck' && c) return { name: 'agents', view: 'deck', msn: c };
+      return notFound;
     case 'sources':
       // BACK-88: `#/sources` is the table view; `#/sources/observatory[/<provider>]` is the Observatory view of the same screen.
       if (n === 1) return { name: 'sources' };
@@ -102,7 +106,7 @@ export function hrefFor(r: Route): string {
     case 'evidence': return r.from ? `#/evidence/${enc(r.id)}?from=${enc(r.from)}` : `#/evidence/${enc(r.id)}`;
     case 'decisions': return '#/decisions';
     case 'decision': return `#/decisions/${enc(r.id)}`;
-    case 'agents': return '#/agents';
+    case 'agents': return r.view ? (r.msn ? `#/agents/deck/${enc(r.msn)}` : '#/agents/deck') : '#/agents';
     case 'sources': return r.view ? (r.src ? `#/sources/observatory/${enc(r.src)}` : '#/sources/observatory') : '#/sources';
     case 'notFound': return '#/';
   }

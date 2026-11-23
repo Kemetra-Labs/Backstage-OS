@@ -50,7 +50,7 @@ for (const lang of LANGS) {
 
 test('Investigation: the room stays the default view and the replay is another view of the same case', async ({ page }) => {
   await openRoute(page, ROOM, { lang: 'en', persona: 'owner', width: 1440 });
-  expect(await lens(page).count()).toBe(0);
+  await expect(lens(page)).toHaveCount(0);
   await expect(page.locator('.view-switch a[data-view="room"]')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('#sidenav a[data-nav="investigation"]')).toHaveAttribute('aria-current', 'page');
   await page.locator('.view-switch a[data-view="replay"]').click();
@@ -59,7 +59,7 @@ test('Investigation: the room stays the default view and the replay is another v
   await expect.poll(() => hash(page)).toMatch(/^#\/investigation\/INV-DEMO-7\/replay(\/R-\d+)?$/);
   await expect(page.locator('.view-switch a[data-view="replay"]')).toHaveAttribute('aria-current', 'page');
   await page.goBack();
-  expect(await lens(page).count()).toBe(0);
+  await expect(lens(page)).toHaveCount(0);
 });
 
 test('Replay: three times, kept apart: processing order, source read time, and an honest "not recorded"', async ({ page }) => {

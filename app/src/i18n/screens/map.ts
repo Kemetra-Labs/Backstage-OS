@@ -26,6 +26,21 @@ export const SOURCES_VIEW_COPY: Readonly<Record<Lang, SourcesViewCopy>> = {
   ar: { label: 'عروض المصادر', tables: 'الجداول', observatory: 'المرصد', loading: 'جارٍ تحميل مرصد المصادر…', failed: 'تعذّر تحميل مرصد المصادر. تعمل الجداول كالمعتاد.', region: 'مرصد المصادر' },
 };
 
+export interface AgentsViewCopy {
+  readonly label: string;
+  readonly roster: string;
+  readonly deck: string;
+  readonly loading: string;
+  readonly failed: string;
+  readonly region: string;
+}
+
+/** BACK-90: the view switch on the Agents screen and the Flight Deck lens's own states. */
+export const AGENTS_VIEW_COPY: Readonly<Record<Lang, AgentsViewCopy>> = {
+  en: { label: 'Agent views', roster: 'Roster', deck: 'Flight Deck', loading: 'Loading the Flight Deck…', failed: 'The Flight Deck could not load. The roster still works.', region: 'Agent Flight Deck' },
+  ar: { label: 'عروض الوكلاء', roster: 'القائمة', deck: 'لوحة القيادة', loading: 'جارٍ تحميل لوحة القيادة…', failed: 'تعذّر تحميل لوحة القيادة. تعمل القائمة كالمعتاد.', region: 'لوحة قيادة الوكلاء' },
+};
+
 export interface ReplayViewCopy {
   readonly label: string;
   readonly room: string;

@@ -19,6 +19,8 @@ describe('parseHash', () => {
     ['#/sources', { name: 'sources' }],
     ['#/investigation/INV-DEMO-7/replay', { name: 'investigation', id: 'INV-DEMO-7', view: 'replay' }],
     ['#/investigation/INV-DEMO-7/replay/R-2', { name: 'investigation', id: 'INV-DEMO-7', view: 'replay', evt: 'R-2' }],
+    ['#/agents/deck', { name: 'agents', view: 'deck' }],
+    ['#/agents/deck/MSN-DEMO-2', { name: 'agents', view: 'deck', msn: 'MSN-DEMO-2' }],
     ['#/sources/observatory', { name: 'sources', view: 'observatory' }],
     ['#/sources/observatory/sentry', { name: 'sources', view: 'observatory', src: 'sentry' }],
     ['#/map', { name: 'map' }],
@@ -30,7 +32,7 @@ describe('parseHash', () => {
   });
 
   it.each(['#/nope', '#/home/x', '#/portfolio/x', '#/project', '#/project/a/b/c', '#/investigation', '#/evidence',
-    '#/decisions/a/b', '#/agents/x', '#/sources/x', '#/map/nope', '#/investigation/X/nope', '#/investigation/X/replay/a/b', '#/investigation/X/replay/%3Cx%3E', '#/sources/nope', '#/sources/observatory/nope', '#/sources/observatory/github/x', '#/sources/sentry', '#/sources/observatory/%3Cx%3E', '#/map/all/a/b', '#/map/retail-tower/%3Cx%3E', '#/map/%E0%A4%A', '#/map//x', '#/project/%E0%A4%A', '#/project/<script>'])('%s is notFound', (hash) => {
+    '#/decisions/a/b', '#/agents/x', '#/sources/x', '#/map/nope', '#/agents/nope', '#/agents/deck/a/b', '#/agents/deck/%3Cx%3E', '#/investigation/X/nope', '#/investigation/X/replay/a/b', '#/investigation/X/replay/%3Cx%3E', '#/sources/nope', '#/sources/observatory/nope', '#/sources/observatory/github/x', '#/sources/sentry', '#/sources/observatory/%3Cx%3E', '#/map/all/a/b', '#/map/retail-tower/%3Cx%3E', '#/map/%E0%A4%A', '#/map//x', '#/project/%E0%A4%A', '#/project/<script>'])('%s is notFound', (hash) => {
     expect(parseHash(hash).name).toBe('notFound');
   });
 
@@ -46,6 +48,7 @@ describe('hrefFor', () => {
     { name: 'evidence', id: 'E-1' }, { name: 'evidence', id: 'E-1', from: 'INV-DEMO-7' }, { name: 'decisions' },
     { name: 'decision', id: 'DEC-DEMO-3' }, { name: 'agents' }, { name: 'sources' },
     { name: 'investigation', id: 'INV-DEMO-7', view: 'replay' }, { name: 'investigation', id: 'INV-DEMO-7', view: 'replay', evt: 'R-4' },
+    { name: 'agents', view: 'deck' }, { name: 'agents', view: 'deck', msn: 'MSN-DEMO-5' },
     { name: 'sources', view: 'observatory' }, { name: 'sources', view: 'observatory', src: 'port' },
     { name: 'map' }, { name: 'map', scope: 'all' }, { name: 'map', scope: 'retail-tower', node: 'stock-sync' },
   ];
