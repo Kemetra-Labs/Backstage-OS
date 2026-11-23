@@ -1,7 +1,8 @@
 // Shared by the lens specs (map, Source Observatory, Replay, Flight Deck, convergence): what must never reach a lay persona's screen, and
 // the one way to read every place a restricted id could hide. One copy, so the matrix is changed once.
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { DOMAIN } from '../src/domain/fixture';
+import { openRoute, type LoadQuery } from './helpers';
 
 /** Evidence the canonical model withholds from lay personas. */
 export const WITHHELD = Object.values(DOMAIN.evidence).filter((e) => e.visibility === 'technical');
@@ -27,3 +28,18 @@ export const surface = (page: Page): Promise<string> =>
     }
     return out.join('\n');
   });
+
+/** Every screen of the app: the eight V1 screens and the four lens views. */
+export const SCREENS = [
+  '/', '/portfolio', '/project/RT', '/project/RT/stock-sync', '/project/KH', '/investigation/INV-DEMO-7', '/evidence/E-1', '/decisions', '/agents', '/sources',
+  '/map', '/map/retail-tower/inventory', '/sources/observatory', '/investigation/INV-DEMO-7/replay', '/agents/deck',
+] as const;
+
+export const LENS_READY = '[data-testid="mission-map-lens"], [data-testid="source-observatory-lens"], [data-testid="replay-lens"], [data-testid="agent-deck-lens"]';
+
+/** Opens a route and, for a lens view, waits for the lens itself: the page heading is already visible while the lazy chunk loads. */
+export async function openScreen(page: Page, route: string, q: LoadQuery = {}) {
+  const errors = await openRoute(page, route, q);
+  if (/^\/(map|sources\/observatory|investigation\/[^/]+\/replay|agents\/deck)/.test(route)) await expect(page.locator(LENS_READY)).toBeVisible();
+  return errors;
+}

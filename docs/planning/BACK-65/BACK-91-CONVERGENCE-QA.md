@@ -2,22 +2,24 @@
 
 Synthetic only. No deletion, no production-readiness claim, no auto-merge. Persona is a display switch, not authorization: no server-side identity, tenant or X02/X04 enforcement exists or is claimed. Nothing in this app is live telemetry.
 
-Base: `origin/main` `c7f982596f1d` (BACK-84, PR #59). CI for that SHA: `completed success` (verified live). The six PRs below are **stacked drafts, none merged**.
+Status note, 23 Nov 2026 (corrects the first version of this report, which was written while the six PRs were still open drafts). Base for the figures below: `origin/main` `8b81d20`.
+
+The stack has since merged: #60 (`42d95af`) and #61 (`495f4be`) straight to `main`; #63 to #66 (BACK-88 to BACK-91) were merged into the #62 branch and reached `main` through #62 (`9fc7698`); #67 (`ea2a884`) then fixed a flaky WebKit assertion in the replay spec (test-only); #68 and #69 added unit coverage for the replay time rows and the Observatory's evidence scoping. Required check `Playwright (chromium + webkit)` completed `success` on `main` for `ea2a884` (run 45152191967) and on the merge of #69. #62 was merged while its own required PR check was failing (the WebKit race fixed by #67), and #67 was merged before its PR run finished.
 
 ## 1. What exists now (state of the stack)
 
-| Ticket | Result | Branch | Commit | PR (draft, base) |
-|---|---|---|---|---|
-| BACK-85 typed ID and host context bridge | DRAFT PR | `feat/back-85-typed-id-host-bridge` | `f338631` | [#60](https://github.com/Kemetra-Labs/Backstage-OS/pull/60) (main) |
-| BACK-86 semantic tokens and CSS isolation | DRAFT PR | `feat/back-86-css-isolation` | `275772a` | [#61](https://github.com/Kemetra-Labs/Backstage-OS/pull/61) (#60) |
-| BACK-87 unified B+C Mission Map | DRAFT PR | `feat/back-87-mission-map-lens` | `f42ad75` | [#62](https://github.com/Kemetra-Labs/Backstage-OS/pull/62) (#61) |
-| BACK-88 Source Observatory | DRAFT PR | `feat/back-88-source-observatory` | `97aa288` | [#63](https://github.com/Kemetra-Labs/Backstage-OS/pull/63) (#62) |
-| BACK-89 Mission Replay | DRAFT PR, time-ordering segment BLOCKED | `feat/back-89-mission-replay` | `a882af5` | [#64](https://github.com/Kemetra-Labs/Backstage-OS/pull/64) (#63) |
-| BACK-90 Agent Flight Deck | DRAFT PR, events figure classified unknown | `feat/back-90-agent-flight-deck` | `7958448` | [#65](https://github.com/Kemetra-Labs/Backstage-OS/pull/65) (#64) |
-| BACK-91 this QA | this PR | `feat/back-91-convergence-qa` | see PR | [#66](https://github.com/Kemetra-Labs/Backstage-OS/pull/66) (#65) |
-| BACK-92 retirement | NOT EXECUTED (recommendation only, section 6) | | | |
+| Ticket | Result | PR | Merge commit on `main` |
+|---|---|---|---|
+| BACK-85 typed ID and host context bridge | MERGED | #60 | `42d95af` |
+| BACK-86 semantic tokens and CSS isolation | MERGED | #61 | `495f4be` |
+| BACK-87 unified B+C Mission Map | MERGED (through #62) | #62 | `9fc7698` |
+| BACK-88 Source Observatory | MERGED (through #62); Partial source state not in the contract | #63 | `9fc7698` |
+| BACK-89 Mission Replay | MERGED (through #62); processing order kept by owner decision (Option A) | #64 | `9fc7698` |
+| BACK-90 Agent Flight Deck | MERGED (through #62); events figure shown as not defined | #65 | `9fc7698` |
+| BACK-91 this QA | MERGED (through #62) | #66 | `9fc7698` |
+| BACK-92 retirement | NOT EXECUTED (recommendation only, section 6) | | |
 
-Jira tickets are left open until their merge status is reconciled.
+Jira states are tracked on the tickets; BACK-83, BACK-84 and BACK-85 are Done, the rest stay open until their remaining criteria are met.
 
 ## 2. One application: what the convergence spec proves (`e2e/convergence.spec.ts`, Chromium and WebKit)
 
@@ -47,10 +49,17 @@ Per-lens specs (map 29, Observatory 25, Replay 24, Flight Deck 23 tests, each in
 
 **Exact V1 change footprint** (`git diff origin/main...HEAD`, pre-existing production files only): `App.tsx` +2, `nav/routes.ts` +40/-12, `shell/Sidebar.tsx` +1, `i18n/shell.ts` +3/-1, `styles/components.css` +5, `screens/Sources.tsx` +40/-13, `screens/Agents.tsx` +32/-5, `screens/InvestigationRoute.tsx` +34/-4. In the lab: `context.tsx` +3, `deck.ts` +1, four screens gained an optional `embedded` prop (4 to 9 lines each), `base.css` lost the 14 global rules that moved to `reset.css`. Every other V1 screen file is untouched. The default view of Sources, Agents and the Investigation Room is the old one; the new views are reached by a link switch, and the tables/roster/room tests of the old suite pass unchanged (the full V1 suite is green apart from findings recorded in each PR).
 
-**CI on the stack, investigated:**
-- GitHub Actions "Playwright (chromium + webkit)" (the required check) passed on #60; the later PRs were still running or queued when this was written.
-- `ci/circleci: playwright` **fails with 0 s on every PR, including the already-merged #59**: the job "failed before its first step ran" (executor never started). It is not a required check, pre-dates this work, and is infrastructure, not a test result. Not claimed green.
-- SonarCloud Code Analysis **failed the quality gate on #64** for `new_duplicated_lines_density` 3.8% (limit 3%); all other conditions OK. Cause: four lens specs repeated the same helpers. Fixed in this slice by one shared `e2e/lens-helpers.ts`; #64's own gate stays red until the stack is merged or its spec is rebased, and should be re-read once the final PR is analysed.
+**CI on the stack, investigated (corrected):**
+- GitHub Actions "Playwright (chromium + webkit)" is the required check. It passed on #60 and on `main` for `ea2a884`; it failed on #62's PR run (WebKit race, fixed by #67).
+- `ci/circleci: playwright` is not a required check and fails on every PR. The earlier text here said it fails "with 0 s, the executor never started"; the job logs say otherwise. On PR #66 (run 0e653796) and PR #67 (run 9e850f1f) the job started, ran install, the root suite and the app unit tests, and was cancelled at the external 10-minute limit during "Run app Playwright tests" (`timed_out` at exactly 10:00). The job runs the GitHub workflow through `circleci run actions exec`; there is no `.circleci/` file in the repo, so the limit lives in CircleCI project settings (BACK-68, owner approval needed to change it).
+- SonarCloud Code Analysis failed the quality gate on #64 for `new_duplicated_lines_density` 3.8% (limit 3%) because four lens specs repeated the same helpers; the shared `e2e/lens-helpers.ts` fixed that. The Quality Gate on `main` is OK with 0.5% new-code duplication.
+
+**Automated QA added after the first version of this report** (`e2e/reflow-focus.spec.ts`, 7 tests per browser, Chromium and WebKit):
+- Zoom reflow on every screen (15), EN and AR: a 1280 px window at 200% lays out at 640 CSS px and at 400% at 320 by 256 CSS px. Checked: no sideways page scroll, `<main>` inside the window, the persona and language controls inside the window, no console errors. This sets the layout width; it is **not** a real zoomed browser and does not replace a person zooming one.
+- Focus after navigation: a link to another screen lands focus on `<main>` (all eight sidebar screens, EN and AR); Back and Forward never leave focus on `<body>`. Following the link of the screen that is already open changes nothing, by design.
+- Mutation proof, reverted: forcing `main` to 900 px fails all 8 zoom tests; removing the focus move on route change fails all 6 focus tests.
+- Shared `SCREENS`, `LENS_READY` and `openScreen` moved into `e2e/lens-helpers.ts` (they were private to `convergence.spec.ts`).
+- Run at base `8b81d20`: `convergence`, `mission-map`, `source-observatory`, `mission-replay`, `agent-flight-deck` and `reflow-focus` specs together: 245 passed, 1 skipped (the deliberate WebKit keyboard skip above), 0 failed; `npm run check` 694 tests passed.
 
 ## 4. Route and feature disposition
 
@@ -76,14 +85,14 @@ Per-lens specs (map 29, Observatory 25, Replay 24, Flight Deck 23 tests, each in
 ## 5. Unresolved risks and decisions that genuinely need the owner
 
 1. **The `stock-sync` to `inventory` edge.** The map says hypothesis (canonical); V1 Project Intelligence still says authored (E-7, never read). One app now shows two classifications for one edge. Pinned by tests, not reconciled. Decision: which is true, then change the V1 fixture or the canonical one.
-2. **Replay ordering (BACK-89).** The replay order is the processing order; evidence read times disagree with it (the PR record is read 35 minutes before the failure it is processed after); four of seven events have no time; occurrence time is not recorded. Decision: which time orders the replay, and what "occurred" means per source.
+2. **Replay ordering (BACK-89): decided.** The owner chose Option A on 23 Nov 2026: the replay keeps processing order, source read time is shown beside it and never used to sort, and no occurrence time is inferred. Sorting by read time is rejected; a modelled "occurred" time is deferred to a separate domain-contract decision; a second lane of read times is an optional future enhancement.
 3. **Mission `events` (BACK-90).** Shown as "Not defined in the demo data" until the fixture says what it counts. The lab still shows a subtracted figure.
 4. **KH and SB identity (BACK-85).** Same name is not proof; KH is unresolved, SB ambiguous. The map cannot link them to Project Intelligence until decided.
 5. **The "B + C pilot" chip** is the lab's wording on the Mission Map. Product call.
 6. **Hash router limits recorded in the PRs:** the Inspector tab and map/list view are module state, not in the route; a failed lazy chunk is not retried until reload; the Replay's starting event is written into the address on load (history is replaced, not added).
 7. **Accessibility is automated-only.** No axe, no screen reader, no native Arabic review, no real device, no 200% zoom measurement (320 px reflow is tested). These need people (BACK-31, BACK-32).
 8. **Persona is not authorization.** X02/X04 and any production tenant security remain outside this work.
-9. **CircleCI** has been failing at start-up on every PR, merged ones included. Someone should look at the executor or the config; it is unrelated to these changes.
+9. **CircleCI** times out at its external 10-minute limit on every PR (see section 3). It is not a required check and is unrelated to these changes; whether to retire the mirror or raise this one job's limit is an owner decision (BACK-68).
 
 ## 6. Remaining duplication (and the cleanup plan for BACK-92, not executed)
 
@@ -95,12 +104,10 @@ Per-lens specs (map 29, Observatory 25, Replay 24, Flight Deck 23 tests, each in
 
 Recommended BACK-92 order (each its own PR, after the stack merges and an owner confirms parity): (1) delete the lab-only shell and entry (`v2.html`, `vite.v2.config.ts`, `design-lab/v2/{main,App}.tsx`, `navigation/{Shell,hits}.ts`, the `V2Provider`, `reset.css`, `fonts.css`) and move `e2e-v2` checks that still add value into `e2e/`; (2) delete the concept-A `MissionMap.tsx` and its copy; (3) move the V2 screens and styles out of `design-lab/` into `src/lenses/` (rename only); (4) put the Technical-only rule in `domain/` for every record; (5) reconcile the two fixtures and the `stock-sync` edge. Nothing is deleted by this ticket.
 
-## 7. Recommended merge order and rollback
+## 7. Merge record and rollback
 
-Merge in stack order: #60, #61, #62, #63, #64, #65, #66. Each PR is small enough to review alone; GitHub retargets the next PR to `main` as its base merges (do not enable auto-merge; the required Playwright check must pass on each). Re-read the SonarCloud result on the first PR that touches the specs once it targets `main`.
-
-Rollback: revert the PRs in reverse order. Every step is additive or a mechanical move and every old screen's default view is unchanged, so reverting any suffix of the stack leaves the app working; reverting #61 also needs #62 and later reverted (they import the scoped CSS).
+The stack is merged (see section 1); the original merge-order advice is no longer needed. Rollback is a revert of the relevant PR(s), newest first: every step was additive or a mechanical move and every old screen's default view is unchanged, so reverting any suffix leaves the app working. Reverting #61 also needs #62 and later reverted (they import the scoped CSS).
 
 ## 8. Exact next step toward a single Kawalys app
 
-Merge the stack in order with an owner review, then decide the four BLOCKED items in section 5 (they are product decisions, not engineering). With those answered, the next engineering PR is BACK-92 step (1): remove the lab shell and entry, which turns the lab into library code and leaves one application.
+Decide the BLOCKED items in section 5 (they are product decisions, not engineering; the replay ordering one is decided: processing order stays, Option A). Then the next engineering PR is BACK-92 step (1): extract `useV2` from `context.tsx`, remove the lab shell and entry, and move the lab-only checks that still add value into `e2e/`. That step changes the CI workflow and `tsconfig`, so it needs owner approval first. Nothing is deleted by this ticket.

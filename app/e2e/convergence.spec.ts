@@ -3,26 +3,12 @@
 // cross-screen journey whose Back and Forward retrace exactly. Persona is a display switch on synthetic data, not authorization.
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/i18n/strings';
-import { LANGS, openRoute as load, PERSONAS, type LoadQuery } from './helpers';
-import { hash, leaks, RESTRICTED, surface } from './lens-helpers';
+import { LANGS, PERSONAS } from './helpers';
+import { hash, LENS_READY, leaks, openScreen as openRoute, RESTRICTED, SCREENS, surface } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 
-/** Every screen of the app: the eight V1 screens and the four lens views. */
-const SCREENS = [
-  '/', '/portfolio', '/project/RT', '/project/RT/stock-sync', '/project/KH', '/investigation/INV-DEMO-7', '/evidence/E-1', '/decisions', '/agents', '/sources',
-  '/map', '/map/retail-tower/inventory', '/sources/observatory', '/investigation/INV-DEMO-7/replay', '/agents/deck',
-] as const;
 const LENSES = ['/map', '/sources/observatory', '/investigation/INV-DEMO-7/replay', '/agents/deck'] as const;
-
-const LENS_READY = '[data-testid="mission-map-lens"], [data-testid="source-observatory-lens"], [data-testid="replay-lens"], [data-testid="agent-deck-lens"]';
-
-/** Opens a route and, for a lens view, waits for the lens itself: the page heading is already visible while the lazy chunk loads. */
-async function openRoute(page: Page, route: string, q: LoadQuery = {}) {
-  const errors = await load(page, route, q);
-  if (/^\/(map|sources\/observatory|investigation\/[^/]+\/replay|agents\/deck)/.test(route)) await expect(page.locator(LENS_READY)).toBeVisible();
-  return errors;
-}
 
 const shellFacts = (page: Page) =>
   page.evaluate(() => ({
