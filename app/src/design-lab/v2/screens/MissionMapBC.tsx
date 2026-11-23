@@ -23,6 +23,9 @@ const FILTER_KEY: Readonly<Record<MapFilter, K>> = {
 };
 const SCOPES = ['retail-tower', 'khepri', 'seshat-bi'] as const;
 
+/** The node shown when the route names none: the approved render's stock-sync for the default scopes, else the scoped system itself. */
+export const fallbackNode = (scope: string): string => (scope === 'all' || scope === 'retail-tower' ? DEFAULT_SELECTION : scope);
+
 export function MissionMapBC() {
   const { route, go, open, t } = useV2();
   const w = authorizedWorld(WORLD, route.persona);
@@ -31,7 +34,7 @@ export function MissionMapBC() {
   const points = useMemo(() => nodePoints(w), [w]);
   const fig = useMemo(() => bcFigures(w), [w]);
   // With no node chosen: the scoped system when a scope other than the default is set (as in V2), else the approved render's stock-sync.
-  const fallback = route.scope === 'all' || route.scope === 'retail-tower' ? DEFAULT_SELECTION : route.scope;
+  const fallback = fallbackNode(route.scope);
   const sel = w.nodes.find((n) => n.id === (route.node ?? fallback)) ?? w.nodes[0]!;
   // Scope and filter dim in the map and hide in the list, as in V2. Nothing is removed from the world.
   const active = useMemo(() => {

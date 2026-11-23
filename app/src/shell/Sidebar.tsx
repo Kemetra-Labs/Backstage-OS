@@ -5,6 +5,7 @@ import { hrefFor, sectionOf, type Route } from '../nav/routes';
 const MAIN: ReadonlyArray<{ key: NavKey; route: Route }> = [
   { key: 'home', route: { name: 'home' } },
   { key: 'portfolio', route: { name: 'portfolio' } },
+  { key: 'map', route: { name: 'map' } },
   { key: 'project', route: { name: 'project', projectId: 'RT' } },
   { key: 'investigation', route: { name: 'investigation', id: 'INV-DEMO-7' } },
   { key: 'decisions', route: { name: 'decisions' } },

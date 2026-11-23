@@ -17,6 +17,9 @@ export interface V2 {
 
 const Ctx = createContext<V2 | null>(null);
 
+/** BACK-87: the context object, exported so the host app can supply a value derived from its own state (src/bridge/hostV2.ts) instead of mounting a second V2Provider. */
+export const V2Context = Ctx;
+
 export function useV2(): V2 {
   const v = useContext(Ctx);
   if (!v) throw new Error('useV2 outside V2Provider');

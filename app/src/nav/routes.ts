@@ -1,17 +1,27 @@
+import type { Provider } from '../contract/types';
+
 // Hash routes. No router library: nine screens, static build, and ?persona=&lang= stays in the search part untouched.
 export type Route =
   | { readonly name: 'home' }
   | { readonly name: 'portfolio' }
+  | { readonly name: 'map'; readonly scope?: MapScope; readonly node?: string }
   | { readonly name: 'project'; readonly projectId: string; readonly componentId?: string }
-  | { readonly name: 'investigation'; readonly id: string }
+  | { readonly name: 'investigation'; readonly id: string; readonly view?: 'replay'; readonly evt?: string }
   | { readonly name: 'evidence'; readonly id: string; readonly from?: string }
   | { readonly name: 'decisions' }
   | { readonly name: 'decision'; readonly id: string }
-  | { readonly name: 'agents' }
-  | { readonly name: 'sources' }
+  | { readonly name: 'agents'; readonly view?: 'deck'; readonly msn?: string }
+  | { readonly name: 'sources'; readonly view?: 'observatory'; readonly src?: Provider }
   | { readonly name: 'notFound'; readonly path: string };
 
 export type RouteName = Route['name'];
+
+/** BACK-87: the scopes of the Mission Map lens (V2 map scope ids). `#/map/<scope>/<node>`; an unknown scope is notFound, never a guess. */
+export const MAP_SCOPES = ['all', 'retail-tower', 'khepri', 'seshat-bi'] as const;
+export type MapScope = (typeof MAP_SCOPES)[number];
+const PROVIDERS: readonly Provider[] = ['github', 'jira', 'confluence', 'sentry', 'datadog', 'port'];
+const isProvider = (v: string | undefined): v is Provider => v !== undefined && (PROVIDERS as readonly string[]).includes(v);
+const isMapScope = (v: string | undefined): v is MapScope => v !== undefined && (MAP_SCOPES as readonly string[]).includes(v);
 
 const ID = /^[A-Za-z0-9._-]{1,64}$/;
 
@@ -34,7 +44,7 @@ export function parseHash(hash: string): Route {
   const parts = rawParts.map(decode);
   const notFound: Route = { name: 'notFound', path: `/${rawParts.join('/')}` };
   if (parts.some((p) => p === null)) return notFound;
-  const [a, b, c] = parts as string[];
+  const [a, b, c, d] = parts as string[];
   const n = parts.length;
 
   switch (a) {
@@ -43,12 +53,21 @@ export function parseHash(hash: string): Route {
       return n <= 1 ? { name: 'home' } : notFound;
     case 'portfolio':
       return n === 1 ? { name: 'portfolio' } : notFound;
+    case 'map':
+      if (n === 1) return { name: 'map' };
+      if (n === 2 && isMapScope(b)) return { name: 'map', scope: b };
+      if (n === 3 && isMapScope(b) && c) return { name: 'map', scope: b, node: c };
+      return notFound;
     case 'project':
       if (n === 2 && b) return { name: 'project', projectId: b };
       if (n === 3 && b && c) return { name: 'project', projectId: b, componentId: c };
       return notFound;
     case 'investigation':
-      return n === 2 && b ? { name: 'investigation', id: b } : notFound;
+      // BACK-89: `#/investigation/<id>` is the room; `#/investigation/<id>/replay[/<event>]` is the Replay view of the same case.
+      if (n === 2 && b) return { name: 'investigation', id: b };
+      if (n === 3 && b && c === 'replay') return { name: 'investigation', id: b, view: 'replay' };
+      if (n === 4 && b && c === 'replay' && d) return { name: 'investigation', id: b, view: 'replay', evt: d };
+      return notFound;
     case 'evidence': {
       if (n !== 2 || !b) return notFound;
       const from = decode(query.get('from') ?? '');
@@ -58,9 +77,17 @@ export function parseHash(hash: string): Route {
       if (n === 1) return { name: 'decisions' };
       return n === 2 && b ? { name: 'decision', id: b } : notFound;
     case 'agents':
-      return n === 1 ? { name: 'agents' } : notFound;
+      // BACK-90: `#/agents` is the roster; `#/agents/deck[/<mission>]` is the Flight Deck view of the same screen.
+      if (n === 1) return { name: 'agents' };
+      if (n === 2 && b === 'deck') return { name: 'agents', view: 'deck' };
+      if (n === 3 && b === 'deck' && c) return { name: 'agents', view: 'deck', msn: c };
+      return notFound;
     case 'sources':
-      return n === 1 ? { name: 'sources' } : notFound;
+      // BACK-88: `#/sources` is the table view; `#/sources/observatory[/<provider>]` is the Observatory view of the same screen.
+      if (n === 1) return { name: 'sources' };
+      if (n === 2 && b === 'observatory') return { name: 'sources', view: 'observatory' };
+      if (n === 3 && b === 'observatory' && isProvider(c)) return { name: 'sources', view: 'observatory', src: c };
+      return notFound;
     default:
       return notFound;
   }
@@ -73,21 +100,22 @@ export function hrefFor(r: Route): string {
   switch (r.name) {
     case 'home': return '#/';
     case 'portfolio': return '#/portfolio';
+    case 'map': return r.scope ? (r.node ? `#/map/${enc(r.scope)}/${enc(r.node)}` : `#/map/${enc(r.scope)}`) : '#/map';
     case 'project': return r.componentId ? `#/project/${enc(r.projectId)}/${enc(r.componentId)}` : `#/project/${enc(r.projectId)}`;
-    case 'investigation': return `#/investigation/${enc(r.id)}`;
+    case 'investigation': return r.view ? (r.evt ? `#/investigation/${enc(r.id)}/replay/${enc(r.evt)}` : `#/investigation/${enc(r.id)}/replay`) : `#/investigation/${enc(r.id)}`;
     case 'evidence': return r.from ? `#/evidence/${enc(r.id)}?from=${enc(r.from)}` : `#/evidence/${enc(r.id)}`;
     case 'decisions': return '#/decisions';
     case 'decision': return `#/decisions/${enc(r.id)}`;
-    case 'agents': return '#/agents';
-    case 'sources': return '#/sources';
+    case 'agents': return r.view ? (r.msn ? `#/agents/deck/${enc(r.msn)}` : '#/agents/deck') : '#/agents';
+    case 'sources': return r.view ? (r.src ? `#/sources/observatory/${enc(r.src)}` : '#/sources/observatory') : '#/sources';
     case 'notFound': return '#/';
   }
 }
 
 /** Which sidebar entry a route belongs to. */
-export function sectionOf(r: Route): 'home' | 'portfolio' | 'project' | 'investigation' | 'decisions' | 'agents' | 'sources' | null {
+export function sectionOf(r: Route): 'home' | 'portfolio' | 'map' | 'project' | 'investigation' | 'decisions' | 'agents' | 'sources' | null {
   switch (r.name) {
-    case 'home': case 'portfolio': case 'project': case 'investigation': case 'agents': case 'sources': return r.name;
+    case 'home': case 'portfolio': case 'map': case 'project': case 'investigation': case 'agents': case 'sources': return r.name;
     case 'evidence': return 'investigation';
     case 'decisions': case 'decision': return 'decisions';
     case 'notFound': return null;

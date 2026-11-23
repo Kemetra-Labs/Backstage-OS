@@ -23,7 +23,9 @@ const rank = (s: ReplayStage) => STAGES.indexOf(s);
 type InspTab = 'evidence' | 'context' | 'history';
 type HoldTab = 'cor' | 'hyp' | 'gap';
 
-export function MissionReplay() {
+/** `embedded`: shown inside a host screen that already has the page's h1, so the title is an h2 and the pilot chip is left out. */
+export function MissionReplay({ embedded = false }: { readonly embedded?: boolean } = {}) {
+  const H = embedded ? 'h2' : 'h1';
   const { route, go, t, copy } = useV2();
   const w = authorizedWorld(WORLD, route.persona);
   const events = w.replay;
@@ -115,7 +117,7 @@ export function MissionReplay() {
         <header className="kv2-head">
           <div className="kv2-head-title">
             <p className="kv2-eyebrow"><T k="rp.eyebrow" /></p>
-            <h1><T k="nav.replay" /><span className="kv2-chip kv2-chip-outline"><T k="map.concept" /></span></h1>
+            <H><T k="nav.replay" />{!embedded && <span className="kv2-chip kv2-chip-outline"><T k="map.concept" /></span>}</H>
             <p className="kv2-lede"><T k="rp.lede" /></p>
           </div>
           <div className="kv2-kpis">

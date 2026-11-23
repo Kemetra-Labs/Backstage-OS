@@ -81,6 +81,7 @@ export const DECK = {
   'deck.md.agent': ['Agent', 'الوكيل'],
   'deck.md.started': ['Started', 'بدأت'],
   'deck.md.events': ['Events', 'الأحداث'],
+  'deck.md.events.unknown': ['Not defined in the demo data', 'غير معرّف في البيانات التجريبية'],
   'deck.md.human': ['Human oversight', 'الإشراف البشري'],
   'deck.md.evidence': ['Evidence used', 'الأدلة المستخدمة'],
   'deck.prop.title': ['Proposed action', 'الإجراء المقترح'],
