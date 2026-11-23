@@ -77,3 +77,25 @@ test('V1 withheld-only, Technical positive control: the same component shows its
     for (const id of c.evidence) await expect(page.locator(`[data-evidence="${id}"]`), id).toHaveCount(1);
   }
 });
+
+// BACK-84: the scoped canonical fixture is decided per persona at runtime, so a switch on the same page must follow it in both
+// directions and leave nothing behind (no cached Technical world shown to Owner, no Owner world shown to Technical).
+test('V1 same-page persona switch on the withheld-only deep link: Technical, Owner, Technical, Owner', async ({ page }) => {
+  const [c] = WITHHELD_ONLY;
+  expect(c).toBeDefined();
+  await openRoute(page, `/project/RT/${c!.id}`, { persona: 'technical' });
+  for (const id of c!.evidence) await expect(page.locator(`[data-evidence="${id}"]`), `technical ${id}`).toHaveCount(1);
+  for (const round of ['Owner', 'Technical', 'Owner'] as const) {
+    await page.getByRole('button', { name: round, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`persona=${round.toLowerCase()}`));
+    const label = page.locator(`[data-node="${c!.id}"] .dg-health`);
+    if (round === 'Technical') {
+      for (const id of c!.evidence) await expect(page.locator(`[data-evidence="${id}"]`), `technical ${id}`).toHaveCount(1);
+    } else {
+      await expect(label).toHaveAttribute('data-health', 'unknown');
+      await expect(page.locator(WITHHELD_IDS.map((id) => `[data-evidence="${id}"], [data-evidence-row="${id}"]`).join(', '))).toHaveCount(0);
+      const text = await surface(page);
+      for (const token of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) expect(text.includes(token), `${round}: "${token}"`).toBe(false);
+    }
+  }
+});
