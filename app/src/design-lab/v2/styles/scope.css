@@ -1,0 +1,22 @@
+/* BACK-86 (S4): the B+C map's base rules, scoped for embedding in the host. The lab's reset.css styles `*`, html, body, headings,
+   lists, buttons, links and :focus-visible for the whole page; imported into the host it would restyle every V1 screen. These are
+   the same declarations under .kv2-scope, wrapped in :where() so they keep the zero specificity the lab's element selectors have
+   and every .kv2-* class still wins over them. The lab itself does not import this file. */
+:where(.kv2-scope), :where(.kv2-scope) :where(*, *::before, *::after) { box-sizing: border-box; }
+:where(.kv2-scope) {
+  color: var(--kv2-ink); font: 400 var(--kv2-t-md) / 1.5 var(--kv2-f-ui); font-variant-numeric: tabular-nums;
+  /* The map region does not widen the host page. */
+  overflow-x: clip; -webkit-text-size-adjust: 100%;
+}
+:where(html[lang="ar"]) :where(.kv2-scope) { font-family: var(--kv2-f-ar); }
+:where(.kv2-scope) :where(h1, h2, h3, h4, p, ul, ol, dl, dd, figure) { margin: 0; }
+:where(.kv2-scope) :where(h1, h2, h3) { text-wrap: balance; }
+:where(.kv2-scope) :where(ul, ol) { padding: 0; list-style: none; }
+:where(.kv2-scope) :where(button, input, select) { font: inherit; color: inherit; }
+:where(.kv2-scope) :where(button) { cursor: pointer; }
+:where(.kv2-scope) :where(button:disabled) { cursor: not-allowed; opacity: 0.4; }
+:where(.kv2-scope) :where(a) { color: inherit; text-decoration: none; }
+:where(.kv2-scope) :focus-visible { outline: 2px solid var(--kv2-cyan); outline-offset: 2px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  :where(.kv2-scope), :where(.kv2-scope) :where(*, *::before, *::after) { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

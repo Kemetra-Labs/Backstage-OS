@@ -1,0 +1,17 @@
+/* BACK-86 (S4): the B+C map's self-hosted faces under their own family names. The lab declares "Manrope" and "Cairo"; declaring
+   "Cairo" in the host would silently change the Arabic text of every V1 screen, whose stack lists Cairo. Here the same two files
+   (provenance and licences: ../assets/fonts/SOURCE.md) get names only .kv2-scope uses. No new font file, no redistribution. */
+@font-face {
+  font-family: "Kawalys BC Manrope"; font-style: normal; font-weight: 200 800; font-display: swap;
+  src: url("../assets/fonts/manrope-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Kawalys BC Cairo"; font-style: normal; font-weight: 200 1000; font-display: swap;
+  src: url("../assets/fonts/cairo-arabic-wght-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+.kv2-scope {
+  --kv2-f-ui: "Kawalys BC Manrope", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Cairo", sans-serif;
+  --kv2-f-ar: "Kawalys BC Cairo", "Manrope", "Segoe UI", "Tahoma", system-ui, sans-serif;
+}

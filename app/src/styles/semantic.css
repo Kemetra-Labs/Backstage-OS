@@ -1,0 +1,60 @@
+/* BACK-86 (S4): semantic role aliases. One name per role, two value sets: the host (V1) tokens by default, the B+C map's own tokens
+   inside .kv2-scope. Nothing here has a value of its own, every role points at a token that already exists, so neither identity
+   changes: V1 keeps its gold/green/coral truth and health colours, B+C keeps its cyan/teal ones. A shared component styled with
+   these roles looks right in whichever surface it sits in. Dark only, like both sources (no light theme exists to alias). */
+:root {
+  /* surfaces and text */
+  --sem-ground: var(--bg);
+  --sem-surface: var(--surface);
+  --sem-surface-raised: var(--surface-2);
+  --sem-ink: var(--ink);
+  --sem-ink-2: var(--ink-2);
+  --sem-muted: var(--muted);
+  --sem-line: var(--line);
+  /* focus and the one accent */
+  --sem-focus: var(--gold);
+  --sem-accent: var(--gold);
+  /* truth labels */
+  --sem-truth-observed: var(--obs);
+  --sem-truth-correlated: var(--cor);
+  --sem-truth-hypothesis: var(--hyp);
+  --sem-truth-proposed: var(--pro);
+  --sem-truth-approved: var(--apr);
+  --sem-truth-unknown: var(--unk);
+  /* health (Unknown is its own colour, never the healthy one) */
+  --sem-health-healthy: var(--green);
+  --sem-health-degraded: var(--amber);
+  --sem-health-down: var(--coral);
+  --sem-health-unknown: var(--unk);
+  /* shape and motion */
+  --sem-radius-sm: var(--r-sm);
+  --sem-radius-md: var(--r-md);
+  --sem-radius-lg: var(--r-lg);
+  --sem-ease: var(--ease);
+}
+
+.kv2-scope {
+  --sem-ground: var(--kv2-bg);
+  --sem-surface: var(--kv2-panel);
+  --sem-surface-raised: var(--kv2-panel-hi);
+  --sem-ink: var(--kv2-ink);
+  --sem-ink-2: var(--kv2-ink-2);
+  --sem-muted: var(--kv2-muted);
+  --sem-line: var(--kv2-line-2);
+  --sem-focus: var(--kv2-cyan);
+  --sem-accent: var(--kv2-cyan);
+  --sem-truth-observed: var(--kv2-obs);
+  --sem-truth-correlated: var(--kv2-cor);
+  --sem-truth-hypothesis: var(--kv2-hyp);
+  --sem-truth-proposed: var(--kv2-pro);
+  --sem-truth-approved: var(--kv2-ink-2);
+  --sem-truth-unknown: var(--kv2-unk);
+  --sem-health-healthy: var(--kv2-green);
+  --sem-health-degraded: var(--kv2-amber);
+  --sem-health-down: var(--kv2-red);
+  --sem-health-unknown: var(--kv2-unk);
+  --sem-radius-sm: var(--kv2-r-sm);
+  --sem-radius-md: var(--kv2-r-md);
+  --sem-radius-lg: var(--kv2-r-lg);
+  --sem-ease: var(--kv2-ease);
+}
