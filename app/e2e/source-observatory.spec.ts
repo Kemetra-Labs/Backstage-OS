@@ -4,28 +4,14 @@
 // every inspector tab. Persona is a display switch on synthetic data, not authorization. Nothing here is live telemetry.
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
-import { DOMAIN } from '../src/domain/fixture';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
+import { hasId, hash, RESTRICTED, surface } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
-const WITHHELD = Object.values(DOMAIN.evidence).filter((e) => e.visibility === 'technical');
-const RESTRICTED = [...WITHHELD.map((e) => e.id), ...WITHHELD.flatMap((e) => (e.observation ? [e.observation.id] : []))];
 const lens = (page: Page) => page.locator('[data-testid="source-observatory-lens"]');
 const card = (page: Page, p: string) => page.locator(`.kv2-scard[data-provider="${p}"]`);
-const hash = (page: Page) => page.evaluate(() => window.location.hash);
-const hasId = (text: string, id: string) => new RegExp(`(^|[^A-Za-z0-9-])${id}([^A-Za-z0-9-]|$)`).test(text);
 
-const surface = (page: Page) =>
-  page.evaluate(() => {
-    const out: string[] = [document.body.innerText, document.body.textContent ?? '', window.location.href];
-    for (const el of document.querySelectorAll('*')) {
-      for (const a of Array.from(el.attributes)) {
-        if (a.name === 'aria-label' || a.name === 'title' || a.name === 'alt' || a.name === 'href' || a.name.startsWith('data-')) out.push(`${a.name}=${a.value}`);
-      }
-    }
-    return out.join('\n');
-  });
 
 test('the canonical fixture has the restricted record this spec depends on', () => {
   expect(RESTRICTED).toContain('E-5');
@@ -48,7 +34,7 @@ for (const lang of LANGS) {
 
 test('Sources: the tables stay the default view and the Observatory is another view of the same screen', async ({ page }) => {
   await openRoute(page, '/sources', { lang: 'en', persona: 'owner', width: 1440 });
-  expect(await lens(page).count()).toBe(0);
+  await expect(lens(page)).toHaveCount(0);
   await expect(page.locator('.view-switch a[data-view="tables"]')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('#sidenav a[data-nav="sources"]')).toHaveAttribute('aria-current', 'page');
   expect(await page.locator('table').count()).toBeGreaterThan(0);
@@ -58,7 +44,7 @@ test('Sources: the tables stay the default view and the Observatory is another v
   await expect(page.locator('.view-switch a[data-view="observatory"]')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('#sidenav a[data-nav="sources"]')).toHaveAttribute('aria-current', 'page');
   await page.goBack();
-  expect(await lens(page).count()).toBe(0);
+  await expect(lens(page)).toHaveCount(0);
   expect(await page.locator('table').count()).toBeGreaterThan(0);
 });
 
@@ -89,7 +75,7 @@ test('Observatory: selecting a source is a navigation, so Back, Forward and deep
 test('Observatory: an unknown source is not found, never guessed', async ({ page }) => {
   await openRoute(page, '/sources/observatory/nope', { lang: 'en', persona: 'owner' });
   await expect(page.locator('h1')).toHaveText(/Page not found/);
-  expect(await lens(page).count()).toBe(0);
+  await expect(lens(page)).toHaveCount(0);
 });
 
 test('Observatory: the keyboard selects a source card, as a navigation', async ({ page }) => {

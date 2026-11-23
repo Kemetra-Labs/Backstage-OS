@@ -32,7 +32,13 @@ const SATS: readonly { readonly id: string; readonly key: K; readonly icon: Icon
   { id: 'proposal', key: 'deck.sat.proposal', icon: 'doc', agents: ['AG-5'] },
 ];
 
-export function AgentFlightDeck() {
+/**
+ * `embedded`: shown inside a host screen that already has the page's h1, so the title is an h2 and the pilot chip is left out.
+ * Also, a mission's `events` figure is shown as not defined: the fixture does not say what it counts, and the only way to scope it for
+ * a persona is to subtract withheld references, which is an assumption (and a figure that differs by persona is itself a cue).
+ */
+export function AgentFlightDeck({ embedded = false }: { readonly embedded?: boolean } = {}) {
+  const H = embedded ? 'h2' : 'h1';
   const { route, go, open, t, copy } = useV2();
   const w = authorizedWorld(WORLD, route.persona);
   const persona = route.persona;
@@ -70,7 +76,7 @@ export function AgentFlightDeck() {
         <header className="kv2-head">
           <div className="kv2-head-title">
             <p className="kv2-eyebrow"><T k="deck.eyebrow" /></p>
-            <h1><T k="nav.deck" /><span className="kv2-chip kv2-chip-outline"><T k="map.concept" /></span></h1>
+            <H><T k="nav.deck" />{!embedded && <span className="kv2-chip kv2-chip-outline"><T k="map.concept" /></span>}</H>
             <p className="kv2-lede"><T k="deck.lede" /></p>
           </div>
           <div className="kv2-kpis">
@@ -178,7 +184,7 @@ export function AgentFlightDeck() {
                 <div><dt><T k="deck.md.agent" /></dt><dd><T k={agentOf(sel).key as K} /></dd></div>
                 <div><dt><T k="deck.th.status" /></dt><dd><ToneChip tone={STATUS_TONE[sel.status]}><T k={statusKey(sel.status)} /></ToneChip></dd></div>
                 <div><dt><T k="deck.md.started" /></dt><dd><Age minutes={sel.startedMinutesAgo} /></dd></div>
-                <div><dt><T k="deck.md.events" /></dt><dd>{sel.events}</dd></div>
+                <div><dt><T k="deck.md.events" /></dt><dd>{embedded ? <T k="deck.md.events.unknown" /> : sel.events}</dd></div>
                 <div><dt><T k="deck.md.human" /></dt><dd><ToneChip tone={HUMAN_TONE[sel.human]}><T k={`deck.h.${sel.human}` as K} /></ToneChip></dd></div>
                 <div><dt><T k="deck.th.basis" /></dt><dd><TruthChip label={sel.label} /></dd></div>
               </dl>
