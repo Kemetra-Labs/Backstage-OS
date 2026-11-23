@@ -1,31 +1,25 @@
-// Sign-in, single-owner bootstrap and sessions against a real Postgres (BACK-56, gate A).
+// Durable owner identity and sessions behind the #76 auth ports (BACK-56 on BACK-55, gate A).
 import { createHash } from 'node:crypto';
-import { AuthRefused, mayBindOwner, PrincipalResolver } from '../../src/auth/principal-resolver';
-import { SessionStore } from '../../src/auth/session-store';
-import type { VerifiedSubject } from '../../src/auth/identity-provider.port';
+import pg from 'pg';
+import { DatabaseOwnerDirectory } from '../../src/auth/identity/database-owner-directory';
+import { PostgresSessionStore } from '../../src/auth/session/postgres-session-store';
+import { SessionService } from '../../src/auth/session/session.service';
+import { WorkspaceResolver } from '../../src/auth/workspace-resolver';
 import { verifyRuntimeRole } from '../../src/db/runtime-role';
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { sqlState } from '../db/pg-container';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
+import { OWNER } from './_helpers';
 
 let db: KawalysDb | undefined;
-let resolver: PrincipalResolver;
-let sessions: SessionStore;
-const OWNER_EMAIL = 'owner@example.test';
-const ISS = 'https://api.descope.com/v1/apps/P2testproject0001';
-
-const subject = (sub: string, email: string | null = OWNER_EMAIL, emailVerified = true): VerifiedSubject => ({
-  providerKey: 'descope',
-  issuer: ISS,
-  subject: sub,
-  email,
-  emailVerified,
-});
+let workspaces: WorkspaceResolver;
+let directory: DatabaseOwnerDirectory;
+const POLICY = { absoluteTtlMs: 8 * 3600_000, idleTtlMs: 3600_000 };
 
 beforeAll(async () => {
   db = await startKawalysDb();
-  resolver = new PrincipalResolver({ authPool: db.auth, appPool: db.app, ownerEmail: 'Owner@Example.test' });
-  sessions = new SessionStore(db.auth);
+  workspaces = new WorkspaceResolver(db.app, db.auth);
+  directory = new DatabaseOwnerDirectory(OWNER, db.auth, workspaces);
 }, 180_000);
 
 afterAll(async () => {
@@ -34,138 +28,149 @@ afterAll(async () => {
 
 const count = async (sql: string) => Number((await db!.admin.query(sql)).rows[0].n);
 
-describe('owner sign-in (single owner, Personal Alpha)', () => {
-  it('refuses an unverified or missing email before any owner exists', async () => {
-    await expect(resolver.signIn(subject('U-x', OWNER_EMAIL, false))).rejects.toBeInstanceOf(AuthRefused);
-    await expect(resolver.signIn(subject('U-x', null))).rejects.toBeInstanceOf(AuthRefused);
-    await expect(resolver.signIn(subject('U-x', 'someone@example.test'))).rejects.toBeInstanceOf(AuthRefused);
+describe('DatabaseOwnerDirectory (owner = the configured identity)', () => {
+  it('resolves nobody but the configured triple, and creates nothing for strangers', async () => {
+    await expect(directory.resolve({ ...OWNER, subject: 'UsomeoneElse0002' })).resolves.toBeNull();
+    await expect(directory.resolve({ ...OWNER, issuer: 'https://api.descope.com/v1/apps/P2rtProject0001' })).resolves.toBeNull();
+    await expect(new DatabaseOwnerDirectory(null, db!.auth, workspaces).resolve(OWNER)).resolves.toBeNull();
     expect(await count('SELECT count(*) AS n FROM kawalys.users')).toBe(0);
   });
 
-  it('only one of two concurrent first sign-ins can become the owner', async () => {
-    const results = await Promise.allSettled([resolver.signIn(subject('U-owner-1')), resolver.signIn(subject('U-rival-2'))]);
-    const ok = results.filter((r) => r.status === 'fulfilled');
-    expect(ok).toHaveLength(1);
+  it('binds the owner exactly once, even for concurrent first sign-ins', async () => {
+    const [a, b] = await Promise.all([directory.resolve(OWNER), directory.resolve(OWNER)]);
+    expect(a).not.toBeNull();
+    expect(b).toEqual(a);
+    expect(a!.role).toBe('owner');
+    expect(a!.userId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(await count('SELECT count(*) AS n FROM kawalys.users')).toBe(1);
     expect(await count('SELECT count(*) AS n FROM kawalys.owner_binding')).toBe(1);
-    expect(await count('SELECT count(*) AS n FROM kawalys.external_identity_links')).toBe(1);
   });
 
-  it('binds the owner once: user, identity link, workspace, membership and one audit row', async () => {
-    const binding = (await db!.admin.query('SELECT l.subject, b.user_id, b.owner_workspace_id AS workspace_id FROM kawalys.owner_binding b JOIN kawalys.external_identity_links l ON l.user_id = b.user_id')).rows[0];
-    const p = await resolver.signIn(subject(binding.subject));
-    expect(p).toMatchObject({ userId: binding.user_id, workspaceId: binding.workspace_id, role: 'owner' });
-    expect(p.capabilities).toContain('evidence.read');
-    expect(p.capabilities).not.toContain('evidence.ingest');
-    const inWs = await runWithWorkspaceContext(db!.app, p.workspaceId, async (c) => ({
-      ws: (await c.query('SELECT count(*) AS n FROM workspaces')).rows[0].n,
-      members: (await c.query(`SELECT count(*) AS n FROM memberships WHERE user_id = $1 AND role = 'owner'`, [p.userId])).rows[0].n,
+  it('creates the owner workspace, membership and one audit row', async () => {
+    const p = await workspaces.forUser((await directory.resolve(OWNER))!.userId);
+    expect(p).toMatchObject({ role: 'owner' });
+    expect(p!.capabilities).toContain('evidence.read');
+    expect(p!.capabilities).not.toContain('evidence.ingest');
+    const inWs = await runWithWorkspaceContext(db!.app, p!.workspaceId, async (c) => ({
+      members: (await c.query(`SELECT count(*) AS n FROM memberships WHERE user_id = $1`, [p!.userId])).rows[0].n,
       audit: (await c.query(`SELECT count(*) AS n FROM audit_events WHERE action = 'owner.bound'`)).rows[0].n,
     }));
-    expect(inWs).toEqual({ ws: '1', members: '1', audit: '1' });
+    expect(inWs).toEqual({ members: '1', audit: '1' });
   });
 
-  it('a later sign-in of the same subject resolves the same principal, even without an email claim', async () => {
-    const { subject: sub } = (await db!.admin.query('SELECT subject FROM kawalys.external_identity_links')).rows[0];
-    const a = await resolver.signIn(subject(sub));
-    const b = await resolver.signIn(subject(sub, null, false));
-    expect(b).toEqual(a);
-  });
-
-  it('refuses any other subject once the owner is bound, even with the owner email', async () => {
-    await expect(resolver.signIn(subject('U-intruder-3'))).rejects.toBeInstanceOf(AuthRefused);
+  it('fails closed when the configured owner changes after binding', async () => {
+    const changed = new DatabaseOwnerDirectory({ ...OWNER, subject: 'UnewOwner0003' }, db!.auth, workspaces);
+    await expect(changed.resolve({ ...OWNER, subject: 'UnewOwner0003' })).resolves.toBeNull();
     expect(await count('SELECT count(*) AS n FROM kawalys.users')).toBe(1);
   });
 
-  it('refuses a disabled identity link and a disabled user', async () => {
-    const { subject: sub, user_id } = (await db!.admin.query('SELECT subject, user_id FROM kawalys.external_identity_links')).rows[0];
+  it('refuses a disabled identity link or user', async () => {
+    const { userId } = (await directory.resolve(OWNER))!;
     await db!.admin.query(`UPDATE kawalys.external_identity_links SET status = 'disabled', disabled_at = now()`);
-    await expect(resolver.signIn(subject(sub))).rejects.toBeInstanceOf(AuthRefused);
+    await expect(directory.resolve(OWNER)).resolves.toBeNull();
+    await expect(workspaces.forUser(userId)).resolves.toBeNull();
     await db!.admin.query(`UPDATE kawalys.external_identity_links SET status = 'active', disabled_at = NULL`);
-    await db!.admin.query(`UPDATE kawalys.users SET status = 'disabled' WHERE id = $1`, [user_id]);
-    await expect(resolver.signIn(subject(sub))).rejects.toBeInstanceOf(AuthRefused);
-    await expect(resolver.forUser(user_id)).resolves.toBeNull();
-    await db!.admin.query(`UPDATE kawalys.users SET status = 'active' WHERE id = $1`, [user_id]);
-  });
-});
-
-describe('owner subject pin (KAWALYS_OWNER_SUBJECT)', () => {
-  it('when configured, only that exact subject may bind, even with the verified owner email', () => {
-    expect(mayBindOwner(subject('U-pinned'), OWNER_EMAIL, 'U-pinned')).toBe(true);
-    expect(mayBindOwner(subject('U-not-pinned'), OWNER_EMAIL, 'U-pinned')).toBe(false);
-    expect(mayBindOwner(subject('U-any'), OWNER_EMAIL, undefined)).toBe(true);
-    expect(mayBindOwner(subject('U-any', OWNER_EMAIL, false), OWNER_EMAIL, undefined)).toBe(false);
-    expect(mayBindOwner(subject('U-pinned', 'other@example.test'), OWNER_EMAIL, 'U-pinned')).toBe(false);
-    expect(() => new PrincipalResolver({ authPool: db!.auth, appPool: db!.app, ownerEmail: OWNER_EMAIL, ownerSubject: '' })).toThrow(/subject/);
-  });
-});
-
-describe('sessions', () => {
-  let userId = '';
-  beforeAll(async () => {
-    userId = (await db!.admin.query('SELECT user_id FROM kawalys.owner_binding')).rows[0].user_id;
-  });
-
-  it('stores only a SHA-256 hash of an opaque 256-bit token', async () => {
-    const { token, sessionId } = await sessions.create(userId);
-    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    const row = (await db!.admin.query('SELECT credential_hash FROM kawalys.sessions WHERE id = $1', [sessionId])).rows[0];
-    expect(Buffer.from(row.credential_hash).equals(createHash('sha256').update(token).digest())).toBe(true);
-    expect(JSON.stringify(row)).not.toContain(token);
-    await expect(sessions.findActive(token)).resolves.toEqual({ sessionId, userId });
-  });
-
-  it('refuses a revoked, an absolutely expired and an idle session', async () => {
-    const revoked = await sessions.create(userId);
-    await sessions.revoke(revoked.sessionId);
-    await expect(sessions.findActive(revoked.token)).resolves.toBeNull();
-
-    const expired = await sessions.create(userId);
-    await db!.admin.query(`UPDATE kawalys.sessions SET absolute_expires_at = now() - interval '1 second' WHERE id = $1`, [expired.sessionId]);
-    await expect(sessions.findActive(expired.token)).resolves.toBeNull();
-
-    const idle = await sessions.create(userId);
-    await db!.admin.query(`UPDATE kawalys.sessions SET last_seen_at = now() - interval '13 hours' WHERE id = $1`, [idle.sessionId]);
-    await expect(sessions.findActive(idle.token)).resolves.toBeNull();
-  });
-
-  it('refuses a session of a disabled user', async () => {
-    const s = await sessions.create(userId);
     await db!.admin.query(`UPDATE kawalys.users SET status = 'disabled' WHERE id = $1`, [userId]);
-    await expect(sessions.findActive(s.token)).resolves.toBeNull();
+    await expect(directory.resolve(OWNER)).resolves.toBeNull();
     await db!.admin.query(`UPDATE kawalys.users SET status = 'active' WHERE id = $1`, [userId]);
   });
 
-  it('refuses a session once the user’s identity link is disabled', async () => {
-    const s = await sessions.create(userId);
-    await db!.admin.query(`UPDATE kawalys.external_identity_links SET status = 'disabled', disabled_at = now()`);
-    await expect(sessions.findActive(s.token)).resolves.toBeNull();
-    await expect(resolver.forUser(userId)).resolves.toBeNull();
-    await db!.admin.query(`UPDATE kawalys.external_identity_links SET status = 'active', disabled_at = NULL`);
+  it('has no workspace for a non-database user id (the in-memory owner id)', async () => {
+    await expect(workspaces.forUser('kawalys-owner')).resolves.toBeNull();
+  });
+});
+
+describe('PostgresSessionStore behind SessionService', () => {
+  let sessions: SessionService;
+  let userId = '';
+  beforeAll(async () => {
+    sessions = new SessionService(new PostgresSessionStore(db!.auth), Date.now, POLICY);
+    userId = (await directory.resolve(OWNER))!.userId;
+  });
+
+  it('stores only the SHA-256 of the token, with the verified triple', async () => {
+    const issued = await sessions.issue({ userId, role: 'owner' }, OWNER);
+    const row = (await db!.admin.query('SELECT * FROM kawalys.sessions WHERE credential_hash = $1', [createHash('sha256').update(issued.rawToken).digest()])).rows[0];
+    expect(row).toMatchObject({ user_id: userId, provider_key: OWNER.providerKey, issuer: OWNER.issuer, subject: OWNER.subject });
+    expect(JSON.stringify(row)).not.toContain(issued.rawToken);
+    const live = await sessions.authenticate(issued.rawToken);
+    expect(live).toMatchObject({ userId, subject: OWNER });
+  });
+
+  it('survives a restart: a new pool and store read the same session', async () => {
+    const issued = await sessions.issue({ userId, role: 'owner' }, OWNER);
+    const pool = new pg.Pool({ connectionString: db!.authUrl, max: 1 });
+    try {
+      const fresh = new SessionService(new PostgresSessionStore(pool), Date.now, POLICY);
+      await expect(fresh.authenticate(issued.rawToken)).resolves.toMatchObject({ userId });
+    } finally {
+      await pool.end();
+    }
+  });
+
+  it('ends revoked, absolutely expired and idle sessions; revokeAllForUser counts', async () => {
+    const r = await sessions.issue({ userId, role: 'owner' }, OWNER);
+    expect(await sessions.revoke(r.rawToken)).toBe(true);
+    await expect(sessions.authenticate(r.rawToken)).resolves.toBeNull();
+
+    const expired = await sessions.issue({ userId, role: 'owner' }, OWNER);
+    await db!.admin.query(`UPDATE kawalys.sessions SET absolute_expires_at = now() - interval '1 second' WHERE credential_hash = $1`, [
+      createHash('sha256').update(expired.rawToken).digest(),
+    ]);
+    await expect(sessions.authenticate(expired.rawToken)).resolves.toBeNull();
+
+    const idle = await sessions.issue({ userId, role: 'owner' }, OWNER);
+    await db!.admin.query(`UPDATE kawalys.sessions SET last_seen_at = now() - interval '2 hours' WHERE credential_hash = $1`, [
+      createHash('sha256').update(idle.rawToken).digest(),
+    ]);
+    await expect(sessions.authenticate(idle.rawToken)).resolves.toBeNull();
+
+    await sessions.issue({ userId, role: 'owner' }, OWNER);
+    expect(await sessions.revokeAllForUser(userId)).toBeGreaterThan(0);
+    expect(await sessions.revokeAllForUser('kawalys-owner')).toBe(0);
+  });
+
+  it('never returns a session past its database expiry, even if the app clock runs behind', async () => {
+    const behind = new SessionService(new PostgresSessionStore(db!.auth), () => Date.now() - 3 * 3600_000, POLICY);
+    const s = await sessions.issue({ userId, role: 'owner' }, OWNER);
+    await db!.admin.query(`UPDATE kawalys.sessions SET absolute_expires_at = now() - interval '1 second' WHERE credential_hash = $1`, [
+      createHash('sha256').update(s.rawToken).digest(),
+    ]);
+    await expect(behind.authenticate(s.rawToken)).resolves.toBeNull();
+  });
+
+  it('refuses to store a session for a non-database user id', async () => {
+    await expect(sessions.issue({ userId: 'kawalys-owner', role: 'owner' }, OWNER)).rejects.toThrow(/user id/);
   });
 
   it('bounds sessions in the database: lifetime cap, one-way revocation, no future activity', async () => {
     const lifetime = await db!.auth
-      .query(`INSERT INTO kawalys.sessions (user_id, credential_hash, absolute_expires_at) VALUES ($1, $2, now() + interval '30 days')`, [
-        userId,
-        Buffer.alloc(32, 7),
-      ])
+      .query(
+        `INSERT INTO kawalys.sessions (user_id, credential_hash, absolute_expires_at, provider_key, issuer, subject)
+         VALUES ($1, $2, now() + interval '30 days', 'descope', 'i', 's')`,
+        [userId, Buffer.alloc(32, 7)],
+      )
       .catch((e: unknown) => e);
     expect(sqlState(lifetime)).toBe('23514');
-    const s = await sessions.create(userId);
-    await sessions.revoke(s.sessionId);
-    const unrevoke = await db!.auth.query('UPDATE kawalys.sessions SET revoked_at = NULL WHERE id = $1', [s.sessionId]).catch((e: unknown) => e);
-    expect(sqlState(unrevoke)).toBe('42501');
-    const live = await sessions.create(userId);
+    const futureInsert = await db!.auth
+      .query(
+        `INSERT INTO kawalys.sessions (user_id, credential_hash, absolute_expires_at, last_seen_at, provider_key, issuer, subject)
+         VALUES ($1, $2, now() + interval '1 hour', now() + interval '1 day', 'descope', 'i', 's')`,
+        [userId, Buffer.alloc(32, 8)],
+      )
+      .catch((e: unknown) => e);
+    expect(sqlState(futureInsert)).toBe('42501');
+    const s = await sessions.issue({ userId, role: 'owner' }, OWNER);
+    const hash = createHash('sha256').update(s.rawToken).digest();
+    await sessions.revoke(s.rawToken);
+    expect(sqlState(await db!.auth.query('UPDATE kawalys.sessions SET revoked_at = NULL WHERE credential_hash = $1', [hash]).catch((e: unknown) => e))).toBe('42501');
+    const live = await sessions.issue({ userId, role: 'owner' }, OWNER);
     const future = await db!.auth
-      .query(`UPDATE kawalys.sessions SET last_seen_at = now() + interval '1 day' WHERE id = $1`, [live.sessionId])
+      .query(`UPDATE kawalys.sessions SET last_seen_at = now() + interval '1 day' WHERE credential_hash = $1`, [
+        createHash('sha256').update(live.rawToken).digest(),
+      ])
       .catch((e: unknown) => e);
     expect(sqlState(future)).toBe('42501');
-  });
-
-  it('returns null for malformed tokens', async () => {
-    for (const t of ['', 'short', 'x'.repeat(43) + '=', "' OR 1=1 --".padEnd(43, 'a')]) {
-      await expect(sessions.findActive(t)).resolves.toBeNull();
-    }
   });
 });
 
@@ -186,8 +191,7 @@ describe('kawalys_auth role', () => {
       'DELETE FROM kawalys.sessions',
       'DELETE FROM kawalys.owner_binding',
     ]) {
-      const err = await db!.auth.query(sql).catch((e: unknown) => e);
-      expect(sqlState(err)).toBe('42501');
+      expect(sqlState(await db!.auth.query(sql).catch((e: unknown) => e))).toBe('42501');
     }
   });
 });

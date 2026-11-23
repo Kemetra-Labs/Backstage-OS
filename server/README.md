@@ -1,15 +1,13 @@
 # Synthetic Kawalys BFF (BACK-69, T0)
 
 A minimal NestJS service that returns **synthetic** data only. It exists to prove the error and
-request-id conventions before any real backend work. By default (synthetic mode) the running service
-has no database connection, no authentication, no connectors, no outbound network calls and no secrets.
-`server/` also holds a PostgreSQL foundation (BACK-55 S1), real-mode authentication (BACK-56 S2) and an
-evidence API (BACK-55 S3); see below. All are tested locally and stay off unless every `KAWALYS_*` variable in `.env.example` is set.
-Nothing is provisioned: no Descope project, no database, no hosting. Nothing in the prototype
-(`index.html`, `js/`, `css/`) or `app/` calls the server yet.
+request-id conventions before any real backend work. With no `KAWALYS_*` variable set it has no database, no connectors and no secrets, and every
+protected route is denied. It carries the owner-only authentication foundation (BACK-47, BACK-56, PR #76), and a PostgreSQL foundation, durable
+sessions and an evidence API (BACK-55) that are active only when both database URLs are set. All of it is tested locally and nothing is provisioned:
+no Descope project, no database, no hosting. Nothing in the prototype (`index.html`, `js/`, `css/`) or `app/` calls the server yet.
 
-The `x-kawalys-demo-persona` header is a **display switch, not authorization**: any caller can set it,
-and it is never used as authentication.
+The `x-kawalys-demo-persona` header is a **display switch, not authorization**: any caller can set it. The auth
+guard never reads it.
 
 ## Commands
 
@@ -30,10 +28,15 @@ NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental
 
 | Route | Behaviour |
 | --- | --- |
-| `GET /process` | Process liveness only: `{ service, process: "up", synthetic: true }`. Never says "healthy". |
-| `GET /demo/evidence/:id` | Synthetic evidence. Fixture ids `E-1` (visible to all) and `E-5` (technical persona only). Persona comes from `x-kawalys-demo-persona`: `technical`, `owner` or `nontechnical` (default). |
-| `POST /auth/session`, `POST /auth/signout`, `GET /me` | Exist **only in real mode** (see Authentication below). In synthetic mode they are not registered and answer 404. |
-| `GET /evidence`, `GET /evidence/:id`, `POST /investigations/:id/decisions` | Exist **only in real mode** and always require a session (see Evidence API below). In synthetic mode they answer 404. |
+| `GET /process` | Public. Process liveness only: `{ service, process: "up", synthetic: true }`. Never says "healthy". |
+| `POST /auth/session` | Public. The only route that accepts a Descope session JWT (`Authorization: Bearer <jwt>`). On success: 200, `{ user: { id, role }, expires_at }` and the session cookie. |
+| `GET /auth/me` | Session required. The signed-in user. |
+| `DELETE /auth/session` | Session required. Revokes the current session and clears the cookie (204). |
+| `DELETE /auth/sessions` | Session required. Revokes every session of the signed-in user (204). |
+| `GET /demo/evidence/:id` | Session required. Synthetic evidence. Fixture ids `E-1` (visible to all) and `E-5` (technical persona only). Persona comes from `x-kawalys-demo-persona`: `technical`, `owner` or `nontechnical` (default). |
+| `GET /evidence`, `GET /evidence/:id`, `POST /investigations/:id/decisions` | Exist **only when both database URLs are set** (see Evidence API below). Session plus a workspace capability required. Without the database they answer 404. |
+
+Every route is protected unless it is marked `@Public()` (the guard is global), so a new controller is denied by default.
 
 ## Error behaviour
 
@@ -57,8 +60,8 @@ messages are fixed:
 
 ## Database foundation (BACK-55 S1)
 
-Local code and tests only (owner approved gate A on 2026-11-23). Nothing is provisioned in any cloud,
-and the synthetic service does not use this code. Only real mode (Authentication, below) opens database pools.
+Local code and tests only (owner approved gate A on 2026-11-23). Nothing is provisioned in any cloud.
+The server opens database pools only when both `KAWALYS_DATABASE_URL_APP` and `KAWALYS_DATABASE_URL_AUTH` are set (see "Durable sessions and owner identity" below).
 
 - `migrations/0001_foundation.sql` and `migrations/README.md`: the first migration, applied by our own runner `src/db/migrate.ts` into schema `kawalys`.
 - Roles: `kawalys_migrator` applies migrations; `kawalys_app` is the runtime role with table-by-table grants. `src/db/provision.ts` and `src/db/runtime-role.ts` create the roles and schema (operator step).
@@ -75,41 +78,66 @@ What this does **not** protect against (by design, state it in reviews):
 - **The table owner.** `kawalys_migrator` (and a superuser) can disable or drop the audit triggers with DDL. Migrations are reviewed; an external audit sink is future work.
 - **Poolers.** Run migrations through a direct connection, not a transaction-mode pooler (the runner's advisory lock needs a session).
 - **Non-superuser provisioning** (Neon's owner role) is not tested yet; checked at gate B.
-- FK checks bypass RLS, so a foreign key can reveal whether a user id exists. Owner insertion rules arrive with BACK-56.
+- FK checks bypass RLS, so a foreign key can reveal whether a user id exists. The owner binding and workspace creation are described under "Durable sessions and owner identity" below.
 
-## Authentication (BACK-56 S2)
+## Authentication (BACK-47, BACK-56)
 
-Local code and tests only (owner approved gate A on 2026-11-23). Nothing is provisioned: no Descope project, no database, no hosting. Tests use locally generated RS256 keys (no network) and disposable Docker Postgres.
+**Does nothing live until Kawalys Descope configuration is set.** Unconfigured, every protected route is denied and no
+network call is made.
 
-**Real mode vs synthetic mode.** `src/config/runtime-config.ts` reads five required variables (`KAWALYS_DATABASE_URL_APP`, `KAWALYS_DATABASE_URL_AUTH`, `KAWALYS_DESCOPE_PROJECT_ID`, `KAWALYS_OWNER_EMAIL`, `KAWALYS_ALLOWED_ORIGIN`) and one optional variable (`KAWALYS_OWNER_SUBJECT`); see `.env.example`. With none of the five set, the service runs in synthetic mode: only the synthetic routes exist and there are **no auth routes**, so there is no unauthenticated fallback. With any of the five set, all five are required, or boot fails naming the missing variables (never their values). `KAWALYS_OWNER_EMAIL` must be ASCII (checked before lower-casing) and `KAWALYS_OWNER_SUBJECT`, when set, must be 1-256 printable ASCII characters. The two database URLs must use different roles, and the origin must be https (http only for localhost) with no path. `src/main.ts` calls `src/real-mode.ts`, which builds the dependencies, and `src/create-app.ts` registers `AuthModule` only when they exist.
+Chain: provider JWT, verified once at `POST /auth/session` -> the full `(providerKey, issuer, subject)` triple ->
+exactly one configured owner identity (the issuer is part of the match) -> an opaque Kawalys session. Provider claims
+(admin, email, groups) grant nothing, and a provider JWT is never accepted on any other route.
 
-**Routes (real mode only).**
+- **Verifier**: `src/auth/identity/descope-verifier.ts`, behind `IdentityVerificationPort` (jose, RS256 only, `exp` / `sub` / `iat`
+  required, audience = project id and required, one pinned issuer, token-age cap, refresh tokens refused, impersonation tokens refused). Results are
+  `verified`, `refused`, `unavailable` or `unconfigured`; all but the first deny, and clients cannot tell them apart.
+- **Sessions**: 32 random bytes, base64url; only the SHA-256 is stored (`SessionStore`; in-memory unless the database is configured, see below). Absolute expiry
+  (default 8 h) and idle expiry (default 1 h). Revocation ends the session. On every request the session's triple is
+  rechecked against the current owner configuration, so changing the owner kills old sessions. With the in-memory store a restart drops all
+  sessions (fail closed); the Postgres store below keeps them.
+- **Transport**: one cookie, `__Host-kawalys_session`, `Secure; HttpOnly; SameSite=Strict; Path=/`, with `Cache-Control: no-store`
+  on auth responses. A repeated session cookie is refused. No CORS is enabled and the session is never read from a header
+  or query string.
+- **Errors**: every denial is the standard `not_found` envelope (policy M05-D05-B). The only log lines are fixed
+  operator messages for an outage or a missing configuration; never a token, claim or subject.
+- **No passwords** are stored or handled. There is no sign-up and no team management.
 
-| Route | Behaviour |
+Configuration (names only; none is a secret):
+
+| Variable | Meaning |
 | --- | --- |
-| `POST /auth/session` | `Origin` must equal `KAWALYS_ALLOWED_ORIGIN` exactly. Body `{ "token": "<Descope session JWT>" }`. On success: 204 and a `Set-Cookie` session cookie. |
-| `POST /auth/signout` | Needs the same `Origin` and a live session. Revokes the session and clears the cookie (204). |
-| `GET /me` | Needs a live session. Returns `{ userId, workspaceId, role, capabilities }`. |
+| `KAWALYS_DESCOPE_PROJECT_ID` | The Kawalys Descope project id. Must be a separate project from Retail Tower's. |
+| `KAWALYS_OWNER_SUBJECT` | The owner's Descope user id (`sub`). Exactly one owner. |
+| `KAWALYS_DESCOPE_ISSUER` | Optional https issuer override (for example a custom domain). Default `https://api.descope.com/v1/apps/<project id>`. |
+| `KAWALYS_DESCOPE_MAX_TOKEN_AGE_SECONDS` | Optional, 60-3600, default 900. |
+| `KAWALYS_SESSION_ABSOLUTE_TTL_SECONDS` | Optional, 300-86400, default 28800. |
+| `KAWALYS_SESSION_IDLE_TTL_SECONDS` | Optional, 60 up to the absolute TTL, default 3600. |
 
-**Cookie** (`src/auth/cookie.ts`): name `__Host-kawalys_session`; attributes `Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Strict`, with no `Domain`. Sign-out sends the same name with an empty value and `Max-Age=0`. A request carrying the cookie more than once is treated as having no session.
+In production (`NODE_ENV=production`) the project id and owner subject are required, or the server refuses to boot. A
+set but malformed value always refuses to boot. Retail Tower's `DESCOPE_*` variables are never read.
 
-**Sessions** (`src/auth/session-store.ts`): an opaque 256-bit token; only its SHA-256 hash is stored. Idle timeout 12 hours (sliding), absolute cap 24 hours; activity never extends the absolute cap. A session is live only while its user is active **and** the user has an active identity link: disabling the identity link (or the user) ends live sessions, not only new sign-ins. Signing in again revokes the session the browser already holds (if its cookie is still live) before creating the new one, so sessions do not pile up and a planted cookie cannot survive a fresh sign-in.
+Test doubles (a fake verifier, clock, store, directory) exist only under `test/` and are injected through `createApp`;
+`createApp` refuses any override in production, and `main.ts` passes none.
 
-**Descope verification** (`src/auth/descope-verifier.ts`, behind the provider-neutral port in `identity-provider.port.ts`):
+Still needed before a real sign-in (K-ID-1b): a separate Kawalys Descope project and a sign-in flow, the owner's user
+id, confirmation of the real token's `iss` and `aud` against this verifier, the TLS front for the `Secure` cookie, and
+an owner decision on session lifetimes and MFA. Not done here: rate limiting on `POST /auth/session` (the service is
+loopback-only today) and any UI.
 
-- RS256 only (no `none`, no HMAC), signature checked against this project's JWKS.
-- Issuer: the canonical `https://api.descope.com/v1/apps/<projectId>`, or the legacy forms `https://api.descope.com/<projectId>` and the bare project id. Audience: the project id.
-- `exp`, `iat` and `sub` are required. The token may be at most 15 minutes old (it is exchanged once for a local session). Clock tolerance 5 seconds.
-- Only Descope session tokens are accepted: `drn` must be exactly `DS`. Refresh tokens (`DSR`), any other kind and `token_type` `refresh` are refused.
-- Impersonation tokens are refused: any token with an `act` or `dact` claim.
-- The email must be ASCII (printable, 3-320 characters), checked before lower-casing, so non-ASCII characters that fold to ASCII on lower-casing (for example U+212A) cannot collide. The same rule applies to `KAWALYS_OWNER_EMAIL`.
-- Any failure throws one generic error; only jose's fixed `ERR_*` code is kept, never claims.
+### Durable sessions and owner identity (BACK-55)
 
-**Single-owner binding** (`src/auth/principal-resolver.ts`, `migrations/0002_identity.sql`): the first sign-in whose provider-verified email (`email_verified` must be `true`) equals `KAWALYS_OWNER_EMAIL` becomes the single owner. The user, the identity link and the `owner_binding` row are written in one transaction. The singleton primary key on `owner_binding` makes a concurrent second binding fail and roll back, so the race is safe. After that the owner is pinned to (provider, issuer, subject): the email is no longer consulted and every other subject is refused. The owner workspace and membership are created on first use, under RLS, with an `owner.bound` audit row.
+Local code and tests only (owner approved gate A on 2026-11-23). Active only when **both** `KAWALYS_DATABASE_URL_APP` and `KAWALYS_DATABASE_URL_AUTH` are set. Neither set: the behaviour above (in-memory sessions, no evidence routes). One set: boot fails naming the missing variable. The two URLs must be postgres URLs that name different roles (`src/config/database-config.ts`). At boot, `verifyRuntimeRole` checks both logins (`src/db/open-database.ts`) and boot fails on an unsafe one; both pools have an `error` listener so a dropped idle connection logs one fixed line instead of crashing the process. `src/main.ts` passes the checked pools to `createApp` as `{ database }`, and `src/create-app.ts` wires the pieces below through the `AuthPersistence` parameter of `buildAuth`. Test overrides are still refused in production; the persistence wiring is not an override.
 
-**Owner subject pin (optional).** If `KAWALYS_OWNER_SUBJECT` is set, only the Descope subject equal to it may become the owner; a token with the verified owner email but another subject is refused. Setting it is recommended before the first real sign-in. Without it, the first token carrying the verified owner email wins permanently.
+- **Postgres session store** (`src/auth/session/postgres-session-store.ts`): the `SessionStore` port from #76 on the `kawalys_auth` pool. Only the SHA-256 hash of the token is stored. Revocation sets `revoked_at` (one-way, no DELETE grant), and a revoked row is never returned. A row past its `absolute_expires_at` by the database clock is never returned either, even if the app clock runs behind; activity times are capped at the database clock.
+- **JSON bodies only** (`src/create-app.ts`): Nest's default urlencoded parser is off. A plain HTML form on another localhost port is the same site, so the `SameSite=Strict` cookie would be sent; its form body now never parses and the request is a 400, so it cannot create a decision.
+- **Database owner directory** (`src/auth/identity/database-owner-directory.ts`): the `IdentityDirectory` for the same owner configured by `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` (the database never decides who the owner is). The first matching sign-in creates a stable uuid user, the identity link and the `owner_binding` row in one transaction. The singleton primary key makes a concurrent second binding fail, so the race is safe. If the configured owner changes after binding, the new identity cannot bind and every sign-in is refused (fail closed) until an operator moves the binding.
+- **Workspace guard** (`src/auth/workspace-resolver.ts`, `src/auth/workspace.guard.ts`): runs after #76's global `AuthGuard`. It resolves the user's workspace, role and capabilities from the database; the owner workspace and membership are created on first use under RLS with an `owner.bound` audit row. A route behind `WorkspaceGuard` that declares no capability is refused, and a missing capability is refused; both answer 404.
+- **Verifier additions** (`src/auth/identity/descope-verifier.ts`): beyond #76, an allowlist (only `drn` `DS`; `token_type` `refresh` is refused) and refusal of impersonation tokens (any token with an `act` or `dact` claim).
+- **Migration** `migrations/0002_identity.sql`: `owner_binding` (singleton, no email), subject columns on `sessions`, a session lifetime cap (`absolute_expires_at` at most `created_at` plus 24 hours 5 minutes; `created_at` is not insertable by the auth role), a trigger (on insert and update) that makes revocation one-way and refuses a `last_seen_at` later than `now()`, and the `kawalys_auth` grants.
+- **Database roles**: `kawalys_migrator` (applies migrations), `kawalys_app` (workspace data under forced RLS) and `kawalys_auth` (identity and session tables only: select and insert on users, identity links and the owner binding; on sessions select, insert of the credential columns, and update of `last_seen_at` and `revoked_at` only; no workspace table, no DELETE). `src/db/provision.ts` creates them.
 
-**Capabilities** (`src/auth/capabilities.ts`, `src/auth/capability.guard.ts`): deny by default. A route behind `CapabilityGuard` that declares no capability is refused, and a missing capability is a 404.
+**Capabilities** (`src/auth/capabilities.ts`): deny by default; only the `owner` role exists.
 
 | Capability | owner |
 | --- | --- |
@@ -120,35 +148,19 @@ Local code and tests only (owner approved gate A on 2026-11-23). Nothing is prov
 | `audit.read` | yes |
 | `evidence.ingest` | no (server-internal connector path; no user role holds it) |
 
-Effective permission for source data is the role capability AND an active source grant (see Evidence API below). The evidence routes use `CapabilityGuard`.
-
-**Every authentication failure is a 404** (policy M05-D05-B): bad or missing token, wrong or missing `Origin`, unknown or expired session, refused owner binding, missing capability. The body is the fixed envelope; no reason, claim or token is echoed. The persona header is never authentication.
-
-**Stated exceptions to "every failure is 404".** Both use the fixed envelope and neither depends on who the caller is:
-
-- A database failure on an auth route is a 500 `internal_error`.
-- Malformed or oversized JSON is rejected by the global body parser for every path (not only auth routes) with the fixed `validation_error` envelope (status 400).
-
-**Database limits on sessions** (`migrations/0002_identity.sql`). Even a compromised `kawalys_auth` login cannot mint a long session, undo a revocation or push activity into the future: `created_at` is set by a database default and is not insertable by the auth role, and a CHECK caps `absolute_expires_at` at `created_at` plus 24 hours; a trigger (enabled ALWAYS) makes revocation one-way and refuses a `last_seen_at` later than `now()`.
-
-**Pool errors.** Both pools (app and auth) have an `error` listener (`src/real-mode.ts`), so a dropped idle connection (for example a serverless database scaling to zero) logs one fixed line instead of crashing the process.
-
-**Database roles.** There are now three: `kawalys_migrator` (applies migrations), `kawalys_app` (workspace data under forced RLS) and `kawalys_auth` (identity and session tables only: select and insert on users, identity links and the owner binding; on sessions select, insert of the credential columns, and update of `last_seen_at` and `revoked_at` only; no workspace table, no DELETE). `src/db/provision.ts` creates them. At boot, `verifyRuntimeRole` runs against both the app and the auth login and refuses an unsafe one (the checks listed under the database foundation) before the server listens.
-
-**Dependency.** `jose` 6.2.16, exact pin (6.2.18 was skipped because it was only 5 days old). Provenance of the adapted files is in [THIRD_PARTY.md](THIRD_PARTY.md).
+Effective permission for source data is the role capability AND an active source grant (see Evidence API below).
 
 **Open for gate B:**
 
 - The Descope project is not created.
-- Whether Descope session JWTs carry the `email` and `email_verified` claims must be checked; a JWT template may be needed. Without them the owner binding refuses every sign-in.
 - Real sign-in has never been run against Descope.
-- Decide whether to set `KAWALYS_OWNER_SUBJECT` (recommended before the first real sign-in).
 - Database TLS (`sslmode=verify-full`) for non-local hosts is not enforced yet.
-- Deny-by-default global guards, rate limiting and security event logging are follow-ups.
+- Provisioning as a non-superuser (Neon's owner role) is untested.
+- Changing the owner after binding needs an operator step: the new identity is refused until the existing `owner_binding` is moved.
 
 ## Evidence API (BACK-55 S3)
 
-Local code and tests only (owner approved gate A on 2026-11-23). Nothing is provisioned. Evidence routes exist only in real mode, are registered together with `AuthModule` (`createApp` refuses evidence without auth), and always require a session and a capability.
+Local code and tests only (owner approved gate A on 2026-11-23). Nothing is provisioned. Evidence routes exist only when both database URLs are set. They are protected by #76's global `AuthGuard` (a live session) and then by `WorkspaceGuard` (a capability). There is no Origin check: the session cookie is `SameSite=Strict` and no CORS is enabled, the same model as #76.
 
 **Tables** (`migrations/0003_evidence.sql`): `projects`, `sources`, `source_grants`, `investigations`, `evidence` and `evidence_citations`. All are workspace-scoped with forced RLS. Every reference between them is a composite foreign key that includes `workspace_id`, because foreign-key checks bypass RLS; no row can point into another workspace. Evidence also references its source and investigation through `(workspace_id, project_id, id)`, and citations stay in the decision's project, so nothing links across projects either. GitHub repository names are stored lower-case (one repository is one source).
 
@@ -170,9 +182,9 @@ Local code and tests only (owner approved gate A on 2026-11-23). Nothing is prov
 | --- | --- |
 | `GET /evidence` | Needs a session and `evidence.read`. Optional filters `sourceId`, `investigationId`, `projectId`. An unknown, malformed or repeated filter value gives an empty list. Returns `{ items }`, newest first, capped at 500 rows. |
 | `GET /evidence/:id` | Needs a session and `evidence.read`. 404 when the record is absent or not visible to the caller. |
-| `POST /investigations/:id/decisions` | Needs the allowed `Origin`, a session and `decision.create`. Body `{ decision, rationale, evidenceIds }` (text without NUL or unpaired surrogates; at most 50 ids). Every cited id must be source evidence of the investigation's project, visible to the caller. The decision and its audit row commit in one transaction. Returns 201 `{ id }`. |
+| `POST /investigations/:id/decisions` | Needs a session and `decision.create`. Body `{ decision, rationale, evidenceIds }` (text without NUL or unpaired surrogates; at most 50 ids). Every cited id must be source evidence of the investigation's project, visible to the caller. The decision and its audit row commit in one transaction. Returns 201 `{ id }`. |
 
-Failures follow the same fixed-envelope policy as authentication (404 for denied or invisible, 400 for an invalid body).
+Failures follow the same fixed-envelope policy as authentication (404 for denied or invisible, 400 for an invalid body, 500 for a database failure).
 
 **Restart test.** `test/evidence/evidence-http.spec.ts` proves that evidence, decisions and sessions survive a full restart with new pools.
 
@@ -186,21 +198,33 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 - Database-role hardening not done yet: `kawalys_app` could insert a `HumanDecision` row directly without an audit row, or a grant for any user id; the application never does, and a later slice can enforce it in the database.
 - There is no way yet for an administrator to revoke another user's grant (single owner).
 
+## Known limits
+
+- No rate limiting on `POST /auth/session` (the service binds loopback only).
+- A database failure in the auth or evidence path answers 500 `internal_error` (fixed body, nothing leaked), not 404.
+- Each evidence request resolves the workspace twice (in the directory recheck and in `WorkspaceGuard`); a performance cost only.
+- Database TLS is not enforced; migrations must use a direct connection, not a transaction-mode pooler.
+- Only the `owner` role exists; there is no sign-up, team management or administrator revocation of another user's grant.
+- No UI or prototype code calls the server.
+- Tests run against disposable local Docker Postgres and locally generated RS256 keys; no real database or Descope project has been used.
+
 ## Provenance
 
-`src/errors/envelope.ts` is copied from Retail Tower, and the database files listed in THIRD_PARTY.md are adapted from it. See [THIRD_PARTY.md](THIRD_PARTY.md) for paths,
-pinned SHA and licence.
+`src/errors/envelope.ts` and `src/auth/tokens.ts` are copied from Retail Tower, the Descope verifier and the database files listed in THIRD_PARTY.md are adapted from it, and the Postgres session store follows a Retail Tower pattern without copying code. See
+[THIRD_PARTY.md](THIRD_PARTY.md) for paths, pinned SHAs, strategy and licence.
 
 ## Rollback
 
-Delete `server/`, then revert the `CLAUDE.md` bullet, the root `NOTICE`, the root `LICENSE`, the
+To remove only the durable layer (BACK-55): delete `server/src/auth/session/postgres-session-store.ts`, `server/src/auth/identity/database-owner-directory.ts`, `server/src/auth/workspace-resolver.ts`, `server/src/auth/workspace.guard.ts`, `server/src/evidence/`, `server/src/db/`, `server/src/audit/`, `server/src/config/database-config.ts`, `server/migrations/` and the matching tests, and restore `create-app.ts` and `main.ts` from `main`. To remove the authentication foundation: delete `server/src/auth/` and `server/test/auth/`, restore `create-app.ts`,
+`health/process.controller.ts` and `test/http/app.spec.ts` from `main`, and remove `jose` from `server/package.json` and
+the lockfile. To remove the whole BFF: delete `server/`, then revert the `CLAUDE.md` bullet, the root `NOTICE`, the root `LICENSE`, the
 `license` field in the root `package.json`, and the "Synthetic BFF" section of the root `README.md`.
 
 ## Out of scope / still gated
 
 - BACK-47 exit criteria for anything beyond this T0.
 - BACK-55 (database) is in progress: S1 and S3 done locally; no provisioned DB.
-- BACK-56 (authentication) is in progress: S2 is done locally (code and tests only; no Descope project, no real sign-in, no provisioned database or hosting).
+- BACK-56 (authentication): the #76 foundation plus durable sessions are done locally; real sign-in is K-ID-1b.
 - BACK-58 (secrets).
 - Correlation helper: deferred because it needs `@opentelemetry/api`.
 - TypeScript 7 (native compiler): `ts-jest` 29 needs the JavaScript compiler API, so the toolchain stays on TypeScript 6.0.3 (BACK-75).

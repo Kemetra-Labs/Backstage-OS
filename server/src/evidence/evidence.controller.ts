@@ -1,6 +1,7 @@
-// Authorized evidence API (BACK-55 S3). Real mode only; every route needs a session and a
-// capability, and every read is filtered by the caller's active source grants. Unknown and
-// invisible records look the same: 404 for one record, an empty list for a filter.
+// Authorized evidence API (BACK-55 S3). Database mode only. The global AuthGuard (#76) requires a live
+// session; WorkspaceGuard then requires a capability; every read is filtered by the caller's active
+// source grants. Unknown and invisible records look the same: 404 for one record, an empty list for a
+// filter. CSRF: the session cookie is SameSite=Strict and no CORS is enabled (same model as #76).
 import {
   BadRequestException,
   Body,
@@ -15,15 +16,20 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { AuthenticatedRequest } from '../auth/auth-deps';
-import { CapabilityGuard, RequireCapability } from '../auth/capability.guard';
-import { OriginGuard, SessionGuard } from '../auth/session.guard';
+import { RequireCapability, WorkspaceGuard, type WorkspaceRequest } from '../auth/workspace.guard';
+import type { WorkspacePrincipal } from '../auth/workspace-resolver';
 import { EvidenceRepository, type DecisionInput } from './evidence.repository';
 import { NotVisibleError, UUID } from './evidence.types';
 
 export const EVIDENCE_REPOSITORY = Symbol('KAWALYS_EVIDENCE_REPOSITORY');
 
-type Req = AuthenticatedRequest & { requestId?: string };
+type Req = WorkspaceRequest;
+
+/** Set by WorkspaceGuard; its absence means a wiring error, never a pass. */
+function workspaceOf(req: Req): WorkspacePrincipal {
+  if (!req.workspace) throw new NotFoundException();
+  return req.workspace;
+}
 
 const optionalId = (value: unknown): string | undefined | null =>
   value === undefined ? undefined : typeof value === 'string' ? value : null;
@@ -45,7 +51,7 @@ function decisionBody(body: unknown, investigationId: string): DecisionInput {
 }
 
 @Controller()
-@UseGuards(SessionGuard, CapabilityGuard)
+@UseGuards(WorkspaceGuard)
 export class EvidenceController {
   constructor(@Inject(EVIDENCE_REPOSITORY) private readonly repo: EvidenceRepository) {}
 
@@ -59,27 +65,26 @@ export class EvidenceController {
     };
     // A repeated or non-string filter is treated like an unknown id: nothing matches.
     if (Object.values(filter).some((v) => v === null)) return { items: [] };
-    const { principal } = req.kawalys!;
+    const principal = workspaceOf(req);
     return { items: await this.repo.list(principal.workspaceId, principal.userId, filter as Record<string, string | undefined>) };
   }
 
   @Get('evidence/:id')
   @RequireCapability('evidence.read')
   async get(@Req() req: Req, @Param('id') id: string) {
-    const { principal } = req.kawalys!;
+    const principal = workspaceOf(req);
     const record = await this.repo.get(principal.workspaceId, principal.userId, id);
     if (!record) throw new NotFoundException();
     return record;
   }
 
   @Post('investigations/:id/decisions')
-  @UseGuards(OriginGuard)
   @RequireCapability('decision.create')
   @HttpCode(201)
   async decide(@Req() req: Req, @Param('id') investigationId: string, @Body() body: unknown) {
     if (!UUID.test(investigationId)) throw new NotFoundException();
     const input = decisionBody(body, investigationId);
-    const { principal } = req.kawalys!;
+    const principal = workspaceOf(req);
     try {
       const id = await this.repo.recordDecision(principal.workspaceId, principal.userId, input, req.requestId ?? null);
       return { id };

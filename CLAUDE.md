@@ -1,12 +1,12 @@
 # Backstage-OS (Kemetra Mission Control prototype)
 
-Static, vanilla HTML/CSS/JS **review prototype**. Demo data only: no backend (beyond the synthetic BFF in server/), auth, AI calls or real GitHub/Jira/Sentry/Datadog/Port access. Never present anything in the UI as live telemetry. Jira home: project `BACK` (BACK-1 epic, BACK-2 UX planning, BACK-4 prototype QA). Read [README.md](README.md) for structure.
+Static, vanilla HTML/CSS/JS **review prototype**. Demo data only: no backend (beyond the synthetic BFF in server/), live auth, AI calls or real GitHub/Jira/Sentry/Datadog/Port access. Never present anything in the UI as live telemetry. Jira home: project `BACK` (BACK-1 epic, BACK-2 UX planning, BACK-4 prototype QA). Read [README.md](README.md) for structure.
 
 ## Hard rules
 - **Script order in `index.html` is load-bearing.** Later files (`war.js`, `v3.js`–`v5.js`) deliberately override earlier globals (`mapSVG`, `warGraph`, `projectCard`, `SCREENS.home`, …). Find the *last* definition before editing; never reorder `<script>` tags.
 - Keep **English-first with working Arabic/RTL** (`S.lang`, `_('en','ar')` helper). Every user-visible string needs both.
 - **Unknown is never Healthy.** Stale/unavailable source states (`S.src` = `ok|stale|down`) must show on every screen that reads sources.
-- No customer data, secrets or MCP connection added to the prototype. The only backend is the synthetic Kawalys BFF in server/ (BACK-69 T0). server/ also contains a PostgreSQL foundation (BACK-55 S1, gate A 2026-11-23) tested only against disposable local Docker Postgres; server/ also contains real-mode authentication and evidence API code (BACK-56 S2, BACK-55 S3, gate A 2026-11-23) that is off unless the KAWALYS_* variables are set; still no provisioned database, Descope project, connectors or secrets; nothing in index.html, js/, css/ or app/ calls the server. Customers never sign in to Mission Control (internal staff only).
+- No customer data, secrets or MCP connection added to the prototype. The only backend is the Kawalys BFF in server/: synthetic routes, the owner-only authentication foundation (BACK-47/56, PR #76: Descope token verification via `jose`, sessions, deny-by-default routes; off and deny-all until `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set; the persona header is never authentication), and a PostgreSQL foundation with durable sessions and the evidence API (BACK-55, gate A 2026-11-23), active only when both `KAWALYS_DATABASE_URL_*` variables are set and tested only against disposable local Docker Postgres. Still no provisioned database, Descope project, connectors or secrets. The only network call the code can make is the Descope JWKS fetch, and only when configured. Nothing in index.html, js/, css/ or app/ calls the server. Customers never sign in to Mission Control (internal staff only).
 - Work on a feature branch. **No commit, push, PR or merge without explicit approval.**
 
 ## Run and test

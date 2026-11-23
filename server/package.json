@@ -6,7 +6,7 @@
     "node": ">=24"
   },
   "license": "Apache-2.0",
-  "description": "Kawalys BFF: synthetic routes plus a locally tested PostgreSQL foundation (BACK-55 S1); no provisioned DB, auth, connectors or secrets",
+  "description": "Synthetic Kawalys BFF (BACK-69 T0): no DB, auth, connectors, network or secrets",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -18,7 +18,7 @@
     "@nestjs/common": "12.6.0",
     "@nestjs/core": "12.6.0",
     "@nestjs/platform-express": "12.6.0",
-    "jose": "6.2.16",
+    "jose": "5.10.0",
     "pg": "8.23.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"

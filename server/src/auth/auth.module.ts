@@ -1,19 +1,23 @@
-import { Global, Module, type DynamicModule } from '@nestjs/common';
-import { AuthController } from './auth.controller';
-import { AUTH_DEPS, type AuthDeps } from './auth-deps';
-import { CapabilityGuard } from './capability.guard';
-import { OriginGuard, SessionGuard } from './session.guard';
+import { type DynamicModule, Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
+import { AuthController } from "./auth.controller";
+import { AuthGuard } from "./auth.guard";
+import { IDENTITY_DIRECTORY, IDENTITY_VERIFIER, SESSION_SERVICE } from "./auth.tokens";
+import type { AuthDeps } from "./build-auth";
 
-/** Registered only when real mode is configured; there is no auth-less variant of these routes. */
-@Global()
 @Module({})
 export class AuthModule {
+  /** Registers the sign-in routes and the global deny-by-default guard. */
   static register(deps: AuthDeps): DynamicModule {
     return {
       module: AuthModule,
       controllers: [AuthController],
-      providers: [{ provide: AUTH_DEPS, useValue: deps }, SessionGuard, OriginGuard, CapabilityGuard],
-      exports: [AUTH_DEPS, SessionGuard, OriginGuard, CapabilityGuard],
+      providers: [
+        { provide: IDENTITY_VERIFIER, useValue: deps.verifier },
+        { provide: IDENTITY_DIRECTORY, useValue: deps.directory },
+        { provide: SESSION_SERVICE, useValue: deps.sessions },
+        { provide: APP_GUARD, useClass: AuthGuard },
+      ],
     };
   }
 }
