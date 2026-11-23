@@ -231,7 +231,7 @@ describe('the bridge adds no second authority', () => {
   const sources = readdirSync(dir).filter((f) => /\.ts$/.test(f) && !/\.test\.ts$/.test(f)).map((f) => [f, readFileSync(join(dir, f), 'utf8')] as const);
 
   it('has source files to check', () => {
-    expect(sources.map(([f]) => f).sort()).toEqual(['hostV2.ts', 'identity.ts', 'mapContext.ts']);
+    expect(sources.map(([f]) => f).sort()).toEqual(['hostV2.ts', 'identity.ts', 'mapContext.ts', 'replayTime.ts']);
   });
 
   it('imports no React, no V2 provider or context at runtime, and holds no module state', () => {

@@ -154,7 +154,7 @@ test('Mission Map: reduced motion plays no animation and no intro', async ({ pag
 test('Mission Map: the inspector actions are host navigations, not the lab\'s screens', async ({ page }) => {
   await openRoute(page, '/map/retail-tower/stock-sync', { lang: 'en', persona: 'technical', width: 1440 });
   await page.getByRole('button', { name: 'Open the investigation replay' }).click();
-  expect(await hash(page)).toBe('#/investigation/INV-DEMO-7');
+  expect(await hash(page)).toBe('#/investigation/INV-DEMO-7/replay');
   await page.goBack();
   await expect(node(page, 'stock-sync')).toHaveAttribute('aria-pressed', 'true');
   await openRoute(page, '/map/all/github', { lang: 'en', persona: 'technical', width: 1440 });

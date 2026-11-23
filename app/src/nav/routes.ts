@@ -6,7 +6,7 @@ export type Route =
   | { readonly name: 'portfolio' }
   | { readonly name: 'map'; readonly scope?: MapScope; readonly node?: string }
   | { readonly name: 'project'; readonly projectId: string; readonly componentId?: string }
-  | { readonly name: 'investigation'; readonly id: string }
+  | { readonly name: 'investigation'; readonly id: string; readonly view?: 'replay'; readonly evt?: string }
   | { readonly name: 'evidence'; readonly id: string; readonly from?: string }
   | { readonly name: 'decisions' }
   | { readonly name: 'decision'; readonly id: string }
@@ -44,7 +44,7 @@ export function parseHash(hash: string): Route {
   const parts = rawParts.map(decode);
   const notFound: Route = { name: 'notFound', path: `/${rawParts.join('/')}` };
   if (parts.some((p) => p === null)) return notFound;
-  const [a, b, c] = parts as string[];
+  const [a, b, c, d] = parts as string[];
   const n = parts.length;
 
   switch (a) {
@@ -63,7 +63,11 @@ export function parseHash(hash: string): Route {
       if (n === 3 && b && c) return { name: 'project', projectId: b, componentId: c };
       return notFound;
     case 'investigation':
-      return n === 2 && b ? { name: 'investigation', id: b } : notFound;
+      // BACK-89: `#/investigation/<id>` is the room; `#/investigation/<id>/replay[/<event>]` is the Replay view of the same case.
+      if (n === 2 && b) return { name: 'investigation', id: b };
+      if (n === 3 && b && c === 'replay') return { name: 'investigation', id: b, view: 'replay' };
+      if (n === 4 && b && c === 'replay' && d) return { name: 'investigation', id: b, view: 'replay', evt: d };
+      return notFound;
     case 'evidence': {
       if (n !== 2 || !b) return notFound;
       const from = decode(query.get('from') ?? '');
@@ -94,7 +98,7 @@ export function hrefFor(r: Route): string {
     case 'portfolio': return '#/portfolio';
     case 'map': return r.scope ? (r.node ? `#/map/${enc(r.scope)}/${enc(r.node)}` : `#/map/${enc(r.scope)}`) : '#/map';
     case 'project': return r.componentId ? `#/project/${enc(r.projectId)}/${enc(r.componentId)}` : `#/project/${enc(r.projectId)}`;
-    case 'investigation': return `#/investigation/${enc(r.id)}`;
+    case 'investigation': return r.view ? (r.evt ? `#/investigation/${enc(r.id)}/replay/${enc(r.evt)}` : `#/investigation/${enc(r.id)}/replay`) : `#/investigation/${enc(r.id)}`;
     case 'evidence': return r.from ? `#/evidence/${enc(r.id)}?from=${enc(r.from)}` : `#/evidence/${enc(r.id)}`;
     case 'decisions': return '#/decisions';
     case 'decision': return `#/decisions/${enc(r.id)}`;
