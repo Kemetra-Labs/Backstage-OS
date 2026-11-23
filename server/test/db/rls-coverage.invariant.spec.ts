@@ -17,6 +17,7 @@ const GLOBAL_TABLES: Readonly<Record<string, string>> = {
   users: 'principal identity exists before any workspace',
   external_identity_links: 'provider identity lookup happens before a workspace is known',
   sessions: 'session lookup happens before a workspace is known',
+  owner_binding: 'single-owner binding is resolved at sign-in, before a workspace is known',
 };
 
 /** Tables whose own primary key is the workspace id. */

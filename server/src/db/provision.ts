@@ -19,6 +19,8 @@ import type pg from 'pg';
 export const SCHEMA = 'kawalys';
 export const ROLE_MIGRATOR = 'kawalys_migrator';
 export const ROLE_APP = 'kawalys_app';
+/** Sign-in and session lookup on the global identity tables (no workspace tables). BACK-56. */
+export const ROLE_AUTH = 'kawalys_auth';
 
 type Queryable = Pick<pg.Pool | pg.PoolClient, 'query'>;
 
@@ -50,10 +52,14 @@ export function scramSha256Verifier(password: string): string {
 }
 
 /** Cluster level: create both login roles. */
-export async function provisionRoles(admin: Queryable, passwords: { migrator: string; app: string }): Promise<void> {
+export async function provisionRoles(
+  admin: Queryable,
+  passwords: { migrator: string; app: string; auth: string },
+): Promise<void> {
   for (const [role, password] of [
     [ROLE_MIGRATOR, passwords.migrator],
     [ROLE_APP, passwords.app],
+    [ROLE_AUTH, passwords.auth],
   ] as const) {
     await execFormatted(admin, `CREATE ROLE %I ${ROLE_ATTRS} PASSWORD %L`, role, scramSha256Verifier(password));
     // pg_catalog first, so nothing in the kawalys schema can shadow a built-in.
@@ -64,11 +70,11 @@ export async function provisionRoles(admin: Queryable, passwords: { migrator: st
 /** Database level: run while connected to the target database as an admin. */
 export async function provisionDatabase(admin: Queryable, database: string): Promise<void> {
   await execFormatted(admin, 'REVOKE ALL ON DATABASE %I FROM PUBLIC', database);
-  await execFormatted(admin, 'GRANT CONNECT ON DATABASE %I TO %I, %I', database, ROLE_MIGRATOR, ROLE_APP);
+  await execFormatted(admin, 'GRANT CONNECT ON DATABASE %I TO %I, %I, %I', database, ROLE_MIGRATOR, ROLE_APP, ROLE_AUTH);
   await admin.query('REVOKE ALL ON SCHEMA public FROM PUBLIC');
   await execFormatted(admin, 'CREATE SCHEMA %I AUTHORIZATION %I', SCHEMA, ROLE_MIGRATOR);
   await execFormatted(admin, 'REVOKE ALL ON SCHEMA %I FROM PUBLIC', SCHEMA);
-  await execFormatted(admin, 'GRANT USAGE ON SCHEMA %I TO %I', SCHEMA, ROLE_APP);
+  await execFormatted(admin, 'GRANT USAGE ON SCHEMA %I TO %I, %I', SCHEMA, ROLE_APP, ROLE_AUTH);
   // Functions are EXECUTE-able by PUBLIC by default; migrations grant explicitly instead.
   await execFormatted(admin, 'ALTER DEFAULT PRIVILEGES FOR ROLE %I REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC', ROLE_MIGRATOR);
 }

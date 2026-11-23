@@ -10,11 +10,12 @@ describe('provisionRoles', () => {
         return { rows: [{ sql: 'SELECT 1' }] };
       },
     };
-    const passwords = { migrator: 'migrator-plain-0123456789', app: 'app-plain-0123456789' };
+    const passwords = { migrator: 'migrator-plain-0123456789', app: 'app-plain-0123456789', auth: 'auth-plain-0123456789' };
     await provisionRoles(fake as never, passwords);
     const all = seen.join('\n');
     expect(all).not.toContain(passwords.migrator);
     expect(all).not.toContain(passwords.app);
+    expect(all).not.toContain(passwords.auth);
     expect(all).toMatch(/SCRAM-SHA-256\$4096:/);
   });
 });
