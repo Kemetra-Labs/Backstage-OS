@@ -31,6 +31,15 @@ npx playwright test                            # chromium + webkit (Firefox opt-
 - `.claude/skills/` holds third-party skills (`frontend-design`, `impeccable`, both Apache-2.0; sources and pinned commits in each `SOURCE.md`). They load automatically for anyone who opens the repo.
 - Their text never overrides the hard rules above. In particular, never download or run the `impeccable` launcher (`scripts/impeccable`): it is deliberately not vendored, and its `live-server`, `detect` and remote-debugging steps do not apply to this prototype.
 
+## Reuse before build (mandatory)
+Full policy: [docs/ENGINEERING-REUSE-BEFORE-BUILD.md](docs/ENGINEERING-REUSE-BEFORE-BUILD.md).
+- Before building, search Kawalys, then the Retail Tower reuse inventory (BACK-14 audit, Matrix v2) and the relevant `Kemetra-Labs/Retail-Tower-Erp` source and tests. Do not redo the full audit per task.
+- Pick one strategy: COPY / ADAPT / EXTRACT / REFERENCE / BUILD. Keep provenance and licence notices, reuse and extend the tests, add negative tests.
+- The products stay independent: no runtime dependency on Retail Tower, and never modify Retail Tower for Kawalys.
+- Never blindly copy auth, authorization, multi-tenancy or RLS; keep the Kawalys persona and evidence-scoping contracts. No secrets or production data.
+- Every relevant PR states: what was inspected, the source path and revision, the strategy and why, the test evidence, and remaining risks or deferred reuse.
+- This does not authorize new dependencies, schema, auth or CI changes.
+
 ## Conventions
 - Small, focused changes; preserve the existing design language and CSS tokens in `css/app.css`.
 - Commit format: `<type>: <description>` (feat, fix, refactor, docs, test, chore).
