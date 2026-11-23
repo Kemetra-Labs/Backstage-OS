@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 // @ts-ignore node builtin, available at test time
 const { readFileSync, existsSync, statSync } = await import('node:fs');
 const read = (rel: string): string => readFileSync(new URL(rel, import.meta.url), 'utf8') as string;
-const NAMES = ['fonts', 'tokens', 'base', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;
+const NAMES = ['fonts', 'tokens', 'reset', 'base', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;
 const css: Record<string, string> = Object.fromEntries(NAMES.map((n) => [`./styles/${n}.css`, read(`./styles/${n}.css`)]));
 const src = import.meta.glob(['./**/*.ts', './**/*.tsx', '!./**/*.test.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const v1css: Record<string, string> = Object.fromEntries(['tokens', 'app'].map((n) => [n, read(`../../styles/${n}.css`)]));
@@ -37,14 +37,15 @@ describe('V2 stylesheets', () => {
   });
 
   it('clip horizontal overflow on html and body, and honour reduced motion', () => {
-    const base = css['./styles/base.css']!;
+    // BACK-86: the global reset moved from base.css to reset.css; the lab ships both, so the guarantee is on their sum.
+    const base = css['./styles/reset.css']! + css['./styles/base.css']!;
     expect(base).toMatch(/html\s*\{[^}]*overflow-x:\s*clip/);
     expect(base).toMatch(/body\s*\{[^}]*overflow-x:\s*clip/);
     expect(base).toMatch(/prefers-reduced-motion:\s*reduce/);
   });
 
   it('scope every screen stylesheet rule to the .kv2- namespace', () => {
-    for (const [f, text] of bodyCss.filter(([n]) => !n.endsWith('base.css'))) {
+    for (const [f, text] of bodyCss.filter(([n]) => !n.endsWith('base.css') && !n.endsWith('reset.css'))) {
       const stripped = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@[^{;]+\{/g, '');
       const selectors = [...stripped.matchAll(/([^{}@;]+)\{/g)].map((m) => m[1]!.trim()).filter((sel) => sel && !/^\d+%$/.test(sel));
       const offenders = selectors.flatMap((list) => list.split(',').map((x) => x.trim())).filter((sel) => !sel.includes('.kv2-') && !sel.includes('.kv2'));
