@@ -41,7 +41,7 @@ function read(env: Env, name: string): string {
 function intFrom(env: Env, name: string, fallback: number, min: number, max: number): number {
   const raw = read(env, name);
   if (raw === "") return fallback;
-  const value = /^\d{1,7}$/.test(raw) ? Number(raw) : NaN;
+  const value = /^\d{1,7}$/.test(raw) ? Number(raw) : Number.NaN;
   if (!(value >= min && value <= max)) {
     throw new AuthConfigError(`${name} must be an integer from ${min} to ${max}`);
   }
