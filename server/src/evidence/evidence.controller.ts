@@ -28,12 +28,15 @@ type Req = AuthenticatedRequest & { requestId?: string };
 const optionalId = (value: unknown): string | undefined | null =>
   value === undefined ? undefined : typeof value === 'string' ? value : null;
 
+/** No NUL and no unpaired surrogate: PostgreSQL jsonb would reject them later with a 500. */
+function storableText(v: string): boolean {
+  return !v.includes(String.fromCharCode(0)) && (v as unknown as { isWellFormed(): boolean }).isWellFormed();
+}
+
 function decisionBody(body: unknown, investigationId: string): DecisionInput {
   const b = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
   const { decision, rationale, evidenceIds } = b;
-  // No NUL and no unpaired surrogate: PostgreSQL jsonb would reject them later with a 500.
-  const BAD_TEXT = /\u0000|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
-  const text = (v: unknown, max: number) => typeof v === 'string' && v.trim().length > 0 && v.length <= max && !BAD_TEXT.test(v);
+  const text = (v: unknown, max: number) => typeof v === 'string' && v.trim().length > 0 && v.length <= max && storableText(v);
   if (!text(decision, 2000) || !text(rationale, 4000)) throw new BadRequestException();
   if (!Array.isArray(evidenceIds) || evidenceIds.length > 50 || !evidenceIds.every((id) => typeof id === 'string')) {
     throw new BadRequestException();

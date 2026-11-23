@@ -12,6 +12,7 @@ import type pg from 'pg';
 import { insertAuditRowInTransaction } from '../audit/audit-row.writer';
 import { runWithWorkspaceContext } from '../db/workspace-context';
 import { capabilitiesFor, type Capability, type Role } from './capabilities';
+import { isAsciiEmail } from './email';
 import type { VerifiedSubject } from './identity-provider.port';
 
 export class AuthRefused extends Error {
@@ -54,7 +55,7 @@ export class PrincipalResolver {
   constructor(private readonly options: PrincipalResolverOptions) {
     // ASCII check BEFORE lower-casing: toLowerCase folds some non-ASCII (e.g. U+212A) to ASCII.
     const raw = options.ownerEmail.trim();
-    if (!/^[\x21-\x3f\x41-\x7e]+@[\x21-\x3f\x41-\x7e]+$/.test(raw)) throw new Error('owner email is malformed');
+    if (!isAsciiEmail(raw)) throw new Error('owner email is malformed');
     this.ownerEmail = raw.toLowerCase();
     if (options.ownerSubject !== undefined && !/^[\x21-\x7e]{1,256}$/.test(options.ownerSubject)) {
       throw new Error('owner subject is malformed');

@@ -2,6 +2,8 @@
 // No variable set: synthetic routes only, and NO auth or real routes exist (there is no
 // unauthenticated fallback). Any variable set: all are required.
 
+import { isAsciiEmail } from '../auth/email';
+
 export class ConfigError extends Error {}
 
 export interface RuntimeConfig {
@@ -66,9 +68,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
   if (app.username === auth.username) throw new ConfigError(`${VARS.databaseUrlApp} and ${VARS.databaseUrlAuth} must use different roles`);
   if (!/^[A-Za-z0-9]{1,64}$/.test(raw.descopeProjectId)) throw new ConfigError(`${VARS.descopeProjectId} is malformed`);
   // ASCII only, checked BEFORE lower-casing (toLowerCase folds some non-ASCII, e.g. U+212A, to ASCII).
-  if (!/^[\x21-\x3f\x41-\x7e]+@[\x21-\x3f\x41-\x7e]+\.[\x21-\x3f\x41-\x7e]+$/.test(raw.ownerEmail)) {
-    throw new ConfigError(`${VARS.ownerEmail} is malformed`);
-  }
+  if (!isAsciiEmail(raw.ownerEmail)) throw new ConfigError(`${VARS.ownerEmail} is malformed`);
   const ownerEmail = raw.ownerEmail.toLowerCase();
   const ownerSubject = (env[OWNER_SUBJECT_VAR] ?? '').trim();
   if (ownerSubject !== '' && !/^[\x21-\x7e]{1,256}$/.test(ownerSubject)) throw new ConfigError(`${OWNER_SUBJECT_VAR} is malformed`);
