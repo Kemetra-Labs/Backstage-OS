@@ -1,10 +1,12 @@
 import { Controller, ForbiddenException, Get, UnauthorizedException, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createApp } from '../../src/create-app';
+import { Public } from '../../src/auth/public.decorator';
+import { startApp } from '../auth/_helpers';
 import { isErrorEnvelope } from '../../src/errors/envelope';
 
 @Controller()
 class BoomController {
+  @Public() // the filter tests must reach the throwing handler, so they bypass the auth guard
   @Get('boom')
   boom(): never {
     throw new Error('db password=hunter2');
@@ -13,6 +15,7 @@ class BoomController {
 
 @Controller()
 class DeniedControllers401 {
+  @Public()
   @Get('denied401')
   d(): never {
     throw new UnauthorizedException('secret-401');
@@ -20,6 +23,7 @@ class DeniedControllers401 {
 }
 @Controller()
 class DeniedControllers403 {
+  @Public()
   @Get('denied403')
   d(): never {
     throw new ForbiddenException('secret-403');
@@ -31,9 +35,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 describe('Kawalys BFF', () => {
   let app: INestApplication;
+  let cookie: string; // an owner session: the evidence route is protected, the persona header only picks what is shown
 
   beforeAll(async () => {
-    app = await createApp([BoomController, DeniedControllers401, DeniedControllers403]);
+    const t = await startApp([BoomController, DeniedControllers401, DeniedControllers403]);
+    app = t.app;
+    cookie = await t.signIn();
   });
   afterAll(async () => {
     await app.close();
@@ -47,18 +54,18 @@ describe('Kawalys BFF', () => {
   });
 
   it('technical reads E-5; E-1 readable by all', async () => {
-    const a = await request(app.getHttpServer()).get('/demo/evidence/E-5').set(PERSONA, 'technical');
+    const a = await request(app.getHttpServer()).get('/demo/evidence/E-5').set('Cookie', cookie).set(PERSONA, 'technical');
     expect(a.status).toBe(200);
     expect(a.body).toEqual({ id: 'E-5', title: 'Synthetic error read', synthetic: true });
-    const b = await request(app.getHttpServer()).get('/demo/evidence/E-1').set(PERSONA, 'owner');
+    const b = await request(app.getHttpServer()).get('/demo/evidence/E-1').set('Cookie', cookie).set(PERSONA, 'owner');
     expect(b.status).toBe(200);
     expect(b.body.id).toBe('E-1');
-    const c = await request(app.getHttpServer()).get('/demo/evidence/E-1');
+    const c = await request(app.getHttpServer()).get('/demo/evidence/E-1').set('Cookie', cookie);
     expect(c.status).toBe(200);
   });
 
   it('unknown persona value is treated as nontechnical', async () => {
-    const res = await request(app.getHttpServer()).get('/demo/evidence/E-5').set(PERSONA, 'admin');
+    const res = await request(app.getHttpServer()).get('/demo/evidence/E-5').set('Cookie', cookie).set(PERSONA, 'admin');
     expect(res.status).toBe(404);
   });
 
@@ -68,6 +75,7 @@ describe('Kawalys BFF', () => {
       const send = (id: string) =>
         request(app.getHttpServer())
           .get(`/demo/evidence/${id}`)
+          .set('Cookie', cookie)
           .set(PERSONA, persona)
           .set('x-request-id', 'req-aaaaaaaa');
       const restricted = await send('E-5');
@@ -92,7 +100,7 @@ describe('Kawalys BFF', () => {
 
   it.each(['denied401', 'denied403'])('%s is reported as not_found with no leaked text', async (path) => {
     const send = (p: string) =>
-      request(app.getHttpServer()).get(p).set('x-request-id', 'req-aaaaaaaa');
+      request(app.getHttpServer()).get(p).set('Cookie', cookie).set('x-request-id', 'req-aaaaaaaa');
     const denied = await send(`/${path}`);
     const absent = await send('/demo/evidence/E-999');
     expect(denied.status).toBe(404);

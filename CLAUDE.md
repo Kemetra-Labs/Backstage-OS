@@ -1,12 +1,12 @@
 # Backstage-OS (Kemetra Mission Control prototype)
 
-Static, vanilla HTML/CSS/JS **review prototype**. Demo data only: no backend (beyond the synthetic BFF in server/), auth, AI calls or real GitHub/Jira/Sentry/Datadog/Port access. Never present anything in the UI as live telemetry. Jira home: project `BACK` (BACK-1 epic, BACK-2 UX planning, BACK-4 prototype QA). Read [README.md](README.md) for structure.
+Static, vanilla HTML/CSS/JS **review prototype**. Demo data only: no backend (beyond the synthetic BFF in server/), live auth, AI calls or real GitHub/Jira/Sentry/Datadog/Port access. Never present anything in the UI as live telemetry. Jira home: project `BACK` (BACK-1 epic, BACK-2 UX planning, BACK-4 prototype QA). Read [README.md](README.md) for structure.
 
 ## Hard rules
 - **Script order in `index.html` is load-bearing.** Later files (`war.js`, `v3.js`–`v5.js`) deliberately override earlier globals (`mapSVG`, `warGraph`, `projectCard`, `SCREENS.home`, …). Find the *last* definition before editing; never reorder `<script>` tags.
 - Keep **English-first with working Arabic/RTL** (`S.lang`, `_('en','ar')` helper). Every user-visible string needs both.
 - **Unknown is never Healthy.** Stale/unavailable source states (`S.src` = `ok|stale|down`) must show on every screen that reads sources.
-- No customer data, secrets or MCP connection added to the prototype. The only backend is the synthetic Kawalys BFF in server/ (BACK-69 T0): no DB, auth provider, connectors, network calls or secrets; nothing in index.html, js/, css/ or app/ calls it yet. Customers never sign in to Mission Control (internal staff only).
+- No customer data, secrets or MCP connection added to the prototype. The only backend is the synthetic Kawalys BFF in server/ (BACK-69 T0): no DB, connectors or secrets. It carries the owner-only authentication foundation (BACK-47/56: Descope token verification via `jose`, in-memory sessions, deny-by-default routes). That is the only code that may reach the network (Descope JWKS), and only when `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set; unconfigured, every protected route is denied. The persona header is never authentication. Nothing in index.html, js/, css/ or app/ calls it yet. Customers never sign in to Mission Control (internal staff only).
 - Work on a feature branch. **No commit, push, PR or merge without explicit approval.**
 
 ## Run and test
