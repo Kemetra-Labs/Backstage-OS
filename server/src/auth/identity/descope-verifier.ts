@@ -24,7 +24,7 @@ export const PROJECT_ID_RE = /^[A-Za-z0-9]{1,64}$/;
 const ALLOWED_ALGORITHMS = ["RS256"];
 const CLOCK_TOLERANCE_SECONDS = 5;
 const JWKS_TIMEOUT_MS = 5_000;
-const REFRESH_TOKEN_DRN = "DSR";
+const SESSION_TOKEN_DRN = "DS";
 const MAX_TOKEN_CHARS = 8_192;
 const MAX_SUBJECT_CHARS = 256;
 
@@ -107,7 +107,12 @@ export class DescopeVerifier implements IdentityVerificationPort {
     } catch (err) {
       return classify(err);
     }
-    if (payload["drn"] === REFRESH_TOKEN_DRN) return REFUSED;
+    // Allowlist, not denylist: only a Descope session token (drn "DS", always present per Descope's
+    // token-claims docs). Refresh tokens ("DSR"), access keys and other kinds are refused.
+    if (payload["drn"] !== SESSION_TOKEN_DRN || payload["token_type"] === "refresh") return REFUSED;
+    // Impersonation: Descope writes the impersonator into `act` (or `dact` when a JWT template overrides
+    // `act`) while `sub` is the impersonated user. An impersonated owner session is never a Kawalys credential.
+    if (payload["act"] !== undefined || payload["dact"] !== undefined) return REFUSED;
     const sub: unknown = payload.sub;
     if (typeof sub !== "string" || sub.length === 0 || sub.length > MAX_SUBJECT_CHARS) return REFUSED;
     // jose has already proven iss equals the pinned issuer, so the pinned value is the one recorded.

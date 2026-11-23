@@ -1,0 +1,2 @@
+# SQL migrations are checksummed by the runner; keep one line ending on every platform.
+*.sql text eol=lf

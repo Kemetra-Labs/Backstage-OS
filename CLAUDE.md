@@ -6,7 +6,7 @@ Static, vanilla HTML/CSS/JS **review prototype**. Demo data only: no backend (be
 - **Script order in `index.html` is load-bearing.** Later files (`war.js`, `v3.js`–`v5.js`) deliberately override earlier globals (`mapSVG`, `warGraph`, `projectCard`, `SCREENS.home`, …). Find the *last* definition before editing; never reorder `<script>` tags.
 - Keep **English-first with working Arabic/RTL** (`S.lang`, `_('en','ar')` helper). Every user-visible string needs both.
 - **Unknown is never Healthy.** Stale/unavailable source states (`S.src` = `ok|stale|down`) must show on every screen that reads sources.
-- No customer data, secrets or MCP connection added to the prototype. The only backend is the synthetic Kawalys BFF in server/ (BACK-69 T0): no DB, connectors or secrets. It carries the owner-only authentication foundation (BACK-47/56: Descope token verification via `jose`, in-memory sessions, deny-by-default routes). That is the only code that may reach the network (Descope JWKS), and only when `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set; unconfigured, every protected route is denied. The persona header is never authentication. Nothing in index.html, js/, css/ or app/ calls it yet. Customers never sign in to Mission Control (internal staff only).
+- No customer data, secrets or MCP connection added to the prototype. The only backend is the Kawalys BFF in server/: synthetic routes, the owner-only authentication foundation (BACK-47/56, PR #76: Descope token verification via `jose`, sessions, deny-by-default routes; off and deny-all until `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set; the persona header is never authentication), and a PostgreSQL foundation with durable sessions and the evidence API (BACK-55, gate A 2026-11-23), active only when both `KAWALYS_DATABASE_URL_*` variables are set and tested only against disposable local Docker Postgres. Still no provisioned database, Descope project, connectors or secrets. The only network call the code can make is the Descope JWKS fetch, and only when configured. Nothing in index.html, js/, css/ or app/ calls the server. Customers never sign in to Mission Control (internal staff only).
 - Work on a feature branch. **No commit, push, PR or merge without explicit approval.**
 
 ## Run and test
@@ -15,6 +15,7 @@ python -m http.server 8765 --bind 127.0.0.1   # serve (or: npm run serve)
 npm install && npx playwright install chromium webkit
 npx playwright test                            # chromium + webkit (Firefox opt-in: PW_FIREFOX=1)
 ```
+- `npm run check` in `server/` needs Docker (the DB tests start a disposable local Postgres; there is no skip).
 - Tests live in `tests/`: `smoke.spec.js` (all screens, viewports 320–1440, personas × EN/AR, source states, search) and `findings.spec.js` (regression for F1–F6). They run against the real HTTP origin, not `set_content`. Google Fonts is aborted so runs are offline.
 - Run with `workers: 1`; parallel workers against `python -m http.server` produced false load timeouts on Windows.
 - `?s={"persona":"tech","lang":"ar","src":"down","tab":{"inv":"evidence"}}` seeds state; `#route` selects a screen. Globals `S`, `go()`, `renderApp()` are available in `page.evaluate`.

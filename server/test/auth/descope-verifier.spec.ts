@@ -59,12 +59,13 @@ interface TokenOptions {
   readonly expiresIn?: number | null;
   readonly iatAgo?: number | null;
   readonly nbfIn?: number;
-  readonly drn?: string;
+  readonly drn?: string | null;
+  readonly extra?: Record<string, unknown>;
 }
 
 async function token(opts: TokenOptions = {}): Promise<string> {
   const now = nowSeconds();
-  let jwt = new SignJWT({ drn: opts.drn ?? 'DS' })
+  let jwt = new SignJWT({ ...(opts.drn === null ? {} : { drn: opts.drn ?? 'DS' }), ...(opts.extra ?? {}) })
     .setProtectedHeader({ alg: opts.alg ?? 'RS256', kid: opts.kid ?? KID })
     .setIssuer(opts.issuer ?? ISSUER);
   if (opts.iatAgo !== null) jwt = jwt.setIssuedAt(now - (opts.iatAgo ?? 0));
@@ -127,6 +128,12 @@ describe('DescopeVerifier: refuses', () => {
     ['a wrong audience', () => token({ audience: 'PotherProject' })],
     ['a missing audience (audience is required)', () => token({ audience: null })],
     ['a Descope refresh token (drn=DSR)', () => token({ drn: 'DSR' })],
+    // Kawalys (BACK-55/56 integration, security review): allowlist session tokens, refuse impersonation.
+    ['a token without drn (only Descope session tokens, drn=DS)', () => token({ drn: null })],
+    ['another Descope token kind (drn=AK)', () => token({ drn: 'AK' })],
+    ['a token_type=refresh token', () => token({ extra: { token_type: 'refresh' } })],
+    ['an impersonation token (act claim) for the owner subject', () => token({ extra: { act: { sub: 'Uimpersonator' } } })],
+    ['an impersonation token (dact claim, JWT template override)', () => token({ extra: { dact: { sub: 'Uimpersonator' } } })],
     ['an nbf beyond the clock tolerance', () => token({ nbfIn: 60 })],
     ['a token issued longer ago than the age cap', () => token({ iatAgo: MAX_AGE + 600 })],
     ['a token issued in the future', () => token({ iatAgo: -3600, expiresIn: 7200 })],

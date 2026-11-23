@@ -3,7 +3,7 @@
 // and are refused in production, so no environment value or caller can swap in a fake there.
 import { AuthConfigError, loadAuthConfig, type Env } from "./auth.config";
 import { createDescopeVerifier } from "./identity/descope-verifier";
-import { ConfiguredOwnerDirectory, type IdentityDirectory } from "./identity/identity-directory";
+import { ConfiguredOwnerDirectory, type IdentityDirectory, type OwnerIdentity } from "./identity/identity-directory";
 import { UnconfiguredVerifier, type IdentityVerificationPort } from "./identity/identity-verification.port";
 import { InMemorySessionStore } from "./session/in-memory-session-store";
 import { SessionService } from "./session/session.service";
@@ -22,7 +22,16 @@ export interface AuthDeps {
   readonly sessions: SessionService;
 }
 
-export function buildAuth(env: Env, overrides: AuthOverrides = {}): AuthDeps {
+/**
+ * Durable persistence (BACK-55): a Postgres session store and a database-backed directory for the same
+ * configured owner. This is production wiring, not a test override, so it is allowed in production.
+ */
+export interface AuthPersistence {
+  readonly store: SessionStore;
+  directoryFor(owner: OwnerIdentity | null): IdentityDirectory;
+}
+
+export function buildAuth(env: Env, overrides: AuthOverrides = {}, persistence?: AuthPersistence): AuthDeps {
   const config = loadAuthConfig(env);
   if (config.production && Object.keys(overrides).length > 0) {
     throw new AuthConfigError("auth overrides are not allowed in production");
@@ -34,8 +43,10 @@ export function buildAuth(env: Env, overrides: AuthOverrides = {}): AuthDeps {
     (config.descope !== null && config.owner !== null
       ? createDescopeVerifier(config.descope.projectId, config.descope.issuer, config.descope.maxTokenAgeSeconds)
       : new UnconfiguredVerifier());
-  const directory = overrides.directory ?? new ConfiguredOwnerDirectory(config.owner);
-  const sessions = new SessionService(overrides.store ?? new InMemorySessionStore(), overrides.clock ?? Date.now, {
+  const directory =
+    overrides.directory ?? persistence?.directoryFor(config.owner) ?? new ConfiguredOwnerDirectory(config.owner);
+  const store = overrides.store ?? persistence?.store ?? new InMemorySessionStore();
+  const sessions = new SessionService(store, overrides.clock ?? Date.now, {
     absoluteTtlMs: config.session.absoluteTtlSeconds * 1000,
     idleTtlMs: config.session.idleTtlSeconds * 1000,
   });
