@@ -4,7 +4,7 @@ Internal review prototype of Kemetra Labs' Unified Mission Control: portfolio, i
 visibility for authorized Kemetra staff (Owner, Technical, Non-Technical personas).
 
 **Everything shown is demo data.** No backend, no real GitHub/Jira/Sentry/Datadog/Port access, no AI calls, no
-authentication, and no customer or tenant data. Nothing in the UI is live production telemetry.
+live authentication, and no customer or tenant data. Nothing in the UI is live production telemetry.
 
 Product name is "BackStage / Mission Control". A future brand is not decided.
 
@@ -55,6 +55,6 @@ calls, agent execution, authentication and permissions, deployment.
 
 ## Synthetic BFF (server/)
 
-`server/` holds a small NestJS service that returns synthetic data only (BACK-69, T0). It has no database,
-authentication, connectors, network calls or secrets, and nothing in this prototype or `app/` calls it yet.
+`server/` holds a small NestJS service that returns synthetic data only (BACK-69, T0). It has no database, connectors or secrets, and nothing in this prototype or `app/` calls it yet. It carries an
+owner-only Descope authentication foundation (BACK-47/BACK-56) that does nothing until Kawalys Descope configuration is set.
 It needs Node 24. See [server/README.md](server/README.md) for commands, routes, error behaviour and rollback.
