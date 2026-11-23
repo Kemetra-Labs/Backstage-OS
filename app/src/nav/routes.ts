@@ -2,6 +2,7 @@
 export type Route =
   | { readonly name: 'home' }
   | { readonly name: 'portfolio' }
+  | { readonly name: 'map'; readonly scope?: MapScope; readonly node?: string }
   | { readonly name: 'project'; readonly projectId: string; readonly componentId?: string }
   | { readonly name: 'investigation'; readonly id: string }
   | { readonly name: 'evidence'; readonly id: string; readonly from?: string }
@@ -12,6 +13,11 @@ export type Route =
   | { readonly name: 'notFound'; readonly path: string };
 
 export type RouteName = Route['name'];
+
+/** BACK-87: the scopes of the Mission Map lens (V2 map scope ids). `#/map/<scope>/<node>`; an unknown scope is notFound, never a guess. */
+export const MAP_SCOPES = ['all', 'retail-tower', 'khepri', 'seshat-bi'] as const;
+export type MapScope = (typeof MAP_SCOPES)[number];
+const isMapScope = (v: string | undefined): v is MapScope => v !== undefined && (MAP_SCOPES as readonly string[]).includes(v);
 
 const ID = /^[A-Za-z0-9._-]{1,64}$/;
 
@@ -43,6 +49,11 @@ export function parseHash(hash: string): Route {
       return n <= 1 ? { name: 'home' } : notFound;
     case 'portfolio':
       return n === 1 ? { name: 'portfolio' } : notFound;
+    case 'map':
+      if (n === 1) return { name: 'map' };
+      if (n === 2 && isMapScope(b)) return { name: 'map', scope: b };
+      if (n === 3 && isMapScope(b) && c) return { name: 'map', scope: b, node: c };
+      return notFound;
     case 'project':
       if (n === 2 && b) return { name: 'project', projectId: b };
       if (n === 3 && b && c) return { name: 'project', projectId: b, componentId: c };
@@ -73,6 +84,7 @@ export function hrefFor(r: Route): string {
   switch (r.name) {
     case 'home': return '#/';
     case 'portfolio': return '#/portfolio';
+    case 'map': return r.scope ? (r.node ? `#/map/${enc(r.scope)}/${enc(r.node)}` : `#/map/${enc(r.scope)}`) : '#/map';
     case 'project': return r.componentId ? `#/project/${enc(r.projectId)}/${enc(r.componentId)}` : `#/project/${enc(r.projectId)}`;
     case 'investigation': return `#/investigation/${enc(r.id)}`;
     case 'evidence': return r.from ? `#/evidence/${enc(r.id)}?from=${enc(r.from)}` : `#/evidence/${enc(r.id)}`;
@@ -85,9 +97,9 @@ export function hrefFor(r: Route): string {
 }
 
 /** Which sidebar entry a route belongs to. */
-export function sectionOf(r: Route): 'home' | 'portfolio' | 'project' | 'investigation' | 'decisions' | 'agents' | 'sources' | null {
+export function sectionOf(r: Route): 'home' | 'portfolio' | 'map' | 'project' | 'investigation' | 'decisions' | 'agents' | 'sources' | null {
   switch (r.name) {
-    case 'home': case 'portfolio': case 'project': case 'investigation': case 'agents': case 'sources': return r.name;
+    case 'home': case 'portfolio': case 'map': case 'project': case 'investigation': case 'agents': case 'sources': return r.name;
     case 'evidence': return 'investigation';
     case 'decisions': case 'decision': return 'decisions';
     case 'notFound': return null;

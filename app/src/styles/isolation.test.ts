@@ -119,10 +119,13 @@ describe('the lab keeps its global reset, in one file the host never imports', (
     for (const r of parse(css.scope).rules) for (const sel of selectors(r.sel)) expect(sel.includes('.kv2-scope'), sel).toBe(true);
   });
 
-  it('scope.css rules have zero specificity at the scope boundary, so every .kv2-* class still wins', () => {
+  it('scope.css rules are zero-specificity element resets, except the one layout rule for the region itself, so every .kv2-* class still wins', () => {
     for (const r of parse(css.scope).rules) {
       if (/:focus-visible/.test(r.sel)) continue;
-      for (const sel of selectors(r.sel)) expect(sel.startsWith(':where('), sel).toBe(true);
+      for (const sel of selectors(r.sel)) {
+        // .kv2-scope alone is the region (a layout rule); everything inside it is wrapped in :where().
+        expect(sel.startsWith(':where(') || sel === '.kv2-scope', sel).toBe(true);
+      }
     }
   });
 });

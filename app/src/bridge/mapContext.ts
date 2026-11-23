@@ -10,7 +10,7 @@ import type { Lang, Persona } from '../contract/types';
 import { WORLD as MAP_WORLD } from '../design-lab/v2/fixtures/world';
 import { authorizedWorld } from '../design-lab/v2/logic/authorize';
 import type { World as MapWorld } from '../design-lab/v2/types';
-import type { Route } from '../nav/routes';
+import type { MapScope, Route } from '../nav/routes';
 import { COMPONENT_PROJECT, isSharedComponent, mapIdOfProject, projectOfMapId } from './identity';
 
 /** What the host knows. A subset of `AppState`, so the host passes its own state straight in. */
@@ -20,8 +20,8 @@ export interface HostView {
   readonly route: Route;
 }
 
-/** How the route relates to the map: 'none' for a route that is not a project, else the identity status of its project. */
-export type MapOrigin = 'verified' | 'unresolved' | 'ambiguous' | 'foreign' | 'none';
+/** How the route relates to the map: 'map' on the Mission Map route itself, 'none' for any other route that is not a project, else the identity status of its project. */
+export type MapOrigin = 'verified' | 'unresolved' | 'ambiguous' | 'foreign' | 'map' | 'none';
 
 /** The minimal context a map lens consumes. Plain data: it carries ids and presentation switches only, never evidence. */
 export interface MapContext {
@@ -42,6 +42,8 @@ export interface MapSelection {
 }
 
 const ALL = 'all';
+/** The map's scope when the route names none: the approved render opens on Retail Tower (a test pins it to the V2 default). */
+export const MAP_DEFAULT_SCOPE: MapScope = 'retail-tower';
 
 /** An id is selectable only when the authorized world holds that node. */
 export const permittedNode = (world: MapWorld, id: string): string | null =>
@@ -53,6 +55,9 @@ const authorized = (persona: Persona): MapWorld => authorizedWorld(MAP_WORLD, pe
 export function toMapContextIn(view: HostView, world: MapWorld): MapContext {
   const base = { persona: view.persona, lang: view.lang, dir: view.lang === 'ar' ? 'rtl' : 'ltr' } as const;
   const { route } = view;
+  if (route.name === 'map') {
+    return { ...base, scope: route.scope ?? MAP_DEFAULT_SCOPE, node: route.node === undefined ? null : permittedNode(world, route.node), origin: 'map' };
+  }
   if (route.name !== 'project') return { ...base, scope: ALL, node: null, origin: 'none' };
   const mapped = mapIdOfProject(route.projectId);
   if (mapped.kind !== 'verified') return { ...base, scope: ALL, node: null, origin: mapped.kind };

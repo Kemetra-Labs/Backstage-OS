@@ -10,6 +10,7 @@ import type { Route } from './nav/routes';
 import { useRoute } from './nav/useRoute';
 import { AppShell } from './shell/AppShell';
 import { Agents } from './screens/Agents';
+import { MissionMap } from './screens/MissionMap';
 import { DecisionDetail } from './screens/DecisionDetail';
 import { Decisions } from './screens/Decisions';
 import { Evidence } from './screens/Evidence';
@@ -37,6 +38,7 @@ function screenFor(route: Route) {
   switch (route.name) {
     case 'home': return <Home />;
     case 'portfolio': return <Portfolio />;
+    case 'map': return <MissionMap />;
     case 'project': return <Project projectId={route.projectId} {...(route.componentId ? { componentId: route.componentId } : {})} />;
     case 'investigation': return <InvestigationRoute id={route.id} />;
     case 'evidence': return <Evidence id={route.id} {...(route.from ? { from: route.from } : {})} />;

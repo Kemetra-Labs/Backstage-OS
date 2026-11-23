@@ -4,7 +4,7 @@ import type { Lang } from '../contract/types';
 import type { EdgeKind, Severity } from '../contract/world';
 
 export type StateKind = 'loading' | 'empty' | 'error' | 'restricted' | 'unavailable' | 'not_configured' | 'unknown';
-export type NavKey = 'home' | 'portfolio' | 'project' | 'investigation' | 'decisions' | 'agents' | 'sources';
+export type NavKey = 'home' | 'portfolio' | 'map' | 'project' | 'investigation' | 'decisions' | 'agents' | 'sources';
 
 export interface ShellCopy {
   readonly nav: Readonly<Record<NavKey, string>>;
@@ -48,6 +48,7 @@ const en: ShellCopy = {
   nav: {
     home: 'Command Home',
     portfolio: 'Portfolio',
+    map: 'Mission Map',
     project: 'Project Intelligence',
     investigation: 'Investigation Room',
     decisions: 'Decision Inbox',
@@ -104,6 +105,7 @@ const ar: ShellCopy = {
   nav: {
     home: 'مركز القيادة',
     portfolio: 'المحفظة',
+    map: 'خريطة المهام',
     project: 'ذكاء المشروع',
     investigation: 'غرفة التحقيق',
     decisions: 'صندوق القرارات',

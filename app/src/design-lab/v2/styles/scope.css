@@ -20,3 +20,5 @@
 @media (prefers-reduced-motion: reduce) {
   :where(.kv2-scope), :where(.kv2-scope) :where(*, *::before, *::after) { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+/* The map region is a grid item of the host's <main>, whose auto minimum width is its content: without this the region is wider than a narrow phone. */
+.kv2-scope { min-inline-size: 0; max-inline-size: 100%; }

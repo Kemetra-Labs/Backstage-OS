@@ -17,12 +17,16 @@ describe('parseHash', () => {
     ['#/decisions/DEC-DEMO-3', { name: 'decision', id: 'DEC-DEMO-3' }],
     ['#/agents', { name: 'agents' }],
     ['#/sources', { name: 'sources' }],
+    ['#/map', { name: 'map' }],
+    ['#/map/all', { name: 'map', scope: 'all' }],
+    ['#/map/retail-tower', { name: 'map', scope: 'retail-tower' }],
+    ['#/map/retail-tower/inventory', { name: 'map', scope: 'retail-tower', node: 'inventory' }],
   ])('%s', (hash, route) => {
     expect(parseHash(hash)).toEqual(route);
   });
 
   it.each(['#/nope', '#/home/x', '#/portfolio/x', '#/project', '#/project/a/b/c', '#/investigation', '#/evidence',
-    '#/decisions/a/b', '#/agents/x', '#/sources/x', '#/project/%E0%A4%A', '#/project/<script>'])('%s is notFound', (hash) => {
+    '#/decisions/a/b', '#/agents/x', '#/sources/x', '#/map/nope', '#/map/all/a/b', '#/map/retail-tower/%3Cx%3E', '#/map/%E0%A4%A', '#/map//x', '#/project/%E0%A4%A', '#/project/<script>'])('%s is notFound', (hash) => {
     expect(parseHash(hash).name).toBe('notFound');
   });
 
@@ -37,6 +41,7 @@ describe('hrefFor', () => {
     { name: 'project', projectId: 'RT', componentId: 'stock-sync' }, { name: 'investigation', id: 'INV-DEMO-7' },
     { name: 'evidence', id: 'E-1' }, { name: 'evidence', id: 'E-1', from: 'INV-DEMO-7' }, { name: 'decisions' },
     { name: 'decision', id: 'DEC-DEMO-3' }, { name: 'agents' }, { name: 'sources' },
+    { name: 'map' }, { name: 'map', scope: 'all' }, { name: 'map', scope: 'retail-tower', node: 'stock-sync' },
   ];
   it.each(routes)('round-trips %o', (r) => {
     expect(parseHash(hrefFor(r))).toEqual(r);
@@ -52,6 +57,7 @@ describe('sectionOf', () => {
     expect(sectionOf({ name: 'decision', id: 'D' })).toBe('decisions');
     expect(sectionOf({ name: 'decisions' })).toBe('decisions');
     expect(sectionOf({ name: 'project', projectId: 'RT' })).toBe('project');
+    expect(sectionOf({ name: 'map', scope: 'all' })).toBe('map');
     expect(sectionOf({ name: 'notFound', path: '/' })).toBeNull();
   });
 });
