@@ -8,6 +8,7 @@ import { UnconfiguredVerifier, type IdentityVerificationPort } from "./identity/
 import { InMemorySessionStore } from "./session/in-memory-session-store";
 import { SessionService } from "./session/session.service";
 import type { SessionStore } from "./session/session.types";
+import { SignInRateLimiter } from "./sign-in-rate-limiter";
 
 export interface AuthOverrides {
   readonly verifier?: IdentityVerificationPort;
@@ -20,6 +21,10 @@ export interface AuthDeps {
   readonly verifier: IdentityVerificationPort;
   readonly directory: IdentityDirectory;
   readonly sessions: SessionService;
+  readonly limiter: SignInRateLimiter;
+  /** True only when the owner lab is on and the Descope project is configured: then GET /auth/lab exists. */
+  readonly lab: boolean;
+  readonly labProjectId: string | null;
 }
 
 /**
@@ -46,9 +51,13 @@ export function buildAuth(env: Env, overrides: AuthOverrides = {}, persistence?:
   const directory =
     overrides.directory ?? persistence?.directoryFor(config.owner) ?? new ConfiguredOwnerDirectory(config.owner);
   const store = overrides.store ?? persistence?.store ?? new InMemorySessionStore();
-  const sessions = new SessionService(store, overrides.clock ?? Date.now, {
+  // The limiter shares the session clock, so a test clock drives its window too.
+  const clock = overrides.clock ?? Date.now;
+  const sessions = new SessionService(store, clock, {
     absoluteTtlMs: config.session.absoluteTtlSeconds * 1000,
     idleTtlMs: config.session.idleTtlSeconds * 1000,
   });
-  return { verifier, directory, sessions };
+  const limiter = new SignInRateLimiter(clock, config.signInLimitPerMinute);
+  const labProjectId = config.lab && config.descope !== null ? config.descope.projectId : null;
+  return { verifier, directory, sessions, limiter, lab: labProjectId !== null, labProjectId };
 }

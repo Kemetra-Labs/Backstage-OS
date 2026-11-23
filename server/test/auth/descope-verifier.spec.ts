@@ -30,7 +30,6 @@ const ISSUER = descopeIssuer(PROJECT_ID);
 const SUB = 'UkawalysOwner0001';
 const KID = 'test-kid-1';
 const MAX_AGE = 900;
-const REFUSED: VerifyResult = { kind: 'refused' };
 const UNAVAILABLE: VerifyResult = { kind: 'unavailable' };
 
 let privateKey: KeyLike;
@@ -115,37 +114,49 @@ describe('DescopeVerifier: accepts', () => {
   });
 });
 
+type Claim = 'iss' | 'aud' | 'exp' | 'nbf' | 'iat' | 'sub' | 'drn';
+const CLAIM_FAILED = 'ERR_JWT_CLAIM_VALIDATION_FAILED';
+
+/** A refusal carries a reason: a fixed code, plus the name (never the value) of a registered claim when jose names one. */
+function expectRefused(result: VerifyResult, code: string, claim?: Claim): void {
+  expect(result).toEqual({ kind: 'refused', reason: claim === undefined ? { code } : { code, claim } });
+}
+
 describe('DescopeVerifier: refuses', () => {
-  const cases: Array<[string, () => Promise<string>]> = [
-    ['a bad signature (signed by another key)', () => token({ key: otherPrivateKey })],
-    ['a wrong issuer', () => token({ issuer: 'https://api.descope.com/v1/apps/PotherProject' })],
-    ['an expired token', () => token({ expiresIn: -600 })],
-    ['a token without exp', () => token({ expiresIn: null })],
-    ['a token without iat (the age cap needs it)', () => token({ iatAgo: null })],
-    ['a missing sub', () => token({ sub: null })],
-    ['an empty sub', () => token({ sub: '' })],
-    ['an over-long sub', () => token({ sub: 'U'.repeat(300) })],
-    ['a wrong audience', () => token({ audience: 'PotherProject' })],
-    ['a missing audience (audience is required)', () => token({ audience: null })],
-    ['a Descope refresh token (drn=DSR)', () => token({ drn: 'DSR' })],
+  const cases: Array<[string, () => Promise<string>, string, Claim?]> = [
+    ['a bad signature (signed by another key)', () => token({ key: otherPrivateKey }), 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED'],
+    ['a wrong issuer', () => token({ issuer: 'https://api.descope.com/v1/apps/PotherProject' }), CLAIM_FAILED, 'iss'],
+    ['an expired token', () => token({ expiresIn: -600 }), 'ERR_JWT_EXPIRED', 'exp'],
+    ['a token without exp', () => token({ expiresIn: null }), CLAIM_FAILED, 'exp'],
+    ['a token without iat (the age cap needs it)', () => token({ iatAgo: null }), CLAIM_FAILED, 'iat'],
+    ['a missing sub', () => token({ sub: null }), CLAIM_FAILED, 'sub'],
+    ['an empty sub', () => token({ sub: '' }), 'KAWALYS_BAD_SUBJECT'],
+    ['an over-long sub', () => token({ sub: 'U'.repeat(300) }), 'KAWALYS_BAD_SUBJECT'],
+    ['a wrong audience', () => token({ audience: 'PotherProject' }), CLAIM_FAILED, 'aud'],
+    ['a missing audience (audience is required)', () => token({ audience: null }), CLAIM_FAILED, 'aud'],
+    ['a Descope refresh token (drn=DSR)', () => token({ drn: 'DSR' }), 'KAWALYS_TOKEN_KIND'],
     // Kawalys (BACK-55/56 integration, security review): allowlist session tokens, refuse impersonation.
-    ['a token without drn (only Descope session tokens, drn=DS)', () => token({ drn: null })],
-    ['another Descope token kind (drn=AK)', () => token({ drn: 'AK' })],
-    ['a token_type=refresh token', () => token({ extra: { token_type: 'refresh' } })],
-    ['an impersonation token (act claim) for the owner subject', () => token({ extra: { act: { sub: 'Uimpersonator' } } })],
-    ['an impersonation token (dact claim, JWT template override)', () => token({ extra: { dact: { sub: 'Uimpersonator' } } })],
-    ['an nbf beyond the clock tolerance', () => token({ nbfIn: 60 })],
-    ['a token issued longer ago than the age cap', () => token({ iatAgo: MAX_AGE + 600 })],
-    ['a token issued in the future', () => token({ iatAgo: -3600, expiresIn: 7200 })],
+    ['a token without drn (only Descope session tokens, drn=DS)', () => token({ drn: null }), 'KAWALYS_TOKEN_KIND'],
+    ['another Descope token kind (drn=AK)', () => token({ drn: 'AK' }), 'KAWALYS_TOKEN_KIND'],
+    ['a token_type=refresh token', () => token({ extra: { token_type: 'refresh' } }), 'KAWALYS_TOKEN_KIND'],
+    ['an impersonation token (act claim) for the owner subject', () => token({ extra: { act: { sub: 'Uimpersonator' } } }), 'KAWALYS_IMPERSONATION'],
+    ['an impersonation token (dact claim, JWT template override)', () => token({ extra: { dact: { sub: 'Uimpersonator' } } }), 'KAWALYS_IMPERSONATION'],
+    ['an nbf beyond the clock tolerance', () => token({ nbfIn: 60 }), CLAIM_FAILED, 'nbf'],
+    ['a token issued longer ago than the age cap', () => token({ iatAgo: MAX_AGE + 600 }), 'ERR_JWT_EXPIRED', 'iat'],
+    ['a token issued in the future', () => token({ iatAgo: -3600, expiresIn: 7200 }), CLAIM_FAILED, 'iat'],
     [
       'a Retail Tower shaped token (another project: its issuer and audience)',
       () => token({ issuer: 'https://api.descope.com/v1/apps/P2rtProject0001', audience: 'P2rtProject0001' }),
+      CLAIM_FAILED,
+      'iss',
     ],
-    ['an unknown kid (ERR_JWKS_NO_MATCHING_KEY)', () => token({ kid: 'rotated-away' })],
+    ['an unknown kid (ERR_JWKS_NO_MATCHING_KEY)', () => token({ kid: 'rotated-away' }), 'ERR_JWKS_NO_MATCHING_KEY'],
   ];
 
-  it.each(cases)('%s', async (_label, make) => {
-    await expect(verifier().verify(await make(), signal())).resolves.toEqual(REFUSED);
+  // A rest parameter keeps the callback's arity at 0: jest hands rows shorter than the callback a `done` callback.
+  it.each(cases)('%s', async (...row) => {
+    const [, make, code, claim] = row;
+    expectRefused(await verifier().verify(await make(), signal()), code, claim);
   });
 
   it('a disallowed algorithm (ES256 key published in the JWKS)', async () => {
@@ -153,7 +164,7 @@ describe('DescopeVerifier: refuses', () => {
     const ecJwk = { ...(await exportJWK(ec.publicKey)), kid: 'ec-kid', alg: 'ES256' };
     const v = verifierWith(createLocalJWKSet({ keys: [publicJwk, ecJwk] }));
     const t = await token({ key: ec.privateKey, alg: 'ES256', kid: 'ec-kid' });
-    await expect(v.verify(t, signal())).resolves.toEqual(REFUSED);
+    expectRefused(await v.verify(t, signal()), 'ERR_JOSE_ALG_NOT_ALLOWED');
   });
 
   it('an unsigned (alg=none) token', async () => {
@@ -161,7 +172,9 @@ describe('DescopeVerifier: refuses', () => {
     const body = Buffer.from(
       JSON.stringify({ sub: SUB, iss: ISSUER, aud: PROJECT_ID, iat: nowSeconds(), exp: nowSeconds() + 300 }),
     ).toString('base64url');
-    await expect(verifier().verify(`${header}.${body}.`, signal())).resolves.toEqual(REFUSED);
+    const r = await verifier().verify(`${header}.${body}.`, signal());
+    expect(r.kind).toBe('refused');
+    expect(r).toMatchObject({ reason: { code: expect.stringMatching(/^ERR_J/) } });
   });
 
   it('an HS256 token signed with the RSA public key as the HMAC secret', async () => {
@@ -175,11 +188,18 @@ describe('DescopeVerifier: refuses', () => {
       .setExpirationTime('5m')
       .sign(secret);
     // A key getter that hands back the public key for any header, so the algorithm allow-list is what refuses it.
-    await expect(verifierWith(async () => publicKey).verify(t, signal())).resolves.toEqual(REFUSED);
+    expectRefused(await verifierWith(async () => publicKey).verify(t, signal()), 'ERR_JOSE_ALG_NOT_ALLOWED');
   });
 
-  it.each(['not-a-jwt', '', 'a.b.c', 'x'.repeat(9000)])('garbage or oversized input %#', async (input) => {
-    await expect(verifier().verify(input, signal())).resolves.toEqual(REFUSED);
+  it.each(['', 'x'.repeat(9000)])('empty or oversized input %#', async (input) => {
+    expectRefused(await verifier().verify(input, signal()), 'KAWALYS_INPUT');
+  });
+
+  it.each(['not-a-jwt', 'a.b.c'])('garbage input %#', async (input) => {
+    const r = await verifier().verify(input, signal());
+    expect(r.kind).toBe('refused');
+    expect(r).toMatchObject({ reason: { code: expect.stringMatching(/^ERR_JW/) } });
+    expect(Object.keys((r as { reason: object }).reason)).toEqual(['code']);
   });
 });
 
@@ -265,13 +285,41 @@ describe('DescopeVerifier: nothing leaks', () => {
     const outage = await verifierWith(async () => {
       throw new Error(`secret ${SUB} ${t}`);
     }).verify(await token(), signal());
+    expect(Object.keys(refused).sort()).toEqual(['kind', 'reason']);
+    expect(Object.keys(outage)).toEqual(['kind']);
     for (const r of [refused, outage]) {
-      expect(Object.keys(r)).toEqual(['kind']);
       const text = JSON.stringify(r);
       expect(text).not.toContain(SUB);
       expect(text).not.toContain(t);
       expect(text).not.toContain('secret');
     }
+  });
+
+  it('a Retail Tower shaped token gives a reason with neither its project id nor its subject', async () => {
+    const rtSub = 'U2rtOperator0001';
+    const t = await token({
+      issuer: 'https://api.descope.com/v1/apps/P2rtProject0001',
+      audience: 'P2rtProject0001',
+      sub: rtSub,
+    });
+    const r = await verifier().verify(t, signal());
+    expect(r.kind).toBe('refused');
+    const text = JSON.stringify((r as { reason: unknown }).reason);
+    for (const secret of ['P2rtProject0001', rtSub, SUB, PROJECT_ID, t]) expect(text).not.toContain(secret);
+  });
+
+  it('keeps only the allowlisted claim name from jose, and never a message or a claim value', async () => {
+    const throwing = (extra: Record<string, unknown>) =>
+      verifierWith(async () => {
+        throw Object.assign(new Error(`secret ${SUB}`), { code: CLAIM_FAILED, ...extra });
+      });
+    const tok = await token();
+    for (const claim of ['secretclaim', 'jti', 42, undefined, {}]) {
+      const r = await throwing({ claim, reason: `secret ${SUB}` }).verify(tok, signal());
+      expectRefused(r, CLAIM_FAILED);
+      expect(JSON.stringify(r)).not.toContain('secret');
+    }
+    expectRefused(await throwing({ claim: 'nbf', payload: { sub: SUB } }).verify(tok, signal()), CLAIM_FAILED, 'nbf');
   });
 });
 

@@ -3,7 +3,11 @@ import { jest } from '@jest/globals';
 import request from 'supertest';
 import { AuthConfigError } from '../../src/auth/auth.config';
 import { Public } from '../../src/auth/public.decorator';
-import { UnconfiguredVerifier } from '../../src/auth/identity/identity-verification.port';
+import {
+  UnconfiguredVerifier,
+  type IdentityVerificationPort,
+  type VerifyResult,
+} from '../../src/auth/identity/identity-verification.port';
 import { SESSION_COOKIE } from '../../src/auth/session/session-cookie';
 import { createApp } from '../../src/create-app';
 import { OWNER, TOKENS, startApp, shape, FakeIdentityVerifier, type TestApp } from './_helpers';
@@ -65,6 +69,21 @@ describe('Kawalys BFF authentication', () => {
       expect(me.body).toEqual({ user: { id: 'kawalys-owner', role: 'owner' } });
       expect(me.headers['cache-control']).toBe('no-store');
       expect((await t.get('/demo/evidence/E-1', cookie)).status).toBe(200);
+    });
+
+    it('answers 429 rate_limited after the limit and never calls the verifier for refused attempts', async () => {
+      const server = t.app.getHttpServer();
+      for (let i = 0; i < 10; i++) {
+        await request(server).post('/auth/session').set('Authorization', `Bearer ${TOKENS.refused}`);
+      }
+      const limited = await request(server).post('/auth/session').set('Authorization', `Bearer ${TOKENS.owner}`);
+      expect(limited.status).toBe(429);
+      expect(limited.body.error.code).toBe('rate_limited');
+      expect(limited.headers['set-cookie']).toBeUndefined();
+      expect(t.verifier.seen).toHaveLength(10);
+      t.clock.advance(60_000);
+      const after = await request(server).post('/auth/session').set('Authorization', `Bearer ${TOKENS.owner}`);
+      expect(after.status).toBe(200);
     });
 
     it('hands the verifier only the bearer token', async () => {
@@ -217,6 +236,7 @@ describe('Kawalys BFF authentication', () => {
   });
 
   describe('logging', () => {
+    // Lab mode is off here (no KAWALYS_AUTH_LAB in this app), so a refusal stays silent on the error channel.
     it('logs only fixed operator lines for an outage, nothing for a refusal, and never a token or subject', async () => {
       const server = t.app.getHttpServer();
       errorLog.mockClear();
@@ -227,6 +247,130 @@ describe('Kawalys BFF authentication', () => {
       const logged = JSON.stringify(errorLog.mock.calls);
       for (const secret of [TOKENS.unavailable, TOKENS.refused, OWNER.subject]) expect(logged).not.toContain(secret);
     });
+  });
+});
+
+describe('refusal reasons in the lab', () => {
+  const saved = { ...process.env };
+  const LAB_TOKENS = {
+    audience: 'lab.audience.token',
+    kind: 'lab.kind.token',
+    noReason: 'lab.noreason.token',
+  } as const;
+  const LAB_ENV: Record<string, string> = {
+    NODE_ENV: 'test',
+    KAWALYS_AUTH_LAB: '1',
+    KAWALYS_DESCOPE_PROJECT_ID: 'PkawalysTest0001',
+    KAWALYS_OWNER_SUBJECT: 'UkawalysOwner0001',
+  };
+
+  const verifier: IdentityVerificationPort = {
+    verify(rawToken: string): Promise<VerifyResult> {
+      const table: Record<string, VerifyResult> = {
+        [LAB_TOKENS.audience]: { kind: 'refused', reason: { code: 'ERR_JWT_CLAIM_VALIDATION_FAILED', claim: 'aud' } },
+        [LAB_TOKENS.kind]: { kind: 'refused', reason: { code: 'KAWALYS_TOKEN_KIND' } },
+        [LAB_TOKENS.noReason]: { kind: 'refused' },
+        [TOKENS.unavailable]: { kind: 'unavailable' },
+      };
+      return Promise.resolve(table[rawToken] ?? { kind: 'refused' });
+    },
+  };
+
+  // Logger.error, not warn: createApp runs Nest with logger ['error'], so warn lines never print (see the
+  // real-filter test below). The refusal line shares the channel with 'identity provider unavailable'.
+  let errorLog: ReturnType<typeof jest.spyOn>;
+  beforeEach(() => {
+    errorLog = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+    for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
+    Object.assign(process.env, saved);
+  });
+
+  function setEnv(lab: boolean): void {
+    Object.assign(process.env, LAB_ENV);
+    if (!lab) delete process.env['KAWALYS_AUTH_LAB'];
+  }
+
+  const exchange = (t: TestApp, token: string): request.Test =>
+    request(t.app.getHttpServer()).post('/auth/session').set('Authorization', `Bearer ${token}`);
+
+  it('in lab mode a refusal logs one fixed line with code and claim; outside lab mode it logs nothing', async () => {
+    setEnv(true);
+    const lab = await startApp([], { verifier });
+    const labRes = await exchange(lab, LAB_TOKENS.audience);
+    await lab.app.close();
+    expect(errorLog.mock.calls).toEqual([['identity token refused: ERR_JWT_CLAIM_VALIDATION_FAILED claim=aud']]);
+
+    errorLog.mockClear();
+    setEnv(false);
+    const plain = await startApp([], { verifier });
+    const plainRes = await exchange(plain, LAB_TOKENS.audience);
+    const noCredential = await request(plain.app.getHttpServer()).post('/auth/session');
+    await plain.app.close();
+    expect(errorLog).not.toHaveBeenCalled();
+
+    // The client sees the same response in both modes, and the same as for no credential at all.
+    expect(shape(labRes)).toEqual(shape(plainRes));
+    expect(shape(labRes)).toEqual(shape(noCredential));
+    expect(labRes.status).toBe(404);
+    expect(labRes.text).not.toMatch(/ERR_JWT|aud|KAWALYS/);
+  });
+
+  it('logs a bare code when the reason has no claim, nothing for no reason or a missing credential, only the outage line when the provider is down, and never a token', async () => {
+    setEnv(true);
+    const t = await startApp([], { verifier });
+    await exchange(t, LAB_TOKENS.kind);
+    await exchange(t, LAB_TOKENS.noReason);
+    await exchange(t, TOKENS.unavailable);
+    await request(t.app.getHttpServer()).post('/auth/session'); // no credential: no verifier call, no reason
+    await t.app.close();
+    expect(errorLog.mock.calls).toEqual([['identity token refused: KAWALYS_TOKEN_KIND'], ['identity provider unavailable']]);
+    const logged = JSON.stringify(errorLog.mock.calls);
+    for (const secret of [...Object.values(LAB_TOKENS), TOKENS.unavailable, OWNER.subject]) {
+      expect(logged).not.toContain(secret);
+    }
+  });
+});
+
+describe('refusal line through the real Nest log level filter', () => {
+  // No mock of Logger.prototype: createApp configures Nest with logger ['error'], and only what that filter lets
+  // through reaches stdout/stderr. A warn() line is dropped there, which a Logger.prototype mock cannot show.
+  const saved = { ...process.env };
+  const TOKEN = 'lab.audience.token';
+  const verifier: IdentityVerificationPort = {
+    verify: () =>
+      Promise.resolve({ kind: 'refused', reason: { code: 'ERR_JWT_CLAIM_VALIDATION_FAILED', claim: 'aud' } }),
+  };
+  afterEach(() => {
+    jest.restoreAllMocks();
+    for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
+    Object.assign(process.env, saved);
+  });
+
+  it('prints the lab refusal line on the output, and nothing secret', async () => {
+    Object.assign(process.env, {
+      NODE_ENV: 'test',
+      KAWALYS_AUTH_LAB: '1',
+      KAWALYS_DESCOPE_PROJECT_ID: 'PkawalysTest0001',
+      KAWALYS_OWNER_SUBJECT: 'UkawalysOwner0001',
+    });
+    const out: string[] = [];
+    const capture = (chunk: unknown): boolean => {
+      out.push(String(chunk));
+      return true;
+    };
+    jest.spyOn(process.stdout, 'write').mockImplementation(capture);
+    jest.spyOn(process.stderr, 'write').mockImplementation(capture);
+    const app = await createApp([], { verifier });
+    const res = await request(app.getHttpServer()).post('/auth/session').set('Authorization', `Bearer ${TOKEN}`);
+    await app.close();
+    jest.restoreAllMocks();
+    const printed = out.join('');
+    expect(res.status).toBe(404);
+    expect(printed).toContain('identity token refused: ERR_JWT_CLAIM_VALIDATION_FAILED claim=aud');
+    for (const secret of [TOKEN, 'PkawalysTest0001', 'UkawalysOwner0001']) expect(printed).not.toContain(secret);
   });
 });
 

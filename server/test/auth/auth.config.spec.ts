@@ -30,6 +30,11 @@ describe('loadAuthConfig', () => {
     });
   });
 
+  it('defaults the sign-in limit to 10 per minute and accepts an in-range override', () => {
+    expect(loadAuthConfig(VALID).signInLimitPerMinute).toBe(10);
+    expect(loadAuthConfig({ ...VALID, KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE: '100' }).signInLimitPerMinute).toBe(100);
+  });
+
   it('outside production, missing config means unconfigured, not an error', () => {
     const c = loadAuthConfig({});
     expect(c.owner).toBeNull();
@@ -78,6 +83,9 @@ describe('loadAuthConfig', () => {
     ['KAWALYS_SESSION_ABSOLUTE_TTL_SECONDS', '86401'],
     ['KAWALYS_SESSION_IDLE_TTL_SECONDS', '59'],
     ['KAWALYS_SESSION_IDLE_TTL_SECONDS', '28801'], // longer than the default absolute TTL
+    ['KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE', '0'],
+    ['KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE', '101'],
+    ['KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE', 'ten'],
   ])('a malformed %s=%p throws even outside production, and the error never echoes the value', (name, value) => {
     let error: unknown;
     try {
@@ -87,7 +95,8 @@ describe('loadAuthConfig', () => {
     }
     expect(error).toBeInstanceOf(AuthConfigError);
     expect((error as Error).message).toContain(name);
-    expect((error as Error).message).not.toContain(value);
+    // The message legitimately states the allowed range ("from 1 to 100"), which can contain a short value such as '0'.
+    expect((error as Error).message.replace(/from \d+ to \d+/, '')).not.toContain(value);
   });
 
   it('an issuer override needs the project id', () => {
