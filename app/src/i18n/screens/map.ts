@@ -11,6 +11,21 @@ export interface MapLensCopy {
   readonly noProject: string;
 }
 
+export interface SourcesViewCopy {
+  readonly label: string;
+  readonly tables: string;
+  readonly observatory: string;
+  readonly loading: string;
+  readonly failed: string;
+  readonly region: string;
+}
+
+/** BACK-88: the view switch on the Sources screen and the Observatory lens's own states. */
+export const SOURCES_VIEW_COPY: Readonly<Record<Lang, SourcesViewCopy>> = {
+  en: { label: 'Source views', tables: 'Tables', observatory: 'Observatory', loading: 'Loading the Source Observatory…', failed: 'The Source Observatory could not load. The tables above still work.', region: 'Source Observatory' },
+  ar: { label: 'عروض المصادر', tables: 'الجداول', observatory: 'المرصد', loading: 'جارٍ تحميل مرصد المصادر…', failed: 'تعذّر تحميل مرصد المصادر. تعمل الجداول كالمعتاد.', region: 'مرصد المصادر' },
+};
+
 export const MAP_LENS_COPY: Readonly<Record<Lang, MapLensCopy>> = {
   en: {
     loading: 'Loading the Mission Map…',

@@ -72,18 +72,31 @@ describe('the host adapter builds the map\'s useV2 value from host state', () =>
     const n = nav();
     const v2 = toV2(view('technical', 'en', '#/map/retail-tower/stock-sync'), n);
     v2.open('source-observatory', { src: 'github' });
+    v2.open('source-observatory');
     v2.open('mission-replay');
     v2.open('agent-flight-deck');
     v2.open('mission-map', { node: 'pos' });
     v2.go({ scope: '<script>' });
     expect(n.seen).toEqual([
-      { name: 'sources' },
+      { name: 'sources', view: 'observatory', src: 'github' },
+      { name: 'sources', view: 'observatory' },
       { name: 'investigation', id: DOMAIN.investigationId },
       { name: 'agents' },
       { name: 'map', scope: 'retail-tower', node: 'pos' },
       { name: 'map', scope: 'retail-tower', node: 'stock-sync' },
     ]);
     expect(hostRouteFor('mission-map', toMapContext(view('owner', 'en', '#/')))).toEqual({ name: 'map', scope: 'all' });
+  });
+
+  it('on the Sources screen the route carries the selected source, and a change is a source change', () => {
+    const n = nav();
+    const v2 = toV2(view('owner', 'ar', '#/sources/observatory/sentry'), n);
+    expect(v2.route).toMatchObject({ screen: 'source-observatory', src: 'sentry', persona: 'owner', lang: 'ar' });
+    v2.go({ src: 'port' });
+    v2.open('source-observatory', { src: 'jira' });
+    expect(n.seen).toEqual([{ name: 'sources', view: 'observatory', src: 'port' }, { name: 'sources', view: 'observatory', src: 'jira' }]);
+    expect(toV2(view('owner', 'en', '#/sources/observatory'), nav()).route.src).toBe(DEFAULT_ROUTE.src);
+    expect(toV2(view('owner', 'en', '#/sources'), nav()).route.screen).toBe('source-observatory');
   });
 
   it('every route it produces survives the host href and parser, and carries no restricted id', () => {

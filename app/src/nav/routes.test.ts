@@ -17,6 +17,8 @@ describe('parseHash', () => {
     ['#/decisions/DEC-DEMO-3', { name: 'decision', id: 'DEC-DEMO-3' }],
     ['#/agents', { name: 'agents' }],
     ['#/sources', { name: 'sources' }],
+    ['#/sources/observatory', { name: 'sources', view: 'observatory' }],
+    ['#/sources/observatory/sentry', { name: 'sources', view: 'observatory', src: 'sentry' }],
     ['#/map', { name: 'map' }],
     ['#/map/all', { name: 'map', scope: 'all' }],
     ['#/map/retail-tower', { name: 'map', scope: 'retail-tower' }],
@@ -26,7 +28,7 @@ describe('parseHash', () => {
   });
 
   it.each(['#/nope', '#/home/x', '#/portfolio/x', '#/project', '#/project/a/b/c', '#/investigation', '#/evidence',
-    '#/decisions/a/b', '#/agents/x', '#/sources/x', '#/map/nope', '#/map/all/a/b', '#/map/retail-tower/%3Cx%3E', '#/map/%E0%A4%A', '#/map//x', '#/project/%E0%A4%A', '#/project/<script>'])('%s is notFound', (hash) => {
+    '#/decisions/a/b', '#/agents/x', '#/sources/x', '#/map/nope', '#/sources/nope', '#/sources/observatory/nope', '#/sources/observatory/github/x', '#/sources/sentry', '#/sources/observatory/%3Cx%3E', '#/map/all/a/b', '#/map/retail-tower/%3Cx%3E', '#/map/%E0%A4%A', '#/map//x', '#/project/%E0%A4%A', '#/project/<script>'])('%s is notFound', (hash) => {
     expect(parseHash(hash).name).toBe('notFound');
   });
 
@@ -41,6 +43,7 @@ describe('hrefFor', () => {
     { name: 'project', projectId: 'RT', componentId: 'stock-sync' }, { name: 'investigation', id: 'INV-DEMO-7' },
     { name: 'evidence', id: 'E-1' }, { name: 'evidence', id: 'E-1', from: 'INV-DEMO-7' }, { name: 'decisions' },
     { name: 'decision', id: 'DEC-DEMO-3' }, { name: 'agents' }, { name: 'sources' },
+    { name: 'sources', view: 'observatory' }, { name: 'sources', view: 'observatory', src: 'port' },
     { name: 'map' }, { name: 'map', scope: 'all' }, { name: 'map', scope: 'retail-tower', node: 'stock-sync' },
   ];
   it.each(routes)('round-trips %o', (r) => {
