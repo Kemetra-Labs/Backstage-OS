@@ -63,15 +63,16 @@ function scopeSource(s: SourceMeta, keep: Keep): SourceMeta {
 // rows, so removing one leaves no gap.
 const keepReplay = (r: ReplayEvent, visible: Visible): boolean => r.evidence === null || visible(r.evidence);
 
-// A mission keeps the evidence it still has. Each withheld reference takes its event out of the count (the fixture does not say what
-// `events` counts; one event per reference is the assumption, and a lower number never reveals a hidden record). A mission whose
-// whole basis was withheld keeps no claim: unknown label, no evidence, no events.
+// A mission keeps the evidence it still has. A mission whose whole basis was withheld keeps no claim: unknown label, no evidence.
+// Its `events` figure is never touched: the fixture does not say what it counts (owner decision, BACK-90), so no screen shows it and
+// nothing derives a number from it, least of all by subtracting withheld references, which would make a figure that differs by
+// persona and so hint that a record is hidden.
 function scopeMission(m: Mission, visible: Visible): Mission {
   const evidence = m.evidence.filter(visible);
   const withheld = m.evidence.length - evidence.length;
   if (withheld === 0) return m;
-  if (evidence.length === 0) return { ...m, evidence, events: 0, label: 'unknown' };
-  return { ...m, evidence, events: Math.max(0, m.events - withheld) };
+  if (evidence.length === 0) return { ...m, evidence, label: 'unknown' };
+  return { ...m, evidence };
 }
 
 // An overlap dependency is kept, or removed, by the scoped canonical fixture and carries its truth and evidence ids. Any other link

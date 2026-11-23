@@ -115,6 +115,12 @@ describe('authorizedWorld, replay rows and missions (BACK-66)', () => {
     expect(t.missions.map((m) => m.id)).toContain('MSN-X');
   });
 
+  it('no persona gets a different events figure for any mission: it is the fixture value for Technical, Owner and Nontechnical alike (BACK-90)', () => {
+    for (const p of ['technical', ...UNAUTHORIZED] as const) {
+      expect(authorizedWorld(CONSTRUCTED, p).missions.map((x) => [x.id, x.events]), p).toEqual(CONSTRUCTED.missions.map((x) => [x.id, x.events]));
+    }
+  });
+
   for (const p of UNAUTHORIZED) {
     describe(p, () => {
       const w = authorizedWorld(CONSTRUCTED, p);
@@ -132,20 +138,20 @@ describe('authorizedWorld, replay rows and missions (BACK-66)', () => {
         expect(w.replay.find((r) => r.id === 'R-5')).toEqual(WORLD.replay.find((r) => r.id === 'R-5'));
       });
 
-      it('a mission that loses part of its evidence keeps the rest and no longer counts the withheld one', () => {
+      it('a mission that loses part of its evidence keeps the rest and its claim, and its events figure is not recomputed', () => {
         const m = w.missions.find((x) => x.id === 'MSN-DEMO-2')!;
         expect(m.evidence).toEqual(['E-9']);
-        // The fixture does not say what `events` counts. Assumption: one event per evidence reference at least, so the withheld
-        // reference's event leaves the count. A lower number never tells the viewer a hidden record exists.
-        expect(m.events).toBe(WORLD.missions.find((x) => x.id === 'MSN-DEMO-2')!.events - 1);
+        // The fixture does not say what `events` counts (owner decision, BACK-90): it is never derived from the evidence, so
+        // withholding a reference changes no number. A figure that differed by persona would itself hint that a record is hidden.
+        expect(m.events).toBe(WORLD.missions.find((x) => x.id === 'MSN-DEMO-2')!.events);
         expect(m.label).toBe('observed');
       });
 
-      it('a mission that rested only on a withheld record keeps no claim: unknown label, no evidence, no events', () => {
+      it('a mission that rested only on a withheld record keeps no claim: unknown label, no evidence, and its events figure is untouched', () => {
         const m = w.missions.find((x) => x.id === 'MSN-X')!;
         expect(m.evidence).toEqual([]);
         expect(m.label).toBe('unknown');
-        expect(m.events).toBe(0);
+        expect(m.events).toBe(restrictedOnly.events);
       });
 
       it('leaves missions that never touched the withheld record exactly as they were', () => {

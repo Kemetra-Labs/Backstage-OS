@@ -12,7 +12,7 @@ The Agents screen (`#/agents`) keeps its roster, oversight panel and activity hi
 
 A mission has an `events` figure and the fixture does not say what it counts. The lab scopes it for a persona by subtracting one per withheld evidence reference, which is an assumption, and a figure that differs by persona is itself a cue that something was removed. In the embedded Deck the figure is shown as **"Not defined in the demo data"**, for every persona and every mission (Technical included, so there is no persona-dependent number). The standalone lab is unchanged: `embedded` is false there and its own tests still pass.
 
-Not changed, stated: the lab's `scopeMission` (the subtraction) stays in the V2 world for the lab; the host never displays its result.
+**Owner decision, 23 Nov 2026: option A now, option D later.** The figure is not defined by the fixture, in the standalone lab as in the host. The lab now shows the same "Not defined in the demo data" wording, and the subtraction in `scopeMission` is removed: a mission's `events` is never recomputed, displayed or derived from evidence, for any persona. The `events` field stays in the type and the fixture for now; removing it (option D) is a separate, audited change. Option B (count of evidence references) is rejected and option C (real activity events) is not approved.
 
 ## Read-only, tested
 
@@ -45,7 +45,7 @@ All five missions stay listed for every persona. Tested for Owner and Nontechnic
 
 ## Unresolved, recorded not reconciled
 
-- What a mission's `events` counts is an owner/fixture decision; until it is defined the embedded Deck shows no number. The lab still shows the subtracted figure.
+- What a mission's `events` counts is an owner/fixture decision; no screen shows a number (decided, see above); the field's removal is a separate future change.
 - The audit panel's "Events" figure is the length of the persona's authorized replay (the same list the Replay shows), so it is consistent with what that persona sees; its time semantics are BACK-89's.
 - Agent names, roles and mission wording are the lab's fixture copy.
 
