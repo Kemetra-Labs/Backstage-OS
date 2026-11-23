@@ -34,8 +34,9 @@ const SATS: readonly { readonly id: string; readonly key: K; readonly icon: Icon
 
 /**
  * `embedded`: shown inside a host screen that already has the page's h1, so the title is an h2 and the pilot chip is left out.
- * Also, a mission's `events` figure is shown as not defined: the fixture does not say what it counts, and the only way to scope it for
- * a persona is to subtract withheld references, which is an assumption (and a figure that differs by persona is itself a cue).
+ * A mission's `events` figure is shown as not defined, embedded or standalone: the fixture does not say what it counts (owner
+ * decision, BACK-90), and a figure scoped by subtracting withheld references would differ by persona and so be a cue. The field itself
+ * stays in the type and the fixture for now; its removal is a separate, audited change.
  */
 export function AgentFlightDeck({ embedded = false }: { readonly embedded?: boolean } = {}) {
   const H = embedded ? 'h2' : 'h1';
@@ -184,7 +185,7 @@ export function AgentFlightDeck({ embedded = false }: { readonly embedded?: bool
                 <div><dt><T k="deck.md.agent" /></dt><dd><T k={agentOf(sel).key as K} /></dd></div>
                 <div><dt><T k="deck.th.status" /></dt><dd><ToneChip tone={STATUS_TONE[sel.status]}><T k={statusKey(sel.status)} /></ToneChip></dd></div>
                 <div><dt><T k="deck.md.started" /></dt><dd><Age minutes={sel.startedMinutesAgo} /></dd></div>
-                <div><dt><T k="deck.md.events" /></dt><dd>{embedded ? <T k="deck.md.events.unknown" /> : sel.events}</dd></div>
+                <div><dt><T k="deck.md.events" /></dt><dd><T k="deck.md.events.unknown" /></dd></div>
                 <div><dt><T k="deck.md.human" /></dt><dd><ToneChip tone={HUMAN_TONE[sel.human]}><T k={`deck.h.${sel.human}` as K} /></ToneChip></dd></div>
                 <div><dt><T k="deck.th.basis" /></dt><dd><TruthChip label={sel.label} /></dd></div>
               </dl>

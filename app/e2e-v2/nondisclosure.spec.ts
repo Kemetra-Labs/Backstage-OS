@@ -156,7 +156,7 @@ for (const persona of UNAUTHORIZED) {
 // ---- BACK-66: Source Observatory, Mission Replay, Agent Flight Deck and shell search ---------------------------------------------
 // The same rule as above, on the four surfaces that used to read the unfiltered world. A display persona is not authorization; this
 // checks the demo's scoping, not a server-side control (X02/X04 stay open).
-const at = (key: 'obs.ev.none' | 'deck.md.events', lang: 'en' | 'ar'): string => TABLE[key][lang === 'ar' ? 1 : 0];
+const at = (key: 'obs.ev.none' | 'deck.md.events' | 'deck.md.events.unknown', lang: 'en' | 'ar'): string => TABLE[key][lang === 'ar' ? 1 : 0];
 const scoped = (persona: 'owner' | 'nontechnical') => authorizedWorld(WORLD, persona);
 const READABLE = (persona: 'owner' | 'nontechnical'): number => INV_DEMO_7.evidence.filter((e) => scoped(persona).evidenceById[e.id] !== undefined).length;
 
@@ -214,17 +214,14 @@ for (const persona of UNAUTHORIZED) {
         }
       });
 
-      test('Agent Flight Deck: MSN-DEMO-2 keeps E-9 and loses E-5, and its event count drops the withheld one', async ({ page }) => {
+      test('Agent Flight Deck: MSN-DEMO-2 keeps E-9 and loses E-5, and its events figure is not defined, so no count can hint at the hidden record', async ({ page }) => {
         await load(page, { screen: 'agent-flight-deck', persona, lang, extra: 'msn=MSN-DEMO-2' });
         await expect(page.locator('#mission')).toBeVisible();
         expect(await leaks(page, lang, { inspectorAge: false })).toEqual([]);
         for (const text of [COPY[lang].restricted, COPY[lang].notRead.restricted]) await expect(page.getByText(text)).toHaveCount(0);
         await expect(page.locator('#mission .kv2-md-side .kv2-ev-list li')).toHaveCount(1);
-        const raw = WORLD.missions.find((m) => m.id === 'MSN-DEMO-2')!;
-        const mine = scoped(persona).missions.find((m) => m.id === 'MSN-DEMO-2')!;
-        expect(mine.events).toBeLessThan(raw.events);
         const events = page.locator('#mission .kv2-md-grid > div', { hasText: at('deck.md.events', lang) }).locator('dd');
-        await expect(events).toHaveText(String(mine.events));
+        await expect(events).toHaveText(at('deck.md.events.unknown', lang));
       });
 
       // With the shipped fixture no search label carries E-5, so this passes on the old code too. It guards the user-visible result
@@ -257,13 +254,28 @@ test.describe('BACK-66 Technical is permitted', () => {
     await expect(page.locator('#rpinsp-panel')).toContainText('E-5');
   });
 
-  test('Deck: Technical sees MSN-DEMO-2 with both evidence rows and the full event count', async ({ page }) => {
+  test('Deck: Technical sees MSN-DEMO-2 with both evidence rows, and its events figure is still not defined (the same wording as every persona)', async ({ page }) => {
     await load(page, { screen: 'agent-flight-deck', persona: 'technical', lang: 'en', extra: 'msn=MSN-DEMO-2' });
     await expect(page.locator('#mission .kv2-md-side .kv2-ev-list li')).toHaveCount(2);
     await expect(page.locator('#mission .kv2-md-side')).toContainText('E-5');
     const events = page.locator('#mission .kv2-md-grid > div', { hasText: at('deck.md.events', 'en') }).locator('dd');
-    await expect(events).toHaveText(String(WORLD.missions.find((m) => m.id === 'MSN-DEMO-2')!.events));
+    await expect(events).toHaveText(at('deck.md.events.unknown', 'en'));
   });
+
+  // BACK-90 (owner decision A): the events figure is not defined, in the standalone lab as in the host Flight Deck. Every mission, all three
+  // personas, both languages: the cell holds the same words and no digit, so no fixture value (the fixture has 2 to 4) can reach the screen.
+  for (const lang of ['en', 'ar'] as const) {
+    test(`Deck ${lang}: every mission's events figure reads as not defined for every persona, never a number`, async ({ page }) => {
+      for (const persona of ['technical', 'owner', 'nontechnical'] as const) {
+        for (const m of WORLD.missions) {
+          await load(page, { screen: 'agent-flight-deck', persona, lang, extra: `msn=${m.id}` });
+          const events = page.locator('#mission .kv2-md-grid > div', { hasText: at('deck.md.events', lang) }).locator('dd');
+          await expect(events, `${persona} ${m.id}`).toHaveText(at('deck.md.events.unknown', lang));
+          expect(await events.innerText(), `${persona} ${m.id}`).not.toMatch(/\d/);
+        }
+      }
+    });
+  }
 });
 
 test.describe('BACK-66 persona switch on the same page (display only, not authorization)', () => {
@@ -288,11 +300,14 @@ test.describe('BACK-66 persona switch on the same page (display only, not author
     expect(await leaks(page, 'en', { inspectorAge: false })).toEqual([]);
   });
 
-  test('Deck: switching Technical to Owner removes E-5 from MSN-DEMO-2 and lowers its event count', async ({ page }) => {
+  test('Deck: switching Technical to Owner removes E-5 from MSN-DEMO-2, and its events figure reads the same before and after', async ({ page }) => {
     await load(page, { screen: 'agent-flight-deck', persona: 'technical', lang: 'en', extra: 'msn=MSN-DEMO-2' });
     await expect(page.locator('#mission .kv2-md-side')).toContainText('E-5');
+    const events = page.locator('#mission .kv2-md-grid > div', { hasText: at('deck.md.events', 'en') }).locator('dd');
+    await expect(events).toHaveText(at('deck.md.events.unknown', 'en'));
     await toOwner(page);
     await expect(page.locator('#mission .kv2-md-side .kv2-ev-list li')).toHaveCount(1);
+    await expect(events).toHaveText(at('deck.md.events.unknown', 'en'));
     expect(await leaks(page, 'en', { inspectorAge: false })).toEqual([]);
   });
 });
