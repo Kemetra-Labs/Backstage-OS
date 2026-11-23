@@ -5,31 +5,17 @@
 // not authorization. Nothing is live.
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
-import { DOMAIN } from '../src/domain/fixture';
 import { translate } from '../src/design-lab/v2/i18n/t';
 import { MISSIONS } from '../src/design-lab/v2/fixtures/world';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
+import { hasId, hash, RESTRICTED, surface } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
-const WITHHELD = Object.values(DOMAIN.evidence).filter((e) => e.visibility === 'technical');
-const RESTRICTED = [...WITHHELD.map((e) => e.id), ...WITHHELD.flatMap((e) => (e.observation ? [e.observation.id] : []))];
 const lens = (page: Page) => page.locator('[data-testid="agent-deck-lens"]');
 const missionButtons = (page: Page) => lens(page).locator('table.kv2-missions button[aria-pressed]');
-const hash = (page: Page) => page.evaluate(() => window.location.hash);
-const hasId = (text: string, id: string) => new RegExp(`(^|[^A-Za-z0-9-])${id}([^A-Za-z0-9-]|$)`).test(text);
 const eventsCell = (page: Page, lang: 'en' | 'ar') => lens(page).locator('#mission .kv2-md-grid > div', { hasText: translate('deck.md.events', lang, 'technical') }).locator('dd');
 
-const surface = (page: Page) =>
-  page.evaluate(() => {
-    const out: string[] = [document.body.innerText, document.body.textContent ?? '', window.location.href];
-    for (const el of document.querySelectorAll('*')) {
-      for (const a of Array.from(el.attributes)) {
-        if (a.name === 'aria-label' || a.name === 'title' || a.name === 'alt' || a.name === 'href' || a.name.startsWith('data-')) out.push(`${a.name}=${a.value}`);
-      }
-    }
-    return out.join('\n');
-  });
 
 test('the fixture has the restricted record and the missions this spec depends on', () => {
   expect(RESTRICTED).toContain('E-5');

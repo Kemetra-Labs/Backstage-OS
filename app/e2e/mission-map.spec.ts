@@ -2,32 +2,17 @@
 // the map's selection lives in the host route, so deep links and Back/Forward work. Restricted evidence stays undisclosed across the
 // map, the list, every inspector tab and the route. Persona is a display switch on synthetic data, not authorization.
 import { expect, test, type Page } from '@playwright/test';
-import { DOMAIN } from '../src/domain/fixture';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
+import { hash, RESTRICTED, surface } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
-const WITHHELD = Object.values(DOMAIN.evidence).filter((e) => e.visibility === 'technical');
-const WITHHELD_IDS = WITHHELD.map((e) => e.id);
-const WITHHELD_OBSERVATIONS = WITHHELD.flatMap((e) => (e.observation ? [e.observation.id] : []));
 const node = (page: Page, id: string) => page.locator(`.kv2-bc-node[data-node="${id}"]`);
-const hash = (page: Page) => page.evaluate(() => window.location.hash);
 
-/** Visible text, hidden text and every aria-label, title, alt and data-* value on the page, and the address. */
-const surface = (page: Page) =>
-  page.evaluate(() => {
-    const out: string[] = [document.body.innerText, document.body.textContent ?? ''];
-    for (const el of document.querySelectorAll('*')) {
-      for (const a of Array.from(el.attributes)) {
-        if (a.name === 'aria-label' || a.name === 'title' || a.name === 'alt' || a.name === 'href' || a.name.startsWith('data-')) out.push(`${a.name}=${a.value}`);
-      }
-    }
-    return out.join('\n');
-  });
 
 test('the canonical fixture has the restricted record this spec depends on', () => {
-  expect(WITHHELD_IDS).toContain('E-5');
-  expect(WITHHELD_OBSERVATIONS).toContain('O-5');
+  expect(RESTRICTED).toContain('E-5');
+  expect(RESTRICTED).toContain('O-5');
 });
 
 for (const lang of LANGS) {
@@ -183,7 +168,7 @@ for (const lang of LANGS) {
     test(`Mission Map non-disclosure ${persona}/${lang}: no restricted id, record or observation on any route, view or tab`, async ({ page }) => {
       for (const route of ROUTES) {
         await openRoute(page, route, { lang, persona, width: 1440 });
-// The address holds no restricted id on any route: the probe route types one, and the page takes it back out of the address.        for (const id of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) await expect.poll(() => page.url(), route).not.toContain(id);
+// The address holds no restricted id on any route: the probe route types one, and the page takes it back out of the address.        for (const id of RESTRICTED) await expect.poll(() => page.url(), route).not.toContain(id);
         for (const view of ['map', 'list'] as const) {
           await page.locator('.kv2-bc-top .kv2-seg').last().locator('button').nth(view === 'list' ? 1 : 0).click();
           await expect(page.locator('[data-testid="bc-stage"]')).toHaveAttribute('data-mode', view);
@@ -192,8 +177,8 @@ for (const lang of LANGS) {
             await tabs.nth(i).click();
             // The address of a route the tester typed (the E-5 probe) is theirs; everything the page adds must be clean.
             const text = await surface(page);
-for (const id of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) expect(page.url(), `${route} ${view} tab ${i}`).not.toContain(id);
-            for (const id of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) {
+for (const id of RESTRICTED) expect(page.url(), `${route} ${view} tab ${i}`).not.toContain(id);
+            for (const id of RESTRICTED) {
               expect(text.includes(`"${id}"`) || new RegExp(`(^|[^A-Za-z0-9-])${id}([^A-Za-z0-9-]|$)`).test(text), `${persona}/${lang} ${route} ${view} tab ${i}: ${id}`).toBe(false);
             }
           }
