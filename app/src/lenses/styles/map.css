@@ -1,92 +1,11 @@
-/* Mission Map. The canvas keeps left-to-right geometry in Arabic (like V1's map); only text inside nodes follows the language. */
-.kv2-map { grid-template-areas: "main insp" "bottom bottom"; }
-.kv2-map .kv2-col-main { grid-area: main; }
-.kv2-map .kv2-inspector { grid-area: insp; align-self: stretch; }
-.kv2-bottom { grid-area: bottom; display: grid; grid-template-columns: 1.28fr 1fr 1.09fr; gap: 16px; }
-
-.kv2-canvas-panel { padding: 0; overflow: hidden; border-color: transparent; background: transparent; box-shadow: none; }
-.kv2-canvas-panel .kv2-canvas { background: radial-gradient(30% 34% at 50% 52%, var(--kv2-cyan-haze), transparent 72%), radial-gradient(70% 60% at 50% 55%, color-mix(in srgb, var(--kv2-cyan) 9%, transparent), transparent 70%); }
-.kv2-canvas { position: relative; direction: ltr; aspect-ratio: 1000 / 560; min-block-size: 360px; container-type: inline-size; overflow: hidden; border-radius: inherit; cursor: grab; touch-action: none; outline: none; }
-.kv2-canvas:active { cursor: grabbing; }
-.kv2-canvas-svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
-.kv2-stop-a { stop-color: var(--kv2-cyan); stop-opacity: 0.42; }
-.kv2-stop-b { stop-color: var(--kv2-cyan); stop-opacity: 0; }
-.kv2-orbit { fill: none; stroke: var(--kv2-line-hi); stroke-width: 1; stroke-dasharray: 2 7; vector-effect: non-scaling-stroke; }
-
-.kv2-edge path { fill: none; stroke-width: 1.8; vector-effect: non-scaling-stroke; stroke-linecap: round; }
-.kv2-edge circle { fill: var(--kv2-bg); stroke-width: 2; vector-effect: non-scaling-stroke; }
-.kv2-edge[data-cls="group"] path { stroke: var(--kv2-line-hi); stroke-width: 1; opacity: 0.5; }
-.kv2-edge[data-truth="observed"] path, .kv2-edge[data-truth="observed"] circle { stroke: var(--kv2-cyan); }
-.kv2-edge[data-truth="observed"] path { stroke-width: 2.6; filter: drop-shadow(0 0 2px var(--kv2-cyan)) drop-shadow(0 0 9px var(--kv2-cyan-bloom)); }
-.kv2-edge[data-truth="correlated"] path { stroke-width: 2.2; filter: drop-shadow(0 0 4px var(--kv2-blue)); }
-.kv2-edge[data-truth="hypothesis"] path { stroke-width: 2.2; filter: drop-shadow(0 0 4px var(--kv2-amber)); }
-.kv2-edge[data-truth="correlated"] path, .kv2-edge[data-truth="correlated"] circle { stroke: var(--kv2-blue); }
-.kv2-edge[data-truth="hypothesis"] path, .kv2-edge[data-truth="hypothesis"] circle { stroke: var(--kv2-amber); }
-.kv2-edge[data-truth="hypothesis"] path { stroke-dasharray: 9 5; }
-.kv2-edge[data-cls="dep"][data-truth="unknown"] path, .kv2-edge[data-cls="dep"][data-truth="unknown"] circle { stroke: var(--kv2-unk); }
-.kv2-edge[data-cls="dep"][data-truth="unknown"] path { stroke-dasharray: 3 7; opacity: 0.8; }
-.kv2-edge[data-stale] path { stroke-dasharray: 10 4; opacity: 0.75; filter: none; }
-.kv2-edge[data-dim] { opacity: 0.16; }
-.kv2-alert-mark path:first-child { fill: var(--kv2-amber); stroke: var(--kv2-bg); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.kv2-alert-mark path:last-child { fill: none; stroke: var(--kv2-amber-ink); stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-
-.kv2-node {
-  --orb: 50px; position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 7px; min-inline-size: 44px; padding: 0; border: 0; background: none;
-  transform: translate(-50%, calc(var(--orb) * -0.5)); color: var(--kv2-ink); transition: opacity var(--kv2-dur-short) var(--kv2-ease);
-}
-/* The hub sits under the other nodes (still over the edge layer) so its bloom never washes over a neighbour's card. */
-.kv2-node[data-hub] { --orb: 124px; z-index: 1; }
-.kv2-node[data-hub]:focus-visible { z-index: 6; } /* a focused hub is never hidden under a neighbour */
-.kv2-node[data-dim] { opacity: 0.3; }
+/* Mission Map lens pieces shared with the other lenses: the orb and the inspector. */
 .kv2-orb {
   display: grid; place-items: center; inline-size: var(--orb); block-size: var(--orb); border-radius: 50%; color: var(--kv2-cyan);
   background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--kv2-cyan) 24%, transparent), color-mix(in srgb, var(--kv2-bg) 86%, transparent) 72%);
   border: 2px solid var(--kv2-cyan); box-shadow: 0 0 0 5px var(--kv2-cyan-soft), 0 0 22px var(--kv2-cyan-glow);
 }
-.kv2-node[data-hub] .kv2-orb { border-width: 2px; box-shadow: 0 0 0 10px var(--kv2-cyan-soft), 0 0 0 24px color-mix(in srgb, var(--kv2-cyan) 7%, transparent), 0 0 80px var(--kv2-cyan-glow); }
-.kv2-node[data-tone="warn"] .kv2-orb, .kv2-orb[data-tone="warn"] { color: var(--kv2-amber); border-color: var(--kv2-amber-line); box-shadow: 0 0 0 5px var(--kv2-amber-soft), 0 0 22px var(--kv2-amber-line); background: radial-gradient(circle at 50% 30%, var(--kv2-amber-soft), color-mix(in srgb, var(--kv2-bg) 86%, transparent) 72%); }
-.kv2-node[data-tone="bad"] .kv2-orb, .kv2-orb[data-tone="bad"] { color: var(--kv2-red); border-color: var(--kv2-red-line); box-shadow: 0 0 0 5px var(--kv2-red-soft); }
-.kv2-node[data-tone="unk"] .kv2-orb { color: var(--kv2-ink-2); border-color: var(--kv2-line); box-shadow: 0 0 0 5px var(--kv2-line-2); }
-.kv2-node-card {
-  display: grid; justify-items: center; gap: 3px; min-inline-size: 112px; max-inline-size: 150px; padding: 7px 10px 8px; border: 1px solid var(--kv2-line); border-radius: 10px; text-align: center;
-  background: color-mix(in srgb, var(--kv2-bg-2) 94%, transparent); box-shadow: 0 10px 20px -12px var(--kv2-shade); direction: var(--kv2-dir, ltr);
-}
-.kv2-node-card b { font-size: 13.5px; font-weight: 600; line-height: 1.2; }
-.kv2-node-card small { color: var(--kv2-ink-2); font-size: 11.5px; line-height: 1.25; }
-.kv2-node-card .kv2-chip { margin-block-start: 2px; }
-.kv2-node[data-selected] .kv2-node-card { border-color: var(--kv2-line-hi); box-shadow: var(--kv2-shadow-sel); }
-.kv2-node[data-selected] .kv2-orb { box-shadow: var(--kv2-bloom-sel); }
-.kv2-node[data-hub][data-selected] .kv2-orb { box-shadow: 0 0 0 10px var(--kv2-cyan-soft), 0 0 0 24px color-mix(in srgb, var(--kv2-cyan) 7%, transparent), 0 0 26px var(--kv2-cyan-bloom), 0 0 110px var(--kv2-cyan-glow), inset 0 0 30px var(--kv2-cyan-soft); }
-.kv2-node:hover .kv2-node-card { border-color: var(--kv2-line-hi); }
-.kv2-node:focus-visible { outline: none; }
-.kv2-node:focus-visible .kv2-orb, .kv2-node:focus-visible .kv2-node-card { outline: 2px solid var(--kv2-cyan); outline-offset: 3px; }
-
-.kv2-callout {
-  position: absolute; z-index: 2; display: flex; align-items: center; gap: 9px; padding: 8px 13px; border: 1px solid var(--kv2-amber-line); border-radius: 9px;
-  background: color-mix(in srgb, var(--kv2-bg-2) 96%, transparent); box-shadow: 0 10px 22px -10px var(--kv2-amber-line); direction: var(--kv2-dir, ltr);
-  transform: translate(calc(-100% - 78px), -22px); pointer-events: none; color: var(--kv2-amber);
-}
-.kv2-callout strong { display: block; color: var(--kv2-ink); font-size: 13px; }
-.kv2-callout small { display: block; color: var(--kv2-ink-2); font-size: 11.5px; }
-
-.kv2-canvas-tools { position: absolute; inset-block-start: 12px; inset-inline-end: 12px; z-index: 5; display: grid; gap: 6px; }
-.kv2-canvas-tools button { display: grid; place-items: center; inline-size: 36px; block-size: 36px; padding: 0; border: 1px solid var(--kv2-line); border-radius: var(--kv2-r-md); background: color-mix(in srgb, var(--kv2-bg-2) 88%, transparent); color: var(--kv2-ink-2); }
-.kv2-canvas-tools button:hover:not(:disabled) { color: var(--kv2-cyan); border-color: var(--kv2-line-hi); }
-.kv2-legend { position: absolute; inset-block-start: 12px; inset-inline-start: 14px; z-index: 4; display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--kv2-ink-2); font-size: 11.5px; direction: var(--kv2-dir, ltr); pointer-events: none; }
-.kv2-legend li { display: inline-flex; align-items: center; gap: 6px; }
-.kv2-legend i { display: inline-block; inline-size: 20px; block-size: 0; border-block-start: 2px solid var(--kv2-cyan); }
-.kv2-legend [data-truth="correlated"] i { border-color: var(--kv2-blue); }
-.kv2-legend [data-truth="hypothesis"] i { border-color: var(--kv2-amber); border-block-start-style: dashed; }
-.kv2-legend [data-truth="unknown"] i { border-color: var(--kv2-unk); border-block-start-style: dotted; }
-.kv2-canvas-hint { padding: 7px 16px 9px; border-block-start: 1px solid var(--kv2-line-2); color: var(--kv2-muted); font-size: 11.5px; }
-
-.kv2-list-view { display: grid; gap: 14px; padding: 14px; }
-
-.kv2-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.kv2-metrics .kv2-kpi { align-items: flex-start; padding: 10px 14px; gap: 12px; }
-.kv2-metrics .kv2-kpi-icon { padding-block-start: 2px; }
-.kv2-metrics .kv2-kpi strong { font-size: 26px; line-height: 1; }
-.kv2-metrics .kv2-kpi-body > span { margin-block-start: 5px; font-size: 13px; color: var(--kv2-ink); }
+.kv2-orb[data-tone="warn"] { color: var(--kv2-amber); border-color: var(--kv2-amber-line); box-shadow: 0 0 0 5px var(--kv2-amber-soft), 0 0 22px var(--kv2-amber-line); background: radial-gradient(circle at 50% 30%, var(--kv2-amber-soft), color-mix(in srgb, var(--kv2-bg) 86%, transparent) 72%); }
+.kv2-orb[data-tone="bad"] { color: var(--kv2-red); border-color: var(--kv2-red-line); box-shadow: 0 0 0 5px var(--kv2-red-soft); }
 
 /* Inspector */
 .kv2-inspector { display: flex; flex-direction: column; gap: 14px; padding: 14px; }
@@ -113,46 +32,3 @@
 .kv2-linkbars [data-truth="hypothesis"] .kv2-bar > span { background: var(--kv2-amber); }
 .kv2-linkbars [data-truth="unknown"] .kv2-bar > span { background: var(--kv2-unk); }
 .kv2-insp-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-
-/* Bottom row */
-.kv2-hood { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.3fr) auto minmax(0, 1fr); align-items: stretch; gap: 6px; }
-.kv2-hood .kv2-hood-arrow { align-self: center; }
-.kv2-hood > div { display: grid; gap: 2px; justify-items: center; align-content: center; padding: 10px 8px; min-inline-size: 0; border: 1px solid var(--kv2-line); border-radius: var(--kv2-r-md); background: var(--kv2-well); text-align: center; }
-.kv2-hood strong { font-size: 22px; line-height: 1.1; }
-.kv2-hood span { color: var(--kv2-ink-2); font-size: 12px; }
-.kv2-hood small { color: var(--kv2-amber); font-size: 11px; }
-.kv2-hood .kv2-hood-this { border-color: var(--kv2-line-hi); background: var(--kv2-cyan-soft); }
-.kv2-hood .kv2-hood-this strong { font-size: 14.5px; }
-.kv2-hood .kv2-hood-this .kv2-ltr { white-space: normal; }
-.kv2-hood-arrow { color: var(--kv2-cyan); }
-[dir="rtl"] .kv2-hood-arrow { transform: scaleX(-1); }
-.kv2-hood-arrow { rotate: -90deg; }
-
-@container (max-width: 760px) {
-  .kv2-node-card small, .kv2-node-card .kv2-chip { display: none; }
-  .kv2-node { --orb: 42px; }
-  .kv2-node[data-hub] { --orb: 84px; }
-  .kv2-callout { display: none; }
-}
-@media (max-width: 1180px) {
-  .kv2-map { grid-template-areas: "main" "insp" "bottom"; }
-  .kv2-bottom { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kv2-bottom > :first-child { grid-column: 1 / -1; }
-}
-@media (max-width: 760px) {
-  .kv2-bottom { grid-template-columns: minmax(0, 1fr); }
-  .kv2-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kv2-canvas { min-block-size: 340px; }
-}
-@media (max-width: 460px) {
-  .kv2-metrics { grid-template-columns: minmax(0, 1fr); }
-  .kv2-hood { grid-template-columns: minmax(0, 1fr); }
-  .kv2-hood .kv2-hood-arrow { display: none; }
-}
-
-@media (pointer: coarse) {
-  .kv2-canvas-tools button { inline-size: 44px; block-size: 44px; }
-  .kv2-node { min-inline-size: 44px; min-block-size: 44px; }
-  .kv2-node .kv2-orb { min-inline-size: 44px; min-block-size: 44px; }
-}
-@container (max-width: 760px) { .kv2-node { --orb: 44px; } .kv2-node[data-hub] { --orb: 84px; } }

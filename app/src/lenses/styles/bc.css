@@ -2,19 +2,6 @@
    screens/MissionMapBC.tsx, bc/ and the Outlet switch in App.tsx to remove the pilot. Tokens only, text 11 px or larger.
    The canvas keeps left-to-right geometry in Arabic; text inside the cards and every panel follows the language. */
 
-/* ---- Shell: a 76 px icon rail while the pilot is on screen. At 860 px and below V2's own menu drawer stays. ---- */
-.kv2-app:has(.kv2-bc) .kv2-main { padding: 0; }
-@media (min-width: 861px) {
-  .kv2-app:has(.kv2-bc) { grid-template-columns: 76px minmax(0, 1fr); }
-  .kv2-app:has(.kv2-bc) .kv2-side { align-items: center; gap: 8px; padding: 12px 6px; overflow-x: hidden; }
-  .kv2-app:has(.kv2-bc) .kv2-ws { justify-content: center; inline-size: 52px; padding: 8px; }
-  .kv2-app:has(.kv2-bc) .kv2-ws > span:last-child { display: none; }
-  .kv2-app:has(.kv2-bc) .kv2-side nav { inline-size: 100%; }
-  .kv2-app:has(.kv2-bc) .kv2-side nav ul { justify-items: center; }
-  .kv2-app:has(.kv2-bc) .kv2-side nav a { flex-direction: column; justify-content: center; gap: 4px; inline-size: 64px; min-block-size: 56px; padding: 8px 2px; font-size: var(--kv2-t-xs); line-height: 1.2; text-align: center; }
-  .kv2-app:has(.kv2-bc) .kv2-side-group { display: none; }
-}
-
 /* ---- Stage ---- */
 .kv2-bc { position: relative; block-size: calc(100vh - 57px); min-block-size: 760px; overflow: hidden; }
 .kv2-bc-region { position: absolute; inset-block: 0; inset-inline: 0 372px; overflow: hidden; }
@@ -287,8 +274,6 @@
 @media (max-width: 640px) {
   /* Phone: every control is at least 44 x 44 px, and the readings matrix becomes one card per source. */
   .kv2-bc .kv2-seg button, .kv2-bc .kv2-tabs button, .kv2-bc .kv2-btn, .kv2-bc .kv2-select, .kv2-bc .kv2-select select, .kv2-bc .kv2-linkbtn, .kv2-bc .kv2-table button, .kv2-bc button.kv2-ev { min-block-size: 44px; min-inline-size: 44px; }
-  .kv2-app:has(.kv2-bc) .kv2-seg-compact button, .kv2-app:has(.kv2-bc) .kv2-search, .kv2-app:has(.kv2-bc) .kv2-search input { min-block-size: 44px; }
-  .kv2-app:has(.kv2-bc) .kv2-seg-compact button { min-inline-size: 44px; }
   .kv2-bc-canvas { aspect-ratio: 1000 / 1250; }
   .kv2-bc-mk { inline-size: 12px; block-size: 12px; }
   .kv2-bc-mk[data-shape="diamond"] { inline-size: 11px; block-size: 11px; }
