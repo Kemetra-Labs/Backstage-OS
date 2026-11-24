@@ -127,7 +127,8 @@ export function Inspector({ w, node, tab, setTab, isScope, onOpen }: Props) {
         onChange={setTab}
         options={[{ value: 'overview', label: t('map.tab.overview') }, { value: 'evidence', label: t('tab.evidence') }, { value: 'sources', label: t('tab.sources') }]}
       />
-      <div role="tabpanel" id="bcinsp-panel" aria-labelledby={`bcinsp-tab-${tab}`} className="kv2-bc-insp-body">{body}</div>
+      {/* tabIndex 0: the panel can overflow and scroll, so it must be reachable by keyboard (WAI-ARIA tabs pattern; axe, BACK-91). */}
+      <div role="tabpanel" id="bcinsp-panel" tabIndex={0} aria-labelledby={`bcinsp-tab-${tab}`} className="kv2-bc-insp-body">{body}</div>
     </aside>
   );
 }

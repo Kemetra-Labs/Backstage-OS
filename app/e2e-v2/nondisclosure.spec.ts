@@ -134,7 +134,9 @@ for (const persona of UNAUTHORIZED) {
           await expect(page.locator('.kv2-bc-edge[data-id="d4"]')).toHaveCount(0);
           await expect(page.getByText(copyOf('edge.restricted', lang))).toHaveCount(0);
           if (view === 'map') {
-            const name = (await page.locator('.kv2-bc-node[data-node="inventory"]').getAttribute('aria-label')) ?? '';
+            // All of the node's text, hidden parts included: a superset of its accessible name, which is computed from content (BACK-91).
+            const name = await page.locator('.kv2-bc-node[data-node="inventory"]').evaluate((e) => e.textContent ?? '');
+            expect(name.length).toBeGreaterThan(0);
             expect(name).not.toContain(copyOf('chip.stale', lang));
             expect(await page.locator('.kv2-bc-edge').count()).toBe(SCOPED_EDGES);
           }

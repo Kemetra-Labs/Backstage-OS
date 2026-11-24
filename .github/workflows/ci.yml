@@ -19,8 +19,9 @@ jobs:
     name: Playwright (chromium + webkit)
     runs-on: ubuntu-latest
     # The root suite plus the app/ typecheck, unit and e2e suites took about 17 minutes on chromium + webkit.
-    # The V2 lab suite (chromium only, about 330 tests) adds a few minutes; 40 keeps headroom (BACK-67).
-    timeout-minutes: 40
+    # The V2 lab suite (chromium only, about 330 tests) adds a few minutes (BACK-67). Recent full runs took about 38 minutes, and
+    # the BACK-91 axe scan adds 180 scans (about 4.5 minutes locally), so 55 keeps headroom. PR #80 (BACK-93) replaces this job.
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
         with:
