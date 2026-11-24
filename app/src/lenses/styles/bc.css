@@ -35,6 +35,14 @@
 .kv2-bc-top .kv2-seg button { min-block-size: 32px; padding: 0 11px; font-size: var(--kv2-t-sm); }
 .kv2-bc-key { display: flex; flex-direction: column; gap: 5px; padding: 7px 12px; }
 .kv2-bc-hint { color: var(--kv2-muted); font-size: var(--kv2-t-xs); }
+/* BACK-95: on the side-by-side desktop layout (1181 px and wider) the title's risk pills and the key and hint block overlap the map and
+   swallowed pointer clicks aimed at the orb under them (GitHub at 1440 x 900 and 1280 x 900; in Arabic the pills). They are
+   blocks that only hold text or whitespace, so they let pointer events through to the node below; the filter and view toggles and
+   the scope select stay clickable. Keyboard selection never depended on this. */
+@media (min-width: 1181px) {
+  .kv2-bc-controls, .kv2-bc-title { pointer-events: none; }
+  .kv2-bc-top, .kv2-bc-title .kv2-select { pointer-events: auto; }
+}
 
 /* Legend and orbit key */
 .kv2-bc-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 13px; color: var(--kv2-ink-2); font-size: var(--kv2-t-xs); direction: var(--kv2-dir, ltr); }
@@ -260,6 +268,13 @@
   /* Visually hidden, not display:none: the node's name is computed from the card, so the status word must stay in it for screen
      readers (unknown is never healthy; BACK-91). Same properties as .kv2-sr in base.css. */
   .kv2-bc-node:not([data-selected]) .kv2-bc-card .kv2-chip { position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+}
+@container (max-width: 300px) {
+  /* 320 px phones leave the canvas 264 px wide: at the 64 px hub the Retail Tower orb overlapped the Khepri orb by about 8 x 34 px
+     and the Inventory and Sentry orbs overlapped by 5 x 26 px (BACK-95). Slightly smaller orbs, only below 300 px, keep them apart;
+     375 px and wider are unchanged. */
+  .kv2-bc-node { --orb: 40px; }
+  .kv2-bc-node[data-hub] { --orb: 48px; }
 }
 @media (max-width: 1180px) {
   /* Stacked: title, risk pills, readings, filters, map, legend, timeline, inspector. The SPEC's bottom sheet (901 to 1180 px)

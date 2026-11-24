@@ -452,10 +452,6 @@ test('Mission Map: the idle page runs no infinite animation, including the decor
 // keep their shape are HTML markers and non-scaling strokes.
 for (const [width, height] of [[320, 700], [375, 812], [768, 1024]] as const) {
   test(`Mission Map at ${width}px: link markers are round, on their link, counted from the DOM; strokes do not scale; orbs do not overlap`, async ({ page }) => {
-    // Known host defect, found by this port (BACK-92 R3): at 320 px the host's gutters leave the canvas 264 px wide (the lab's is
-    // wider) and the Retail Tower hub orb overlaps the Khepri orb by about 8 x 34 px. The lab passes at 320 px. Marked expected to
-    // fail, with the assertion unchanged, so the run turns red the moment the layout is fixed and this mark must be removed.
-    test.fail(width === 320, 'host defect: hub and Khepri orbs overlap on a 320 px phone (BACK-92 R3 finding)');
     await openMapView(page, '/map', { lang: 'en', persona: 'owner', width, height });
 
     // markers are HTML siblings of the node buttons, not SVG shapes
@@ -504,6 +500,31 @@ for (const [width, height] of [[320, 700], [375, 812], [768, 1024]] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     expect(await clippedElements(page)).toEqual([]);
   });
+}
+
+// BACK-95 defect 5: at desktop widths the filter/key/hint block sat over the GitHub orb, so a pointer click aimed at it landed on the
+// hint text. Keyboard selection was unaffected, which is why no earlier test caught it. At each node's centre the topmost element must
+// belong to that node, and a real click there must select it.
+for (const lang of LANGS) {
+  for (const [width, height] of [[1440, 900], [1280, 900]] as const) {
+    test(`Mission Map at ${width}x${height} (${lang}): a click on the centre of every orb reaches its own node, nothing sits on top`, async ({ page }) => {
+      await openMapView(page, '/map', { lang, persona: 'owner', width, height });
+      const ids = await page.locator('.kv2-bc-node').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.node!));
+      expect(ids).toHaveLength(10);
+      for (const id of ids) {
+        const orb = node(page, id).locator('.kv2-bc-orb');
+        await orb.scrollIntoViewIfNeeded();
+        const hit = await orb.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return { owner: (top?.closest('[data-node]') as HTMLElement | null)?.dataset.node ?? null, top: top ? `${top.tagName}.${top.className}` : null };
+        });
+        expect(hit.owner, `${id}: the topmost element at its centre is ${hit.top}`).toBe(id);
+        await orb.click();
+        await expect(node(page, id), `${id} selected by a pointer click`).toHaveAttribute('aria-pressed', 'true');
+      }
+    });
+  }
 }
 
 test('Mission Map markers keep their shape and colour state: dim follows the edge, and they stay left-to-right in Arabic', async ({ page }) => {
