@@ -17,3 +17,19 @@ for (const c of CASES) {
     if (c.lang === 'ar') expect(await age.getAttribute('aria-label')).not.toContain(',');
   });
 }
+
+// The kind that follows a node's name (map button and list row) is joined with the same comma, and the lens heading uses the
+// shell's wording for the screen ("خريطة المهام"), not a second translation of "Mission Map".
+test('Mission Map ar: node names join the kind with the Arabic comma, and the heading matches the side navigation', async ({ page }) => {
+  await openRoute(page, '/map/retail-tower/stock-sync', { lang: 'ar', persona: 'owner' });
+  const node = page.locator('.kv2-bc-node[data-node="stock-sync"]');
+  await expect(node).toContainText('، مشروع');
+  expect(await node.innerText()).not.toContain(',');
+  const nav = (await page.locator('#sidenav [aria-current="page"]').innerText()).trim();
+  await expect(page.locator('h1')).toContainText(nav);
+});
+
+test('Mission Map en: node names keep ", Project"', async ({ page }) => {
+  await openRoute(page, '/map/retail-tower/stock-sync', { lang: 'en', persona: 'owner' });
+  await expect(page.locator('.kv2-bc-node[data-node="stock-sync"]')).toContainText(', Project');
+});
