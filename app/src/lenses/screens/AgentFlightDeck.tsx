@@ -36,7 +36,7 @@ const SATS: readonly { readonly id: string; readonly key: K; readonly icon: Icon
  * `embedded`: shown inside a host screen that already has the page's h1, so the title is an h2 and the pilot chip is left out.
  * A mission's `events` figure is shown as not defined, embedded or standalone: the fixture does not say what it counts (owner
  * decision, BACK-90), and a figure scoped by subtracting withheld references would differ by persona and so be a cue. The field itself
- * stays in the type and the fixture for now; its removal is a separate, audited change.
+ * was removed from the type and the fixture in BACK-96, so there is nothing to read.
  */
 export function AgentFlightDeck({ embedded = false }: { readonly embedded?: boolean } = {}) {
   const H = embedded ? 'h2' : 'h1';
