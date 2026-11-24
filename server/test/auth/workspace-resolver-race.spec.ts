@@ -70,7 +70,12 @@ describe('WorkspaceResolver: concurrent first use', () => {
     // B has already read "no membership"; it pauses before checking whether the workspace exists.
     const gate = pausingPool(db!.app, /^SELECT 1 FROM workspaces/);
     const loser = new WorkspaceResolver(gate.pool, db!.auth).forUser(userId);
-    await gate.reached;
+    await Promise.race([
+      gate.reached,
+      loser.then((v) => {
+        throw new Error(`loser settled before pausing: ${JSON.stringify(v)}`);
+      }),
+    ]);
     // A creates and commits the workspace, membership and audit row in that window.
     const winner = await new WorkspaceResolver(db!.app, db!.auth).forUser(userId);
     expect(winner).toMatchObject({ userId, workspaceId, role: 'owner' });
