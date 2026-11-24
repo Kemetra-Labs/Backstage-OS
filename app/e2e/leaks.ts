@@ -13,7 +13,7 @@ import { SHELL } from '../src/i18n/shell';
 import { HOME_COPY } from '../src/i18n/screens/home';
 import { EVIDENCE as EVIDENCE_COPY } from '../src/i18n/screens/evidence';
 import { WORLD as LENS_WORLD } from '../src/lenses/fixtures/world';
-import { TABLE } from '../src/lenses/i18n/t';
+import { TABLE } from '../src/i18n/index';
 
 const LANGS: readonly Lang[] = ['en', 'ar'];
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];

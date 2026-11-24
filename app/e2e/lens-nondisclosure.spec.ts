@@ -6,10 +6,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import { WORLD } from '../src/lenses/fixtures/world';
 import { authorizedWorld } from '../src/lenses/logic/authorize';
-import { TABLE } from '../src/lenses/i18n/t';
+import { TABLE } from '../src/i18n/index';
 import { INV_DEMO_7 } from '../src/fixture/inv-demo-7';
 import { COPY } from '../src/i18n/strings';
-import { formatAge } from '../src/i18n/segments';
+import { formatAge } from '../src/i18n/format';
 import { LANGS } from './helpers';
 import { waitForIntroDone } from './lens-fidelity';
 import { leaks as probe, type Leak } from './leaks';

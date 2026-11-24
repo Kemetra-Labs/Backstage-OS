@@ -1,4 +1,4 @@
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import { hrefFor } from '../../nav/routes';
 import type { DecisionRow } from '../../view/decisionView';
 import { Text } from '../../components/Text';

@@ -3,7 +3,7 @@ import { Panel } from '../../components/Panel';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import { PROJECT_COPY } from '../../i18n/screens/project';
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import type { DeliveryRow } from '../../view/projectView';
 
 /** CI and delivery items. Labels come from deliveryLabelFor, so Owner and Nontechnical never see job names or run ids. */

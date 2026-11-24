@@ -1,6 +1,7 @@
 // Global demo search: an in-memory index over the synthetic world only. No network, no live lookup.
 import type { Lang, Persona } from '../contract/types';
 import type { World } from '../contract/world';
+import { plain as strip } from '../i18n/format';
 import { hrefFor } from './routes';
 
 export type SearchKind = 'project' | 'component' | 'investigation' | 'evidence' | 'decision' | 'workItem';
@@ -16,8 +17,6 @@ export interface SearchItem {
   /** Run ids, job names and PR ids are Technical-only (same redaction as the Investigation Room). */
   readonly technicalOnly: boolean;
 }
-
-const strip = (s: string): string => s.replace(/[{}]/g, '');
 
 export function buildIndex(w: World): readonly SearchItem[] {
   const items: SearchItem[] = [];

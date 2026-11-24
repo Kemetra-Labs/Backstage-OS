@@ -5,7 +5,7 @@
 import { expect, test } from '@playwright/test';
 import { DOMAIN } from '../src/domain/fixture';
 import { COPY } from '../src/i18n/strings';
-import { formatAge } from '../src/i18n/segments';
+import { formatAge } from '../src/i18n/format';
 import { WORLD as LENS_WORLD } from '../src/lenses/fixtures/world';
 import { BANNED, openRoute } from './helpers';
 import { findLeaks, leaks, PUBLIC_IDS, RESTRICTED_IDS, RESTRICTED_TOKENS, tokensFor, WITHHELD, type LeakOptions } from './leaks';

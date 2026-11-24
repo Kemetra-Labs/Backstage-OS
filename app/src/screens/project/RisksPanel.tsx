@@ -2,7 +2,7 @@ import { Text } from '../../components/Text';
 import { useApp } from '../../app/AppContext';
 import { Panel } from '../../components/Panel';
 import { PROJECT_COPY } from '../../i18n/screens/project';
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import { hrefFor } from '../../nav/routes';
 import type { Risks } from '../../view/projectView';
 

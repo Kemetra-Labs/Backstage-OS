@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { formatAge, segments } from './segments';
+import { fill, formatAge, plain, segments } from './format';
+
+describe('fill and plain: the shared $variable and {brace} conventions (BACK-92 R7)', () => {
+  it('fills known $variables and leaves an unknown one visible', () => {
+    expect(fill('$n of $of', { n: 2, of: 6 })).toBe('2 of 6');
+    expect(fill('$n of $of', { n: 2 })).toBe('2 of $of');
+    expect(fill('no vars', undefined)).toBe('no vars');
+    expect(fill('price $5', { n: 1 })).toBe('price $5');
+  });
+  it('strips brace markers only', () => {
+    expect(plain('فحص {stock-sync} على {main}')).toBe('فحص stock-sync على main');
+  });
+});
 
 describe('segments: {braces} mark left-to-right tokens', () => {
   it('splits plain text and LTR tokens in order', () => {

@@ -2,7 +2,7 @@
 // Persona is a display switch, not authorization: this scopes the demo world only and claims no server-side enforcement.
 import { describe, expect, it } from 'vitest';
 import { WORLD } from '../fixtures/world';
-import { TABLE } from '../i18n/t';
+import { TABLE } from '../../i18n';
 import type { Mission, ReplayEvent, World } from '../types';
 import { authorizedWorld } from './authorize';
 import { nodeStatus } from './status';

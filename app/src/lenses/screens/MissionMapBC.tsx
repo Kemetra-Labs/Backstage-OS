@@ -12,7 +12,7 @@ import { useV2 } from '../context';
 import { nodePoints } from '../fixtures/orbit-layout';
 import { WORLD } from '../fixtures/world';
 import { authorizedWorld } from '../logic/authorize';
-import type { K } from '../i18n/t';
+import type { K } from '../../i18n';
 import { bcFigures } from '../logic/bc';
 import { filterSet, MAP_FILTERS, scopeSet, type MapFilter } from '../logic/graph';
 

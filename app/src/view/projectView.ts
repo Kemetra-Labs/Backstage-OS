@@ -5,6 +5,7 @@ import type {
   Attention, ComponentLayer, DeliveryItem, EdgeKind, World, WorldComponent, WorldProject,
 } from '../contract/world';
 import type { GraphEdge } from '../components/DepGraph';
+import { plain } from '../i18n/format';
 import { deliveryLabelFor, evidenceTitleFor, evidenceViewFor } from './evidence';
 import type { EvidenceView } from './viewFor';
 import { triadOf, type Triad } from './world';
@@ -75,7 +76,7 @@ export function mapFor(p: WorldProject, f: Filters): MapModel {
 
 /** Segmented labels are plain strings: strip {braces}, and mark Latin text lang="en" so Arabic pages stay isolated. */
 export function segLabel(s: string): { readonly label: string; readonly lang?: string } {
-  const label = s.replace(/[{}]/g, '');
+  const label = plain(s);
   return /[A-Za-z]/.test(label) ? { label, lang: 'en' } : { label };
 }
 

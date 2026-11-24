@@ -5,7 +5,7 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import { INVESTIGATION } from '../../i18n/screens/investigation';
 import { hrefFor } from '../../nav/routes';
 import { crumbTrail, summaryFor } from '../../view/investigationView';

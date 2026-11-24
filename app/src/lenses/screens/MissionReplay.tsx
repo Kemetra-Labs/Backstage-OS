@@ -8,7 +8,7 @@ import { Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip, TruthChip,
 import { SourceRows } from '../components/SourceRows';
 import { useV2 } from '../context';
 import { WORLD } from '../fixtures/world';
-import { plain, type K } from '../i18n/t';
+import { plain, type K } from '../../i18n';
 import { authorizedWorld } from '../logic/authorize';
 import { SPEEDS, STEP_MS, advance, gapsAt, indexAt, milestonesAt, msOfIndex, stageAt, totalMs, type Speed } from '../logic/replay';
 import { sourceStatus } from '../logic/status';

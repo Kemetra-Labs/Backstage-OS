@@ -1,5 +1,5 @@
 // Shell and shared copy. Keys used as button or link text are also listed in CONTROL_KEYS for the vocabulary test.
-import type { Table } from './t';
+import type { Table } from '../translate';
 
 export const COMMON = {
   skip: ['Skip to content', 'انتقل إلى المحتوى'],

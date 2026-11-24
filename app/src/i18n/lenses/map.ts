@@ -1,5 +1,5 @@
 // Mission Map copy. Link and node wording avoids action verbs on controls (see isForbiddenControlLabel).
-import type { Table } from './t';
+import type { Table } from '../translate';
 
 export const MAP = {
   'map.eyebrow': ['Mission control', 'مركز القيادة'],

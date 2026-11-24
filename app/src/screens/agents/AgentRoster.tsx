@@ -3,7 +3,7 @@ import { Panel } from '../../components/Panel';
 import { Text } from '../../components/Text';
 import type { Lang, Persona } from '../../contract/types';
 import type { AgentsCopy } from '../../i18n/screens/agents';
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import { stateCounts, type AgentRow } from '../../view/agentView';
 
 interface Props {

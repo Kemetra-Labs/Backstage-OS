@@ -2,7 +2,7 @@
 import { Icon } from '../components/Icon';
 import { Provider_, T } from '../components/ui';
 import { useV2 } from '../context';
-import type { K } from '../i18n/t';
+import type { K } from '../../i18n';
 import { bcFigures, formatAt, type Axis } from '../logic/bc';
 import { sourceStatus } from '../logic/status';
 import type { World } from '../types';

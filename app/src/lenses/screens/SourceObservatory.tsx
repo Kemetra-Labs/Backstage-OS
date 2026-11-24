@@ -6,7 +6,7 @@ import { Icon, type IconName } from '../components/Icon';
 import { Age, Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip } from '../components/ui';
 import { useV2 } from '../context';
 import { WORLD } from '../fixtures/world';
-import type { K } from '../i18n/t';
+import type { K } from '../../i18n';
 import { authorizedWorld } from '../logic/authorize';
 import { evidenceOf } from '../logic/evidence';
 import { hhmm, sourceCounts, sourceStatus, type SourceStatus, type Tone } from '../logic/status';

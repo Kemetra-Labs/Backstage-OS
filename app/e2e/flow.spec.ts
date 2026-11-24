@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { freshnessOf, isForbiddenControlLabel } from '../src/contract/rules';
 import { SOURCES } from '../src/fixture/inv-demo-7';
-import { formatAge } from '../src/i18n/segments';
+import { formatAge } from '../src/i18n/format';
 import { COPY } from '../src/i18n/strings';
 import { BANNED } from './helpers';
 import { expectNoLeaks, RESTRICTED_IDS } from './leaks';

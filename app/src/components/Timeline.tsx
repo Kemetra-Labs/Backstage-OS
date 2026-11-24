@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useApp } from '../app/AppContext';
 import type { DisplayLabel } from '../contract/types';
-import { formatAge } from '../i18n/segments';
+import { formatAge } from '../i18n/format';
 import { TruthChip } from './TruthChip';
 
 export interface TimelineItem {

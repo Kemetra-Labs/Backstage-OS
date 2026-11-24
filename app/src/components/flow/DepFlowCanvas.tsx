@@ -10,6 +10,7 @@ import './depFlow.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Handle, Position, ReactFlow, type AriaLabelConfig, type Edge, type Node, type NodeProps } from '@xyflow/react';
 import { useApp } from '../../app/AppContext';
+import { plain } from '../../i18n/format';
 import { PROJECT_COPY } from '../../i18n/screens/project';
 import { toFlowModel } from '../../view/flowModel';
 import type { GraphEdge, GraphNode } from '../DepGraph';
@@ -54,7 +55,6 @@ function FlowNode({ data }: NodeProps<KwNode>) {
 }
 
 const NODE_TYPES = { kw: FlowNode };
-const plain = (s: string) => s.replace(/[{}]/g, '');
 
 /** Width of the scroll wrapper, kept current. Zero until measured, which layoutFor treats as "use the natural width". */
 function useWidth(ref: { readonly current: HTMLElement | null }): number {

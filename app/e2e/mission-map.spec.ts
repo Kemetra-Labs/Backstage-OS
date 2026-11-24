@@ -2,7 +2,7 @@
 // the map's selection lives in the host route, so deep links and Back/Forward work. Restricted evidence stays undisclosed across the
 // map, the list, every inspector tab and the route. Persona is a display switch on synthetic data, not authorization.
 import { expect, test, type Page } from '@playwright/test';
-import { translate } from '../src/lenses/i18n/t';
+import { translate } from '../src/i18n/index';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
 import { blurRadii, clippedElements, expectRenderedAA, infiniteAnimations, smallTargets, waitForAnimationsSettled, waitForIntroDone } from './lens-fidelity';

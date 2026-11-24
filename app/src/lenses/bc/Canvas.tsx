@@ -5,7 +5,7 @@ import { Icon } from '../components/Icon';
 import { Lt, Tx } from '../components/ui';
 import { useV2 } from '../context';
 import { DEFAULT_BEND, HUB_ID, LINK_BEND } from '../fixtures/orbit-layout';
-import { type K } from '../i18n/t';
+import { type K } from '../../i18n';
 import { curve, edgeStale, isIncident } from '../logic/bc';
 import { nodeChip } from '../logic/evidence';
 import { nextByDirection, type Dir } from '../logic/graph';

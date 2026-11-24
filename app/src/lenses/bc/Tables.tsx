@@ -3,7 +3,7 @@
 import { Icon } from '../components/Icon';
 import { Lt, Provider_, T, TruthChip, Tx } from '../components/ui';
 import { useV2 } from '../context';
-import type { K } from '../i18n/t';
+import type { K } from '../../i18n';
 import { bcFigures, edgeRestricted, edgeStale } from '../logic/bc';
 import { nodeChip } from '../logic/evidence';
 import { sourceStatus } from '../logic/status';
