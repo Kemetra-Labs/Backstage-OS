@@ -9,7 +9,7 @@ const here = (rel: string): string => fileURLToPath(new URL(rel, import.meta.url
 const read = (rel: string): string => readFileSync(here(rel), 'utf8');
 const V2 = '../design-lab/v2/styles/';
 
-/** Every stylesheet the host would import to embed the map. reset.css and fonts.css are the lab's and are deliberately not here. */
+/** Every stylesheet the host imports to embed the lenses (src/screens/lensStyles.ts). The lab's reset.css and fonts.css retired with it (BACK-92 R4). */
 export const EMBED = ['tokens', 'base', 'scope', 'embed-fonts', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;
 
 interface Parsed { readonly rules: { readonly sel: string; readonly body: string }[]; readonly fontFaces: string[]; readonly keyframes: string[] }
@@ -70,7 +70,7 @@ describe('the embeddable B+C stylesheets are scoped to .kv2-', () => {
     for (const name of EMBED) for (const k of parse(css[name]).keyframes) expect(k.startsWith('kv2-'), `${name}: ${k}`).toBe(true);
   });
 
-  it('declares fonts only under names the host does not use, and the lab\'s own fonts.css is not part of the set', () => {
+  it('declares fonts only under names the host does not use, and no lab font sheet is part of the set', () => {
     expect(EMBED as readonly string[]).not.toContain('fonts');
     const faces = parse(css['embed-fonts']).fontFaces;
     expect(faces.length).toBe(2);
@@ -90,32 +90,29 @@ describe('the embeddable B+C stylesheets are scoped to .kv2-', () => {
   });
 });
 
-describe('the lab keeps its global reset, in one file the host never imports', () => {
-  const reset = parse(read(`${V2}reset.css`));
+// BACK-92 R4: the lab's global reset (reset.css) and its entry retired. Its declarations are pinned here, verbatim, so scope.css keeps
+// re-stating every one of them under .kv2-scope (the map renders as it did in the lab), and no embedded sheet brings a global rule back.
+const LAB_RESET: readonly string[] = [
+  'box-sizing: border-box', 'overflow-x: clip', '-webkit-text-size-adjust: 100%', 'color: var(--kv2-ink)',
+  'font: 400 var(--kv2-t-md) / 1.5 var(--kv2-f-ui)', 'font-variant-numeric: tabular-nums', 'font-family: var(--kv2-f-ar)', 'margin: 0',
+  'text-wrap: balance', 'padding: 0', 'list-style: none', 'font: inherit', 'color: inherit', 'cursor: pointer', 'cursor: not-allowed',
+  'opacity: 0.4', 'text-decoration: none', 'outline: 2px solid var(--kv2-cyan)', 'outline-offset: 2px', 'border-radius: 4px',
+  'animation: none !important', 'transition: none !important', 'scroll-behavior: auto !important',
+];
 
-  it('reset.css holds the global rules, base.css keeps none of them', () => {
-    expect(reset.rules.some((r) => selectors(r.sel).includes('body'))).toBe(true);
-    expect(reset.rules.some((r) => selectors(r.sel).includes('*'))).toBe(true);
-    for (const r of parse(css.base).rules) for (const sel of selectors(r.sel)) expect(sel.startsWith('.kv2-') || customOnly(r.body) || sel.includes('.kv2-'), sel).toBe(true);
-  });
-
-  it('only the lab entry imports it; the host entry and the embed set do not', () => {
-    expect(read('../design-lab/v2/main.tsx')).toMatch(/styles\/reset\.css/);
+describe('the lab\'s global reset is retired; scope.css carries it under .kv2-scope', () => {
+  it('no lab reset or lab font sheet is left, and the host entry imports no design-lab file directly', () => {
+    expect(existsSync(here(`${V2}reset.css`))).toBe(false);
+    expect(existsSync(here(`${V2}fonts.css`))).toBe(false);
     expect(read('../main.tsx')).not.toMatch(/reset\.css|design-lab/);
     const noComments = (t: string): string => t.replace(/\/\*[\s\S]*?\*\//g, '');
-    for (const name of EMBED) expect(noComments(css[name]), name).not.toMatch(/reset\.css/);
+    for (const name of EMBED) expect(noComments(css[name]), name).not.toMatch(/reset\.css|fonts\.css/);
   });
 
-  it('scope.css re-states every declaration of the reset under .kv2-scope (so the map renders as in the lab), except the two the host owns', () => {
+  it('scope.css re-states every declaration of the retired reset under .kv2-scope, except the page background the host owns', () => {
     const scope = norm(css.scope);
-    // body margin and the page background belong to the host document, not to a region inside it.
-    const hostOwned = new Set(['background:var(--kv2-bg)']);
-    for (const r of reset.rules) {
-      for (const d of decls(r.body).map(norm)) {
-        if (hostOwned.has(d)) continue;
-        expect(scope.includes(d), `${r.sel} { ${d} }`).toBe(true);
-      }
-    }
+    // The page background (the reset's `background: var(--kv2-bg)` on body) belongs to the host document, so it is not in the list.
+    for (const d of LAB_RESET.map(norm)) expect(scope.includes(d), d).toBe(true);
     for (const r of parse(css.scope).rules) for (const sel of selectors(r.sel)) expect(sel.includes('.kv2-scope'), sel).toBe(true);
   });
 
@@ -127,6 +124,10 @@ describe('the lab keeps its global reset, in one file the host never imports', (
         expect(sel.startsWith(':where(') || sel === '.kv2-scope', sel).toBe(true);
       }
     }
+  });
+
+  it('base.css keeps no global rule either', () => {
+    for (const r of parse(css.base).rules) for (const sel of selectors(r.sel)) expect(sel.startsWith('.kv2-') || customOnly(r.body) || sel.includes('.kv2-'), sel).toBe(true);
   });
 });
 
@@ -189,8 +190,7 @@ describe('semantic roles', () => {
     }
   });
 
-  it('is not imported by either entry yet: the V1 bundle stays free of .kv2- until the map mounts (e2e-v2 structure.spec isolation guard)', () => {
+  it('is not imported by the host entry: the V1 entry stays free of .kv2- until a lens mounts (the lab entry retired, BACK-92 R4)', () => {
     expect(read('../main.tsx')).not.toMatch(/semantic\.css/);
-    expect(read('../design-lab/v2/main.tsx')).not.toMatch(/semantic\.css/);
   });
 });

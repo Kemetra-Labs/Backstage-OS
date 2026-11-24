@@ -75,7 +75,7 @@
   --kv2-r-sm: 6px;
   --kv2-r-md: 10px;
   --kv2-r-lg: 14px;
-  /* Manrope and Cairo are self-hosted (fonts.css); the rest is the local fallback while they load or if they fail. */
+  /* Manrope and Cairo are self-hosted (embed-fonts.css); the rest is the local fallback while they load or if they fail. */
   --kv2-f-ui: "Manrope", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Cairo", sans-serif;
   --kv2-f-ar: "Cairo", "Manrope", "Segoe UI", "Tahoma", system-ui, sans-serif;
   --kv2-f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;

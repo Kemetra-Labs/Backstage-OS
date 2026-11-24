@@ -1,8 +1,9 @@
-// Shared V2 context: the URL route, language and persona, and a translator bound to them. State lives in the hash.
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { COPY, type Copy } from '../../i18n/strings';
-import { buildHash, parseRoute, type Route } from './navigation/route';
-import { translate, type K, type Vars } from './i18n/t';
+// The lens context: the route, language and persona, and a translator bound to them. The host supplies its value from its own state
+// (src/bridge/hostV2.ts); the standalone lab's V2Provider retired with the lab entry (BACK-92 R4).
+import { createContext, useContext } from 'react';
+import type { Copy } from '../../i18n/strings';
+import type { Route } from './navigation/route';
+import type { K, Vars } from './i18n/t';
 import type { ScreenId } from './types';
 
 export interface V2 {
@@ -17,54 +18,11 @@ export interface V2 {
 
 const Ctx = createContext<V2 | null>(null);
 
-/** BACK-87: the context object, exported so the host app can supply a value derived from its own state (src/bridge/hostV2.ts) instead of mounting a second V2Provider. */
+/** BACK-87: the context object, exported so the host app supplies a value derived from its own state (src/bridge/hostV2.ts). */
 export const V2Context = Ctx;
 
 export function useV2(): V2 {
   const v = useContext(Ctx);
-  if (!v) throw new Error('useV2 outside V2Provider');
+  if (!v) throw new Error('useV2 outside V2Context (the host supplies it, src/bridge/hostV2.ts)');
   return v;
 }
-
-export function V2Provider({ children }: { readonly children: ReactNode }) {
-  const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash, window.location.search));
-
-  useEffect(() => {
-    const on = () => setRoute(parseRoute(window.location.hash, window.location.search));
-    window.addEventListener('hashchange', on);
-    return () => window.removeEventListener('hashchange', on);
-  }, []);
-
-  const apply = useCallback((next: Route, replace: boolean) => {
-    const h = buildHash(next);
-    if (replace) window.history.replaceState(null, '', h);
-    else if (window.location.hash !== h) window.location.hash = h;
-    setRoute(next);
-  }, []);
-
-  const value = useMemo<V2>(() => {
-    const copy = COPY[route.lang];
-    return {
-      route,
-      copy,
-      t: (key, vars) => translate(key, route.lang, route.persona, vars),
-      go: (patch, replace = true) => apply({ ...route, ...patch }, replace),
-      open: (screen, patch) => apply({ ...route, ...patch, screen }, false),
-    };
-  }, [route, apply]);
-
-  useEffect(() => {
-    document.documentElement.lang = route.lang;
-    document.documentElement.dir = route.lang === 'ar' ? 'rtl' : 'ltr';
-    document.title = `Kawalys V2 · ${translate(TITLE[route.screen], route.lang, route.persona)}`;
-  }, [route.lang, route.persona, route.screen]);
-
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
-}
-
-const TITLE: Readonly<Record<ScreenId, K>> = {
-  'mission-map': 'nav.map',
-  'source-observatory': 'nav.obs',
-  'mission-replay': 'nav.replay',
-  'agent-flight-deck': 'nav.deck',
-};

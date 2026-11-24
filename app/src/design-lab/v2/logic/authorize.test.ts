@@ -1,10 +1,8 @@
 // BACK-30 (M05-D05-B): a viewer not authorized for a Technical-only record must not be able to tell it exists.
 // Persona is a display switch, not authorization: this scopes the demo world only and claims no server-side enforcement.
 import { describe, expect, it } from 'vitest';
-import { COPY } from '../../../i18n/strings';
 import { WORLD } from '../fixtures/world';
-import { TABLE, translate } from '../i18n/t';
-import { buildHits } from '../navigation/hits';
+import { TABLE } from '../i18n/t';
 import type { Mission, ReplayEvent, World } from '../types';
 import { authorizedWorld } from './authorize';
 import { nodeStatus } from './status';
@@ -167,38 +165,5 @@ describe('authorizedWorld, replay rows and missions (BACK-66)', () => {
   }
 });
 
-describe('shell search hits (BACK-66)', () => {
-  const hitsFor = (w: World) => buildHits(w, (k) => translate(k, 'en', 'owner'), COPY.en.provider, 'owner');
-
-  it('built from the scoped world, search offers no replay row the viewer may not read', () => {
-    const owner = hitsFor(authorizedWorld(CONSTRUCTED, 'owner')).map((h) => h.id);
-    expect(owner).not.toContain('r-R-X');
-    expect(hitsFor(authorizedWorld(CONSTRUCTED, 'technical')).map((h) => h.id)).toContain('r-R-X');
-  });
-
-  it('keeps independently authorized targets: the Sentry node and source stay searchable', () => {
-    const ids = hitsFor(authorizedWorld(CONSTRUCTED, 'owner')).map((h) => h.id);
-    expect(ids).toContain('n-sentry');
-    expect(ids).toContain('s-sentry');
-    expect(ids).toContain('n-inventory');
-  });
-
-  // C-16: the Flight Deck never shows mission ids to Nontechnical, so search must not show them either.
-  it('Nontechnical mission hits carry the mission title only, never its MSN- id; Owner and Technical keep the id', () => {
-    const lay = buildHits(authorizedWorld(WORLD, 'nontechnical'), (k) => translate(k, 'en', 'nontechnical'), COPY.en.provider, 'nontechnical');
-    const missions = lay.filter((h) => h.screen === 'agent-flight-deck');
-    expect(missions.length).toBe(WORLD.missions.length);
-    for (const h of missions) expect(h.label).not.toMatch(/MSN-/);
-    for (const persona of ['owner', 'technical'] as const) {
-      const hits = buildHits(authorizedWorld(WORLD, persona), (k) => translate(k, 'en', persona), COPY.en.provider, persona);
-      for (const h of hits.filter((x) => x.screen === 'agent-flight-deck')) expect(h.label).toMatch(/^MSN-/);
-    }
-  });
-
-  it('no hit label or id carries the withheld record id', () => {
-    for (const h of hitsFor(authorizedWorld(CONSTRUCTED, 'owner'))) {
-      expect(h.id).not.toContain('E-5');
-      expect(h.label).not.toContain('E-5');
-    }
-  });
-});
+// The lab shell's search (navigation/hits.ts) retired with the lab entry (BACK-92 R4). The host's one search box is src/nav/search.ts;
+// its persona scoping, including the cases that used to live here, is tested in src/nav/search.test.ts.

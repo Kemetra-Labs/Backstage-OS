@@ -1,5 +1,7 @@
 # BACK-30 to BACK-35: B+C Pilot Follow-ups Implementation Plan
 
+> **Retired (BACK-92 R4, 24 Nov 2026):** the V2 lab (`v2.html`, `app/e2e-v2/`, `npm run e2e:v2`) no longer exists. Commands below are historical; the lens checks now run in the host suite (`app/e2e`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close the six BACK-27 follow-ups as far as an agent can. Code fixes for BACK-35, BACK-30 and BACK-34, plus evidence packs and exact hand-off steps for the human-only parts of BACK-31, BACK-32 and BACK-33.

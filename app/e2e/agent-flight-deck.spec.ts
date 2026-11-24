@@ -9,7 +9,7 @@ import { translate } from '../src/design-lab/v2/i18n/t';
 import { MISSIONS } from '../src/design-lab/v2/fixtures/world';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
-import { blurRadii } from './lens-fidelity';
+import { blurRadii, expectRenderedAA, waitForAnimationsSettled } from './lens-fidelity';
 import { hasId, hash, openScreen, RESTRICTED, surface } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
@@ -176,3 +176,16 @@ test('Flight Deck luminosity: agent satellites with an unknown state carry no gl
   expect(ok.length).toBeGreaterThan(0);
   for (const s of ok) expect(Math.max(...blurRadii(s.shadow)), `${s.id}`).toBeGreaterThan(0);
 });
+
+// BACK-92 R4 (from the retired e2e-v2/fidelity.spec.ts "contrast", which measured all four lab screens; R3 moved the map and the
+// Observatory): text over the cosmos and glow of the Flight Deck signature panel keeps AA, read from rendered pixels.
+for (const lang of LANGS) {
+  for (const width of WIDTHS) {
+    test(`Flight Deck contrast ${lang} @${width}px: text over the cosmos and glow keeps AA on rendered pixels`, async ({ page }) => {
+      await openScreen(page, '/agents/deck', { lang, persona: 'owner', width });
+      await expect(lens(page).locator('.kv2-fleet')).toBeVisible();
+      await waitForAnimationsSettled(page);
+      await expectRenderedAA(page, '.kv2-fleet', `flight deck ${lang} ${width}`);
+    });
+  }
+}

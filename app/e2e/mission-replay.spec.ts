@@ -6,7 +6,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
-import { hasId, hash, RESTRICTED, surface } from './lens-helpers';
+import { expectRenderedAA, waitForAnimationsSettled } from './lens-fidelity';
+import { hasId, hash, openScreen, RESTRICTED, surface } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 const ROOM = '/investigation/INV-DEMO-7';
@@ -282,3 +283,22 @@ test('Replay proposal: copying the proposal text is the only action, and it neve
     expect(await proposal.innerText(), persona).not.toMatch(/\b(approved|executed|applied|deployed|was decided|decision (made|recorded))\b/i);
   }
 });
+
+// BACK-92 R4 (from the retired e2e-v2/fidelity.spec.ts "contrast", which measured all four lab screens; R3 moved the map and the
+// Observatory): text over the cosmos and glow of the Replay signature panel keeps AA, read from rendered pixels.
+for (const lang of LANGS) {
+  for (const width of WIDTHS) {
+    test(`Replay contrast ${lang} @${width}px: text over the cosmos and glow keeps AA on rendered pixels`, async ({ page, browserName }) => {
+      // Known host defects (BACK-95), marked expected to fail with the assertion unchanged, so the run turns red once fixed.
+      // Chromium: at 320 px the stage clock "14:05" sits over the cyan glow at 3.2:1 (EN) and 4.2:1 (AR), under the 4.5:1 AA minimum.
+      // WebKit (CI run 45473364228): EN 320 fails the same way, AR 320 passes, and at 1440 px the muted caption (3.91:1) and, in Arabic,
+      // the truth chips and stage times over the glow (1.67-4.02:1) fall below AA. 375 and 768 px pass on both engines.
+      const knownFailure = browserName === 'webkit' ? (width === 320 && lang === 'en') || width === 1440 : width === 320;
+      test.fail(knownFailure, 'host defect: Replay text below AA over the glow (BACK-95)');
+      await openScreen(page, '/investigation/INV-DEMO-7/replay', { lang, persona: 'owner', width });
+      await expect(lens(page).locator('.kv2-stage-panel')).toBeVisible();
+      await waitForAnimationsSettled(page);
+      await expectRenderedAA(page, '.kv2-stage-panel', `replay ${lang} ${width}`);
+    });
+  }
+}

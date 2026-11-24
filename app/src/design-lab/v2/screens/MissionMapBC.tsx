@@ -1,5 +1,5 @@
 // Mission Map, Hybrid B+C pilot (BACK-27). Concept B's immersive orbit map with concept C's accessible ledger as the List
-// view. It reads the same synthetic WORLD as every V2 screen and adds no data. Opened with v2.html?concept=bc.
+// view. It reads the same synthetic WORLD as every V2 screen and adds no data. The host mounts it at #/map (MissionMapLens.tsx).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas } from '../bc/Canvas';
 import { Inspector } from '../bc/Inspector';

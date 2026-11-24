@@ -43,3 +43,10 @@ export async function openScreen(page: Page, route: string, q: LoadQuery = {}) {
   if (/^\/(map|sources\/observatory|investigation\/[^/]+\/replay|agents\/deck)/.test(route)) await expect(page.locator(LENS_READY)).toBeVisible();
   return errors;
 }
+
+/** Puts the Mission Map in the map or list mode with its "Map | List" control (phones open on the list, wider screens on the map). */
+export async function setMapMode(page: Page, mode: 'map' | 'list'): Promise<void> {
+  const stage = page.locator('[data-testid="bc-stage"]');
+  if ((await stage.getAttribute('data-mode')) !== mode) await page.locator('.kv2-bc-top .kv2-seg').last().locator('button').nth(mode === 'list' ? 1 : 0).click();
+  await expect(stage).toHaveAttribute('data-mode', mode);
+}

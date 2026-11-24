@@ -1,5 +1,7 @@
 # BACK-35: timing stability of the B+C pilot spec
 
+> **Retired (BACK-92 R4, 24 Nov 2026):** the V2 lab (`v2.html`, `app/e2e-v2/`, `npm run e2e:v2`) no longer exists. Commands below are historical; the lens checks now run in the host suite (`app/e2e`).
+
 Date: 2026-11-21. Scope: `app/e2e-v2/bc.spec.ts` (and the capture helper in `bc-capture.spec.ts`). Test-only change.
 This is preventive hardening, not a fix for an observed failure: PR #32 CI was green. No product code, backend or live
 data is involved; the pilot still shows synthetic demo data only.
