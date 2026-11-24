@@ -98,10 +98,19 @@ test('control: inside .kv2-scope the injected sheets apply, with the map\'s own 
   expect(r.boxSizing).toBe('border-box');
 });
 
-test('control: the lab\'s own global reset.css, injected into V1, does change it (this is the leak the scoped sheets avoid)', async ({ page }) => {
+// BACK-92 R4: the lab's global reset.css retired with the lab entry. scope.css holds the same declarations under .kv2-scope, so the
+// control strips that scoping (what the lab's reset was) and shows that, unscoped, the same rules would restyle V1.
+const UNSCOPED_RESET = readFileSync(new URL('scope.css', V2), 'utf8')
+  .replace(/:where\(\.kv2-scope\)\s*:where\(([^)]*)\)/g, '$1')
+  .replace(/:where\(\.kv2-scope\)\s*/g, '')
+  .replace(/\.kv2-scope\s*/g, 'body ');
+
+test('control: scope.css without its .kv2-scope scoping, injected into V1, does change it (this is the leak the scoping avoids)', async ({ page }) => {
+  expect(UNSCOPED_RESET).not.toContain('kv2-scope');
+  expect(UNSCOPED_RESET).toMatch(/box-sizing:\s*border-box/);
   await openRoute(page, '/sources', { lang: 'en', persona: 'technical' });
   const before = await measure(page);
-  await page.addStyleTag({ content: readFileSync(new URL('reset.css', V2), 'utf8') });
+  await page.addStyleTag({ content: UNSCOPED_RESET });
   expect(await measure(page)).not.toBe(before);
 });
 

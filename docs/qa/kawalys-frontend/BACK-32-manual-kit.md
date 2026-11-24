@@ -31,23 +31,15 @@ Error: Failed to download WebKit 27.2 (playwright webkit v2388), caused by Error
 
 Not retried, and no other way of fetching the browser was attempted. Playwright 1.65.1 expects WebKit 27.2 (build 2388). Update, 24 Nov 2026: since BACK-93 the required CI runs the host suite (`app/e2e`, which includes `mission-map.spec.ts` and `a11y.spec.ts` for the map lens) on WebKit in three shards on every app change, so the B+C map now has automated WebKit evidence in CI. That is engine evidence only; it does not answer any manual row below.
 
-To get this evidence on a machine that can reach the Playwright CDN (human step, not run here):
+To get this evidence on a machine that can reach the Playwright CDN (human step, not run here). The lab config this used to name (`playwright.v2.config.ts`) retired in BACK-92 R4; the host suite has a WebKit project already:
 
 ```bash
 cd app
 npx playwright install webkit
-npx vite build --config vite.v2.config.ts
+npm run e2e -- --project=webkit
 ```
 
-Create an uncommitted config next to the real one, for example `app/playwright.v2.webkit.local.config.ts`:
-
-```ts
-import { devices } from '@playwright/test';
-import base from './playwright.v2.config';
-export default { ...base, testIgnore: /bc-capture/, projects: [{ name: 'webkit', use: devices['Desktop Safari'] }] };
-```
-
-Then run `npx playwright test -c playwright.v2.webkit.local.config.ts` (workers stay 1 through the base config). Record the WebKit version (`npx playwright --version` and the browser build), pass, fail and skip counts, and every failing test name with its first error line. The capture spec is excluded because it skips anyway. A failure is a finding for a ticket, not something to fix in the kit. This is an engine check only; it says nothing about iOS Safari touch, the on-screen keyboard or VoiceOver.
+(`npm run e2e` builds the app first; workers stay 1 through the config.) Record the WebKit version (`npx playwright --version` and the browser build), pass, fail and skip counts, and every failing test name with its first error line. The capture spec is excluded because it skips anyway. A failure is a finding for a ticket, not something to fix in the kit. This is an engine check only; it says nothing about iOS Safari touch, the on-screen keyboard or VoiceOver.
 
 ## 2. Test run header
 

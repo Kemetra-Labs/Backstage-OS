@@ -1,5 +1,7 @@
 # Kawalys V2 visual lab
 
+> **Retired (BACK-92 R4, 24 Nov 2026).** The standalone lab entry (`app/v2.html`, `vite.v2.config.ts`, `playwright.v2.config.ts`, the lab shell, concept-A map and `app/e2e-v2/`) is deleted, and so are the `dev:v2`, `build:v2` and `e2e:v2` scripts. The four screens live on as lenses of the host app: `cd app && npx vite build && npx vite preview`, then `#/map`, `#/sources/observatory`, `#/investigation/INV-DEMO-7/replay` and `#/agents/deck` on `http://127.0.0.1:4178/`. Their tests are in `app/e2e`. The rest of this page is kept as history; its run instructions no longer work.
+
 Four interactive, reference-driven screens built as an **isolated** React + TypeScript experiment next to the existing frontend. V1 is untouched. Nothing here is committed, merged or deployed; the owner decides what happens next.
 
 Synthetic data only. No backend, auth, AI calls, credentials, or real GitHub / Jira / Sentry / Datadog / Port access. Nothing is live telemetry.

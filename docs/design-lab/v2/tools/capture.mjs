@@ -1,3 +1,5 @@
+// RETIRED (BACK-92 R4): it targets the lab entry v2.html, which no longer exists; kept as history. Host captures of the B+C map:
+// BC_CAPTURE=1 npx playwright test e2e/bc-capture.spec.ts --project=chromium (in app/).
 // Captures the V2 screens at the reference size (and other widths) with real Chromium, for visual comparison.
 // Usage: node docs/design-lab/v2/tools/capture.mjs [--base http://127.0.0.1:4279] [--out <dir>] [--widths 1448,1440,768,375,320] [--screens a,b] [--lang en] [--persona owner]
 // Reads nothing but the local lab URL. No third-party host is contacted (the lab self-hosts its fonts).

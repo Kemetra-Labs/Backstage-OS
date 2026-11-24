@@ -121,7 +121,7 @@ What changed:
 - **Strokes use `vector-effect: non-scaling-stroke`** on edge paths and orbit ellipses, so line weights do not stretch with the canvas.
 - **Orb sizes on narrow canvases.** The stylesheet's narrow-canvas orb sizes never took effect because the node's inline `--orb` overrode them. The inline value is now `--orb-d` (desktop size) and the stylesheet derives `--orb` from it. At a canvas width of 700 px and below the orbs are 44 px (hub 64 px) and `--pad` is 32 px. Without this the hub orb covered the Khepri orb at 320 and 375 px.
 
-Regression criteria (`app/e2e-v2/bc.spec.ts`, `phone map legibility`, at 320, 375 and 768 px): every marker is at least 10 x 10 px and square within 1 px; its centre is within 3 px of its link's midpoint; the marker count equals the drawn markable links, derived from the DOM (Owner draws one link fewer than Technical); edge and orbit strokes are non-scaling; no two orbs overlap by more than 4 px on both axes; 44 px targets and no horizontal overflow at 640 px and below; under reduced motion markers are present and nothing animates.
+Regression criteria (originally `app/e2e-v2/bc.spec.ts`; since BACK-92 the same checks run on the host in `app/e2e/mission-map.spec.ts`, `phone map legibility`, at 320, 375 and 768 px): every marker is at least 10 x 10 px and square within 1 px; its centre is within 3 px of its link's midpoint; the marker count equals the drawn markable links, derived from the DOM (Owner draws one link fewer than Technical); edge and orbit strokes are non-scaling; no two orbs overlap by more than 4 px on both axes; 44 px targets and no horizontal overflow at 640 px and below; under reduced motion markers are present and nothing animates.
 
 Rollback: revert the BACK-34 commit.
 

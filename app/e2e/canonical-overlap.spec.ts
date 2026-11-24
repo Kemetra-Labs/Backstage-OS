@@ -1,13 +1,21 @@
-// BACK-83 (V1 side): the INV-DEMO-7 overlap on the Project map is what the canonical model says, per persona and language.
+// BACK-83: the INV-DEMO-7 overlap on the V1 Project map and on the B+C Mission Map is what the canonical model says, per persona and
+// language. (The B+C half moved here from the retired e2e-v2/canonical-overlap.spec.ts, BACK-92 R4, onto the host /map route.)
 // Expectations come from src/domain (scopeFixture then toV1Nodes), never from a second copy in this file. Persona is a display
 // switch on synthetic data, not authorization: no server-side enforcement is claimed.
 import { expect, test, type Page } from '@playwright/test';
 import { DOMAIN } from '../src/domain/fixture';
 import { scopeFixture } from '../src/domain/scope';
+import type { ComponentId } from '../src/domain/types';
 import { toV1Nodes } from '../src/domain/toV1';
+import { toV2NodeFacts } from '../src/domain/toV2';
+import { WORLD } from '../src/design-lab/v2/fixtures/world';
+import { authorizedWorld } from '../src/design-lab/v2/logic/authorize';
+import { nodeChip } from '../src/design-lab/v2/logic/evidence';
+import type { WorldNode } from '../src/design-lab/v2/types';
 import { COPY } from '../src/i18n/strings';
 import { triadOf } from '../src/view/world';
 import { LANGS, openRoute, PERSONAS } from './helpers';
+import { openScreen, setMapMode } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 
@@ -96,6 +104,70 @@ test('V1 same-page persona switch on the withheld-only deep link: Technical, Own
       await expect(page.locator(WITHHELD_IDS.map((id) => `[data-evidence="${id}"], [data-evidence-row="${id}"]`).join(', '))).toHaveCount(0);
       const text = await surface(page);
       for (const token of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) expect(text.includes(token), `${round}: "${token}"`).toBe(false);
+    }
+  }
+});
+
+// ---- B+C Mission Map (BACK-83 V2 side), moved from the retired e2e-v2/canonical-overlap.spec.ts (BACK-92 R4) ----------------------
+
+/** The map node as the canonical scoped fixture says it is: layout and copy keys from the lens world, facts from the domain. */
+const canonicalNode = (persona: (typeof PERSONAS)[number], id: ComponentId): WorldNode => {
+  const base = WORLD.nodes.find((n) => n.id === id)!;
+  return { ...base, ...toV2NodeFacts(scopeFixture(DOMAIN, persona), id) };
+};
+
+for (const lang of LANGS) {
+  for (const persona of PERSONAS) {
+    test(`B+C map ${persona}/${lang}: each overlap node shows the tone the canonical facts give`, async ({ page }) => {
+      await openScreen(page, '/map', { lang, persona, width: 1440 });
+      await setMapMode(page, 'map');
+      const sources = authorizedWorld(WORLD, persona).sources;
+      for (const c of DOMAIN.components) {
+        const chip = nodeChip(canonicalNode(persona, c.id), sources);
+        await expect(page.locator(`.kv2-bc-node[data-node="${c.id}"]`), `${c.id} tone`).toHaveAttribute('data-tone', chip.tone);
+      }
+    });
+  }
+}
+
+for (const lang of LANGS) {
+  for (const persona of LAY) {
+    test(`B+C withheld-only ${persona}/${lang}: inventory is never healthy and nothing hints at the withheld record`, async ({ page }) => {
+      for (const c of WITHHELD_ONLY) {
+        await openScreen(page, `/map/retail-tower/${c.id}`, { lang, persona, width: 1440 });
+        await setMapMode(page, 'map');
+        for (const tab of ['evidence', 'overview'] as const) {
+          await page.locator(`#bcinsp-tab-${tab}`).click();
+          await expect(page.locator(`#bcinsp-tab-${tab}`)).toHaveAttribute('aria-selected', 'true');
+          const chip = nodeChip(canonicalNode(persona, c.id), authorizedWorld(WORLD, persona).sources);
+          expect(chip.kind, `${c.id} chip kind`).not.toBe('healthy');
+          await expect(page.locator(`.kv2-bc-node[data-node="${c.id}"]`)).not.toHaveAttribute('data-tone', 'ok');
+          const text = await surface(page);
+          for (const token of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) expect(text.includes(token), `${persona}/${lang}/${tab} ${c.id}: "${token}"`).toBe(false);
+        }
+      }
+    });
+  }
+}
+
+test('B+C same-page persona switch on the withheld-only node: Technical, Owner, Technical, Owner', async ({ page }) => {
+  const [c] = WITHHELD_ONLY;
+  expect(c).toBeDefined();
+  await openScreen(page, `/map/retail-tower/${c!.id}`, { lang: 'en', persona: 'technical', width: 1440 });
+  await setMapMode(page, 'map');
+  const panel = page.locator('#bcinsp-panel');
+  await page.locator('#bcinsp-tab-evidence').click();
+  for (const id of c!.evidence) await expect(panel, `technical ${id}`).toContainText(id);
+  for (const next of ['owner', 'technical', 'owner'] as const) {
+    await page.getByRole('button', { name: COPY.en.persona[next], exact: true }).click();
+    await page.locator('#bcinsp-tab-evidence').click();
+    if (next === 'technical') {
+      for (const id of c!.evidence) await expect(panel, `technical ${id}`).toContainText(id);
+    } else {
+      for (const id of c!.evidence) await expect(panel, `owner ${id}`).not.toContainText(id);
+      await expect(page.locator(`.kv2-bc-node[data-node="${c!.id}"]`)).not.toHaveAttribute('data-tone', 'ok');
+      const text = await surface(page);
+      for (const token of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) expect(text.includes(token), `owner: "${token}"`).toBe(false);
     }
   }
 });

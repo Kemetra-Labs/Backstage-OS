@@ -6,7 +6,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
-import { hasId, hash, RESTRICTED, surface } from './lens-helpers';
+import { expectRenderedAA, waitForAnimationsSettled } from './lens-fidelity';
+import { hasId, hash, openScreen, RESTRICTED, surface } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 const ROOM = '/investigation/INV-DEMO-7';
@@ -282,3 +283,19 @@ test('Replay proposal: copying the proposal text is the only action, and it neve
     expect(await proposal.innerText(), persona).not.toMatch(/\b(approved|executed|applied|deployed|was decided|decision (made|recorded))\b/i);
   }
 });
+
+// BACK-92 R4 (from the retired e2e-v2/fidelity.spec.ts "contrast", which measured all four lab screens; R3 moved the map and the
+// Observatory): text over the cosmos and glow of the Replay signature panel keeps AA, read from rendered pixels.
+for (const lang of LANGS) {
+  for (const width of WIDTHS) {
+    test(`Replay contrast ${lang} @${width}px: text over the cosmos and glow keeps AA on rendered pixels`, async ({ page }) => {
+      // Known host defect, found by this port (BACK-92 R4): at 320 px the stage clock "14:05" sits over the cyan glow at 3.2:1 (EN) and
+      // 4.2:1 (AR), under the 4.5:1 AA minimum. Marked expected to fail with the assertion unchanged, so the run turns red once fixed.
+      test.fail(width === 320, 'host defect: the 320 px stage clock is below AA over the glow (BACK-92 R4 finding)');
+      await openScreen(page, '/investigation/INV-DEMO-7/replay', { lang, persona: 'owner', width });
+      await expect(lens(page).locator('.kv2-stage-panel')).toBeVisible();
+      await waitForAnimationsSettled(page);
+      await expectRenderedAA(page, '.kv2-stage-panel', `replay ${lang} ${width}`);
+    });
+  }
+}

@@ -20,10 +20,10 @@ seed_repo() {
   git config user.name ci
   git config commit.gpgsign false
   git config core.autocrlf false
-  mkdir -p server/src server/migrations app/src app/e2e app/e2e-v2 js css tests docs/qa docs/design-lab \
+  mkdir -p server/src server/migrations app/src app/e2e js css tests docs/qa docs/design-lab \
     docs/planning/G1/fixture docs/planning/G1/holdout-v1 .github/workflows .github/scripts .claude/skills tests-bstack
   for f in server/src/main.ts server/migrations/0001.sql server/package.json server/README.md \
-    app/src/main.tsx app/e2e/a.spec.ts app/e2e-v2/b.spec.ts app/package.json app/vite.config.ts \
+    app/src/main.tsx app/e2e/a.spec.ts app/package.json app/vite.config.ts \
     index.html js/app.js css/app.css tests/smoke.spec.js playwright.config.js package.json package-lock.json \
     docs/qa/report.md docs/qa/shot.png docs/design-lab/tool.py docs/design-lab/page.html \
     docs/planning/G1/fixture/score.py docs/planning/G1/holdout-v1/verify.py \
@@ -38,7 +38,7 @@ seed_repo() {
 # Prints the selected suites in a fixed order, e.g. "root app" or "none".
 selected() {
   local out="$1" s=""
-  for k in root app app_v1 app_v2 server g1; do
+  for k in root app app_v1 server g1; do
     grep -qx "$k=true" <<<"$out" && s="$s $k"
   done
   s="${s# }"
@@ -63,9 +63,10 @@ check() {
 commit_change() { git add -A && git commit -qm change; }
 case_with() { seed_repo "$WORK/r"; "$@"; commit_change; }
 
-ALL="root app app_v1 app_v2 server g1"
-# Any app/ change runs the app typecheck and unit tests (`app`); each browser suite runs only when it can be affected.
-APP_ALL="app app_v1 app_v2"
+ALL="root app app_v1 server g1"
+# Any app/ change runs the app typecheck and unit tests (`app`) and the one app browser suite (`app_v1`, app/e2e). The V2 lab suite
+# and its flag (app_v2) retired with the lab entry (BACK-92 R4).
+APP_ALL="app app_v1"
 
 # Backend-only, like PR #79 (server plus documentation).
 case_with bash -c 'echo x >> server/src/main.ts; echo x >> server/migrations/0001.sql; echo x >> docs/qa/report.md'
@@ -77,31 +78,28 @@ check "root prototype only" "root" selective pull_request "$BASE_SHA"
 case_with bash -c 'echo x >> tests/smoke.spec.js; echo x >> playwright.config.js'
 check "root tests and config" "root" selective pull_request "$BASE_SHA"
 
-# app/src is shared: the V2 lab imports host code (contract, domain, i18n), so a source change runs both browser suites.
 case_with bash -c 'echo x >> app/src/main.tsx'
 check "app source" "$APP_ALL" selective pull_request "$BASE_SHA"
 
-case_with bash -c 'echo x >> app/e2e-v2/b.spec.ts'
-check "V2 lab spec only: no V1 browser suite" "app app_v2" selective pull_request "$BASE_SHA"
-
 case_with bash -c 'echo x >> app/e2e/a.spec.ts'
-check "host spec only: no V2 lab browser suite" "app app_v1" selective pull_request "$BASE_SHA"
-
-case_with bash -c 'echo x > app/playwright.v2.config.ts; echo x > app/vite.v2.config.ts; echo x > app/v2.html'
-check "V2 lab entry and configs" "app app_v2" selective pull_request "$BASE_SHA"
+check "host spec only" "$APP_ALL" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'echo x > app/playwright.config.ts'
-check "host Playwright config" "app app_v1" selective pull_request "$BASE_SHA"
+check "host Playwright config" "$APP_ALL" selective pull_request "$BASE_SHA"
 
-# The V2 job builds V1 too: e2e-v2/structure.spec.ts reads V1's dist/ to prove no lab stylesheet is linked from the host entry.
 case_with bash -c 'echo x > app/index.html'
-check "host entry page (V2 isolation spec reads its build)" "$APP_ALL" selective pull_request "$BASE_SHA"
+check "host entry page" "$APP_ALL" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'echo x >> app/vite.config.ts'
-check "host vite config (V2 isolation spec reads its build)" "$APP_ALL" selective pull_request "$BASE_SHA"
+check "host vite config" "$APP_ALL" selective pull_request "$BASE_SHA"
 
-case_with bash -c 'echo x >> app/e2e/a.spec.ts; echo x >> app/e2e-v2/b.spec.ts'
-check "both spec folders" "$APP_ALL" selective pull_request "$BASE_SHA"
+# BACK-92 R4: the lab's paths are gone. Re-adding one is an ordinary app/ change: it runs the app suites, never a retired job.
+case_with bash -c 'mkdir -p app/e2e-v2 && echo x > app/e2e-v2/b.spec.ts; echo x > app/playwright.v2.config.ts; echo x > app/vite.v2.config.ts; echo x > app/v2.html'
+check "retired lab paths re-added: app suites, no lab flag" "$APP_ALL" selective pull_request "$BASE_SHA"
+
+case_with bash -c 'echo x >> app/src/main.tsx'
+out="$(bash "$CLASSIFIER" pull_request "$BASE_SHA" HEAD 2>/dev/null)"
+if grep -q '^app_v2=' <<<"$out"; then FAIL=$((FAIL + 1)); echo "FAIL: the retired app_v2 flag is still printed" >&2; else PASS=$((PASS + 1)); fi
 
 case_with bash -c 'echo x > app/tsconfig.json'
 check "other app file (shared config)" "$APP_ALL" selective pull_request "$BASE_SHA"

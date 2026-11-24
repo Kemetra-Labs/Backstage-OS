@@ -1,7 +1,7 @@
-/* BACK-86 (S4): the B+C map's base rules, scoped for embedding in the host. The lab's reset.css styles `*`, html, body, headings,
-   lists, buttons, links and :focus-visible for the whole page; imported into the host it would restyle every V1 screen. These are
+/* BACK-86 (S4): the B+C map's base rules, scoped for embedding in the host. The lab's reset.css (retired with the lab entry, BACK-92 R4) styled `*`, html, body, headings,
+   lists, buttons, links and :focus-visible for the whole page; imported into the host it would have restyled every V1 screen. These are
    the same declarations under .kv2-scope, wrapped in :where() so they keep the zero specificity the lab's element selectors have
-   and every .kv2-* class still wins over them. The lab itself does not import this file. */
+   and every .kv2-* class still wins over them. */
 :where(.kv2-scope), :where(.kv2-scope) :where(*, *::before, *::after) { box-sizing: border-box; }
 :where(.kv2-scope) {
   color: var(--kv2-ink); font: 400 var(--kv2-t-md) / 1.5 var(--kv2-f-ui); font-variant-numeric: tabular-nums;

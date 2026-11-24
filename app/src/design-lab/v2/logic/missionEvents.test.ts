@@ -1,8 +1,8 @@
 // BACK-90, owner decision A: a mission's `events` figure is NOT DEFINED by the synthetic fixture. Nothing shows it, nothing derives a count
 // from it, and nothing subtracts withheld evidence references from it (a figure that differs by persona would hint that a record is hidden).
 // The field stays in the type and the fixture for now; its removal is a separate, audited change (option D). These guards read the source
-// because the screen has no DOM unit environment; the rendered wording is checked in the browser (e2e-v2/nondisclosure.spec.ts and
-// e2e/agent-flight-deck.spec.ts). Persona is a display switch on synthetic data, not authorization.
+// because the screen has no DOM unit environment; the rendered wording is checked in the browser (e2e/agent-flight-deck.spec.ts and
+// e2e/lens-nondisclosure.spec.ts). Persona is a display switch on synthetic data, not authorization.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';

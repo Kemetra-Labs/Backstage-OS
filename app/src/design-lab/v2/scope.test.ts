@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest';
 // @ts-ignore node builtin, available at test time
 const { readFileSync, existsSync, statSync } = await import('node:fs');
 const read = (rel: string): string => readFileSync(new URL(rel, import.meta.url), 'utf8') as string;
-const NAMES = ['fonts', 'tokens', 'reset', 'base', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;
+// The embeddable set the host imports (src/screens/lensStyles.ts). The lab's own reset.css and fonts.css retired with the lab entry
+// (BACK-92 R4); scope.css and embed-fonts.css are their host counterparts.
+const NAMES = ['embed-fonts', 'tokens', 'scope', 'base', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;
 const css: Record<string, string> = Object.fromEntries(NAMES.map((n) => [`./styles/${n}.css`, read(`./styles/${n}.css`)]));
 const src = import.meta.glob(['./**/*.ts', './**/*.tsx', '!./**/*.test.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const v1css: Record<string, string> = Object.fromEntries(['tokens', 'app'].map((n) => [n, read(`../../styles/${n}.css`)]));
@@ -36,16 +38,17 @@ describe('V2 stylesheets', () => {
     }
   });
 
-  it('clip horizontal overflow on html and body, and honour reduced motion', () => {
-    // BACK-86: the global reset moved from base.css to reset.css; the lab ships both, so the guarantee is on their sum.
-    const base = css['./styles/reset.css']! + css['./styles/base.css']!;
-    expect(base).toMatch(/html\s*\{[^}]*overflow-x:\s*clip/);
-    expect(base).toMatch(/body\s*\{[^}]*overflow-x:\s*clip/);
-    expect(base).toMatch(/prefers-reduced-motion:\s*reduce/);
+  it('clip horizontal overflow on the lens region, and honour reduced motion', () => {
+    // BACK-92 R4: the lab's global reset (reset.css) retired with the lab entry. The host embeds the lenses under .kv2-scope, so the
+    // guarantee is on scope.css: the region clips its own overflow and stops every animation under reduced motion.
+    const scope = css['./styles/scope.css']!;
+    expect(scope).toMatch(/:where\(\.kv2-scope\)\s*\{[^}]*overflow-x:\s*clip/);
+    expect(scope).toMatch(/prefers-reduced-motion:\s*reduce\s*\)\s*\{[^}]*\.kv2-scope[^}]*animation:\s*none\s*!important/);
   });
 
   it('scope every screen stylesheet rule to the .kv2- namespace', () => {
-    for (const [f, text] of bodyCss.filter(([n]) => !n.endsWith('base.css') && !n.endsWith('reset.css'))) {
+    // scope.css wraps element resets in :where(.kv2-scope); its own selector check is src/styles/isolation.test.ts (a real parser).
+    for (const [f, text] of bodyCss.filter(([n]) => !n.endsWith('base.css') && !n.endsWith('scope.css'))) {
       const stripped = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@[^{;]+\{/g, '');
       const selectors = [...stripped.matchAll(/([^{}@;]+)\{/g)].map((m) => m[1]!.trim()).filter((sel) => sel && !/^\d+%$/.test(sel));
       const offenders = selectors.flatMap((list) => list.split(',').map((x) => x.trim())).filter((sel) => !sel.includes('.kv2-') && !sel.includes('.kv2'));
@@ -66,11 +69,11 @@ describe('V2 self-hosted assets (BACK-18)', () => {
 
   it('reference no hosted URL from any stylesheet or the HTML entry', () => {
     for (const [f, text] of Object.entries(css)) expect(text.replace(/\/\*[\s\S]*?\*\//g, ''), f).not.toMatch(/https?:\/\/|\/\/fonts\.|@import/);
-    expect(read('../../../v2.html')).not.toMatch(/<link[^>]+href=["']https?:|<script[^>]+src=["']https?:/);
+    expect(read('../../../index.html')).not.toMatch(/<link[^>]+href=["']https?:|<script[^>]+src=["']https?:/);
   });
 
   it('declare each face from a local woff2 only (no local() lookup), and every file and its licence ship', () => {
-    const fonts = css['./styles/fonts.css']!.replace(/\/\*[\s\S]*?\*\//g, '');
+    const fonts = css['./styles/embed-fonts.css']!.replace(/\/\*[\s\S]*?\*\//g, '');
     expect(fonts).not.toMatch(/local\(/);
     const files = urls(fonts);
     expect(files.length).toBe(2);

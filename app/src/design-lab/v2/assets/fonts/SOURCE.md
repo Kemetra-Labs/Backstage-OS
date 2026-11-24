@@ -17,6 +17,6 @@ the ticket names (Sora's Latin file is 33.6 KB and wider). Cairo is the Arabic f
 stacks. Only Cairo's Arabic subset ships; Latin text inside Arabic pages (ids, digits) falls through to Manrope, which
 saves the 33.8 KB Cairo Latin file and keeps tabular figures in both languages.
 
-`styles/fonts.css` declares both faces with `src: url(...)` only (no `local()`, so an installed copy never wins) and
+`styles/embed-fonts.css` declares both faces (as "Kawalys BC Manrope" and "Kawalys BC Cairo"; the lab's own `styles/fonts.css` retired with the lab entry, BACK-92 R4) with `src: url(...)` only (no `local()`, so an installed copy never wins) and
 keeps the fontsource `unicode-range`, so an English page downloads Manrope only and Cairo is fetched only when Arabic
 text is on screen.

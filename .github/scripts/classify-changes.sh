@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Decides which CI suites a change needs (BACK-93). Prints GITHUB_OUTPUT lines:
-#   root=, app=, app_v1=, app_v2=, server=, g1= (true|false), mode= (selective|docs|full), reason=
-# app = the app typecheck and unit tests (any app/ change); app_v1 = the host browser suite (app/e2e); app_v2 = the V2 lab
-# browser suite (app/e2e-v2). app/src and shared app files select both browser suites, because the lab imports host code.
+#   root=, app=, app_v1=, server=, g1= (true|false), mode= (selective|docs|full), reason=
+# app = the app typecheck and unit tests (any app/ change); app_v1 = the host browser suite (app/e2e), also any app/ change.
+# The V2 lab browser suite (app/e2e-v2, flag app_v2) retired with the lab entry (BACK-92 R4); its checks live in app/e2e.
 # Usage: classify-changes.sh <event-name> <base-sha> <head-ref>
 #
 # Fail safe, never fail open: a manual, scheduled or unknown event, a missing, all-zero or unreadable base, an empty diff,
@@ -15,10 +15,10 @@ EVENT="${1:-}"
 BASE="${2:-}"
 HEAD="${3:-HEAD}"
 
-ROOT=false APP=false APP_V1=false APP_V2=false SERVER=false G1=false
+ROOT=false APP=false APP_V1=false SERVER=false G1=false
 
 full() {
-  echo "root=true"; echo "app=true"; echo "app_v1=true"; echo "app_v2=true"; echo "server=true"; echo "g1=true"
+  echo "root=true"; echo "app=true"; echo "app_v1=true"; echo "server=true"; echo "g1=true"
   echo "mode=full"; echo "reason=$1"
   exit 0
 }
@@ -55,12 +55,9 @@ while IFS= read -r path; do
   case "$path" in
     .github/*) full ".github/ changed: $path" ;;
     docs/planning/G1/fixture/*|docs/planning/G1/holdout-v1/*) G1=true ;;
-    # app/ before *.md: app unit tests assert on markdown inside app/ (e.g. the V2 font SOURCE.md pins).
-    # Files only one browser suite reads select that suite; everything else in app/ is shared and selects both.
-    # app/index.html and app/vite.config.ts are shared: the V2 isolation spec (e2e-v2/structure.spec.ts) reads V1's build.
-    app/e2e/*|app/playwright.config.ts) APP=true APP_V1=true ;;
-    app/e2e-v2/*|app/playwright.v2.config.ts|app/vite.v2.config.ts|app/v2.html) APP=true APP_V2=true ;;
-    app/*) APP=true APP_V1=true APP_V2=true ;;
+    # app/ before *.md: app unit tests assert on markdown inside app/ (e.g. the lens font SOURCE.md pins).
+    # There is one app browser suite (app/e2e) since the V2 lab retired (BACK-92 R4), so every app/ path selects it.
+    app/*) APP=true APP_V1=true ;;
     *.md) ;;
     server/*) SERVER=true ;;
     index.html|js/*|css/*|tests/*|playwright.config.js|package.json|package-lock.json) ROOT=true ;;
@@ -74,7 +71,7 @@ while IFS= read -r path; do
   esac
 done <<<"$CHANGED"
 
-echo "root=$ROOT"; echo "app=$APP"; echo "app_v1=$APP_V1"; echo "app_v2=$APP_V2"; echo "server=$SERVER"; echo "g1=$G1"
+echo "root=$ROOT"; echo "app=$APP"; echo "app_v1=$APP_V1"; echo "server=$SERVER"; echo "g1=$G1"
 if [[ "$ROOT$APP$SERVER$G1" == "falsefalsefalsefalse" ]]; then
   echo "mode=docs"; echo "reason=documentation only"
 else

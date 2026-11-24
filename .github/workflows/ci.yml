@@ -33,7 +33,6 @@ jobs:
       root: ${{ steps.classify.outputs.root }}
       app: ${{ steps.classify.outputs.app }}
       app_v1: ${{ steps.classify.outputs.app_v1 }}
-      app_v2: ${{ steps.classify.outputs.app_v2 }}
       server: ${{ steps.classify.outputs.server }}
       g1: ${{ steps.classify.outputs.g1 }}
       mode: ${{ steps.classify.outputs.mode }}
@@ -101,7 +100,7 @@ jobs:
           path: test-results/
           retention-days: 7
 
-  # The Kawalys React app in app/ has its own package.json, lockfile and Playwright configs. No browsers needed here.
+  # The Kawalys React app in app/ has its own package.json, lockfile and Playwright config. No browsers needed here.
   app-check:
     name: App typecheck and unit tests
     needs: classify
@@ -133,6 +132,8 @@ jobs:
   # 987 tests, webkit 1410 s for 978), so mixed shards came out at 5, 11 and 15 minutes of tests. Chromium runs in one job
   # and WebKit in three, each about 8 minutes of tests. Each project's shards cover all its tests, so the union is the
   # whole suite. The gate sees one result for the matrix: success only if every job in it succeeded.
+  # This is the app's only browser suite: the V2 lab suite (app/e2e-v2, job app-e2e-v2) retired with the lab entry in
+  # BACK-92 R4, and its checks were moved into app/e2e first.
   app-e2e-v1:
     name: App V1 e2e (${{ matrix.project }}) ${{ matrix.shard }}/${{ matrix.shards }}
     needs: classify
@@ -173,46 +174,6 @@ jobs:
         with:
           name: app-e2e-v1-test-results-${{ matrix.project }}-shard-${{ matrix.shard }}
           path: app/test-results/
-          retention-days: 7
-
-  # The V2 visual lab and the B+C pilot (app/e2e-v2, including the restricted-evidence non-disclosure specs).
-  # Chromium only: playwright.v2.config.ts defines no WebKit project, so this proves nothing about V2 on WebKit.
-  app-e2e-v2:
-    name: App V2 e2e (chromium)
-    needs: classify
-    if: needs.classify.outputs.app_v2 == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    outputs:
-      ran: ${{ steps.done.outputs.ran }}
-    defaults:
-      run:
-        working-directory: app
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-      - name: Install app dependencies
-        run: bash ../.github/scripts/npm-ci.sh
-      - name: Install Playwright browsers
-        run: ./node_modules/.bin/playwright install --with-deps chromium
-      # structure.spec.ts checks that V1's dist/ carries no V2 selectors, so it needs the V1 build too
-      # (in the single pre-BACK-93 job, `npm run e2e` had already built it).
-      - name: Build V1 app (read by the V2 isolation spec)
-        run: ./node_modules/.bin/vite build
-      - name: Run app V2 Playwright tests (chromium)
-        run: npm run e2e:v2
-      - id: done
-        run: echo "ran=true" >> "$GITHUB_OUTPUT"
-      - name: Upload test results on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-e2e-v2-test-results
-          path: app/test-results/v2/
           retention-days: 7
 
   # The Kawalys BFF in server/ needs Node 24. Its DB tests start a disposable PostgreSQL through Testcontainers,
@@ -263,7 +224,7 @@ jobs:
   # The required check on main. Its name is the historic one so branch protection needs no change (BACK-93).
   gate:
     name: Playwright (chromium + webkit)
-    needs: [classify, root, app-check, app-e2e-v1, app-e2e-v2, server, g1]
+    needs: [classify, root, app-check, app-e2e-v1, server, g1]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
