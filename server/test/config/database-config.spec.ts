@@ -56,6 +56,27 @@ describe('loadDatabaseConfig', () => {
       }
     });
 
+    it('refuses query parameters that pg would apply differently from the URL parser (duplicate sslmode, host override)', () => {
+      for (const url of [
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=verify-full&sslmode=disable',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=disable&sslmode=verify-full',
+        'postgres://kawalys_app:s3cret-app@localhost:5432/kawalys?host=db.evil.com',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=verify-full&host=other.internal',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=verify-full&ssl=false',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=verify-full&user=kawalys_migrator',
+      ]) {
+        expect(load(url)).toThrow(ConfigError);
+        let message = '';
+        try {
+          load(url)();
+        } catch (e) {
+          message = (e as Error).message;
+        }
+        expect(message).toMatch(/^KAWALYS_DATABASE_URL_APP /);
+        expect(message).not.toMatch(/s3cret|evil/);
+      }
+    });
+
     it('accepts a pooled hostname for runtime logins (the workspace setting is transaction-local)', () => {
       const pooled = 'postgres://kawalys_app:s3cret-app@ep-square-dew-bgjbfuyv-pooler.eu-central-1.aws.neon.tech/kawalys?sslmode=verify-full';
       expect(load(pooled)).not.toThrow();

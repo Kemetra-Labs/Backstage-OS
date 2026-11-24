@@ -25,7 +25,7 @@ export function loadOperatorConfig(env: Readonly<Record<string, string | undefin
   const url = postgresUrl(ADMIN, adminUrl);
   // The runner holds a session advisory lock, which a transaction-mode pooler does not keep.
   if (url.hostname.split('.')[0]!.endsWith('-pooler')) {
-    throw new ConfigError(`${ADMIN} must use the direct endpoint, not a pooler`);
+    throw new ConfigError(`${ADMIN} must use the direct endpoint, not a pooler (only the Neon -pooler host name is detected)`);
   }
   const database = decodeURIComponent(url.pathname.replace(/^\//, ''));
   if (database === '') throw new ConfigError(`${ADMIN} must name a database`);
@@ -39,4 +39,12 @@ export function loadOperatorConfig(env: Readonly<Record<string, string | undefin
     throw new ConfigError('the three role passwords must differ');
   }
   return { adminUrl, database, passwords };
+}
+
+/** The admin URL with another login. The password is percent-encoded: the URL setter leaves `%` as it is. */
+export function roleConnectionString(adminUrl: string, role: string, password: string): string {
+  const url = new URL(adminUrl);
+  url.username = encodeURIComponent(role);
+  url.password = encodeURIComponent(password);
+  return url.toString();
 }

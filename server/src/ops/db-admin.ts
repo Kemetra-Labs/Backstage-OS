@@ -6,18 +6,11 @@
 // Output names roles, the database and file names only: never URLs or passwords.
 import { join } from 'node:path';
 import pg from 'pg';
-import { loadOperatorConfig } from './db-admin-config';
+import { loadOperatorConfig, roleConnectionString } from './db-admin-config';
 import { provisionDatabase, provisionRoles, ROLE_MIGRATOR } from '../db/provision';
 import { runMigrations } from '../db/migrate';
 
 const MIGRATIONS_DIR = join(__dirname, '..', '..', 'migrations');
-
-function asRole(adminUrl: string, role: string, password: string): string {
-  const url = new URL(adminUrl);
-  url.username = role;
-  url.password = password;
-  return url.toString();
-}
 
 async function main(argv: readonly string[]): Promise<void> {
   const [command, ...flags] = argv;
@@ -29,9 +22,13 @@ async function main(argv: readonly string[]): Promise<void> {
     return;
   }
   if (command === 'provision') {
+    const plaintext = flags.includes('--plaintext-passwords');
+    if (plaintext) {
+      console.error('db-admin: warning: the role passwords travel as plaintext DDL; rotate them after provisioning (Neon console or API).');
+    }
     const admin = new pg.Pool({ connectionString: cfg.adminUrl, max: 1 });
     try {
-      await provisionRoles(admin, cfg.passwords, { passwordFormat: flags.includes('--plaintext-passwords') ? 'plaintext' : 'scram' });
+      await provisionRoles(admin, cfg.passwords, { passwordFormat: plaintext ? 'plaintext' : 'scram' });
       await provisionDatabase(admin, cfg.database);
       console.log('provisioned roles and schema kawalys');
     } finally {
@@ -39,7 +36,7 @@ async function main(argv: readonly string[]): Promise<void> {
     }
     return;
   }
-  const migrator = new pg.Pool({ connectionString: asRole(cfg.adminUrl, ROLE_MIGRATOR, cfg.passwords.migrator), max: 1 });
+  const migrator = new pg.Pool({ connectionString: roleConnectionString(cfg.adminUrl, ROLE_MIGRATOR, cfg.passwords.migrator), max: 1 });
   try {
     const done = await runMigrations(migrator, MIGRATIONS_DIR);
     console.log(done.length === 0 ? 'no pending migrations' : `applied: ${done.join(', ')}`);

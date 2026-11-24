@@ -10,6 +10,7 @@ Scope: a **throwaway Neon branch** (`validate-back55-throwaway`, parent `main`, 
 | 2 | `CREATE SCHEMA kawalys AUTHORIZATION kawalys_migrator` fails for that admin: `must be able to SET ROLE "kawalys_migrator"` (SQLSTATE 42501). | Ran the pre-fix statement, then the fixed sequence. | `provisionDatabase` now runs `GRANT kawalys_migrator TO CURRENT_USER WITH SET TRUE` first. |
 | 3 | Neon refuses pre-hashed passwords: `Neon only supports being given plaintext passwords` (HTTP 400, XX000). | `CREATE ROLE ... PASSWORD 'SCRAM-SHA-256$...'`. | `provisionRoles` takes `passwordFormat: 'plaintext'`; CLI flag `--plaintext-passwords`. SCRAM stays the default for other hosts. |
 | 4 | The database config accepted any URL, including a remote one without TLS. | code review | non-loopback hosts now require `sslmode=verify-full`. |
+| 5 | Independent review: `pg` takes the last duplicate query key and lets `host`/`ssl`/`user` override the URL, so a first-value TLS check and the pooler check were bypassable. | review reproduced with pg-connection-string; two regression tests written first and seen to fail | only `sslmode`, `application_name`, `connect_timeout`, `channel_binding` are accepted, each once. Role passwords are percent-encoded when building the migrator URL. |
 
 ## Passed on the branch (real code, `kawalys_app` / `kawalys_auth` logins, `sslmode=verify-full`)
 
@@ -23,5 +24,7 @@ Persistence: after an explicit endpoint suspend, a new connection read the earli
 
 - Point-in-time **restore drill** (needs a timestamped branch or snapshot restore; the 7-day window is configuration only).
 - The `db-admin provision` command itself on Neon: the same statements were run by hand through the Neon SQL tool as `kawalys_owner`.
+- `provision` is not transactional and has no `IF NOT EXISTS`: a failure half-way (for example the 42501 above) needs manual cleanup before a re-run. The admin also keeps SET membership on `kawalys_migrator` afterwards.
+- `--plaintext-passwords` leaves the passwords in DDL text on the server; rotate them after provisioning (the CLI warns).
 - Runtime secret custody and the host (BACK-58): no production role passwords exist yet. `main` on Neon is untouched: no roles, no schema.
 - The Docker-based database test suites were not run in this environment (no Docker); they run in CI.

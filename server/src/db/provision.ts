@@ -90,7 +90,7 @@ export async function provisionDatabase(admin: Queryable, database: string): Pro
   await execFormatted(admin, 'GRANT CONNECT ON DATABASE %I TO %I, %I, %I', database, ROLE_MIGRATOR, ROLE_APP, ROLE_AUTH);
   await admin.query('REVOKE ALL ON SCHEMA public FROM PUBLIC');
   // PostgreSQL 16+: the role that ran CREATE ROLE holds ADMIN OPTION but may not SET ROLE to it. A non-superuser
-  // admin (Neon's owner role) needs SET on the migrator for the two statements below. PostgreSQL 17 syntax.
+  // admin (Neon's owner role) needs SET on the migrator for the two statements below. The SET option needs PostgreSQL 16 or later.
   await execFormatted(admin, 'GRANT %I TO CURRENT_USER WITH SET TRUE', ROLE_MIGRATOR);
   await execFormatted(admin, 'CREATE SCHEMA %I AUTHORIZATION %I', SCHEMA, ROLE_MIGRATOR);
   await execFormatted(admin, 'REVOKE ALL ON SCHEMA %I FROM PUBLIC', SCHEMA);

@@ -16,7 +16,23 @@ const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 // Credentials and workspace data must not cross a network in clear text, and an unverified certificate
 // allows a man in the middle. Only loopback (local development, tests) may skip TLS.
+// node-postgres parses the URL itself: it takes the LAST duplicate of a query key and lets `host`, `port`, `user`,
+// `ssl` and similar keys override the URL. Only these keys are allowed, each at most once, so the checks below
+// see what pg will actually use.
+const ALLOWED_QUERY_KEYS = new Set(['sslmode', 'application_name', 'connect_timeout', 'channel_binding']);
+
+function requireStrictQuery(name: string, url: URL): void {
+  const seen = new Set<string>();
+  for (const key of url.searchParams.keys()) {
+    if (!ALLOWED_QUERY_KEYS.has(key) || seen.has(key)) {
+      throw new ConfigError(`${name} has an unsupported or repeated query parameter "${key.slice(0, 32)}"`);
+    }
+    seen.add(key);
+  }
+}
+
 function requireTls(name: string, url: URL): void {
+  requireStrictQuery(name, url);
   if (LOOPBACK_HOSTS.has(url.hostname)) return;
   if (url.searchParams.get('sslmode') !== 'verify-full') {
     throw new ConfigError(`${name} must use sslmode=verify-full for a non-loopback host`);

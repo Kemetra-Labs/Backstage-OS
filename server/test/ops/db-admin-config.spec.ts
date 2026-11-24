@@ -19,8 +19,13 @@ describe('loadOperatorConfig', () => {
   it('refuses the pooled endpoint: provisioning and migrations take a session advisory lock', () => {
     const pooled = ADMIN.replace('ep-square-dew-bgjbfuyv', 'ep-square-dew-bgjbfuyv-pooler');
     expect(() => loadOperatorConfig({ KAWALYS_ADMIN_DATABASE_URL: pooled, ...PW })).toThrow(
-      new ConfigError('KAWALYS_ADMIN_DATABASE_URL must use the direct endpoint, not a pooler'),
+      new ConfigError('KAWALYS_ADMIN_DATABASE_URL must use the direct endpoint, not a pooler (only the Neon -pooler host name is detected)'),
     );
+  });
+
+  it('refuses a host override that would send the connection to the pooler', () => {
+    const sneaky = `${ADMIN}&host=ep-square-dew-bgjbfuyv-pooler.eu-central-1.aws.neon.tech`;
+    expect(() => loadOperatorConfig({ KAWALYS_ADMIN_DATABASE_URL: sneaky, ...PW })).toThrow(ConfigError);
   });
 
   it('applies the TLS policy to the admin URL', () => {
