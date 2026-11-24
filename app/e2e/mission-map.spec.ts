@@ -153,7 +153,8 @@ test('Mission Map: an id the persona\'s world does not hold is dropped, not echo
   await openRoute(page, '/map/retail-tower/E-5', { lang: 'en', persona: 'owner', width: 1440 });
   await expect(node(page, 'stock-sync')).toHaveAttribute('aria-pressed', 'true');
   expect(await page.locator('.kv2-bc-node[aria-pressed="true"]').count()).toBe(1);
-// The dropped id is also taken out of the address, so it is not kept in the URL, the history or a copied link.  await expect.poll(() => hash(page)).toBe('#/map/retail-tower');
+  // The dropped id is also taken out of the address, so it is not kept in the URL, the history or a copied link.
+  await expect.poll(() => hash(page)).toBe('#/map/retail-tower');
   const text = await page.evaluate(() => document.body.innerText + document.body.textContent);
   expect(text).not.toContain('E-5');
 });
@@ -209,7 +210,12 @@ test('Mission Map: a verified system links to its Project Intelligence page, an 
   expect(await page.locator('[data-testid="map-open-project"]').count()).toBe(0);
   await openRoute(page, '/map/khepri', { lang: 'en', persona: 'owner', width: 1440 });
   await expect(page.locator('[data-testid="map-no-project"]')).toBeVisible();
-// The link describes what the map shows: with no node in the route the map falls back to stock-sync, and so does the link.  for (const r of ['/map', '/map/all', '/map/retail-tower']) {    await openRoute(page, r, { lang: 'en', persona: 'owner', width: 1440 });    await expect(page.locator('[data-testid="map-open-project"]'), r).toHaveAttribute('href', '#/project/RT/stock-sync');    await expect(node(page, 'stock-sync')).toHaveAttribute('aria-pressed', 'true');  }
+  // The link describes what the map shows: with no node in the route the map falls back to stock-sync, and so does the link.
+  for (const r of ['/map', '/map/all', '/map/retail-tower']) {
+    await openRoute(page, r, { lang: 'en', persona: 'owner', width: 1440 });
+    await expect(page.locator('[data-testid="map-open-project"]'), r).toHaveAttribute('href', '#/project/RT/stock-sync');
+    await expect(node(page, 'stock-sync')).toHaveAttribute('aria-pressed', 'true');
+  }
 });
 
 const ROUTES = ['/map', '/map/retail-tower/inventory', '/map/retail-tower/stock-sync', '/map/all/sentry', '/map/retail-tower/E-5'] as const;
@@ -219,7 +225,8 @@ for (const lang of LANGS) {
     test(`Mission Map non-disclosure ${persona}/${lang}: no restricted id, record or observation on any route, view or tab`, async ({ page }) => {
       for (const route of ROUTES) {
         await openRoute(page, route, { lang, persona, width: 1440 });
-// The address holds no restricted id on any route: the probe route types one, and the page takes it back out of the address.        for (const id of RESTRICTED) await expect.poll(() => page.url(), route).not.toContain(id);
+        // The address holds no restricted id on any route: the probe route types one, and the page takes it back out of the address.
+        for (const id of RESTRICTED) await expect.poll(() => page.url(), route).not.toContain(id);
         for (const view of ['map', 'list'] as const) {
           await page.locator('.kv2-bc-top .kv2-seg').last().locator('button').nth(view === 'list' ? 1 : 0).click();
           await expect(page.locator('[data-testid="bc-stage"]')).toHaveAttribute('data-mode', view);
