@@ -41,10 +41,17 @@ export class WorkspaceResolver {
   private async ensureOwnerWorkspace(workspaceId: string, userId: string): Promise<Role | null> {
     const attempt = () =>
       runWithWorkspaceContext(this.appPool, workspaceId, async (c) => {
-        const member = await c.query<{ role: Role }>('SELECT role FROM memberships WHERE user_id = $1', [userId]);
-        if (member.rows[0]) return member.rows[0].role;
+        const memberRole = async () =>
+          (await c.query<{ role: Role }>('SELECT role FROM memberships WHERE user_id = $1', [userId])).rows[0]?.role;
+        const role = await memberRole();
+        if (role) return role;
         const existing = await c.query('SELECT 1 FROM workspaces');
-        if ((existing.rowCount ?? 0) > 0) return null; // inconsistent state: fail closed
+        if ((existing.rowCount ?? 0) > 0) {
+          // READ COMMITTED gives each statement a fresh snapshot: a concurrent first use may have committed
+          // the workspace and its membership (one transaction) after the read above. Read the membership
+          // again; still none means a genuinely inconsistent workspace: fail closed.
+          return (await memberRole()) ?? null;
+        }
         await c.query('INSERT INTO workspaces (id, owner_user_id) VALUES ($1, $2)', [workspaceId, userId]);
         await c.query(`INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`, [workspaceId, userId]);
         await insertAuditRowInTransaction(c, {
