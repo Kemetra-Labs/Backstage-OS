@@ -12,8 +12,9 @@ permissions:
 
 # Superseded PR runs are cancelled. Runs on main are not: a push run only checks the suites its own diff selects, so
 # cancelling one would leave that merge's suites unverified on main (branch protection does not require up-to-date branches).
+# Each push gets its own group: with one shared group GitHub keeps only one pending run and cancels the one it replaces.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Impact-aware CI (BACK-93). `classify` decides which suites a change needs; the suites run as independent, parallel jobs;

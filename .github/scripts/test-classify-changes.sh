@@ -90,8 +90,15 @@ check "host spec only: no V2 lab browser suite" "app app_v1" selective pull_requ
 case_with bash -c 'echo x > app/playwright.v2.config.ts; echo x > app/vite.v2.config.ts; echo x > app/v2.html'
 check "V2 lab entry and configs" "app app_v2" selective pull_request "$BASE_SHA"
 
-case_with bash -c 'echo x > app/playwright.config.ts; echo x >> app/vite.config.ts; echo x > app/index.html'
-check "host entry and configs" "app app_v1" selective pull_request "$BASE_SHA"
+case_with bash -c 'echo x > app/playwright.config.ts'
+check "host Playwright config" "app app_v1" selective pull_request "$BASE_SHA"
+
+# The V2 job builds V1 too: e2e-v2/structure.spec.ts reads V1's dist/ to prove no lab stylesheet is linked from the host entry.
+case_with bash -c 'echo x > app/index.html'
+check "host entry page (V2 isolation spec reads its build)" "$APP_ALL" selective pull_request "$BASE_SHA"
+
+case_with bash -c 'echo x >> app/vite.config.ts'
+check "host vite config (V2 isolation spec reads its build)" "$APP_ALL" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'echo x >> app/e2e/a.spec.ts; echo x >> app/e2e-v2/b.spec.ts'
 check "both spec folders" "$APP_ALL" selective pull_request "$BASE_SHA"

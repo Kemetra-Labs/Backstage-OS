@@ -57,7 +57,8 @@ while IFS= read -r path; do
     docs/planning/G1/fixture/*|docs/planning/G1/holdout-v1/*) G1=true ;;
     # app/ before *.md: app unit tests assert on markdown inside app/ (e.g. the V2 font SOURCE.md pins).
     # Files only one browser suite reads select that suite; everything else in app/ is shared and selects both.
-    app/e2e/*|app/playwright.config.ts|app/vite.config.ts|app/index.html) APP=true APP_V1=true ;;
+    # app/index.html and app/vite.config.ts are shared: the V2 isolation spec (e2e-v2/structure.spec.ts) reads V1's build.
+    app/e2e/*|app/playwright.config.ts) APP=true APP_V1=true ;;
     app/e2e-v2/*|app/playwright.v2.config.ts|app/vite.v2.config.ts|app/v2.html) APP=true APP_V2=true ;;
     app/*) APP=true APP_V1=true APP_V2=true ;;
     *.md) ;;

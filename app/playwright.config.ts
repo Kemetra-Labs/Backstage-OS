@@ -1,4 +1,4 @@
-// Playwright for the S1 slice. @playwright/test resolves from the repo root (same 1.65.1 the prototype suite uses).
+// Playwright for the S1 slice. app/ pins its own @playwright/test (1.65.1, the same version the prototype suite uses).
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
