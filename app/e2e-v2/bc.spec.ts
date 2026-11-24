@@ -116,15 +116,21 @@ test.describe('layout', () => {
 });
 
 test.describe('map and list carry the same information', () => {
-  test('map: ten systems, each a native button named "title, kind, status"', async ({ page }) => {
+  // BACK-91: the name carries the card's visible words in order (WCAG 2.5.3 Label in Name), then the kind.
+  test('map: ten systems, each a native button named "title, …, status, kind"', async ({ page }) => {
     await loadBc(page);
     const nodes = page.locator('.kv2-bc-node');
     await expect(nodes).toHaveCount(10);
-    const info = await nodes.evaluateAll((els) => els.map((e) => ({ tag: e.tagName, id: (e as HTMLElement).dataset.node, label: e.getAttribute('aria-label') ?? '' })));
+    const info = await nodes.evaluateAll((els) => els.map((e) => ({ tag: e.tagName, id: (e as HTMLElement).dataset.node ?? '', status: (e.querySelector('.kv2-chip')?.textContent ?? '').trim(), aria: e.getAttribute('aria-label') })));
     expect(info.map((i) => i.id).sort()).toEqual([...IDS].sort());
     for (const i of info) {
       expect(i.tag).toBe('BUTTON');
-      expect(i.label, i.id).toMatch(/^.+, (Product|Project|Service), .+$/);
+      expect(i.aria, `${i.id}: name comes from the content, not an aria-label`).toBeNull();
+      // The browser-computed name (aria snapshot): it carries the status word and ends with the kind.
+      const name = /button "(.*)"/.exec(await page.locator(`.kv2-bc-node[data-node="${i.id}"]`).ariaSnapshot())?.[1] ?? '';
+      expect(i.status.length, `${i.id} has a status word`).toBeGreaterThan(0);
+      expect(name, i.id).toContain(i.status);
+      expect(name, i.id).toMatch(/, (Product|Project|Service)$/);
     }
   });
 

@@ -2,10 +2,10 @@
 // The canvas is always left-to-right; text inside the cards follows the language.
 import type { CSSProperties, KeyboardEvent, MutableRefObject } from 'react';
 import { Icon } from '../components/Icon';
-import { Lt, T, Tx } from '../components/ui';
+import { Lt, Tx } from '../components/ui';
 import { useV2 } from '../context';
 import { DEFAULT_BEND, HUB_ID, LINK_BEND } from '../fixtures/orbit-layout';
-import { plain, type K } from '../i18n/t';
+import { type K } from '../i18n/t';
 import { curve, edgeStale, isIncident } from '../logic/bc';
 import { nodeChip } from '../logic/evidence';
 import { nextByDirection, type Dir } from '../logic/graph';
@@ -86,6 +86,8 @@ function Node({ n, w, p, selected, dim, onSelect, refFn, intro }: NodeProps) {
   const st: SourceStatus | null = meta ? sourceStatus(meta, w.now) : null;
   const card = hub || selected ? 'full' : n.kind === 'service' ? 'read' : 'min';
   const text = chipText(chip.kind);
+  const desc = card === 'full' ? t(ND(n.id)) : null;
+  const read = card !== 'min' && st ? (st.ageMinutes === null ? t('bc.never') : t('obs.read.age', { a: st.ageMinutes, m: st.ttlMinutes })) : null;
   const dx = (p.x - BC_CANVAS.cx) / BC_CANVAS.w;
   const dy = (p.y - BC_CANVAS.cy) / BC_CANVAS.w;
   // Position is a fraction of the canvas; the stylesheet turns it into left/top and may inset it on narrow screens.
@@ -110,7 +112,10 @@ function Node({ n, w, p, selected, dim, onSelect, refFn, intro }: NodeProps) {
       data-dim={dim || undefined}
       data-intro={intro || undefined}
       aria-pressed={selected}
-      aria-label={plain(`${n.title}, ${t(`kind.${n.kind}` as K)}, ${text}`)}
+      // No aria-label: the name is computed from the card, so it always holds exactly the words on screen, in order (WCAG 2.5.3
+      // Label in Name, axe, BACK-91). The card's narrow-canvas CSS hides the description and read age with display:none, which
+      // drops them from the name too; the status chip of an unselected node is only visually hidden (bc.css), so the status is
+      // always in the name. The kind follows as visually hidden text, as in the list view (Tables.tsx).
       onClick={() => onSelect(n.id)}
     >
       <span className="kv2-bc-orbw">
@@ -119,10 +124,11 @@ function Node({ n, w, p, selected, dim, onSelect, refFn, intro }: NodeProps) {
       </span>
       <span className="kv2-bc-card">
         <b><Lt>{n.title}</Lt></b>
-        {card === 'full' && <small><T k={ND(n.id)} /></small>}
+        {desc && <small><Tx s={desc} /></small>}
         <StatusChip tone={chip.tone}><Tx s={text} /></StatusChip>
-        {card !== 'min' && st && <span className="kv2-bc-cardread">{st.ageMinutes === null ? t('bc.never') : t('obs.read.age', { a: st.ageMinutes, m: st.ttlMinutes })}</span>}
+        {read && <span className="kv2-bc-cardread">{read}</span>}
       </span>
+      <span className="kv2-sr">, {t(`kind.${n.kind}` as K)}</span>
     </button>
   );
 }
