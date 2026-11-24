@@ -12,6 +12,19 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
   // Close the narrow-screen menu after any navigation.
   useEffect(() => { setMenuOpen(false); }, [route]);
 
+  // Escape closes the open narrow-screen menu and returns focus to its button, so keyboard focus is never left on a hidden link.
+  // A handler that already used the key (a dialog, the evidence drawer) keeps it.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      setMenuOpen(false);
+      document.querySelector<HTMLButtonElement>('button[aria-controls="sidenav"]')?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+
   return (
     <>
       {/* A plain "#main" href would change the hash route, so the skip link moves focus itself. */}

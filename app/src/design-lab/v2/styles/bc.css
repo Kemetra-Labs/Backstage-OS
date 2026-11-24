@@ -315,3 +315,5 @@
   .kv2-bc-srcrows li { grid-template-columns: minmax(0, 1fr) auto; }
   .kv2-bc-srcrows li > span:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
 }
+/* Host only (BACK-87): the link from the Mission Map lens to Project Intelligence. A 44 px touch target, like every lens control (BACK-92 M14). */
+.kv2-host-link a { display: inline-flex; align-items: center; min-block-size: 44px; }

@@ -135,7 +135,7 @@ export function MissionReplay({ embedded = false }: { readonly embedded?: boolea
           </div>
           <div className="kv2-toolbar-end">
             <button type="button" className="kv2-btn kv2-btn-primary" onClick={restart}><Icon name="play" size={16} /><T k="rp.restart" /></button>
-            <Seg label={t('rp.speed')} value={String(speed) as `${Speed}`} onChange={(v) => setSpeed(Number(v) as Speed)} options={SPEEDS.map((s) => ({ value: String(s) as `${Speed}`, label: `${s}x` }))} className="kv2-seg-compact" />
+            <Seg label={t('rp.speed')} value={String(speed) as `${Speed}`} onChange={(v) => setSpeed(Number(v) as Speed)} options={SPEEDS.map((s) => ({ value: String(s) as `${Speed}`, label: <Lt>{`${s}x`}</Lt> }))} className="kv2-seg-compact" />
           </div>
         </div>
 
