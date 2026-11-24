@@ -64,9 +64,8 @@ function scopeSource(s: SourceMeta, keep: Keep): SourceMeta {
 const keepReplay = (r: ReplayEvent, visible: Visible): boolean => r.evidence === null || visible(r.evidence);
 
 // A mission keeps the evidence it still has. A mission whose whole basis was withheld keeps no claim: unknown label, no evidence.
-// Its `events` figure is never touched: the fixture does not say what it counts (owner decision, BACK-90), so no screen shows it and
-// nothing derives a number from it, least of all by subtracting withheld references, which would make a figure that differs by
-// persona and so hint that a record is hidden.
+// A mission has no `events` figure (removed in BACK-96; the Deck says it is not defined, owner decision BACK-90), so there is no number
+// to derive here, least of all by subtracting withheld references, which would differ by persona and so hint that a record is hidden.
 function scopeMission(m: Mission, visible: Visible): Mission {
   const evidence = m.evidence.filter(visible);
   const withheld = m.evidence.length - evidence.length;

@@ -89,7 +89,6 @@ export interface Mission {
   readonly status: AgentStatus;
   readonly human: HumanState;
   readonly startedMinutesAgo: number;
-  readonly events: number;
   /** 'unknown' only after authorizedWorld removed the whole basis of the claim. */
   readonly label: TruthLabel | 'unknown';
   readonly evidence: readonly string[];
