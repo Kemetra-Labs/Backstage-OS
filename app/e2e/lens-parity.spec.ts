@@ -155,7 +155,16 @@ test('M15 arabic Mission Map: the canvas geometry stays left to right while the 
   const ar = await read('ar');
   expect(Object.keys(en.nodes).length).toBeGreaterThan(5);
   expect(ar.canvasDir).toBe('ltr');
-  expect(ar.nodes).toEqual(en.nodes);
+  // Same set of systems, each within 1 px of its English position: WebKit rounds sub-pixel centres differently once the page is
+  // RTL, while a mirrored or reflowed canvas moves nodes by hundreds of pixels.
+  expect(Object.keys(ar.nodes).sort()).toEqual(Object.keys(en.nodes).sort());
+  const enNodes = en.nodes as Record<string, [number, number]>;
+  const arNodes = ar.nodes as Record<string, [number, number]>;
+  for (const [id, [x, y]] of Object.entries(enNodes)) {
+    const [ax, ay] = arNodes[id]!;
+    expect(Math.abs(ax - x), `${id} x: en ${x}, ar ${ax}`).toBeLessThanOrEqual(1);
+    expect(Math.abs(ay - y), `${id} y: en ${y}, ar ${ay}`).toBeLessThanOrEqual(1);
+  }
   expect(en.inspLeftOfRegion).toBe(false);
   expect(ar.inspLeftOfRegion).toBe(true);
 });
