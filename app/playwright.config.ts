@@ -14,6 +14,8 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 60_000,
   },
+  // CI runs each project by name (.github/workflows/ci.yml, job app-e2e-v1, matrix.include). A project added here runs in CI
+  // only once it has matrix rows there, and every row of one project must carry the same `shards` total.
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
