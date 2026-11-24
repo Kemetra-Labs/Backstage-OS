@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 const here = (rel: string): string => fileURLToPath(new URL(rel, import.meta.url));
 const read = (rel: string): string => readFileSync(here(rel), 'utf8');
-const V2 = '../design-lab/v2/styles/';
+const V2 = '../lenses/styles/';
 
 /** Every stylesheet the host imports to embed the lenses (src/screens/lensStyles.ts). The lab's reset.css and fonts.css retired with it (BACK-92 R4). */
 export const EMBED = ['tokens', 'base', 'scope', 'embed-fonts', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;
@@ -101,10 +101,10 @@ const LAB_RESET: readonly string[] = [
 ];
 
 describe('the lab\'s global reset is retired; scope.css carries it under .kv2-scope', () => {
-  it('no lab reset or lab font sheet is left, and the host entry imports no design-lab file directly', () => {
+  it('no lab reset or lab font sheet is left, and the host entry imports no lens file directly', () => {
     expect(existsSync(here(`${V2}reset.css`))).toBe(false);
     expect(existsSync(here(`${V2}fonts.css`))).toBe(false);
-    expect(read('../main.tsx')).not.toMatch(/reset\.css|design-lab/);
+    expect(read('../main.tsx')).not.toMatch(/reset\.css|lenses\//);
     const noComments = (t: string): string => t.replace(/\/\*[\s\S]*?\*\//g, '');
     for (const name of EMBED) expect(noComments(css[name]), name).not.toMatch(/reset\.css|fonts\.css/);
   });

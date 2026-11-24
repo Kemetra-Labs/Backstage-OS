@@ -10,8 +10,8 @@ import type { Persona } from '../contract/types';
 import { WORLD as V1_WORLD } from '../fixture/world';
 import { INV_DEMO_7 } from '../fixture/inv-demo-7';
 import { authorizedInvestigation, authorizedWorld as v1Authorized } from '../view/authorize';
-import { WORLD as V2_WORLD } from '../design-lab/v2/fixtures/world';
-import { authorizedWorld as v2Authorized } from '../design-lab/v2/logic/authorize';
+import { WORLD as V2_WORLD } from '../lenses/fixtures/world';
+import { authorizedWorld as v2Authorized } from '../lenses/logic/authorize';
 import { DOMAIN } from './fixture';
 import { canonicalComponent, canonicalFor, dependencyVerdict, evidenceVerdict } from './runtime';
 import { scopeFixture } from './scope';
@@ -99,7 +99,7 @@ describe('scopeFixture is the only authority for overlap records (mutation proof
 
   const consumers = async () => ({
     v1: await import('../view/authorize'), v1w: await import('../fixture/world'), v1i: await import('../fixture/inv-demo-7'),
-    v2: await import('../design-lab/v2/logic/authorize'), v2w: await import('../design-lab/v2/fixtures/world'),
+    v2: await import('../lenses/logic/authorize'), v2w: await import('../lenses/fixtures/world'),
   });
 
   // `withhold(id)`: mark one canonical record Technical-only in the canonical fixture only. The V1 and V2 objects for it still say
@@ -165,7 +165,7 @@ describe('no module outside src/domain scopes the canonical fixture on its own',
     const files = walk(SRC);
     const users = files.filter((f) => /scopeFixture\s*\(|import[^;]*scopeFixture/.test(readFileSync(f, 'utf8'))).map(rel).filter((f) => !f.startsWith('domain/')).sort();
     expect(users).toEqual([]);
-    for (const f of ['view/authorize.ts', 'design-lab/v2/logic/authorize.ts']) {
+    for (const f of ['view/authorize.ts', 'lenses/logic/authorize.ts']) {
       expect(readFileSync(join(SRC, f), 'utf8'), f).toMatch(/domain\/runtime'/);
     }
   });

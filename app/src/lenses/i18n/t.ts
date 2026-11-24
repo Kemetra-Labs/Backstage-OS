@@ -1,6 +1,6 @@
 // V2 copy. Each string is an [English, Arabic] pair, so parity is structural. A persona entry maps each of the three
 // demo perspectives to its own pair. {braces} mark left-to-right tokens (ids, product names, code); $name is a variable.
-import type { Lang, Persona } from '../../../contract/types';
+import type { Lang, Persona } from '../../contract/types';
 import { COMMON } from './common';
 import { MAP } from './map';
 import { BC } from './bc';

@@ -1,5 +1,5 @@
 // Evidence row shared by all four screens, so the same item reads the same everywhere.
-import type { EvidenceReference } from '../../../contract/types';
+import type { EvidenceReference } from '../../contract/types';
 import { useV2 } from '../context';
 import { evidenceView } from '../logic/evidence';
 import { Icon } from './Icon';

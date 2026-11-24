@@ -5,8 +5,8 @@
 import { useMemo } from 'react';
 import { useApp } from '../app/AppContext';
 import { toV2 } from '../bridge/hostV2';
-import { V2Context } from '../design-lab/v2/context';
-import { MissionReplay } from '../design-lab/v2/screens/MissionReplay';
+import { V2Context } from '../lenses/context';
+import { MissionReplay } from '../lenses/screens/MissionReplay';
 import { REPLAY_VIEW_COPY } from '../i18n/screens/map';
 import { navigate, replace } from './hostNav';
 import { ReplayTimeBasis } from './ReplayTimeBasis';

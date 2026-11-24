@@ -1,5 +1,5 @@
 // V2 visual lab types. Contract types (truth labels, sources, evidence) are reused from src/contract, never redefined.
-import type { DisplayState, EvidenceReference, Persona, Provider, SourceAuthority, TruthLabel } from '../../contract/types';
+import type { DisplayState, EvidenceReference, Persona, Provider, SourceAuthority, TruthLabel } from '../contract/types';
 
 export type ScreenId = 'mission-map' | 'source-observatory' | 'mission-replay' | 'agent-flight-deck';
 export const SCREENS: readonly ScreenId[] = ['mission-map', 'source-observatory', 'mission-replay', 'agent-flight-deck'];

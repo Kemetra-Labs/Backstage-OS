@@ -1,5 +1,5 @@
 // BACK-84: the runtime authority for which canonical records a persona may read. Both consumers (V1 view/authorize.ts and V2
-// design-lab/v2/logic/authorize.ts) ask this module about the INV-DEMO-7 overlap instead of applying their own visibility rule to it.
+// lenses/logic/authorize.ts) ask this module about the INV-DEMO-7 overlap instead of applying their own visibility rule to it.
 // Persona is a display switch, not authorization: this scopes synthetic demo data only, and no server-side identity, tenant or
 // X02/X04 enforcement exists or is claimed.
 //

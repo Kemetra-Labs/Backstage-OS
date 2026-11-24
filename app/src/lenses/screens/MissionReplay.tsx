@@ -1,7 +1,7 @@
 // Screen C. Mission Replay: a deterministic, synthetic replay of INV-DEMO-7. Playback only moves a cursor over fixed
 // events and changes what the screen shows. It executes nothing and calls no source or agent.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { INV_DEMO_7 } from '../../../fixture/inv-demo-7';
+import { INV_DEMO_7 } from '../../fixture/inv-demo-7';
 import { EvidenceItem } from '../components/evidence';
 import { Icon, type IconName } from '../components/Icon';
 import { Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip, TruthChip, Tx } from '../components/ui';

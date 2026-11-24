@@ -1,6 +1,6 @@
 // Hash route for the V2 lab: #/<screen>?persona=&lang=&scope=&node=&src=&evt=&msn=
 // Everything a reviewer can change lives in the URL, so a screenshot or a link reproduces the exact state.
-import type { Lang, Persona, Provider } from '../../../contract/types';
+import type { Lang, Persona, Provider } from '../../contract/types';
 import { SCREENS, type ScreenId } from '../types';
 
 export const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];

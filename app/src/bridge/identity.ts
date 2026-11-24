@@ -3,7 +3,7 @@
 // 'ambiguous' and the caller must treat it as having no counterpart. Nothing here renames an id, a route or a fixture, and nothing
 // here holds state. Synthetic demo data only; persona is a display switch, not authorization.
 import { DOMAIN } from '../domain/fixture';
-import type { NodeKind } from '../design-lab/v2/types';
+import type { NodeKind } from '../lenses/types';
 
 export type IdentityStatus = 'verified' | 'unresolved' | 'ambiguous';
 

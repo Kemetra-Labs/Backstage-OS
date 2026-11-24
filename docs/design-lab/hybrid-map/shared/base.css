@@ -264,7 +264,7 @@ html[data-motion="reduce"] *, html[data-motion="reduce"] *::before, html[data-mo
     linear-gradient(180deg, color-mix(in srgb, var(--kv2-cyan-2) 14%, transparent), transparent);
   box-shadow: 0 -2px 0 var(--kv2-cyan), 0 -14px 46px color-mix(in srgb, var(--kv2-cyan) 62%, transparent);
 }
-.kh-horizon::before { content: ""; position: absolute; inset-inline: 0; inset-block: -28% 0; pointer-events: none; background: url("../../../../app/src/design-lab/v2/assets/horizon.webp") center bottom / 100% 100% no-repeat; }
+.kh-horizon::before { content: ""; position: absolute; inset-inline: 0; inset-block: -28% 0; pointer-events: none; background: url("../../../../app/src/lenses/assets/horizon.webp") center bottom / 100% 100% no-repeat; }
 
 /* ---------- narrow screens: segmented controls scroll inside themselves, never widen the page ---------- */
 .kh-seg { max-inline-size: 100%; overflow-x: auto; scrollbar-width: none; }

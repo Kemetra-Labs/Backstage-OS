@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest';
 import type { Lang, Persona } from '../contract/types';
 import { DOMAIN } from '../domain/fixture';
 import { WORLD as V1 } from '../fixture/world';
-import { WORLD as V2 } from '../design-lab/v2/fixtures/world';
-import { authorizedWorld } from '../design-lab/v2/logic/authorize';
+import { WORLD as V2 } from '../lenses/fixtures/world';
+import { authorizedWorld } from '../lenses/logic/authorize';
 import { hrefFor, parseHash, type Route } from '../nav/routes';
 import { COMPONENT_PROJECT, IDENTITIES, isSharedComponent, mapIdOfProject, projectOfMapId } from './identity';
 import { permittedNode, toHostRoute, toHostRouteIn, toMapContext, toMapContextIn, type HostView } from './mapContext';
@@ -241,7 +241,7 @@ describe('the bridge adds no second authority', () => {
       const src = code(text);
       expect(src, f).not.toMatch(/from 'react'|from "react"/);
       // The lab's provider, shell, entry and search live in these; its pure route defaults and translator are fine to read.
-      expect(src, f).not.toMatch(/design-lab\/v2\/(context|navigation\/(Shell|hits)|main|App)/);
+      expect(src, f).not.toMatch(/lenses\/(context|navigation\/(Shell|hits)|main|App)/);
       expect(src, f).not.toMatch(/\b(useState|useReducer|useContext|createContext|V2Provider|useV2|localStorage|sessionStorage)\b/);
       expect(src, f).not.toMatch(/^\s*(let|var)\s/m);
     }

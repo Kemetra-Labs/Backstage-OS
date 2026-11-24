@@ -1,7 +1,7 @@
 // Persona-safe evidence rows for V2. Mirrors V1's viewFor rules: restricted evidence reveals only that it exists, and
 // only Technical sees targets, external ids and rules. Labels and freshness come from the contract, never from here.
-import { effectiveFreshness, resolveLabel } from '../../../contract/rules';
-import type { DisplayLabel, EvidenceReference, Freshness, Persona, Provider } from '../../../contract/types';
+import { effectiveFreshness, resolveLabel } from '../../contract/rules';
+import type { DisplayLabel, EvidenceReference, Freshness, Persona, Provider } from '../../contract/types';
 import type { SourceMeta, World, WorldNode } from '../types';
 import { nodeStatus } from './status';
 

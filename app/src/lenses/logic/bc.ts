@@ -1,7 +1,7 @@
 // Derivations for the B+C pilot. Every figure the screen shows comes from here, from the existing World and the
 // existing rules (status.ts, evidence.ts, contract/rules.ts). Nothing is invented, and there is no combined score.
-import { effectiveFreshness, resolveLabel } from '../../../contract/rules';
-import type { Lang, Persona } from '../../../contract/types';
+import { effectiveFreshness, resolveLabel } from '../../contract/rules';
+import type { Lang, Persona } from '../../contract/types';
 import type { World, WorldEdge } from '../types';
 import type { MapFilter } from './graph';
 import { isRiskNode, minutesSince, sourceCounts, sourceStatus, type Fraction, type SourceStatus, type Tone } from './status';

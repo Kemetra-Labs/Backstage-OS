@@ -1,6 +1,6 @@
-// Projection of the canonical fixture onto the V2 design-lab world shapes (the slices the canonical model owns).
+// Projection of the canonical fixture onto the V2 lens world shapes (the slices the canonical model owns).
 import type { EvidenceReference } from '../contract/types';
-import type { WorldEdge, WorldNode } from '../design-lab/v2/types';
+import type { WorldEdge, WorldNode } from '../lenses/types';
 import { resolveEvidence } from './resolve';
 import type { ComponentId, DomainFixture } from './types';
 

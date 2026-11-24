@@ -2,8 +2,8 @@
 // Persona is a display switch on synthetic data, not authorization.
 import { describe, expect, it } from 'vitest';
 import type { Persona } from '../contract/types';
-import { WORLD } from '../design-lab/v2/fixtures/world';
-import { authorizedWorld } from '../design-lab/v2/logic/authorize';
+import { WORLD } from '../lenses/fixtures/world';
+import { authorizedWorld } from '../lenses/logic/authorize';
 import { replayTimeRows } from './replayTime';
 
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];

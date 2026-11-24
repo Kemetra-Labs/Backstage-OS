@@ -5,8 +5,8 @@
 import { useMemo } from 'react';
 import { useApp } from '../app/AppContext';
 import { toV2 } from '../bridge/hostV2';
-import { V2Context } from '../design-lab/v2/context';
-import { SourceObservatory } from '../design-lab/v2/screens/SourceObservatory';
+import { V2Context } from '../lenses/context';
+import { SourceObservatory } from '../lenses/screens/SourceObservatory';
 import { SOURCES_VIEW_COPY } from '../i18n/screens/map';
 import { navigate } from './hostNav';
 import './lensStyles';

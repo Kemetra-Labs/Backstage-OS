@@ -5,8 +5,8 @@
 // not authorization. Nothing is live.
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
-import { translate } from '../src/design-lab/v2/i18n/t';
-import { MISSIONS } from '../src/design-lab/v2/fixtures/world';
+import { translate } from '../src/lenses/i18n/t';
+import { MISSIONS } from '../src/lenses/fixtures/world';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
 import { blurRadii, expectRenderedAA, waitForAnimationsSettled } from './lens-fidelity';

@@ -20,14 +20,14 @@ describe('domain is the one source for the INV-DEMO-7 overlap', () => {
       const imports = [...read(f).matchAll(/import (type )?[^;]*? from '([^']+)'/g)].filter((m) => m[2]!.startsWith('.'));
       for (const [, isType, p] of imports) {
         const ok = p === '../contract/types' || p === '../contract/world' || p!.startsWith('./')
-          || (p === '../design-lab/v2/types' && isType === 'type ');
+          || (p === '../lenses/types' && isType === 'type ');
         expect(ok, `${f} imports ${p}`).toBe(true);
       }
     }
   });
 
   it('no consumer fixture holds a second copy of E-1..E-9', () => {
-    const consumers = [...nonTest('fixture'), 'design-lab/v2/fixtures/world.ts'];
+    const consumers = [...nonTest('fixture'), 'lenses/fixtures/world.ts'];
     for (const f of consumers) expect(read(f), f).not.toMatch(/id:\s*'E-[1-9]'/);
   });
 
@@ -58,7 +58,7 @@ describe('changing the canonical record changes both consumers', () => {
     });
     const v1 = await import('../fixture/world');
     const v1Nodes = await import('../fixture/inv-demo-7');
-    const v2 = await import('../design-lab/v2/fixtures/world');
+    const v2 = await import('../lenses/fixtures/world');
 
     const inv1 = v1.WORLD.projects.find((p) => p.id === 'RT')!.components.find((c) => c.id === 'inventory')!;
     expect(inv1.state.health).toBe('degraded');

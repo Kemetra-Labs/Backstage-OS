@@ -7,9 +7,9 @@
 // not in that world, restricted or foreign, becomes "no selection" and never appears in the output. Persona is a display switch,
 // not authorization; no server-side identity is claimed. Synthetic data only.
 import type { Lang, Persona } from '../contract/types';
-import { WORLD as MAP_WORLD } from '../design-lab/v2/fixtures/world';
-import { authorizedWorld } from '../design-lab/v2/logic/authorize';
-import type { World as MapWorld } from '../design-lab/v2/types';
+import { WORLD as MAP_WORLD } from '../lenses/fixtures/world';
+import { authorizedWorld } from '../lenses/logic/authorize';
+import type { World as MapWorld } from '../lenses/types';
 import type { MapScope, Route } from '../nav/routes';
 import { COMPONENT_PROJECT, isSharedComponent, mapIdOfProject, projectOfMapId } from './identity';
 
