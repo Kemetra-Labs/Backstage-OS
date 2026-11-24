@@ -56,10 +56,10 @@ describe('V2 stylesheets', () => {
     }
   });
 
-  it('does not import or share any V1 stylesheet, and V1 does not import V2', () => {
+  it('does not import or share any V1 stylesheet, and the V1 entry does not import the lenses', () => {
     for (const [f, text] of Object.entries(src)) expect(text, f).not.toMatch(/import\s+['"](\.\.\/)+styles\//);
     expect(Object.keys(v1css).length).toBeGreaterThan(0);
-    expect(Object.values(v1main)[0]!).not.toMatch(/design-lab/);
+    expect(Object.values(v1main)[0]!).not.toMatch(/lenses\//);
   });
 });
 

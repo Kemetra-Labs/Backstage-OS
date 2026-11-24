@@ -101,10 +101,10 @@ const LAB_RESET: readonly string[] = [
 ];
 
 describe('the lab\'s global reset is retired; scope.css carries it under .kv2-scope', () => {
-  it('no lab reset or lab font sheet is left, and the host entry imports no design-lab file directly', () => {
+  it('no lab reset or lab font sheet is left, and the host entry imports no lens file directly', () => {
     expect(existsSync(here(`${V2}reset.css`))).toBe(false);
     expect(existsSync(here(`${V2}fonts.css`))).toBe(false);
-    expect(read('../main.tsx')).not.toMatch(/reset\.css|design-lab/);
+    expect(read('../main.tsx')).not.toMatch(/reset\.css|lenses\//);
     const noComments = (t: string): string => t.replace(/\/\*[\s\S]*?\*\//g, '');
     for (const name of EMBED) expect(noComments(css[name]), name).not.toMatch(/reset\.css|fonts\.css/);
   });
