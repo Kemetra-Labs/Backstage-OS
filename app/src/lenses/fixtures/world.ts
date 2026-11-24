@@ -110,11 +110,11 @@ export const AGENTS: readonly Agent[] = [
 ];
 
 export const MISSIONS: readonly Mission[] = [
-  { id: 'MSN-DEMO-1', agent: 'AG-1', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 7, events: 3, label: 'observed', evidence: ['E-1', 'E-2'], key: 'ms.ci' },
-  { id: 'MSN-DEMO-2', agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 9, events: 4, label: 'observed', evidence: ['E-5', 'E-9'], key: 'ms.fresh' },
-  { id: 'MSN-DEMO-3', agent: 'AG-3', kind: 'analysis', status: 'analyzing', human: 'reviewing', startedMinutesAgo: 4, events: 2, label: 'correlated', evidence: ['E-3'], key: 'ms.link' },
-  { id: 'MSN-DEMO-4', agent: 'AG-4', kind: 'analysis', status: 'analyzing', human: 'reviewing', startedMinutesAgo: 2, events: 3, label: 'hypothesis', evidence: ['E-1', 'E-2', 'E-3'], key: 'ms.hyp' },
-  { id: 'MSN-DEMO-5', agent: 'AG-5', kind: 'proposal', status: 'waiting_review', human: 'needs_review', startedMinutesAgo: 1, events: 2, label: 'proposed', evidence: ['E-1', 'E-3'], key: 'ms.proposal' },
+  { id: 'MSN-DEMO-1', agent: 'AG-1', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 7, label: 'observed', evidence: ['E-1', 'E-2'], key: 'ms.ci' },
+  { id: 'MSN-DEMO-2', agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 9, label: 'observed', evidence: ['E-5', 'E-9'], key: 'ms.fresh' },
+  { id: 'MSN-DEMO-3', agent: 'AG-3', kind: 'analysis', status: 'analyzing', human: 'reviewing', startedMinutesAgo: 4, label: 'correlated', evidence: ['E-3'], key: 'ms.link' },
+  { id: 'MSN-DEMO-4', agent: 'AG-4', kind: 'analysis', status: 'analyzing', human: 'reviewing', startedMinutesAgo: 2, label: 'hypothesis', evidence: ['E-1', 'E-2', 'E-3'], key: 'ms.hyp' },
+  { id: 'MSN-DEMO-5', agent: 'AG-5', kind: 'proposal', status: 'waiting_review', human: 'needs_review', startedMinutesAgo: 1, label: 'proposed', evidence: ['E-1', 'E-3'], key: 'ms.proposal' },
 ];
 
 export const WORLD: World = {

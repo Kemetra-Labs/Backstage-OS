@@ -1,7 +1,7 @@
 // BACK-90: the Agent Flight Deck's inputs and scoping, for the cases the first slice did not pin down: zero inputs, partial evidence,
 // evidence that is missing or unread, a mission that rests only on a withheld record, persona switches (including the memoised
-// projection), counts that must not reveal a withheld record, and Unknown staying Unknown. A mission's `events` figure is not defined
-// by the fixture, so nothing here reads it as a count. Persona is a display switch on synthetic data, not authorization.
+// projection), counts that must not reveal a withheld record, and Unknown staying Unknown. A mission has no `events` figure (removed in
+// BACK-96; the screen says it is not defined), so nothing here reads one. Persona is a display switch on synthetic data, not authorization.
 import { describe, expect, it } from 'vitest';
 import { leaksIn as leaks } from '../../e2e/leaks';
 import type { Persona } from '../contract/types';
@@ -15,7 +15,7 @@ import { expectWorldReadOnlyThroughAuthorizedWorld } from './scopeGuard';
 const LAY: readonly Persona[] = ['owner', 'nontechnical'];
 const ALL: readonly Persona[] = ['technical', 'owner', 'nontechnical'];
 
-const base: Omit<Mission, 'id' | 'evidence' | 'label'> = { agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, events: 3, key: 'ms.fresh' };
+const base: Omit<Mission, 'id' | 'evidence' | 'label'> = { agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, key: 'ms.fresh' };
 const onlyRestricted: Mission = { ...base, id: 'MSN-X1', label: 'observed', evidence: ['E-5'] };
 const missingEvidence: Mission = { ...base, id: 'MSN-X2', label: 'observed', evidence: ['E-404'] };
 const alreadyUnknown: Mission = { ...base, id: 'MSN-X3', label: 'unknown', evidence: [] };
@@ -47,9 +47,8 @@ describe('Flight Deck: zero inputs', () => {
 });
 
 describe('Flight Deck: counts reveal nothing', () => {
-  it('the counts do not depend on a mission events figure, whose meaning is not defined', () => {
-    const other: World = { ...WORLD, missions: WORLD.missions.map((m) => ({ ...m, events: m.events + 7 })) };
-    expect(deckCounts(other)).toEqual(deckCounts(WORLD));
+  it('the counts are derived from missions and agents only: no mission carries an events figure to derive from (BACK-96)', () => {
+    for (const m of WORLD.missions) expect('events' in m, m.id).toBe(false);
   });
 
   it('Owner and Nontechnical get the same counts, the same missions in the same order and the same states as Technical, on the shipped and the constructed world', () => {

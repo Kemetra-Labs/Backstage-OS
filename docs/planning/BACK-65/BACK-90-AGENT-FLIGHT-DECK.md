@@ -14,6 +14,8 @@ A mission has an `events` figure and the fixture does not say what it counts. Th
 
 **Owner decision, 23 Nov 2026: option A now, option D later.** The figure is not defined by the fixture, in the standalone lab as in the host. The lab now shows the same "Not defined in the demo data" wording, and the subtraction in `scopeMission` is removed: a mission's `events` is never recomputed, displayed or derived from evidence, for any persona. The `events` field stays in the type and the fixture for now; removing it (option D) is a separate, audited change. Option B (count of evidence references) is rejected and option C (real activity events) is not approved.
 
+**BACK-96 (option D, done):** an audit found no product reader of a mission `events` value, so the field is removed from `Mission` and the fixture. The Deck still says "Not defined in the demo data" for every persona and language. The audit panel Events figure (length of the authorized replay, BACK-89) is a different thing and is unchanged.
+
 ## Read-only, tested
 
 No control labelled or aria-labelled with a forbidden action verb in EN or AR (the repo's own `isForbiddenControlLabel`), no run, approve, stop, cancel, retry, execute, deploy, merge, release, start or restart button, no text input, a visible "simulated" banner, and no "live" claim other than the page's own "Nothing on this page is live". The agents are fixture rows; every control only moves a view.
