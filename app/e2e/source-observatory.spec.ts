@@ -6,7 +6,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
-import { hasId, hash, RESTRICTED, surface } from './lens-helpers';
+import { expectRenderedAA, waitForAnimationsSettled } from './lens-fidelity';
+import { hasId, hash, openScreen, RESTRICTED, surface } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 const lens = (page: Page) => page.locator('[data-testid="source-observatory-lens"]');
@@ -183,3 +184,37 @@ test('Observatory: reduced motion plays no animation', async ({ page }) => {
   await openRoute(page, '/sources/observatory', { lang: 'en', persona: 'owner', width: 1440 });
   expect(await page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').length)).toBe(0);
 });
+
+// ---- BACK-92 R3 (M1): lab parity, ported from e2e-v2/fidelity.spec.ts so the lab suite can be retired without losing it.
+// The posture panel is the Observatory's signature: three pins standing on the pre-rendered horizon. axe cannot judge text over an
+// image or a gradient, so the contrast is read from the rendered pixels. The horizon check first proves there is a horizon to read.
+test('Observatory horizon: the pre-rendered planet is served from the app\'s own origin and sits over the CSS fallback', async ({ page }) => {
+  const responses: { url: string; status: number }[] = [];
+  page.on('response', (r) => { if (r.url().includes('horizon')) responses.push({ url: r.url(), status: r.status() }); });
+  await openScreen(page, '/sources/observatory', { lang: 'en', persona: 'owner', width: 1440 });
+  const origin = new URL(page.url()).origin;
+  const bg = await lens(page).locator('.kv2-posture .kv2-horizon').first().evaluate((el) => ({
+    image: getComputedStyle(el, '::before').backgroundImage,
+    fallback: getComputedStyle(el).backgroundImage,
+    hidden: el.closest('[aria-hidden="true"]') !== null,
+  }));
+  expect(bg.image).toMatch(/horizon[^)]*\.webp/);
+  expect(bg.fallback).toMatch(/gradient/);
+  expect(bg.hidden).toBe(true);
+  await expect.poll(() => responses.length).toBeGreaterThan(0);
+  for (const r of responses) {
+    expect(r.url.startsWith(`${origin}/assets/`), r.url).toBe(true);
+    expect(r.status).toBe(200);
+  }
+});
+
+for (const lang of LANGS) {
+  for (const width of WIDTHS) {
+    test(`Observatory contrast ${lang} @${width}px: text over the horizon and glow keeps AA on rendered pixels`, async ({ page }) => {
+      await openScreen(page, '/sources/observatory', { lang, persona: 'owner', width });
+      await expect(lens(page).locator('.kv2-posture')).toBeVisible();
+      await waitForAnimationsSettled(page);
+      await expectRenderedAA(page, '.kv2-posture', `observatory ${lang} ${width}`);
+    });
+  }
+}
