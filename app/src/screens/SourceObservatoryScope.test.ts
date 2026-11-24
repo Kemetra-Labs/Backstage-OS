@@ -4,7 +4,7 @@
 // bypassed, so a pass is not vacuous. Pairs with the browser matrix in e2e/source-observatory.spec.ts. Persona is a display switch
 // on synthetic data, not authorization.
 import { describe, expect, it } from 'vitest';
-import { leaks } from '../../e2e/lens-helpers';
+import { leaksIn as leaks } from '../../e2e/leaks';
 import type { Persona } from '../contract/types';
 import { WORLD } from '../lenses/fixtures/world';
 import { authorizedWorld } from '../lenses/logic/authorize';

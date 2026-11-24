@@ -12,6 +12,7 @@ import { COPY } from '../src/i18n/strings';
 import { formatAge } from '../src/i18n/segments';
 import { LANGS } from './helpers';
 import { waitForIntroDone } from './lens-fidelity';
+import { leaks as probe, type Leak } from './leaks';
 import { openScreen, setMapMode } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
@@ -22,34 +23,17 @@ const SCOPED_EDGES = authorizedWorld(WORLD, 'owner').edges.length;
 const scoped = (persona: (typeof LAY)[number]) => authorizedWorld(WORLD, persona);
 const READABLE = (persona: (typeof LAY)[number]): number => INV_DEMO_7.evidence.filter((e) => scoped(persona).evidenceById[e.id] !== undefined).length;
 
-// What a viewer could read about the restricted record: its id, its title (every persona's wording) and its age text. All come from the
-// fixture and the shipped copy. The age text is also the Sentry source's own authorized last-read age, so it is matched only inside the
+// What a viewer could read about the restricted record: every withheld token (id, observation id, title in every persona's wording and
+// both languages, rule, link, placeholder copy) comes from the shared probe in leaks.ts (BACK-92 R7). The one extra is the record's age
+// text: it is also the Sentry source's own authorized last-read age, so it cannot be a page-wide token and is matched only inside the
 // map inspector for Inventory, whose only provider came from E-5.
 const E5 = WORLD.evidenceById['E-5']!;
-const escapeRe = (x: string): string => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const e5Titles = (lang: Lang): string[] => [...new Set((['owner', 'technical', 'nontechnical'] as const).map((p) => COPY[lang].evidenceItem['E-5']![p].replace(/[{}]/g, '')))];
 
-/** Everything a viewer, a screen reader or a tooltip could read that matches the restricted id, title or (in the map inspector) age. */
-async function leaks(page: Page, lang: Lang, opts: { readonly inspectorAge?: boolean } = {}): Promise<string[]> {
-  const wide = ['E-5', ...e5Titles(lang)].map(escapeRe);
-  const narrow = opts.inspectorAge ? [escapeRe(formatAge(E5.observation!.source.ageMinutes, lang))] : [];
-  return page.evaluate(({ wide: w, narrow: n }) => {
-    const found: string[] = [];
-    const scan = (root: Element, srcs: string[]) => {
-      const res = srcs.map((x) => new RegExp(x));
-      const body = (root as HTMLElement).innerText;
-      for (const re of res) if (re.test(body)) found.push(`text ${re}: ${body.slice(Math.max(0, body.search(re) - 20), body.search(re) + 40)}`);
-      for (const el of [root, ...root.querySelectorAll('*')]) {
-        for (const a of el.attributes) {
-          if (!(a.name === 'aria-label' || a.name === 'title' || a.name === 'alt' || a.name.startsWith('data-'))) continue;
-          for (const re of res) if (re.test(a.value)) found.push(`${el.tagName}[${a.name}]=${a.value}`);
-        }
-      }
-    };
-    scan(document.body, w);
-    for (const insp of document.querySelectorAll('.kv2-bc-insp')) scan(insp, n);
-    return found;
-  }, { wide, narrow });
+/** Everything a viewer, a screen reader, a tooltip or the address could hold that names the restricted record (or, in the map inspector, its age). */
+async function leaks(page: Page, lang: Lang, opts: { readonly inspectorAge?: boolean } = {}): Promise<Leak[]> {
+  const found = await probe(page);
+  if (opts.inspectorAge) found.push(...await probe(page, { within: '.kv2-bc-insp', restricted: false, extra: [formatAge(E5.observation!.source.ageMinutes, lang)] }));
+  return found;
 }
 
 /** The "restricted" placeholder copy: a placeholder row is itself a disclosure, so it must never be rendered for a lay persona. */

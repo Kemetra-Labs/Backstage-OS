@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
 import { BANNED, LANGS, openRoute as load, PERSONAS, WIDTHS } from './helpers';
+import { expectNoLeaks } from './leaks';
 
 const LAY = ['owner', 'nontechnical'] as const;
 const DETAIL_IDS = ['DEC-DEMO-3', 'DEC-DEMO-5', 'DEC-DEMO-1'] as const;
@@ -215,8 +216,7 @@ for (const lang of LANGS) {
     test(`redaction ${lang}/${persona}: no banned strings on inbox or any detail`, async ({ page }) => {
       for (const route of [INBOX, ...DETAIL_IDS.map(detail)]) {
         await load(page, route, { lang, persona });
-        const text = await page.locator('body').innerText();
-        for (const b of BANNED) expect(text.includes(b), `${route} ${persona}/${lang}: ${b}`).toBe(false);
+        await expectNoLeaks(page, `${route} ${persona}/${lang}`, { extra: BANNED });
       }
     });
   }

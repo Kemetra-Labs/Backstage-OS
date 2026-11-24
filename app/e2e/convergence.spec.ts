@@ -4,7 +4,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, PERSONAS } from './helpers';
-import { hash, LENS_READY, leaks, openScreen as openRoute, RESTRICTED, SCREENS, surface } from './lens-helpers';
+import { expectNoLeaks, explain, leaksIn, RESTRICTED_IDS, shows } from './leaks';
+import { hash, LENS_READY, openScreen as openRoute, SCREENS } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 
@@ -95,17 +96,18 @@ for (const lang of LANGS) {
     test(`restricted evidence on every screen ${persona}/${lang}: no restricted id, observation, link or attribute anywhere, and search finds nothing`, async ({ page }) => {
       for (const route of SCREENS) {
         await openRoute(page, route, { lang, persona, width: 1440 });
-        expect(leaks(await surface(page)), `${persona}/${lang} ${route}`).toEqual([]);
+        await expectNoLeaks(page, `${persona}/${lang} ${route}`);
       }
       await openRoute(page, '/', { lang, persona, width: 1440 });
       // By id: aria-controls is only set while the results list exists (BACK-91 axe fix), so it cannot locate the closed box.
       const box = page.locator('#demo-search');
-      for (const id of RESTRICTED) {
+      for (const id of RESTRICTED_IDS) {
         await box.fill(id);
         // Search matches substrings, so "O-5" may find an unrelated id such as DEMO-5. What must hold is that no result is the restricted id.
         await expect(page.locator('.search-pop')).toBeVisible();
         const results = await page.locator('.search-pop').evaluate((el) => [...el.querySelectorAll('li a')].map((a) => `${a.textContent ?? ''} ${a.getAttribute('href') ?? ''}`).join('\n'));
-        expect(leaks(results), `search for ${id}`).toEqual([]);
+        const found = leaksIn(results);
+        expect(found, `search for ${id}\n${explain(found)}`).toEqual([]);
       }
     });
   }
@@ -114,7 +116,7 @@ for (const lang of LANGS) {
 test('Technical does see the restricted record on the screens that list evidence (so the matrix is not vacuous)', async ({ page }) => {
   await openRoute(page, '/sources/observatory/sentry', { lang: 'en', persona: 'technical', width: 1440 });
   await page.locator('[data-testid="source-observatory-lens"]').getByRole('tab').nth(1).click();
-  expect((await surface(page)).includes('E-5')).toBe(true);
+  expect(await shows(page, 'E-5')).toBe(true);
 });
 
 test('Unknown is never Healthy, and every screen agrees: only GitHub is Healthy on the map and in the Observatory, and the tables never say healthy', async ({ page }) => {

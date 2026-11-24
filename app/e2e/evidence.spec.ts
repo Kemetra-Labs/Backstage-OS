@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
 import { BANNED, LANGS, openRoute as load, PERSONAS, WIDTHS } from './helpers';
+import { expectNoLeaks, RESTRICTED_IDS } from './leaks';
 
 const latinOutsideIsolates = (page: Page) =>
   page.evaluate(() => {
@@ -67,8 +68,8 @@ for (const lang of LANGS) {
     for (const id of ['E-1', 'E-2', 'E-23']) {
       test(`explorer redaction ${lang}/${persona}/${id}: no job names, run ids, PR ids or demo links`, async ({ page }) => {
         await load(page, `/evidence/${id}?from=${id === 'E-23' ? 'INV-DEMO-9' : 'INV-DEMO-7'}`, { lang, persona });
-        const text = await page.locator('body').innerText();
-        for (const b of BANNED) expect(text.includes(b), `${persona}/${lang}/${id}: ${b}`).toBe(false);
+        // E-23 is withheld from these personas: the not-found page echoes the id the visitor typed, so that one id is ignored.
+        await expectNoLeaks(page, `${persona}/${lang}/${id}`, { extra: BANNED, ignore: RESTRICTED_IDS.includes(id) ? [id] : [] });
         await expect(page.locator('.raw')).toHaveCount(0);
         await expect(page.locator('.inert-link')).toHaveCount(0);
       });

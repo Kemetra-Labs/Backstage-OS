@@ -3,6 +3,7 @@
 // privacy, the same keyboard and language behaviour, and that it falls back to DepGraph.
 import { expect, test, type Page } from '@playwright/test';
 import { BANNED, LANGS, openRoute, PERSONAS, WIDTHS, type LoadQuery } from './helpers';
+import { expectNoLeaks } from './leaks';
 
 const FLOW = '[data-testid="dep-flow"]';
 const hashOf = (page: Page) => page.evaluate(() => window.location.hash);
@@ -329,11 +330,9 @@ for (const lang of LANGS) {
       for (const route of ['/project/RT', '/project/RT/inventory', '/project/RT/payments', '/project/RT/stock-sync']) {
         await load(page, { lang, persona, route });
         await ready(page);
-        // page.content() is the serialized DOM: it covers attributes, ARIA labels, data-*, hidden nodes, test ids and title.
-        const html = await page.content();
-        for (const id of ['E-5', 'E-12']) expect(new RegExp(`\\b${id}\\b`).test(html), `${persona}/${lang}${route}: ${id}`).toBe(false);
-        for (const b of BANNED) expect(html.includes(b), `${persona}/${lang}${route}: ${b}`).toBe(false);
-        expect(html).not.toContain('Restricted to Technical');
+        // The shared probe reads what page.content() serializes (every attribute, ARIA label, data-*, hidden node, test id, the title)
+        // plus the address and form values: every withheld id, title and placeholder, and the job names and run ids in BANNED.
+        await expectNoLeaks(page, `${persona}/${lang}${route}`, { extra: BANNED });
         // The adapter drops evidence basis, so no evidence id is attached to the canvas for any persona.
         expect(await page.locator(FLOW).evaluate((el) => /\bE-\d+\b/.test(el.outerHTML)), `${persona}/${lang}${route}: evidence id inside the map`).toBe(false);
       }
