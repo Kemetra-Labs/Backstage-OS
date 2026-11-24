@@ -7,7 +7,7 @@ export const COMMON = {
   demo: ['Demo data, not live', 'بيانات تجريبية، ليست مباشرة'],
   'lab.badge': ['{V2} lab', 'مختبر {V2}'],
   'nav.screens': ['Screens', 'الشاشات'],
-  'nav.map': ['Mission Map', 'خريطة المهمة'],
+  'nav.map': ['Mission Map', 'خريطة المهام'],
   'nav.obs': ['Source Observatory', 'مرصد المصادر'],
   'nav.replay': ['Mission Replay', 'إعادة المهمة'],
   'nav.deck': ['Agent Flight Deck', 'لوحة قيادة الوكلاء'],

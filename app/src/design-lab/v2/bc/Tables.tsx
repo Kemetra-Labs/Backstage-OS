@@ -47,7 +47,7 @@ export function Ledger({ w, active, sel, onSelect }: RowProps & { readonly sel: 
                 <th scope="row">
                   <button type="button" data-node={n.id} aria-pressed={sel === n.id} onClick={() => onSelect(n.id)}>
                     <span className="kv2-bc-mini" data-tone={chip.tone}><Icon name={NODE_ICON[n.id] ?? 'cube'} size={15} /></span>
-                    <span><b><Lt>{n.title}</Lt></b><span className="kv2-sr">, <T k={`kind.${n.kind}` as K} /></span></span>
+                    <span><b><Lt>{n.title}</Lt></b><span className="kv2-sr"><T k="bc.sep" /><T k={`kind.${n.kind}` as K} /></span></span>
                   </button>
                 </th>
                 <td><StatusChip tone={chip.tone}><Tx s={chipText(chip.kind)} /></StatusChip></td>

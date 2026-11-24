@@ -128,7 +128,7 @@ function Node({ n, w, p, selected, dim, onSelect, refFn, intro }: NodeProps) {
         <StatusChip tone={chip.tone}><Tx s={text} /></StatusChip>
         {read && <span className="kv2-bc-cardread">{read}</span>}
       </span>
-      <span className="kv2-sr">, {t(`kind.${n.kind}` as K)}</span>
+      <span className="kv2-sr">{t('bc.sep')}{t(`kind.${n.kind}` as K)}</span>
     </button>
   );
 }
