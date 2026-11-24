@@ -123,10 +123,11 @@ test('Observatory: what each persona is told is the same, so no count or status 
 
 const ROUTES = ['/sources/observatory', '/sources/observatory/sentry', '/sources/observatory/port', '/sources/observatory/github', '/sources/observatory/jira'] as const;
 
+// One test per route: all five routes in one test took about 25 s on WebKit in CI (each click about 0.6 s) and crossed the 30 s timeout.
 for (const lang of LANGS) {
   for (const persona of LAY) {
-    test(`Observatory non-disclosure ${persona}/${lang}: no restricted id or observation on any route, view, tab or timeline filter`, async ({ page }) => {
-      for (const route of ROUTES) {
+    for (const route of ROUTES) {
+      test(`Observatory non-disclosure ${persona}/${lang} ${route}: no restricted id or observation in any view, tab or timeline filter`, async ({ page }) => {
         await openRoute(page, route, { lang, persona, width: 1440 });
         const scan = async (label: string) => {
           const text = await surface(page);
@@ -147,8 +148,8 @@ for (const lang of LANGS) {
           await axes.nth(i).click();
           await scan(`timeline filter ${i}`);
         }
-      }
-    });
+      });
+    }
   }
 }
 

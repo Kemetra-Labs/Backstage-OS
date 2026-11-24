@@ -10,28 +10,47 @@ on:
 permissions:
   contents: read
 
+# Superseded PR runs are cancelled. Runs on main are not: a push run only checks the suites its own diff selects, so
+# cancelling one would leave that merge's suites unverified on main (branch protection does not require up-to-date branches).
+# Each push gets its own group: with one shared group GitHub keeps only one pending run and cancels the one it replaces.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Impact-aware CI (BACK-93). `classify` decides which suites a change needs; the suites run as independent, parallel jobs;
+# the `gate` job is the only required check on main and keeps its historic name, so branch protection is unchanged.
+# Never add workflow-level `paths` / `paths-ignore`: a required check that never starts blocks merging forever.
+# Manual runs, unknown paths, .github/ changes, executable files under docs/ and any missing or invalid base run everything.
+# Every selected job ends with a `ran=true` output; the gate fails if a selected job failed, was cancelled, was skipped or
+# never reached that step, and if a job ran that was not selected.
 
 jobs:
-  playwright:
-    name: Playwright (chromium + webkit)
+  classify:
+    name: Classify changes
     runs-on: ubuntu-latest
-    # The root suite plus the app/ typecheck, unit and e2e suites took about 17 minutes on chromium + webkit.
-    # The V2 lab suite (chromium only, about 330 tests) adds a few minutes (BACK-67). Recent full runs took about 38 minutes, and
-    # the BACK-91 axe scan adds 180 scans (about 4.5 minutes locally), so 55 keeps headroom. PR #80 (BACK-93) replaces this job.
-    timeout-minutes: 55
+    timeout-minutes: 5
+    outputs:
+      root: ${{ steps.classify.outputs.root }}
+      app: ${{ steps.classify.outputs.app }}
+      app_v1: ${{ steps.classify.outputs.app_v1 }}
+      app_v2: ${{ steps.classify.outputs.app_v2 }}
+      server: ${{ steps.classify.outputs.server }}
+      g1: ${{ steps.classify.outputs.g1 }}
+      mode: ${{ steps.classify.outputs.mode }}
+      reason: ${{ steps.classify.outputs.reason }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # needed to diff against the base commit
 
-      # This check is required on main, so the job must always run and report.
-      # Docs-only changes (*.md, docs/**) skip the browser steps but still pass.
-      # Manual runs and anything ambiguous run the full suite.
-      - name: Detect docs-only change
-        id: changes
+      # The classifier and the gate are tested on every run: a few seconds of bash, git and jq.
+      - name: Test classifier and gate
+        run: |
+          bash .github/scripts/test-classify-changes.sh
+          bash .github/scripts/test-ci-gate.sh
+
+      - name: Classify changed paths
+        id: classify
         env:
           EVENT: ${{ github.event_name }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
@@ -42,109 +61,210 @@ jobs:
             push) BASE="$PUSH_BEFORE" ;;
             *) BASE="" ;;
           esac
-          bash .github/scripts/docs-only.sh "$BASE" HEAD >> "$GITHUB_OUTPUT"
-          bash .github/scripts/g1-scorer-changed.sh "$BASE" HEAD >> "$GITHUB_OUTPUT"
-          cat "$GITHUB_OUTPUT"
+          bash .github/scripts/classify-changes.sh "$EVENT" "$BASE" HEAD | tee -a "$GITHUB_OUTPUT"
 
-      - name: Docs-only change, skipping browser tests
-        if: steps.changes.outputs.docs_only == 'true'
-        run: echo "Only *.md or docs/ files changed; Playwright suite skipped."
-
-      # The G1 scorer is executable Python under docs/, so the docs-only skip above never runs it. Run its
-      # self-check whenever the scorer, fixture, schema or ground truth changes. Stdlib only: it uses the
-      # python3 already on the runner, so docs-only PRs that do not touch it stay lightweight.
-      - name: G1 scorer self-check
-        if: steps.changes.outputs.g1_scorer == 'true'
-        run: |
-          python3 -B docs/planning/G1/fixture/score.py --self-check
-          python3 -B docs/planning/G1/holdout-v1/verify.py
-
+  # Static prototype: index.html, js/, css/ and tests/ on chromium + webkit. playwright.config.js serves it with python.
+  root:
+    name: Root prototype (chromium + webkit)
+    needs: classify
+    if: needs.classify.outputs.root == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      ran: ${{ steps.done.outputs.ran }}
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        if: steps.changes.outputs.docs_only != 'true'
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            app/package-lock.json
-
-      # playwright.config.js starts `python -m http.server` as its webServer.
+          cache-dependency-path: package-lock.json
       - uses: actions/setup-python@v5
-        if: steps.changes.outputs.docs_only != 'true'
         with:
           python-version: '3.12'
-
       # No dependency needs lifecycle scripts; skip them (supply-chain hardening).
-      # The script also falls back to a private npm cache when ~/.npm is not writable (CircleCI EACCES).
       - name: Install dependencies
-        if: steps.changes.outputs.docs_only != 'true'
         run: bash .github/scripts/npm-ci.sh
-
-      # Call the lockfile-pinned binary directly instead of npx, which can
-      # fetch and run unpinned packages on demand.
+      # Call the lockfile-pinned binary directly instead of npx, which can fetch and run unpinned packages on demand.
       - name: Install Playwright browsers
-        if: steps.changes.outputs.docs_only != 'true'
         run: ./node_modules/.bin/playwright install --with-deps chromium webkit
-
-      # BrowserStack (npm run test:browserstack) stays manual: it needs secrets
-      # and shares the account's limited parallel sessions.
+      # BrowserStack (npm run test:browserstack) stays manual: it needs secrets and shares limited parallel sessions.
       - name: Run Playwright tests
-        if: steps.changes.outputs.docs_only != 'true'
         run: ./node_modules/.bin/playwright test
-
-      # The Kawalys React app in app/ has its own package.json, lockfile and
-      # Playwright config (testDir ./e2e). The root suite above never runs it, so
-      # without these steps nothing under app/ gates a merge. They live in this
-      # job on purpose: it is the required check, and it keeps the docs-only skip.
-      - name: Install app dependencies
-        if: steps.changes.outputs.docs_only != 'true'
-        working-directory: app
-        run: bash ../.github/scripts/npm-ci.sh
-
-      - name: App typecheck and unit tests
-        if: steps.changes.outputs.docs_only != 'true'
-        working-directory: app
-        run: npm run check
-
-      # Builds the app, then runs app/e2e against `vite preview` on chromium + webkit.
-      - name: Run app Playwright tests
-        if: steps.changes.outputs.docs_only != 'true'
-        working-directory: app
-        run: npm run e2e
-
-      # The V2 visual lab and the B+C pilot (app/e2e-v2, including the restricted-evidence non-disclosure specs).
-      # Chromium only: playwright.v2.config.ts defines no WebKit project, so this step proves nothing about V2 on WebKit.
-      # Failure artifacts land in app/test-results/v2, inside the upload path below (BACK-67).
-      - name: Run app V2 Playwright tests (chromium)
-        if: steps.changes.outputs.docs_only != 'true'
-        working-directory: app
-        run: npm run e2e:v2
-
-      # The synthetic Kawalys BFF in server/ (BACK-69) requires Node 24; everything above stays on Node 22.
-      # These steps run last so switching Node cannot affect the root or app/ steps (BACK-74).
-      - uses: actions/setup-node@v4
-        if: steps.changes.outputs.docs_only != 'true'
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: server/package-lock.json
-
-      - name: Install server dependencies
-        if: steps.changes.outputs.docs_only != 'true'
-        working-directory: server
-        run: bash ../.github/scripts/npm-ci.sh
-
-      - name: Server typecheck and tests (Node 24)
-        if: steps.changes.outputs.docs_only != 'true'
-        working-directory: server
-        run: node --version && npm run check
-
+      - id: done
+        run: echo "ran=true" >> "$GITHUB_OUTPUT"
       - name: Upload test results on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-results
-          path: |
-            test-results/
-            app/test-results/
+          name: root-test-results
+          path: test-results/
           retention-days: 7
+
+  # The Kawalys React app in app/ has its own package.json, lockfile and Playwright configs. No browsers needed here.
+  app-check:
+    name: App typecheck and unit tests
+    needs: classify
+    if: needs.classify.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      ran: ${{ steps.done.outputs.ran }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install app dependencies
+        run: bash ../.github/scripts/npm-ci.sh
+      - name: App typecheck and unit tests
+        run: npm run check
+      - id: done
+        run: echo "ran=true" >> "$GITHUB_OUTPUT"
+
+  # Builds the app, then runs app/e2e against `vite preview` on chromium + webkit. As one step this took about 27 minutes,
+  # so it is split into Playwright shards on parallel runners (BACK-93). Sharding splits by spec file and browser project;
+  # the union of the shards is the whole suite. The gate sees one result for the matrix: success only if every shard succeeded.
+  app-e2e-v1:
+    name: App V1 e2e (chromium + webkit) ${{ matrix.shard }}/${{ strategy.job-total }}
+    needs: classify
+    if: needs.classify.outputs.app_v1 == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    outputs:
+      ran: ${{ steps.done.outputs.ran }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install app dependencies
+        run: bash ../.github/scripts/npm-ci.sh
+      - name: Install Playwright browsers
+        run: ./node_modules/.bin/playwright install --with-deps chromium webkit
+      - name: Run app Playwright tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+        run: npm run e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+      - id: done
+        run: echo "ran=true" >> "$GITHUB_OUTPUT"
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-e2e-v1-test-results-shard-${{ matrix.shard }}
+          path: app/test-results/
+          retention-days: 7
+
+  # The V2 visual lab and the B+C pilot (app/e2e-v2, including the restricted-evidence non-disclosure specs).
+  # Chromium only: playwright.v2.config.ts defines no WebKit project, so this proves nothing about V2 on WebKit.
+  app-e2e-v2:
+    name: App V2 e2e (chromium)
+    needs: classify
+    if: needs.classify.outputs.app_v2 == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      ran: ${{ steps.done.outputs.ran }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install app dependencies
+        run: bash ../.github/scripts/npm-ci.sh
+      - name: Install Playwright browsers
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+      # structure.spec.ts checks that V1's dist/ carries no V2 selectors, so it needs the V1 build too
+      # (in the single pre-BACK-93 job, `npm run e2e` had already built it).
+      - name: Build V1 app (read by the V2 isolation spec)
+        run: ./node_modules/.bin/vite build
+      - name: Run app V2 Playwright tests (chromium)
+        run: npm run e2e:v2
+      - id: done
+        run: echo "ran=true" >> "$GITHUB_OUTPUT"
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-e2e-v2-test-results
+          path: app/test-results/v2/
+          retention-days: 7
+
+  # The Kawalys BFF in server/ needs Node 24. Its DB tests start a disposable PostgreSQL through Testcontainers,
+  # using the Docker engine on the GitHub-hosted runner. No browsers, no secrets.
+  server:
+    name: Server typecheck and tests (Node 24)
+    needs: classify
+    if: needs.classify.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      ran: ${{ steps.done.outputs.ran }}
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install server dependencies
+        run: bash ../.github/scripts/npm-ci.sh
+      - name: Server typecheck and tests (Node 24)
+        run: node --version && npm run check
+      - id: done
+        run: echo "ran=true" >> "$GITHUB_OUTPUT"
+
+  # The G1 scorer is executable Python under docs/. Stdlib only: it uses the python3 already on the runner.
+  g1:
+    name: G1 scorer self-check
+    needs: classify
+    if: needs.classify.outputs.g1 == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ran: ${{ steps.done.outputs.ran }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: G1 scorer self-check
+        run: |
+          python3 -B docs/planning/G1/fixture/score.py --self-check
+          python3 -B docs/planning/G1/holdout-v1/verify.py
+      - id: done
+        run: echo "ran=true" >> "$GITHUB_OUTPUT"
+
+  # The required check on main. Its name is the historic one so branch protection needs no change (BACK-93).
+  gate:
+    name: Playwright (chromium + webkit)
+    needs: [classify, root, app-check, app-e2e-v1, app-e2e-v2, server, g1]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+      - name: Check every selected suite ran and passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: bash .github/scripts/ci-gate.sh
