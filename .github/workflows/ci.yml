@@ -127,11 +127,14 @@ jobs:
       - id: done
         run: echo "ran=true" >> "$GITHUB_OUTPUT"
 
-  # Builds the app, then runs app/e2e against `vite preview` on chromium + webkit. As one step this took about 27 minutes,
-  # so it is split into Playwright shards on parallel runners (BACK-93). Sharding splits by spec file and browser project;
-  # the union of the shards is the whole suite. The gate sees one result for the matrix: success only if every shard succeeded.
+  # Builds the app, then runs app/e2e against `vite preview`. As one step on chromium + webkit this took about 27 minutes,
+  # so it runs on parallel runners (BACK-93), split by browser project and then by Playwright shard. Playwright shards by
+  # test count, and a WebKit test takes about 3x as long as a Chromium one in CI (run 45418356590: chromium 461 s for
+  # 987 tests, webkit 1410 s for 978), so mixed shards came out at 5, 11 and 15 minutes of tests. Chromium runs in one job
+  # and WebKit in three, each about 8 minutes of tests. Each project's shards cover all its tests, so the union is the
+  # whole suite. The gate sees one result for the matrix: success only if every job in it succeeded.
   app-e2e-v1:
-    name: App V1 e2e (chromium + webkit) ${{ matrix.shard }}/${{ strategy.job-total }}
+    name: App V1 e2e (${{ matrix.project }}) ${{ matrix.shard }}/${{ matrix.shards }}
     needs: classify
     if: needs.classify.outputs.app_v1 == 'true'
     runs-on: ubuntu-latest
@@ -139,7 +142,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        include:
+          - { project: chromium, shard: 1, shards: 1 }
+          - { project: webkit, shard: 1, shards: 3 }
+          - { project: webkit, shard: 2, shards: 3 }
+          - { project: webkit, shard: 3, shards: 3 }
     outputs:
       ran: ${{ steps.done.outputs.ran }}
     defaults:
@@ -154,17 +161,17 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - name: Install app dependencies
         run: bash ../.github/scripts/npm-ci.sh
-      - name: Install Playwright browsers
-        run: ./node_modules/.bin/playwright install --with-deps chromium webkit
-      - name: Run app Playwright tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
-        run: npm run e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+      - name: Install Playwright browser (${{ matrix.project }})
+        run: ./node_modules/.bin/playwright install --with-deps ${{ matrix.project }}
+      - name: Run app Playwright tests (${{ matrix.project }} ${{ matrix.shard }}/${{ matrix.shards }})
+        run: npm run e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/${{ matrix.shards }}
       - id: done
         run: echo "ran=true" >> "$GITHUB_OUTPUT"
       - name: Upload test results on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: app-e2e-v1-test-results-shard-${{ matrix.shard }}
+          name: app-e2e-v1-test-results-${{ matrix.project }}-shard-${{ matrix.shard }}
           path: app/test-results/
           retention-days: 7
 
