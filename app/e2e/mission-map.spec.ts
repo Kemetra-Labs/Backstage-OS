@@ -232,6 +232,9 @@ for (const lang of LANGS) {
           await page.locator('.kv2-bc-top .kv2-seg').last().locator('button').nth(view === 'list' ? 1 : 0).click();
           await expect(page.locator('[data-testid="bc-stage"]')).toHaveAttribute('data-mode', view);
           const tabs = page.getByRole('tab');
+          // A view with no tabs would skip every probe below; it has the inspector's tabs, so zero means the loop went vacuous.
+          await expect.poll(() => tabs.count(), `${route} ${view} has tabs to probe`).toBeGreaterThan(0);
+          await expectNoLeaks(page, `${persona}/${lang} ${route} ${view}`);
           for (let i = 0; i < (await tabs.count()); i += 1) {
             await tabs.nth(i).click();
             // The address of a route the tester typed (the E-5 probe) is theirs; everything the page adds must be clean.

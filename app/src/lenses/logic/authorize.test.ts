@@ -6,6 +6,7 @@ import { TABLE } from '../../i18n';
 import type { Mission, ReplayEvent, World } from '../types';
 import { authorizedWorld } from './authorize';
 import { nodeStatus } from './status';
+import { gapsAt, indexAt, milestonesAt, msOfIndex, stageAt, totalMs } from './replay';
 
 const UNAUTHORIZED = ['owner', 'nontechnical'] as const;
 const technicalRecords = Object.values(WORLD.evidenceById).filter((r) => r.visibility === 'technical');
@@ -167,3 +168,63 @@ describe('authorizedWorld, replay rows and missions (BACK-66)', () => {
 
 // The lab shell's search (navigation/hits.ts) retired with the lab entry (BACK-92 R4). The host's one search box is src/nav/search.ts;
 // its persona scoping, including the cases that used to live here, is tested in src/nav/search.test.ts.
+
+// BACK-66 audit (2026-11-25): the ticket feared that scopeReplay nulls a row's evidence and keeps the row. It does not: keepReplay
+// removes the row (above). What the trailing-row case above cannot show is ordering and timing. Here a withheld row sits in the middle
+// of the script, at a stage boundary, so a kept-but-blanked row, or anything derived before filtering (cursor length, stage reached,
+// milestone clocks, announced gaps), would differ from a world that never had the row. A lay projection must be indistinguishable from
+// that world in every derived replay figure.
+describe('authorizedWorld, a withheld replay row in the middle of the script (BACK-66 audit)', () => {
+  const midRow: ReplayEvent = { id: 'R-M', clock: '14:05', stage: 'hypothesis', label: 'hypothesis', evidence: 'E-5', kind: 'gap', key: 'rp.hypothesis' };
+  const at = WORLD.replay.findIndex((r) => r.id === 'R-4');
+  const WITH_MID: World = { ...WORLD, replay: [...WORLD.replay.slice(0, at), midRow, ...WORLD.replay.slice(at)] };
+
+  it('Technical sees the row where it was placed (guards against passing vacuously)', () => {
+    expect(authorizedWorld(WITH_MID, 'technical').replay[at]!.id).toBe('R-M');
+  });
+
+  for (const p of UNAUTHORIZED) {
+    it(`${p}: the replay script, cursor, stage, milestones and gaps equal those of a world that never had the row`, () => {
+      const got = authorizedWorld(WITH_MID, p).replay;
+      const base = authorizedWorld(WORLD, p).replay;
+      expect(got).toEqual(base);
+      expect(totalMs(got)).toBe(totalMs(base));
+      for (let i = -1; i <= base.length; i += 1) {
+        expect(stageAt(i, got), `stage ${i}`).toBe(stageAt(i, base));
+        expect(milestonesAt(i, got), `milestones ${i}`).toEqual(milestonesAt(i, base));
+        expect(gapsAt(i, got), `gaps ${i}`).toEqual(gapsAt(i, base));
+        expect(indexAt(msOfIndex(i), got), `index ${i}`).toBe(indexAt(msOfIndex(i), base));
+      }
+      expect(JSON.stringify(got)).not.toMatch(/R-M|E-5/);
+    });
+  }
+});
+
+// BACK-66 audit, BLOCKED ON AN OWNER DECISION: record ids are sequential and shown to lay personas as-is, so the hole a withheld record
+// leaves in the numbering is itself a cue that it exists (INV-DEMO-7 shows Owner E-4 then E-6). Closing it needs a product decision
+// (opaque or per-persona display ids, or renumbering, and what links and search then key on), which this audit does not make.
+// Expected to fail until that decision lands; when it passes, vitest reports it and the marker must be removed.
+describe('sequential record ids leave no hole for a lay persona (blocked: display-id decision, BACK-66)', () => {
+  const holes = (ids: readonly string[]): string[] => {
+    const byPrefix = new Map<string, number[]>();
+    for (const id of ids) {
+      const m = /^([A-Z]+-)(\d+)$/.exec(id);
+      if (m) byPrefix.set(m[1]!, [...(byPrefix.get(m[1]!) ?? []), Number(m[2])]);
+    }
+    return [...byPrefix].flatMap(([pre, ns]) => {
+      const set = new Set(ns);
+      const max = Math.max(...ns);
+      return Array.from({ length: max }, (_, i) => i + 1).filter((n) => !set.has(n)).map((n) => `${pre}${n}`);
+    });
+  };
+
+  it('the full fixture numbers its INV-DEMO-7 evidence without holes (control)', () => {
+    expect(holes(Object.keys(WORLD.evidenceById))).toEqual([]);
+  });
+
+  for (const p of UNAUTHORIZED) {
+    it.fails(`${p}: the evidence ids received leave no hole in the numbering`, () => {
+      expect(holes(Object.keys(authorizedWorld(WORLD, p).evidenceById))).toEqual([]);
+    });
+  }
+});
