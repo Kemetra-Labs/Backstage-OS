@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { LANGS, openRoute } from './helpers';
+import { openScreen } from './lens-helpers';
 
 const V2 = new URL('../src/design-lab/v2/styles/', import.meta.url);
 const EMBED = ['tokens', 'base', 'scope', 'embed-fonts', 'map', 'bc', 'observatory', 'replay', 'deck'];
@@ -103,3 +104,31 @@ test('control: the lab\'s own global reset.css, injected into V1, does change it
   await page.addStyleTag({ content: readFileSync(new URL('reset.css', V2), 'utf8') });
   expect(await measure(page)).not.toBe(before);
 });
+
+// ---- BACK-92 R3 (M3): lab parity, ported from e2e-v2/fidelity.spec.ts. The lens views load Manrope (and Cairo in Arabic) from the
+// app's own origin, under the embed family names (embed-fonts.css), and make no third-party request. The lab's fonts.css declared
+// "Manrope" and "Cairo"; the host deliberately uses "Kawalys BC Manrope" and "Kawalys BC Cairo" so V1's own Cairo stack is untouched
+// (see the static check in src/styles/isolation.test.ts).
+const LENS_ROUTES = ['/map', '/sources/observatory', '/investigation/INV-DEMO-7/replay', '/agents/deck'] as const;
+for (const lang of LANGS) {
+  test(`fonts ${lang}: the lens views load Kawalys BC Manrope${lang === 'ar' ? ' and Cairo' : ''} from the app's own origin, nothing from a third party`, async ({ page }) => {
+    const requests: string[] = [];
+    page.on('request', (r) => requests.push(r.url()));
+    for (const route of LENS_ROUTES) {
+      await openScreen(page, route, { lang, persona: 'owner', width: 1440 });
+      await page.evaluate(() => document.fonts.ready);
+      const r = await page.evaluate(() => ({
+        loaded: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')),
+        family: getComputedStyle(document.querySelector('.kv2-scope')!).fontFamily,
+      }));
+      expect(r.loaded, route).toContain('Kawalys BC Manrope');
+      if (lang === 'ar') expect(r.loaded, route).toContain('Kawalys BC Cairo');
+      expect(r.family.split(',')[0]!.replace(/"/g, '').trim(), route).toBe(lang === 'ar' ? 'Kawalys BC Cairo' : 'Kawalys BC Manrope');
+    }
+    const origin = new URL(page.url()).origin;
+    const fonts = requests.filter((u) => /\.woff2(\?|$)/.test(u));
+    expect(fonts.length).toBeGreaterThan(0);
+    for (const u of fonts) expect(u.startsWith(`${origin}/assets/`), u).toBe(true);
+    for (const u of requests) expect(u.startsWith(`${origin}/`), `third-party request: ${u}`).toBe(true);
+  });
+}

@@ -9,7 +9,8 @@ import { translate } from '../src/design-lab/v2/i18n/t';
 import { MISSIONS } from '../src/design-lab/v2/fixtures/world';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
-import { hasId, hash, RESTRICTED, surface } from './lens-helpers';
+import { blurRadii } from './lens-fidelity';
+import { hasId, hash, openScreen, RESTRICTED, surface } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 const lens = (page: Page) => page.locator('[data-testid="agent-deck-lens"]');
@@ -158,4 +159,20 @@ test('Flight Deck: reduced motion plays no animation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openRoute(page, '/agents/deck', { lang: 'en', persona: 'owner', width: 1440 });
   expect(await page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').length)).toBe(0);
+});
+
+// ---- BACK-92 R3 (M2): lab parity, ported from e2e-v2/fidelity.spec.ts. Truth in visuals: a satellite whose agent state is unknown or
+// unavailable carries no glow; an observing one keeps it.
+test('Flight Deck luminosity: agent satellites with an unknown state carry no glow; observing ones keep it', async ({ page }) => {
+  await openScreen(page, '/agents/deck', { lang: 'en', persona: 'owner', width: 1440 });
+  // The demo fleet has no drafting or idle agent today, so the last satellite is switched to the unknown tone in place to exercise
+  // the stylesheet rule a real drafting or idle state would hit (STATUS_TONE in AgentFlightDeck.tsx), as the lab test did.
+  await lens(page).locator('.kv2-sat').last().evaluate((e) => e.setAttribute('data-tone', 'unk'));
+  const sats = await lens(page).locator('.kv2-sat').evaluateAll((els) => els.map((e) => ({ id: e.getAttribute('data-sat'), tone: e.getAttribute('data-tone'), shadow: getComputedStyle(e.querySelector('.kv2-sat-orb')!).boxShadow })));
+  const unk = sats.filter((s) => s.tone === 'unk' || s.tone === 'bad');
+  expect(unk.length).toBeGreaterThan(0);
+  for (const s of unk) expect(blurRadii(s.shadow).every((b) => b === 0), `${s.id}: ${s.shadow}`).toBe(true);
+  const ok = sats.filter((x) => x.tone === 'ok');
+  expect(ok.length).toBeGreaterThan(0);
+  for (const s of ok) expect(Math.max(...blurRadii(s.shadow)), `${s.id}`).toBeGreaterThan(0);
 });
