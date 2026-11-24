@@ -12,7 +12,7 @@ Scope and rules:
 
 ## How to review
 
-1. Open the screenshots below, or run the lab and open a B+C URL (format `/v2.html?concept=bc&view=map|list[&tab=evidence|sources]#/mission-map?persona=owner&lang=ar&node=stock-sync`).
+1. Open the screenshots below, or run the host app (`cd app && npx vite build && npx vite preview`, then open `http://127.0.0.1:4178/?lang=ar&persona=owner#/map/retail-tower/stock-sync`). The Mission Map lens has a Map/List switch ("خريطة" / "قائمة") and Overview/Evidence/Sources tabs in the inspector. (Until 24 Nov 2026 this kit used the V2 lab at `v2.html`, which BACK-92 retires; the strings are the same.)
 2. For each row in the strings table, fill "Reviewer verdict" (OK, change, or question) and, if you want a change, "Proposed edit". Answer the pre-read question if it applies.
 3. Check the counter and date tables for plural and bidi behaviour.
 4. Sign the block at the end.
