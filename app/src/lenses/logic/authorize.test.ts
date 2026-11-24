@@ -103,7 +103,7 @@ describe('authorizedWorld', () => {
 // BACK-66: the replay, mission and search projections. The shipped fixture has no replay row or mission that rests ONLY on E-5,
 // so these use a constructed world: the rule has to hold for data the fixture does not happen to contain.
 const restrictedRow: ReplayEvent = { id: 'R-X', clock: '14:10', stage: 'correlated', label: 'observed', evidence: 'E-5', kind: 'event', key: 'rp.checkFailed' };
-const restrictedOnly: Mission = { id: 'MSN-X', agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, events: 3, label: 'observed', evidence: ['E-5'], key: 'ms.fresh' };
+const restrictedOnly: Mission = { id: 'MSN-X', agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, label: 'observed', evidence: ['E-5'], key: 'ms.fresh' };
 const CONSTRUCTED: World = { ...WORLD, replay: [...WORLD.replay, restrictedRow], missions: [...WORLD.missions, restrictedOnly] };
 
 describe('authorizedWorld, replay rows and missions (BACK-66)', () => {
@@ -113,9 +113,9 @@ describe('authorizedWorld, replay rows and missions (BACK-66)', () => {
     expect(t.missions.map((m) => m.id)).toContain('MSN-X');
   });
 
-  it('no persona gets a different events figure for any mission: it is the fixture value for Technical, Owner and Nontechnical alike (BACK-90)', () => {
+  it('no mission has an events figure for any persona: the field is gone, so nothing can differ by persona (BACK-90, BACK-96)', () => {
     for (const p of ['technical', ...UNAUTHORIZED] as const) {
-      expect(authorizedWorld(CONSTRUCTED, p).missions.map((x) => [x.id, x.events]), p).toEqual(CONSTRUCTED.missions.map((x) => [x.id, x.events]));
+      for (const m of authorizedWorld(CONSTRUCTED, p).missions) expect('events' in m, `${p} ${m.id}`).toBe(false);
     }
   });
 
@@ -136,20 +136,16 @@ describe('authorizedWorld, replay rows and missions (BACK-66)', () => {
         expect(w.replay.find((r) => r.id === 'R-5')).toEqual(WORLD.replay.find((r) => r.id === 'R-5'));
       });
 
-      it('a mission that loses part of its evidence keeps the rest and its claim, and its events figure is not recomputed', () => {
+      it('a mission that loses part of its evidence keeps the rest and its claim', () => {
         const m = w.missions.find((x) => x.id === 'MSN-DEMO-2')!;
         expect(m.evidence).toEqual(['E-9']);
-        // The fixture does not say what `events` counts (owner decision, BACK-90): it is never derived from the evidence, so
-        // withholding a reference changes no number. A figure that differed by persona would itself hint that a record is hidden.
-        expect(m.events).toBe(WORLD.missions.find((x) => x.id === 'MSN-DEMO-2')!.events);
         expect(m.label).toBe('observed');
       });
 
-      it('a mission that rested only on a withheld record keeps no claim: unknown label, no evidence, and its events figure is untouched', () => {
+      it('a mission that rested only on a withheld record keeps no claim: unknown label, no evidence', () => {
         const m = w.missions.find((x) => x.id === 'MSN-X')!;
         expect(m.evidence).toEqual([]);
         expect(m.label).toBe('unknown');
-        expect(m.events).toBe(restrictedOnly.events);
       });
 
       it('leaves missions that never touched the withheld record exactly as they were', () => {
