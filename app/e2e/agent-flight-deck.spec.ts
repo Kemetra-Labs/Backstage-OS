@@ -10,7 +10,8 @@ import { MISSIONS } from '../src/lenses/fixtures/world';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
 import { blurRadii, expectRenderedAA, waitForAnimationsSettled } from './lens-fidelity';
-import { hasId, hash, openScreen, RESTRICTED, surface } from './lens-helpers';
+import { expectNoLeaks, RESTRICTED_IDS } from './leaks';
+import { hash, openScreen } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 const lens = (page: Page) => page.locator('[data-testid="agent-deck-lens"]');
@@ -19,7 +20,7 @@ const eventsCell = (page: Page, lang: 'en' | 'ar') => lens(page).locator('#missi
 
 
 test('the fixture has the restricted record and the missions this spec depends on', () => {
-  expect(RESTRICTED).toContain('E-5');
+  expect(RESTRICTED_IDS).toContain('E-5');
   expect(MISSIONS.some((m) => m.evidence.includes('E-5'))).toBe(true);
   expect(MISSIONS.length).toBe(5);
 });
@@ -123,10 +124,7 @@ for (const lang of LANGS) {
     test(`Flight Deck non-disclosure ${persona}/${lang}: no restricted id, observation or record on any mission, tab or filter`, async ({ page }) => {
       for (const m of MISSIONS) {
         await openRoute(page, `/agents/deck/${m.id}`, { lang, persona, width: 1440 });
-        const scan = async (label: string) => {
-          const text = await surface(page);
-          for (const id of RESTRICTED) expect(hasId(text, id) || text.includes(`"${id}"`), `${persona}/${lang} ${m.id} ${label}: ${id}`).toBe(false);
-        };
+        const scan = (label: string) => expectNoLeaks(page, `${persona}/${lang} ${m.id} ${label}`);
         await scan('load');
         const groups = lens(page).locator('.kv2-seg, [role="tablist"]');
         for (let g = 0; g < (await groups.count()); g += 1) {
@@ -148,8 +146,7 @@ for (const lang of LANGS) {
     for (const p of ['technical', 'owner', 'technical', 'owner', 'nontechnical'] as const) {
       await page.getByRole('button', { name: L[p], exact: true }).click();
       await expect(lens(page)).toBeVisible();
-      const text = await surface(page);
-      if (p !== 'technical') for (const id of RESTRICTED) expect(hasId(text, id) || text.includes(`"${id}"`), `${p}: ${id}`).toBe(false);
+      if (p !== 'technical') await expectNoLeaks(page, p);
       expect(await missionButtons(page).count(), `${p}: all missions stay listed`).toBe(MISSIONS.length);
     }
   });

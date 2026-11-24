@@ -7,7 +7,8 @@ import { isForbiddenControlLabel } from '../src/contract/rules';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
 import { expectRenderedAA, waitForAnimationsSettled } from './lens-fidelity';
-import { hasId, hash, openScreen, RESTRICTED, surface } from './lens-helpers';
+import { expectNoLeaks, RESTRICTED_IDS, shows } from './leaks';
+import { hash, openScreen } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 const lens = (page: Page) => page.locator('[data-testid="source-observatory-lens"]');
@@ -15,7 +16,7 @@ const card = (page: Page, p: string) => page.locator(`.kv2-scard[data-provider="
 
 
 test('the canonical fixture has the restricted record this spec depends on', () => {
-  expect(RESTRICTED).toContain('E-5');
+  expect(RESTRICTED_IDS).toContain('E-5');
 });
 
 for (const lang of LANGS) {
@@ -130,10 +131,7 @@ for (const lang of LANGS) {
     for (const route of ROUTES) {
       test(`Observatory non-disclosure ${persona}/${lang} ${route}: no restricted id or observation in any view, tab or timeline filter`, async ({ page }) => {
         await openRoute(page, route, { lang, persona, width: 1440 });
-        const scan = async (label: string) => {
-          const text = await surface(page);
-          for (const id of RESTRICTED) expect(hasId(text, id) || text.includes(`"${id}"`), `${persona}/${lang} ${route} ${label}: ${id}`).toBe(false);
-        };
+        const scan = (label: string) => expectNoLeaks(page, `${persona}/${lang} ${route} ${label}`);
         await scan('cards');
         for (const mode of [1, 0]) {
           await lens(page).locator('.kv2-panel-head .kv2-seg button').nth(mode).click(); // table, then cards
@@ -158,13 +156,13 @@ for (const lang of LANGS) {
   test(`Observatory non-disclosure switch ${lang}: technical, owner, technical, owner on one page leaves nothing behind`, async ({ page }) => {
     await openRoute(page, '/sources/observatory/sentry', { lang, persona: 'technical', width: 1440 });
     const L = COPY[lang].persona;
-    const has = async () => hasId(await surface(page), 'E-5');
     await lens(page).getByRole('tab').nth(1).click();
-    const technicalSees = await has();
-    for (const [p, expected] of [['owner', false], ['technical', technicalSees], ['owner', false], ['nontechnical', false]] as const) {
+    const technicalSees = await shows(page, 'E-5');
+    for (const p of ['owner', 'technical', 'owner', 'nontechnical'] as const) {
       await page.getByRole('button', { name: L[p], exact: true }).click();
       await lens(page).getByRole('tab').nth(1).click();
-      expect(await has(), p).toBe(expected);
+      if (p === 'technical') expect(await shows(page, 'E-5'), p).toBe(technicalSees);
+      else await expectNoLeaks(page, p);
     }
   });
 }

@@ -3,6 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
 import { BANNED, LANGS, openRoute as load, PERSONAS, WIDTHS } from './helpers';
+import { expectNoLeaks } from './leaks';
 
 const R7 = '/investigation/INV-DEMO-7';
 const R9 = '/investigation/INV-DEMO-9';
@@ -69,8 +70,7 @@ for (const persona of ['owner', 'nontechnical'] as const) {
     for (const id of ['E-1', 'E-2']) {
       await page.locator(`[data-evidence="${id}"] button`).click();
       await expect(page.getByRole('dialog')).toBeVisible();
-      const text = await page.locator('body').innerText();
-      for (const b of BANNED) expect(text.includes(b), `${persona}/${id}: ${b}`).toBe(false);
+      await expectNoLeaks(page, `${persona}/${id}`, { extra: BANNED });
       await page.keyboard.press('Escape');
       await expect(page.getByRole('dialog')).toHaveCount(0);
     }
@@ -196,8 +196,7 @@ for (const persona of ['owner', 'nontechnical'] as const) {
   for (const lang of LANGS) {
     test(`room redaction ${lang}/${persona}: the new sections carry no banned token`, async ({ page }) => {
       await load(page, R7, { lang, persona });
-      const text = await page.locator('main').innerText();
-      for (const b of BANNED) expect(text.includes(b), `${persona}/${lang}: ${b}`).toBe(false);
+      await expectNoLeaks(page, `${persona}/${lang}`, { extra: BANNED });
     });
   }
 }
@@ -309,8 +308,7 @@ test('INV-DEMO-9 hypothesis names the deploy for Technical only', async ({ page 
   await expect(page.getByTestId('summary-hypothesis')).toContainText('DEMO-311');
   for (const persona of ['owner', 'nontechnical'] as const) {
     await load(page, R9, { persona });
-    const text = await page.locator('body').innerText();
-    for (const b of BANNED) expect(text.includes(b), `${persona}: ${b}`).toBe(false);
+    await expectNoLeaks(page, persona, { extra: BANNED });
   }
 });
 

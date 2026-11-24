@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
 import { BANNED, LANGS, openRoute, PERSONAS, WIDTHS, type LoadQuery } from './helpers';
+import { expectNoLeaks } from './leaks';
 
 const load = async (page: Page, q: LoadQuery = {}) => {
   const errors = await openRoute(page, '/agents', q);
@@ -113,8 +114,7 @@ for (const lang of LANGS) {
   for (const persona of ['owner', 'nontechnical'] as const) {
     test(`agents redaction ${lang}/${persona}: no banned tokens`, async ({ page }) => {
       await load(page, { lang, persona });
-      const text = await page.locator('body').innerText();
-      for (const b of BANNED) expect(text.includes(b), `${persona}/${lang}: ${b}`).toBe(false);
+      await expectNoLeaks(page, `${persona}/${lang}`, { extra: BANNED });
     });
   }
 }

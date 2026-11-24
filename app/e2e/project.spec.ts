@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
 import { BANNED, LANGS, openRoute, PERSONAS, WIDTHS, type LoadQuery } from './helpers';
+import { expectNoLeaks } from './leaks';
 
 const ROUTES = ['/project/RT', '/project/RT/stock-sync', '/project/RT/inventory', '/project/KH/khepri-api', '/project/SB'] as const;
 /** Retail Tower edges declared in the catalog; their record (E-7) was never read, so they show as Provisional. */
@@ -54,13 +55,12 @@ for (const lang of LANGS) {
     test(`redaction ${lang}/${persona}: no job names, run ids, PR ids or links on any route or view`, async ({ page }) => {
       for (const route of ROUTES) {
         await load(page, { lang, persona, route });
-        // textContent also covers the collapsed table; the toggle is checked in table view too.
-        const text = async () => (await page.evaluate(() => document.body.textContent)) ?? '';
-        for (const b of BANNED) expect((await text()).includes(b), `${persona}/${lang}${route}: ${b}`).toBe(false);
+        // The probe reads hidden text too, so it covers the collapsed table; the toggle is checked in table view as well.
+        await expectNoLeaks(page, `${persona}/${lang}${route}`, { extra: BANNED });
         const table = page.locator('.proj-controls .seg button').last();
         if (route !== '/project/SB' && (await page.locator('[data-testid="dep-graph"]').count()) > 0) {
           await table.click();
-          for (const b of BANNED) expect((await text()).includes(b), `${persona}/${lang}${route} table: ${b}`).toBe(false);
+          await expectNoLeaks(page, `${persona}/${lang}${route} table`, { extra: BANNED });
         }
       }
     });
