@@ -1,7 +1,7 @@
 // Small pieces shared by the B+C pilot components: icon maps, copy keys, and the status words.
 import type { Connectivity, Freshness, Health, Provider } from '../../contract/types';
 import type { IconName } from '../components/Icon';
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import type { K } from '../../i18n';
 import type { NodeChipKind } from '../logic/evidence';
 import type { WorldNode } from '../types';
@@ -21,7 +21,7 @@ export const NL = (node: Pick<WorldNode, 'id' | 'descKey'>): K => (node.descKey 
 
 /** The one status word a node chip shows, in sentence case. Unknown never reads as healthy. */
 export function useChipText(): (k: NodeChipKind) => string {
-  const { copy, t } = useV2();
+  const { copy, t } = useLens();
   return (k) => {
     switch (k) {
       case 'check': return t('ns.checkFailing');
@@ -44,7 +44,7 @@ export interface StatusWords {
 
 /** Sentence-case words for the three source axes. They are kept apart and never combined. */
 export function useStatusWords(): StatusWords {
-  const { copy, t } = useV2();
+  const { copy, t } = useLens();
   return {
     connectivity: (c) => t(`obs.c.${c}` as K),
     freshness: (f) => (f === 'current' ? t('bc.f.current') : f === 'stale' ? t('chip.stale') : t('unknown')),

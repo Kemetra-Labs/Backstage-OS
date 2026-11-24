@@ -1,10 +1,10 @@
 // Source read rows: provider, words for connectivity and freshness, age against the freshness target.
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import type { SourceStatus } from '../logic/status';
 import { Age, Provider_ } from './ui';
 
 export function SourceRows({ items, narrow }: { readonly items: readonly SourceStatus[]; readonly narrow?: boolean }) {
-  const { copy, t } = useV2();
+  const { copy, t } = useLens();
   return (
     <ul className={`kv2-srcrows${narrow ? " kv2-srcrows-insp" : ""}`}>
       {items.map((s) => (

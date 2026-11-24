@@ -4,7 +4,7 @@ import type { Provider } from '../../contract/types';
 import { EvidenceItem } from '../components/evidence';
 import { Icon, type IconName } from '../components/Icon';
 import { Age, Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip } from '../components/ui';
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import { WORLD } from '../fixtures/world';
 import type { K } from '../../i18n';
 import { authorizedWorld } from '../logic/authorize';
@@ -22,7 +22,7 @@ const freshTone = (s: SourceStatus): Tone => (s.freshness === 'current' ? 'ok' :
 const healthTone = (s: SourceStatus): Tone => (s.health === 'healthy' ? 'ok' : s.health === 'degraded' ? 'warn' : s.health === 'down' ? 'bad' : 'unk');
 
 function Ring({ s }: { readonly s: SourceStatus }) {
-  const { t } = useV2();
+  const { t } = useLens();
   const r = 19;
   const c = 2 * Math.PI * r;
   const none = s.ageMinutes === null;
@@ -50,7 +50,7 @@ function ReadRow({ icon, label, tone, children }: { readonly icon: IconName; rea
 }
 
 function SourceCard({ m, s, selected, onSelect }: { readonly m: SourceMeta; readonly s: SourceStatus; readonly selected: boolean; readonly onSelect: () => void }) {
-  const { t, copy } = useV2();
+  const { t, copy } = useLens();
   const chip: { tone: Tone; text: string } =
     s.connectivity === 'unavailable' ? { tone: 'bad', text: copy.connectivity.unavailable }
       : s.connectivity === 'not_configured' ? { tone: 'unk', text: copy.connectivity.not_configured }
@@ -72,7 +72,7 @@ function SourceCard({ m, s, selected, onSelect }: { readonly m: SourceMeta; read
 }
 
 function Pin({ icon, name, n, of, unit, sub }: { readonly icon: IconName; readonly name: string; readonly n: number; readonly of: number; readonly unit: string; readonly sub: React.ReactNode }) {
-  const { t } = useV2();
+  const { t } = useLens();
   return (
     <div className="kv2-pin">
       <span className="kv2-pin-head"><i><Icon name={icon} size={22} /></i><span className="kv2-pin-stem" aria-hidden="true" /></span>
@@ -92,7 +92,7 @@ const AXES: readonly AxisFilter[] = ['all', 'connectivity', 'freshness', 'health
 /** `embedded`: shown inside a host screen that already has the page's h1, so the title is an h2 and the pilot chip is left out. */
 export function SourceObservatory({ embedded = false }: { readonly embedded?: boolean } = {}) {
   const H = embedded ? 'h2' : 'h1';
-  const { route, go, t, copy } = useV2();
+  const { route, go, t, copy } = useLens();
   const w = authorizedWorld(WORLD, route.persona);
   const [kind, setKind] = useState<KindFilter>('all');
   const [axis, setAxis] = useState<AxisFilter>('all');
@@ -236,7 +236,7 @@ export function SourceObservatory({ embedded = false }: { readonly embedded?: bo
 }
 
 function SourceInspector({ m, s, tab }: { readonly m: SourceMeta; readonly s: SourceStatus; readonly tab: Tab }) {
-  const { t, copy, route } = useV2();
+  const { t, copy, route } = useLens();
   const w = authorizedWorld(WORLD, route.persona);
   const head = (
     <header className="kv2-insp-head">

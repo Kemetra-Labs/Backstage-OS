@@ -1,6 +1,6 @@
 // The keyed copy tables and translate(), the one lookup for keyed copy (BACK-92 R7; formerly lenses/i18n/t.ts). Each string is an
 // [English, Arabic] pair, so parity is structural. A persona entry maps each of the three demo perspectives to its own pair.
-// {braces} and $name follow the conventions in ./format.ts. The lenses reach this through useV2().t (bound by src/bridge/hostV2.ts).
+// {braces} and $name follow the conventions in ./format.ts. The lenses reach this through useLens().t (bound by src/bridge/lensState.ts).
 import type { Lang, Persona } from '../contract/types';
 import { fill, type Vars } from './format';
 import { COMMON } from './lenses/common';

@@ -2,7 +2,7 @@
 // Same systems, sources and links as the map; selecting a row selects the node everywhere.
 import { Icon } from '../components/Icon';
 import { Lt, Provider_, T, TruthChip, Tx } from '../components/ui';
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import type { K } from '../../i18n';
 import { bcFigures, edgeRestricted, edgeStale } from '../logic/bc';
 import { nodeChip } from '../logic/evidence';
@@ -24,7 +24,7 @@ interface RowProps {
 
 /** One row per system, grouped products, projects, services. The row is a native button; kind is for assistive technology only. */
 export function Ledger({ w, active, sel, onSelect }: RowProps & { readonly sel: string; readonly onSelect: (id: string) => void }) {
-  const { t } = useV2();
+  const { t } = useLens();
   const chipText = useChipText();
   const rows = KINDS.flatMap((k) => w.nodes.filter((n) => n.kind === k && active.has(n.id)));
   return (
@@ -63,7 +63,7 @@ export function Ledger({ w, active, sel, onSelect }: RowProps & { readonly sel: 
 
 /** One row per source (six, including the two with no node). The three column headings carry the three counters. */
 export function Matrix({ w }: { readonly w: World }) {
-  const { t } = useV2();
+  const { t } = useLens();
   const words = useStatusWords();
   const f = bcFigures(w);
   const rows = w.sources.map((s) => sourceStatus(s, w.now));
@@ -104,7 +104,7 @@ export function Matrix({ w }: { readonly w: World }) {
 
 /** From, To, how we know, and the basis. A stale link says so; restricted evidence reveals only that it exists. */
 export function LinksTable({ w, active }: RowProps) {
-  const { route, t } = useV2();
+  const { route, t } = useLens();
   const title = (id: string): string => w.nodes.find((n) => n.id === id)?.title ?? id;
   const edges = w.edges.filter((e) => active.has(e.a) && active.has(e.b));
   return (

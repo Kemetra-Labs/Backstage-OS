@@ -3,7 +3,7 @@
 import type { CSSProperties, KeyboardEvent, MutableRefObject } from 'react';
 import { Icon } from '../components/Icon';
 import { Lt, Tx } from '../components/ui';
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import { DEFAULT_BEND, HUB_ID, LINK_BEND } from '../fixtures/orbit-layout';
 import { type K } from '../../i18n';
 import { curve, edgeStale, isIncident } from '../logic/bc';
@@ -78,7 +78,7 @@ interface NodeProps {
 }
 
 function Node({ n, w, p, selected, dim, onSelect, refFn, intro }: NodeProps) {
-  const { t } = useV2();
+  const { t } = useLens();
   const chipText = useChipText();
   const chip = nodeChip(n, w.sources);
   const hub = n.id === HUB_ID;
@@ -134,7 +134,7 @@ function Node({ n, w, p, selected, dim, onSelect, refFn, intro }: NodeProps) {
 }
 
 export function Canvas({ w, points, sel, active, onSelect, nodeRefs, intro }: CanvasProps) {
-  const { t } = useV2();
+  const { t } = useLens();
   const edges = w.edges;
   const edgeStates = edges.map((e) => {
     const own = isIncident(e, sel);
