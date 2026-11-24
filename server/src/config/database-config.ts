@@ -12,7 +12,18 @@ export interface DatabaseConfig {
 const APP = 'KAWALYS_DATABASE_URL_APP';
 const AUTH = 'KAWALYS_DATABASE_URL_AUTH';
 
-function postgresUrl(name: string, value: string): URL {
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+// Credentials and workspace data must not cross a network in clear text, and an unverified certificate
+// allows a man in the middle. Only loopback (local development, tests) may skip TLS.
+function requireTls(name: string, url: URL): void {
+  if (LOOPBACK_HOSTS.has(url.hostname)) return;
+  if (url.searchParams.get('sslmode') !== 'verify-full') {
+    throw new ConfigError(`${name} must use sslmode=verify-full for a non-loopback host`);
+  }
+}
+
+export function postgresUrl(name: string, value: string): URL {
   let url: URL;
   try {
     url = new URL(value);
@@ -21,6 +32,7 @@ function postgresUrl(name: string, value: string): URL {
   }
   if (url.protocol !== 'postgres:' && url.protocol !== 'postgresql:') throw new ConfigError(`${name} must be a postgres:// URL`);
   if (!url.username) throw new ConfigError(`${name} must name a role`);
+  requireTls(name, url);
   return url;
 }
 
