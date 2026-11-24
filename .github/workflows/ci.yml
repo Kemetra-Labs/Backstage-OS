@@ -31,6 +31,8 @@ jobs:
     outputs:
       root: ${{ steps.classify.outputs.root }}
       app: ${{ steps.classify.outputs.app }}
+      app_v1: ${{ steps.classify.outputs.app_v1 }}
+      app_v2: ${{ steps.classify.outputs.app_v2 }}
       server: ${{ steps.classify.outputs.server }}
       g1: ${{ steps.classify.outputs.g1 }}
       mode: ${{ steps.classify.outputs.mode }}
@@ -130,7 +132,7 @@ jobs:
   app-e2e-v1:
     name: App V1 e2e (chromium + webkit) ${{ matrix.shard }}/${{ strategy.job-total }}
     needs: classify
-    if: needs.classify.outputs.app == 'true'
+    if: needs.classify.outputs.app_v1 == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -170,7 +172,7 @@ jobs:
   app-e2e-v2:
     name: App V2 e2e (chromium)
     needs: classify
-    if: needs.classify.outputs.app == 'true'
+    if: needs.classify.outputs.app_v2 == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:

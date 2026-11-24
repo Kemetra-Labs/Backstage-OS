@@ -38,7 +38,7 @@ seed_repo() {
 # Prints the selected suites in a fixed order, e.g. "root app" or "none".
 selected() {
   local out="$1" s=""
-  for k in root app server g1; do
+  for k in root app app_v1 app_v2 server g1; do
     grep -qx "$k=true" <<<"$out" && s="$s $k"
   done
   s="${s# }"
@@ -63,7 +63,9 @@ check() {
 commit_change() { git add -A && git commit -qm change; }
 case_with() { seed_repo "$WORK/r"; "$@"; commit_change; }
 
-ALL="root app server g1"
+ALL="root app app_v1 app_v2 server g1"
+# Any app/ change runs the app typecheck and unit tests (`app`); each browser suite runs only when it can be affected.
+APP_ALL="app app_v1 app_v2"
 
 # Backend-only, like PR #79 (server plus documentation).
 case_with bash -c 'echo x >> server/src/main.ts; echo x >> server/migrations/0001.sql; echo x >> docs/qa/report.md'
@@ -75,20 +77,36 @@ check "root prototype only" "root" selective pull_request "$BASE_SHA"
 case_with bash -c 'echo x >> tests/smoke.spec.js; echo x >> playwright.config.js'
 check "root tests and config" "root" selective pull_request "$BASE_SHA"
 
+# app/src is shared: the V2 lab imports host code (contract, domain, i18n), so a source change runs both browser suites.
 case_with bash -c 'echo x >> app/src/main.tsx'
-check "app only" "app" selective pull_request "$BASE_SHA"
+check "app source" "$APP_ALL" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'echo x >> app/e2e-v2/b.spec.ts'
-check "app V2 spec only" "app" selective pull_request "$BASE_SHA"
+check "V2 lab spec only: no V1 browser suite" "app app_v2" selective pull_request "$BASE_SHA"
+
+case_with bash -c 'echo x >> app/e2e/a.spec.ts'
+check "host spec only: no V2 lab browser suite" "app app_v1" selective pull_request "$BASE_SHA"
+
+case_with bash -c 'echo x > app/playwright.v2.config.ts; echo x > app/vite.v2.config.ts; echo x > app/v2.html'
+check "V2 lab entry and configs" "app app_v2" selective pull_request "$BASE_SHA"
+
+case_with bash -c 'echo x > app/playwright.config.ts; echo x >> app/vite.config.ts; echo x > app/index.html'
+check "host entry and configs" "app app_v1" selective pull_request "$BASE_SHA"
+
+case_with bash -c 'echo x >> app/e2e/a.spec.ts; echo x >> app/e2e-v2/b.spec.ts'
+check "both spec folders" "$APP_ALL" selective pull_request "$BASE_SHA"
+
+case_with bash -c 'echo x > app/tsconfig.json'
+check "other app file (shared config)" "$APP_ALL" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'echo x >> app/src/main.tsx; echo x >> server/src/main.ts'
-check "mixed app and server" "app server" selective pull_request "$BASE_SHA"
+check "mixed app and server" "$APP_ALL server" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'echo x >> docs/qa/report.md; echo x >> README.md; echo x >> docs/qa/shot.png'
 check "docs only" "none" docs pull_request "$BASE_SHA"
 
 case_with bash -c 'mkdir -p app/src/fonts && echo x > app/src/fonts/SOURCE.md'
-check "markdown inside app/ (unit tests read some of it)" "app" selective pull_request "$BASE_SHA"
+check "markdown inside app/ (unit tests read some of it)" "$APP_ALL" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'echo x >> server/README.md'
 check "markdown inside server/" "none" docs pull_request "$BASE_SHA"
@@ -106,7 +124,7 @@ case_with bash -c 'echo x >> docs/planning/G1/holdout-v1/verify.py'
 check "G1 hold-out verifier" "g1" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'git mv app/src/main.tsx server/src/moved.tsx'
-check "rename across areas counts both paths" "app server" selective pull_request "$BASE_SHA"
+check "rename across areas counts both paths" "$APP_ALL server" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'git rm -q server/migrations/0001.sql'
 check "deleted file" "server" selective pull_request "$BASE_SHA"
@@ -120,11 +138,16 @@ check "workflow change" "$ALL" full pull_request "$BASE_SHA"
 case_with bash -c 'echo x >> .github/scripts/npm-ci.sh'
 check "shared CI script" "$ALL" full pull_request "$BASE_SHA"
 
+# Root manifests belong to the root prototype only: app/ declares its own dependencies (including @types/node), so a root
+# dependency change cannot affect the app suites (BACK-93; BACK-92 plan R2).
 case_with bash -c 'echo x >> package-lock.json'
 check "root lockfile" "root" selective pull_request "$BASE_SHA"
 
+case_with bash -c 'echo x >> package.json'
+check "root package manifest" "root" selective pull_request "$BASE_SHA"
+
 case_with bash -c 'echo x >> app/package.json'
-check "app package manifest" "app" selective pull_request "$BASE_SHA"
+check "app package manifest" "$APP_ALL" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'echo x >> LICENSE'
 check "unknown root file" "$ALL" full pull_request "$BASE_SHA"

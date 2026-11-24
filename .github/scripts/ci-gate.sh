@@ -8,7 +8,7 @@
 set -uo pipefail
 
 # job name -> classifier flag that selects it
-JOBS=(root:root app-check:app app-e2e-v1:app app-e2e-v2:app server:server g1:g1)
+JOBS=(root:root app-check:app app-e2e-v1:app_v1 app-e2e-v2:app_v2 server:server g1:g1)
 
 die() { echo "ci-gate: FAIL: $*" >&2; exit 1; }
 

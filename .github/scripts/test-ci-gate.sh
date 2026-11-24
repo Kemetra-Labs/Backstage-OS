@@ -8,18 +8,18 @@ GATE="$HERE/ci-gate.sh"
 PASS=0
 FAIL=0
 
-# needs_json <root> <app> <server> <g1> <classify-result> then job=result[:ran] pairs.
+# needs_json "<root> <app> <app_v1> <app_v2> <server> <g1>" <classify-result> then job=result[:ran] pairs.
 # A job given as "name=success" reports ran=true; "name=success:noran" reports no ran output.
 needs_json() {
-  local root="$1" app="$2" server="$3" g1="$4" cres="$5"; shift 5
+  local flags cres; read -r -a flags <<<"$1"; cres="$2"; shift 2
   local jobs="" pair name rest result ran
   for pair in "$@"; do
     name="${pair%%=*}"; rest="${pair#*=}"; result="${rest%%:*}"
     if [[ "$rest" == *":noran" || "$result" != "success" ]]; then ran='{}'; else ran='{"ran":"true"}'; fi
     jobs="$jobs,\"$name\":{\"result\":\"$result\",\"outputs\":$ran}"
   done
-  printf '{"classify":{"result":"%s","outputs":{"root":"%s","app":"%s","server":"%s","g1":"%s","mode":"x","reason":"x"}}%s}' \
-    "$cres" "$root" "$app" "$server" "$g1" "$jobs"
+  printf '{"classify":{"result":"%s","outputs":{"root":"%s","app":"%s","app_v1":"%s","app_v2":"%s","server":"%s","g1":"%s","mode":"x","reason":"x"}}%s}' \
+    "$cres" "${flags[0]}" "${flags[1]}" "${flags[2]}" "${flags[3]}" "${flags[4]}" "${flags[5]}" "$jobs"
 }
 
 check() {
@@ -32,29 +32,51 @@ check() {
   fi
 }
 
+#        root  app   app_v1 app_v2 server g1
+FULL='   true  true  true   true   true   true'
+SRV='    false false false  false  true   false'
+NONEF='  false false false  false  false  false'
+APP='    false true  true   true   false  false'
+V1ONLY=' false true  true   false  false  false'
+V2ONLY=' false true  false  true   false  false'
+
 ALL_OK=(root=success app-check=success app-e2e-v1=success app-e2e-v2=success server=success g1=success)
 SERVER_ONLY=(root=skipped app-check=skipped app-e2e-v1=skipped app-e2e-v2=skipped server=success g1=skipped)
 NONE=(root=skipped app-check=skipped app-e2e-v1=skipped app-e2e-v2=skipped server=skipped g1=skipped)
 
-check "full run, all green" pass "$(needs_json true true true true success "${ALL_OK[@]}")"
-check "server-only, server green" pass "$(needs_json false false true false success "${SERVER_ONLY[@]}")"
-check "docs-only, everything skipped" pass "$(needs_json false false false false success "${NONE[@]}")"
+check "full run, all green" pass "$(needs_json "$FULL" success "${ALL_OK[@]}")"
+check "server-only, server green" pass "$(needs_json "$SRV" success "${SERVER_ONLY[@]}")"
+check "docs-only, everything skipped" pass "$(needs_json "$NONEF" success "${NONE[@]}")"
 
-check "required job failed" fail "$(needs_json false false true false success \
-  root=skipped app-check=skipped app-e2e-v1=skipped app-e2e-v2=skipped server=failure g1=skipped)"
-check "required job cancelled" fail "$(needs_json false false true false success \
-  root=skipped app-check=skipped app-e2e-v1=skipped app-e2e-v2=skipped server=cancelled g1=skipped)"
-check "required job unexpectedly skipped" fail "$(needs_json false true false false success \
+# The app split: a host-spec change runs the check and V1 only; a lab-spec change runs the check and V2 only.
+check "host specs only: check + V1 green, V2 skipped" pass "$(needs_json "$V1ONLY" success \
+  root=skipped app-check=success app-e2e-v1=success app-e2e-v2=skipped server=skipped g1=skipped)"
+check "lab specs only: check + V2 green, V1 skipped" pass "$(needs_json "$V2ONLY" success \
   root=skipped app-check=success app-e2e-v1=skipped app-e2e-v2=success server=skipped g1=skipped)"
-check "required job succeeded without running its steps" fail "$(needs_json false false true false success \
+check "host specs only, but V1 skipped" fail "$(needs_json "$V1ONLY" success \
+  root=skipped app-check=success app-e2e-v1=skipped app-e2e-v2=skipped server=skipped g1=skipped)"
+check "host specs only, but V2 ran too (wiring drift)" fail "$(needs_json "$V1ONLY" success \
+  root=skipped app-check=success app-e2e-v1=success app-e2e-v2=success server=skipped g1=skipped)"
+check "app source: V2 skipped although selected" fail "$(needs_json "$APP" success \
+  root=skipped app-check=success app-e2e-v1=success app-e2e-v2=skipped server=skipped g1=skipped)"
+
+check "required job failed" fail "$(needs_json "$SRV" success \
+  root=skipped app-check=skipped app-e2e-v1=skipped app-e2e-v2=skipped server=failure g1=skipped)"
+check "required job cancelled" fail "$(needs_json "$SRV" success \
+  root=skipped app-check=skipped app-e2e-v1=skipped app-e2e-v2=skipped server=cancelled g1=skipped)"
+check "required job unexpectedly skipped" fail "$(needs_json "$APP" success \
+  root=skipped app-check=success app-e2e-v1=skipped app-e2e-v2=success server=skipped g1=skipped)"
+check "required job succeeded without running its steps" fail "$(needs_json "$SRV" success \
   root=skipped app-check=skipped app-e2e-v1=skipped app-e2e-v2=skipped server=success:noran g1=skipped)"
-check "job ran although not selected" fail "$(needs_json false false true false success \
+check "job ran although not selected" fail "$(needs_json "$SRV" success \
   root=success app-check=skipped app-e2e-v1=skipped app-e2e-v2=skipped server=success g1=skipped)"
-check "classifier failed" fail "$(needs_json false false false false failure "${NONE[@]}")"
-check "classifier cancelled" fail "$(needs_json true true true true cancelled "${NONE[@]}")"
-check "a required job is missing from needs" fail "$(needs_json false false true false success \
+check "classifier failed" fail "$(needs_json "$NONEF" failure "${NONE[@]}")"
+check "classifier cancelled" fail "$(needs_json "$FULL" cancelled "${NONE[@]}")"
+check "a required job is missing from needs" fail "$(needs_json "$SRV" success \
   root=skipped app-check=skipped app-e2e-v1=skipped app-e2e-v2=skipped g1=skipped)"
-check "flag is neither true nor false" fail "$(needs_json false false yes false success "${SERVER_ONLY[@]}")"
+check "flag is neither true nor false" fail "$(needs_json 'false false false false yes false' success "${SERVER_ONLY[@]}")"
+check "a split flag is missing (old classifier)" fail "$(needs_json 'false true  true  true  false false' success \
+  root=skipped app-check=success app-e2e-v1=success app-e2e-v2=success server=skipped g1=skipped | sed 's/"app_v2":"true",//')"
 check "empty needs" fail ""
 check "malformed needs" fail "{not json"
 
