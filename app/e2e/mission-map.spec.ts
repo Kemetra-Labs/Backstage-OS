@@ -6,15 +6,16 @@ import { translate } from '../src/i18n/index';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
 import { blurRadii, clippedElements, expectRenderedAA, infiniteAnimations, smallTargets, waitForAnimationsSettled, waitForIntroDone } from './lens-fidelity';
-import { hash, openScreen, RESTRICTED, surface } from './lens-helpers';
+import { expectNoLeaks, RESTRICTED_IDS, shows } from './leaks';
+import { hash, openScreen } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 const node = (page: Page, id: string) => page.locator(`.kv2-bc-node[data-node="${id}"]`);
 
 
 test('the canonical fixture has the restricted record this spec depends on', () => {
-  expect(RESTRICTED).toContain('E-5');
-  expect(RESTRICTED).toContain('O-5');
+  expect(RESTRICTED_IDS).toContain('E-5');
+  expect(RESTRICTED_IDS).toContain('O-5');
 });
 
 for (const lang of LANGS) {
@@ -155,8 +156,8 @@ test('Mission Map: an id the persona\'s world does not hold is dropped, not echo
   expect(await page.locator('.kv2-bc-node[aria-pressed="true"]').count()).toBe(1);
   // The dropped id is also taken out of the address, so it is not kept in the URL, the history or a copied link.
   await expect.poll(() => hash(page)).toBe('#/map/retail-tower');
-  const text = await page.evaluate(() => document.body.innerText + document.body.textContent);
-  expect(text).not.toContain('E-5');
+  // Raw substring for the typed id, as before; every other withheld token by the probe's rules, on every surface.
+  await expectNoLeaks(page, 'the dropped id', { substring: ['E-5'] });
 });
 
 test('Mission Map: the keyboard moves between nodes and Enter selects, as a navigation', async ({ page }) => {
@@ -226,7 +227,7 @@ for (const lang of LANGS) {
       for (const route of ROUTES) {
         await openRoute(page, route, { lang, persona, width: 1440 });
         // The address holds no restricted id on any route: the probe route types one, and the page takes it back out of the address.
-        for (const id of RESTRICTED) await expect.poll(() => page.url(), route).not.toContain(id);
+        for (const id of RESTRICTED_IDS) await expect.poll(() => page.url(), route).not.toContain(id);
         for (const view of ['map', 'list'] as const) {
           await page.locator('.kv2-bc-top .kv2-seg').last().locator('button').nth(view === 'list' ? 1 : 0).click();
           await expect(page.locator('[data-testid="bc-stage"]')).toHaveAttribute('data-mode', view);
@@ -234,11 +235,8 @@ for (const lang of LANGS) {
           for (let i = 0; i < (await tabs.count()); i += 1) {
             await tabs.nth(i).click();
             // The address of a route the tester typed (the E-5 probe) is theirs; everything the page adds must be clean.
-            const text = await surface(page);
-for (const id of RESTRICTED) expect(page.url(), `${route} ${view} tab ${i}`).not.toContain(id);
-            for (const id of RESTRICTED) {
-              expect(text.includes(`"${id}"`) || new RegExp(`(^|[^A-Za-z0-9-])${id}([^A-Za-z0-9-]|$)`).test(text), `${persona}/${lang} ${route} ${view} tab ${i}: ${id}`).toBe(false);
-            }
+            for (const id of RESTRICTED_IDS) expect(page.url(), `${route} ${view} tab ${i}`).not.toContain(id);
+            await expectNoLeaks(page, `${persona}/${lang} ${route} ${view} tab ${i}`);
           }
         }
       }
@@ -250,13 +248,13 @@ for (const lang of LANGS) {
   test(`Mission Map non-disclosure switch ${lang}: technical, owner, technical, owner on one page leaves nothing behind`, async ({ page }) => {
     await openRoute(page, '/map/all/sentry', { lang, persona: 'technical', width: 1440 });
     const L = COPY[lang].persona;
-    const has = async () => /(^|[^A-Za-z0-9-])E-5([^A-Za-z0-9-]|$)/.test(await surface(page));
     await page.getByRole('tab').nth(1).click();
-    expect(await has(), 'technical sees the record').toBe(true);
-    for (const [p, expected] of [['owner', false], ['technical', true], ['owner', false], ['nontechnical', false]] as const) {
+    expect(await shows(page, 'E-5'), 'technical sees the record').toBe(true);
+    for (const p of ['owner', 'technical', 'owner', 'nontechnical'] as const) {
       await page.getByRole('button', { name: L[p], exact: true }).click();
       await page.getByRole('tab').nth(1).click();
-      expect(await has(), p).toBe(expected);
+      if (p === 'technical') expect(await shows(page, 'E-5'), p).toBe(true);
+      else await expectNoLeaks(page, p);
     }
   });
 }
@@ -569,7 +567,7 @@ test('Mission Map d4: switching the display persona from Technical to Owner drop
   await expect(page.locator('.kv2-bc-edge[data-id="d4"]')).toHaveCount(0);
   await expect(page.locator('.kv2-bc-mk[data-edge="d4"]')).toHaveCount(0);
   await expect(page.getByText(restrictedNote('en'))).toHaveCount(0);
-  expect(/(^|[^A-Za-z0-9-])E-5([^A-Za-z0-9-]|$)/.test(await surface(page))).toBe(false);
+  await expectNoLeaks(page, 'after the switch to Owner');
   await page.getByRole('button', { name: COPY.en.persona.technical, exact: true }).click();
   await expect(page.locator('.kv2-bc-edge[data-id="d4"]')).toHaveCount(1);
 });

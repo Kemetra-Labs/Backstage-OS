@@ -7,7 +7,8 @@ import { isForbiddenControlLabel } from '../src/contract/rules';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
 import { expectRenderedAA, waitForAnimationsSettled } from './lens-fidelity';
-import { hasId, hash, openScreen, RESTRICTED, surface } from './lens-helpers';
+import { expectNoLeaks, RESTRICTED_IDS } from './leaks';
+import { hash, openScreen } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 const ROOM = '/investigation/INV-DEMO-7';
@@ -22,7 +23,7 @@ const eventCount = async (page: Page): Promise<number> => {
 
 
 test('the canonical fixture has the restricted record this spec depends on', () => {
-  expect(RESTRICTED).toContain('E-5');
+  expect(RESTRICTED_IDS).toContain('E-5');
 });
 
 for (const lang of LANGS) {
@@ -138,10 +139,7 @@ for (const lang of LANGS) {
     test(`Replay non-disclosure ${persona}/${lang}: no restricted id, observation, time or gap on any route or tab`, async ({ page }) => {
       for (const route of ROUTES) {
         await openRoute(page, route, { lang, persona, width: 1440 });
-        const scan = async (label: string) => {
-          const text = await surface(page);
-          for (const id of RESTRICTED) expect(hasId(text, id) || text.includes(`"${id}"`), `${persona}/${lang} ${route} ${label}: ${id}`).toBe(false);
-        };
+        const scan = (label: string) => expectNoLeaks(page, `${persona}/${lang} ${route} ${label}`);
         await scan('load');
         for (const tabs of [lens(page).locator('[role="tablist"]')]) {
           for (let k = 0; k < (await tabs.count()); k += 1) {
@@ -169,8 +167,7 @@ for (const lang of LANGS) {
     for (const p of ['technical', 'owner', 'technical', 'owner', 'nontechnical'] as const) {
       await page.getByRole('button', { name: L[p], exact: true }).click();
       await expect(basisRows(page).first()).toBeVisible();
-      const text = await surface(page);
-      for (const id of RESTRICTED) if (p !== 'technical') expect(hasId(text, id) || text.includes(`"${id}"`), `${p}: ${id}`).toBe(false);
+      if (p !== 'technical') await expectNoLeaks(page, p);
       const n = await eventCount(page);
       await expect(basisRows(page), `${p} rows equal events`).toHaveCount(n);
       rows[p] = n;

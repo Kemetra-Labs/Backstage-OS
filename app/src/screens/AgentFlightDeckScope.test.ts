@@ -3,7 +3,7 @@
 // projection), counts that must not reveal a withheld record, and Unknown staying Unknown. A mission's `events` figure is not defined
 // by the fixture, so nothing here reads it as a count. Persona is a display switch on synthetic data, not authorization.
 import { describe, expect, it } from 'vitest';
-import { leaks } from '../../e2e/lens-helpers';
+import { leaksIn as leaks } from '../../e2e/leaks';
 import type { Persona } from '../contract/types';
 import { WORLD } from '../lenses/fixtures/world';
 import { authorizedWorld } from '../lenses/logic/authorize';

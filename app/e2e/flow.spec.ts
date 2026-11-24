@@ -5,6 +5,8 @@ import { freshnessOf, isForbiddenControlLabel } from '../src/contract/rules';
 import { SOURCES } from '../src/fixture/inv-demo-7';
 import { formatAge } from '../src/i18n/format';
 import { COPY } from '../src/i18n/strings';
+import { BANNED } from './helpers';
+import { expectNoLeaks, RESTRICTED_IDS } from './leaks';
 
 const ROUTES = [
   '#/', '#/portfolio', '#/project/RT', '#/project/RT/stock-sync', '#/project/KH', '#/project/SB',
@@ -13,7 +15,6 @@ const ROUTES = [
 ] as const;
 const PERSONAS = ['owner', 'technical', 'nontechnical'] as const;
 const LANGS = ['en', 'ar'] as const;
-const BANNED = ['integration-tests', '#DEMO-4471', 'PR #DEMO-88', 'AssertionError', 'example.invalid', 'DEMO-4468', 'DEMO-5120', 'DEMO-311'];
 
 async function open(page: Page, hash: string, q: { lang?: string; persona?: string; width?: number } = {}) {
   const errors: string[] = [];
@@ -55,8 +56,9 @@ for (const route of ROUTES) {
         const labels = await page.locator('button, a').evaluateAll((els) => els.map((e) => (e.textContent ?? '').trim()));
         for (const l of labels) expect(isForbiddenControlLabel(l), `control label: ${l}`).toBe(false);
         if (persona !== 'technical') {
-          const text = await page.locator('body').innerText();
-          for (const b of BANNED) expect(text.includes(b), `banned token ${b}`).toBe(false);
+          // A withheld id typed into the route (#/evidence/E-12) is echoed by the not-found heading, as an unknown id is: ignore that one.
+          const typed = RESTRICTED_IDS.filter((id) => new RegExp(`/${id}(?![0-9])`).test(route));
+          await expectNoLeaks(page, `${route} ${lang}/${persona}`, { extra: BANNED, ignore: typed });
         }
         if (lang === 'ar') expect(await latinOutsideIsolates(page)).toEqual([]);
         // Copy tokens are always rendered through Text: a visible brace means a raw copy string leaked.

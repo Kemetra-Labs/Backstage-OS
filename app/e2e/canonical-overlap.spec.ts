@@ -15,6 +15,7 @@ import type { WorldNode } from '../src/lenses/types';
 import { COPY } from '../src/i18n/strings';
 import { triadOf } from '../src/view/world';
 import { LANGS, openRoute, PERSONAS } from './helpers';
+import { expectNoLeaks } from './leaks';
 import { openScreen, setMapMode } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
@@ -27,17 +28,8 @@ const WITHHELD_OBSERVATIONS = Object.values(DOMAIN.evidence)
 /** Components whose whole claim rests on withheld evidence: the withheld-only scenario, found from the canonical record. */
 const WITHHELD_ONLY = DOMAIN.components.filter((c) => c.basis.length > 0 && c.basis.every((id) => WITHHELD_IDS.includes(id)));
 
-/** Visible text, hidden text and every aria-label, title, alt and data-* value on the page. */
-const surface = (page: Page) =>
-  page.evaluate(() => {
-    const out: string[] = [document.body.innerText, document.body.textContent ?? ''];
-    for (const el of document.querySelectorAll('*')) {
-      for (const a of Array.from(el.attributes)) {
-        if (a.name === 'aria-label' || a.name === 'title' || a.name === 'alt' || a.name.startsWith('data-')) out.push(`${a.name}=${a.value}`);
-      }
-    }
-    return out.join('\n');
-  });
+/** The shared probe, with this spec's canonical ids still matched as raw substrings (String.includes, as before BACK-92 R7). */
+const noLeaks = (page: Page, label: string) => expectNoLeaks(page, label, { substring: [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS] });
 
 test('the canonical fixture has the withheld-only scenario this spec depends on', () => {
   expect(WITHHELD_IDS).toContain('E-5');
@@ -69,10 +61,7 @@ for (const lang of LANGS) {
         const label = page.locator(`[data-node="${c.id}"] .dg-health`);
         await expect(label).toHaveAttribute('data-health', 'unknown');
         await expect(label).not.toHaveAttribute('data-health', 'healthy');
-        const text = await surface(page);
-        for (const token of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) {
-          expect(text.includes(token), `${persona}/${lang} ${c.id}: "${token}"`).toBe(false);
-        }
+        await noLeaks(page, `${persona}/${lang} ${c.id}`);
         await expect(page.locator(WITHHELD_IDS.map((id) => `[data-evidence="${id}"], [data-evidence-row="${id}"]`).join(', '))).toHaveCount(0);
       }
     });
@@ -102,8 +91,7 @@ test('V1 same-page persona switch on the withheld-only deep link: Technical, Own
     } else {
       await expect(label).toHaveAttribute('data-health', 'unknown');
       await expect(page.locator(WITHHELD_IDS.map((id) => `[data-evidence="${id}"], [data-evidence-row="${id}"]`).join(', '))).toHaveCount(0);
-      const text = await surface(page);
-      for (const token of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) expect(text.includes(token), `${round}: "${token}"`).toBe(false);
+      await noLeaks(page, round);
     }
   }
 });
@@ -142,8 +130,7 @@ for (const lang of LANGS) {
           const chip = nodeChip(canonicalNode(persona, c.id), authorizedWorld(WORLD, persona).sources);
           expect(chip.kind, `${c.id} chip kind`).not.toBe('healthy');
           await expect(page.locator(`.kv2-bc-node[data-node="${c.id}"]`)).not.toHaveAttribute('data-tone', 'ok');
-          const text = await surface(page);
-          for (const token of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) expect(text.includes(token), `${persona}/${lang}/${tab} ${c.id}: "${token}"`).toBe(false);
+          await noLeaks(page, `${persona}/${lang}/${tab} ${c.id}`);
         }
       }
     });
@@ -166,8 +153,7 @@ test('B+C same-page persona switch on the withheld-only node: Technical, Owner, 
     } else {
       for (const id of c!.evidence) await expect(panel, `owner ${id}`).not.toContainText(id);
       await expect(page.locator(`.kv2-bc-node[data-node="${c!.id}"]`)).not.toHaveAttribute('data-tone', 'ok');
-      const text = await surface(page);
-      for (const token of [...WITHHELD_IDS, ...WITHHELD_OBSERVATIONS]) expect(text.includes(token), `owner: "${token}"`).toBe(false);
+      await noLeaks(page, 'owner');
     }
   }
 });

@@ -2,8 +2,8 @@
 // used to stand in for it must not be detectable anywhere: page text, hidden text, aria-label, title, alt, data-* values.
 // Persona is a display switch on synthetic demo data, not authorization (no server-side enforcement is claimed).
 import { expect, test, type Page } from '@playwright/test';
-import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute } from './helpers';
+import { expectNoLeaks, shows, WITHHELD } from './leaks';
 
 const LAY = ['owner', 'nontechnical'] as const;
 const ROUTES = [
@@ -16,29 +16,16 @@ const TECH_SEES: ReadonlyArray<readonly [string, string]> = [
   ['/project/RT/inventory', 'E-5'], ['/investigation/INV-DEMO-7', 'E-5'], ['/evidence/E-1', 'E-5'],
   ['/project/RT/payments', 'E-12'], ['/portfolio', 'E-12'], ['/investigation/INV-DEMO-9', 'E-23'],
 ];
-const IDS = ['E-5', 'E-12', 'E-23'] as const;
-
-const forbidden = (lang: 'en' | 'ar') => [...IDS, 'Restricted to Technical', COPY.ar.restricted, COPY.en.restricted, COPY[lang].restricted];
-
-/** Visible text, hidden text and every aria-label, title, alt and data-* attribute value on the page. */
-const surface = (page: Page) =>
-  page.evaluate(() => {
-    const out: string[] = [document.body.innerText, document.body.textContent ?? ''];
-    for (const el of document.querySelectorAll('*')) {
-      for (const a of Array.from(el.attributes)) {
-        if (a.name === 'aria-label' || a.name === 'title' || a.name === 'alt' || a.name.startsWith('data-')) out.push(`${a.name}=${a.value}`);
-      }
-    }
-    return out.join('\n');
-  });
+/** The withheld V1 record ids, from the fixture. They stay raw substrings (String.includes), as this spec matched them before R7. */
+const IDS = WITHHELD.map((e) => e.id);
+const noLeaks = (page: Page, label: string, ignore: readonly string[] = []) => expectNoLeaks(page, label, { substring: IDS, ignore });
 
 for (const lang of LANGS) {
   for (const persona of LAY) {
     for (const route of ROUTES) {
       test(`nondisclosure ${lang}/${persona} ${route}: no withheld id, placeholder or restricted copy anywhere in the DOM`, async ({ page }) => {
         await openRoute(page, route, { lang, persona });
-        const text = await surface(page);
-        for (const token of forbidden(lang)) expect(text.includes(token), `${persona}/${lang} ${route}: "${token}"`).toBe(false);
+        await noLeaks(page, `${persona}/${lang} ${route}`);
         await expect(page.locator('[data-state="error"]'), `${route} is not an error page`).toHaveCount(0);
       });
     }
@@ -48,7 +35,7 @@ for (const lang of LANGS) {
 for (const [route, token] of TECH_SEES) {
   test(`nondisclosure positive control: Technical sees ${token} on ${route}`, async ({ page }) => {
     await openRoute(page, route, { persona: 'technical' });
-    expect(await surface(page)).toContain(token);
+    expect(await shows(page, token)).toBe(true);
   });
 }
 
@@ -79,13 +66,12 @@ for (const lang of LANGS) {
       await expect(page.locator('h1')).toContainText('E-999');
       const unknown = await notFoundState(page);
       expect(unknown.states.some((s) => s.startsWith('error|'))).toBe(true);
-      for (const id of ['E-12', 'E-5', 'E-23']) {
+      for (const id of IDS) {
         await openRoute(page, `/evidence/${id}`, { lang, persona });
         await expect(page.locator('h1')).toContainText(id); // not a stale render of the previous id
         expect(await notFoundState(page), `${persona}/${lang} ${id}`).toEqual(unknown);
         // The heading echoes the id the visitor typed (as it does for E-999); everything else must not name a withheld record.
-        const text = (await surface(page)).split(id).join('');
-        for (const token of forbidden(lang)) expect(text.includes(token), `${id}: "${token}"`).toBe(false);
+        await noLeaks(page, `${persona}/${lang} ${id}`, [id]);
       }
     });
   }
@@ -94,12 +80,11 @@ for (const lang of LANGS) {
 test('nondisclosure: Technical on INV-DEMO-7 shows E-5; switching to Owner on the same page removes it at once', async ({ page }) => {
   await openRoute(page, '/investigation/INV-DEMO-7', { persona: 'technical' });
   await expect(page.locator('[data-evidence="E-5"]')).toHaveCount(1);
-  expect(await surface(page)).toContain('E-5');
+  expect(await shows(page, 'E-5')).toBe(true);
   await page.getByRole('button', { name: 'Owner', exact: true }).click();
   await expect(page).toHaveURL(/persona=owner/);
   await expect(page.locator('[data-evidence="E-5"]')).toHaveCount(0);
-  const text = await surface(page);
-  for (const token of forbidden('en')) expect(text.includes(token), `after switch: "${token}"`).toBe(false);
+  await noLeaks(page, 'after switch');
   await page.getByRole('button', { name: 'Technical', exact: true }).click();
   await expect(page.locator('[data-evidence="E-5"]')).toHaveCount(1);
 });
