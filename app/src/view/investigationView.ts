@@ -3,7 +3,7 @@
 import { resolveLabel } from '../contract/rules';
 import type { EvidenceReference, Lang, Persona } from '../contract/types';
 import type { Decision, InvestigationSummary, World, WorldComponent, WorldProject } from '../contract/world';
-import { formatAge } from '../i18n/segments';
+import { formatAge } from '../i18n/format';
 import type { Copy } from '../i18n/strings';
 import { evidenceViewFor } from './evidence';
 import type { EvidenceView } from './viewFor';

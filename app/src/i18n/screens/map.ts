@@ -1,5 +1,5 @@
 // Mission Map lens copy (BACK-87): only the host-owned strings around the B+C map. The map's own copy is the V2 table
-// (lenses/i18n), reached through the host adapter. {braces} mark left-to-right tokens; Latin digits in both languages.
+// (i18n/lenses), reached through the host adapter. {braces} mark left-to-right tokens; Latin digits in both languages.
 import type { Lang } from '../../contract/types';
 
 export interface MapLensCopy {

@@ -1,5 +1,5 @@
 import type { Lang, Persona } from '../contract/types';
-import { formatAge } from '../i18n/segments';
+import { formatAge } from '../i18n/format';
 import type { Copy } from '../i18n/strings';
 import type { NodeView } from '../view/viewFor';
 import { Text } from './Text';

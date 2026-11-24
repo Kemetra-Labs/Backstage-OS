@@ -1,12 +1,17 @@
-// V2 copy. Each string is an [English, Arabic] pair, so parity is structural. A persona entry maps each of the three
-// demo perspectives to its own pair. {braces} mark left-to-right tokens (ids, product names, code); $name is a variable.
-import type { Lang, Persona } from '../../contract/types';
-import { COMMON } from './common';
-import { MAP } from './map';
-import { BC } from './bc';
-import { OBS } from './observatory';
-import { REPLAY_COPY } from './replay';
-import { DECK } from './deck';
+// The keyed copy tables and translate(), the one lookup for keyed copy (BACK-92 R7; formerly lenses/i18n/t.ts). Each string is an
+// [English, Arabic] pair, so parity is structural. A persona entry maps each of the three demo perspectives to its own pair.
+// {braces} and $name follow the conventions in ./format.ts. The lenses reach this through useV2().t (bound by src/bridge/hostV2.ts).
+import type { Lang, Persona } from '../contract/types';
+import { fill, type Vars } from './format';
+import { COMMON } from './lenses/common';
+import { MAP } from './lenses/map';
+import { BC } from './lenses/bc';
+import { OBS } from './lenses/observatory';
+import { REPLAY_COPY } from './lenses/replay';
+import { DECK } from './lenses/deck';
+
+export type { Vars } from './format';
+export { plain } from './format';
 
 export type Pair = readonly [string, string];
 export type Entry = Pair | Readonly<Record<Persona, Pair>>;
@@ -24,16 +29,10 @@ export function pairOf(key: K, persona: Persona): Pair {
   return isPair(e) ? e : e[persona];
 }
 
-export type Vars = Readonly<Record<string, string | number>>;
-
+/** The text for a key in a language and persona, with $variables filled. {braces} are kept; render with <Tx>/<Text>. */
 export function translate(key: K, lang: Lang, persona: Persona, vars?: Vars): string {
-  const raw = pairOf(key, persona)[lang === 'ar' ? 1 : 0];
-  if (!vars) return raw;
-  return raw.replace(/\$([a-z][A-Za-z0-9]*)/g, (m, name: string) => (name in vars ? String(vars[name]) : m));
+  return fill(pairOf(key, persona)[lang === 'ar' ? 1 : 0], vars);
 }
-
-/** Strips the {brace} markers for attributes (aria-label, title) where isolates cannot be rendered. */
-export const plain = (s: string): string => s.replace(/[{}]/g, '');
 
 /** Every entry flattened to [key, lang, persona, text], for tests. */
 export function allCopy(): Array<[string, Lang, Persona | null, string]> {

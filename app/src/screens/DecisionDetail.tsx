@@ -1,5 +1,5 @@
 import { useApp } from '../app/AppContext';
-import { formatAge } from '../i18n/segments';
+import { formatAge } from '../i18n/format';
 import { hrefFor } from '../nav/routes';
 import { decisionDetailView } from '../view/decisionView';
 import { Panel } from '../components/Panel';

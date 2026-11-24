@@ -4,7 +4,7 @@ import { EvidenceItem } from '../components/evidence';
 import { Icon } from '../components/Icon';
 import { Age, Lt, Provider_, T, TabBar, TruthChip, Tx } from '../components/ui';
 import { useV2, type V2 } from '../context';
-import type { K } from '../i18n/t';
+import type { K } from '../../i18n';
 import { evidenceOf, evidenceView, nodeChip } from '../logic/evidence';
 import { linkCounts, neighbours } from '../logic/graph';
 import { sourceStatus } from '../logic/status';

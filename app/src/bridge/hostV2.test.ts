@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { Lang, Persona } from '../contract/types';
 import { DOMAIN } from '../domain/fixture';
 import { WORLD as V2 } from '../lenses/fixtures/world';
-import { translate } from '../lenses/i18n/t';
+import { translate } from '../i18n';
 import { authorizedWorld } from '../lenses/logic/authorize';
 import { DEFAULT_ROUTE } from '../lenses/navigation/route';
 import { COPY } from '../i18n/strings';

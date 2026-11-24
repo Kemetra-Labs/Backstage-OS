@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isForbiddenControlLabel } from '../../contract/rules';
-import { segments } from '../segments';
+import { segments } from '../format';
 import { AGENTS_COPY } from './agents';
 import { SOURCES_COPY } from './sources';
 

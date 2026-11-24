@@ -6,7 +6,7 @@ import { Lt, Tx } from '../lenses/components/ui';
 import { useV2 } from '../lenses/context';
 import { WORLD } from '../lenses/fixtures/world';
 import { authorizedWorld } from '../lenses/logic/authorize';
-import type { K } from '../lenses/i18n/t';
+import type { K } from '../i18n';
 import { REPLAY_VIEW_COPY } from '../i18n/screens/map';
 
 const hhmm = (iso: string): string => `${iso.slice(5, 10)} ${iso.slice(11, 16)}`;

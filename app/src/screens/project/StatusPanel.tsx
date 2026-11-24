@@ -2,7 +2,7 @@ import { useApp } from '../../app/AppContext';
 import { HealthTriad } from '../../components/HealthTriad';
 import { Panel } from '../../components/Panel';
 import { StateBlock } from '../../components/StateBlock';
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import { PROJECT_COPY } from '../../i18n/screens/project';
 import type { SourceRow } from '../../view/projectView';
 import type { Triad } from '../../view/world';

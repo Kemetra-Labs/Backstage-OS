@@ -1,7 +1,7 @@
 import { useApp } from '../app/AppContext';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Lang, Persona } from '../contract/types';
-import { formatAge } from '../i18n/segments';
+import { formatAge } from '../i18n/format';
 import type { Copy } from '../i18n/strings';
 import { viewFor } from '../view/viewFor';
 import { EvidenceDrawer } from '../components/EvidenceDrawer';

@@ -1,6 +1,6 @@
 // Agent Flight Deck copy. Every agent here is simulated; no copy implies a real agent, a model call or an executable action.
 // Mission titles appear inside buttons, so they avoid the forbidden control vocabulary.
-import type { Table } from './t';
+import type { Table } from '../translate';
 
 export const DECK = {
   'deck.eyebrow': ['Agent oversight', 'الإشراف على الوكلاء'],

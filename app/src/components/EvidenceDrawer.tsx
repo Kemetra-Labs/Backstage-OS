@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { Lang, Persona } from '../contract/types';
-import { formatAge } from '../i18n/segments';
+import { formatAge } from '../i18n/format';
 import type { Copy } from '../i18n/strings';
 import type { EvidenceView } from '../view/viewFor';
 import { evidenceTitle, statusLine } from './EvidenceList';

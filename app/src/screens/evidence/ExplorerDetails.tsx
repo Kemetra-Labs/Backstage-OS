@@ -4,7 +4,7 @@ import { Panel } from '../../components/Panel';
 import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { EVIDENCE } from '../../i18n/screens/evidence';
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import type { ExplorerView } from '../../view/explorerView';
 
 const row = (k: string, v: ReactNode, key: string) => (

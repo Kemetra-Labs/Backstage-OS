@@ -2,7 +2,7 @@ import { Panel } from '../../components/Panel';
 import { Text } from '../../components/Text';
 import type { Lang, Persona } from '../../contract/types';
 import type { SourcesCopy } from '../../i18n/screens/sources';
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import type { Copy } from '../../i18n/strings';
 import type { ProductSources } from '../../view/sourceView';
 

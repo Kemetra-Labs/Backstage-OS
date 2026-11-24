@@ -1,9 +1,9 @@
 // The lens context: the route, language and persona, and a translator bound to them. The host supplies its value from its own state
 // (src/bridge/hostV2.ts); the standalone lab's V2Provider retired with the lab entry (BACK-92 R4).
 import { createContext, useContext } from 'react';
-import type { Copy } from '../i18n/strings';
+import type { Copy } from '../i18n';
 import type { Route } from './navigation/route';
-import type { K, Vars } from './i18n/t';
+import type { K, Vars } from '../i18n';
 import type { ScreenId } from './types';
 
 export interface V2 {

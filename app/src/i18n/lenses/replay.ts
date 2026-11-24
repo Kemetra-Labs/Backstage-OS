@@ -1,6 +1,6 @@
 // Mission Replay copy. Event titles that appear inside buttons avoid the forbidden control vocabulary
 // (approve, reject, defer, go, release, retry, run). Facts and hypotheses reuse V1's persona copy (strings.ts).
-import type { Table } from './t';
+import type { Table } from '../translate';
 
 export const REPLAY_COPY = {
   'rp.eyebrow': ['Investigation, event replay', 'التحقيق، إعادة الأحداث'],

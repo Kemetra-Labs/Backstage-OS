@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { TABLE } from '../i18n/t';
+import { TABLE } from '../../i18n';
 
 const source = (relative: string): string => readFileSync(join(__dirname, relative), 'utf8');
 /** Source with comments and string literals removed, so a comment or a translation key such as deck.md.events cannot trip a guard. */

@@ -1,5 +1,5 @@
 // Source Observatory copy. There is deliberately no "trust" or "overall" figure: connectivity, freshness and health stay separate.
-import type { Table } from './t';
+import type { Table } from '../translate';
 
 export const OBS = {
   'obs.eyebrow': ['Source observability', 'رصد المصادر'],

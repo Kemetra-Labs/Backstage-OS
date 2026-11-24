@@ -6,7 +6,7 @@ import { Icon, type IconName } from '../components/Icon';
 import { Age, Cosmos, Kpi, Lt, Panel, T, ToneChip, TruthChip, Tx } from '../components/ui';
 import { useV2 } from '../context';
 import { WORLD } from '../fixtures/world';
-import type { K } from '../i18n/t';
+import type { K } from '../../i18n';
 import { authorizedWorld } from '../logic/authorize';
 import { STATUS_ORDER, deckCounts, filterMissions } from '../logic/deck';
 import { evidenceOf } from '../logic/evidence';

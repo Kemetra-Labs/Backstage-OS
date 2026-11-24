@@ -1,6 +1,6 @@
 import { freshnessOf } from '../contract/rules';
 import type { Lang, SourceAuthority } from '../contract/types';
-import { formatAge } from '../i18n/segments';
+import { formatAge } from '../i18n/format';
 import type { Copy } from '../i18n/strings';
 
 interface Props {

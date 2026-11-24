@@ -1,7 +1,7 @@
 // Copy for the Hybrid Mission Map pilot (B+C). Existing V2 keys are reused wherever the wording already exists; only
 // what is new lives here. Every Arabic string below is NEW and has NOT had a native-speaker review (SPEC section 9, item 5).
 // BACK-31: an AI-assisted pass (24 Nov 2026) revised seven strings; it does not replace the native review, so this stays unreviewed.
-import type { Table } from './t';
+import type { Table } from '../translate';
 
 export const BC = {
   'bc.concept': ['{B + C} pilot', 'النسخة التجريبية {B + C}'],

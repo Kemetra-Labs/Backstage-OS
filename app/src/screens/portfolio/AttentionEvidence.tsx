@@ -4,7 +4,7 @@ import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import { PORTFOLIO_COPY } from '../../i18n/screens/portfolio';
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import { hrefFor } from '../../nav/routes';
 import type { AttentionEntry, EvidenceRow } from '../../view/portfolioView';
 

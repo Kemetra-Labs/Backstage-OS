@@ -5,11 +5,10 @@
 // a display switch, not authorization.
 import { DOMAIN } from '../domain/fixture';
 import type { V2 } from '../lenses/context';
-import { translate } from '../lenses/i18n/t';
+import { COPY, translate } from '../i18n';
 import { DEFAULT_ROUTE, type Route as V2Route } from '../lenses/navigation/route';
 import type { ScreenId } from '../lenses/types';
 import type { Provider } from '../contract/types';
-import { COPY } from '../i18n/strings';
 import { MAP_SCOPES, type MapScope, type Route } from '../nav/routes';
 import { toMapContext, toMapContextIn, type HostView, type MapContext } from './mapContext';
 import type { World as MapWorld } from '../lenses/types';

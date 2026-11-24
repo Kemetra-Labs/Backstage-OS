@@ -3,7 +3,7 @@ import { LP } from '../../components/L';
 import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { HOME_COPY } from '../../i18n/screens/home';
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import { hrefFor } from '../../nav/routes';
 import type { HomeDecision, HomeInvestigation } from '../../view/homeView';
 

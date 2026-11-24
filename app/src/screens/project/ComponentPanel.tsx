@@ -7,7 +7,7 @@ import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import type { WorldComponent, WorldProject } from '../../contract/world';
 import { PROJECT_COPY } from '../../i18n/screens/project';
-import { formatAge } from '../../i18n/segments';
+import { formatAge } from '../../i18n/format';
 import { hrefFor } from '../../nav/routes';
 import { attentionFor, linkedEvidence, type LinkedEvidence } from '../../view/projectView';
 import { triadOf } from '../../view/world';
