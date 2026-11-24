@@ -4,7 +4,7 @@
 // (the PR record was read at 13:27 but is processed after the 14:02 failure). "Occurred" is not modelled at all, so it is never
 // claimed. An event with no evidence has no observed time: it is shown as not evidenced, never given a time. Pure; reads only the
 // persona's authorized world, so a withheld record contributes no row, no time and no gap. Synthetic data only.
-import type { ReplayEvent, World } from '../design-lab/v2/types';
+import type { ReplayEvent, World } from '../lenses/types';
 
 export type OrderStatus = 'consistent' | 'uncertain' | 'unknown';
 

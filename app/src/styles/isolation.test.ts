@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 const here = (rel: string): string => fileURLToPath(new URL(rel, import.meta.url));
 const read = (rel: string): string => readFileSync(here(rel), 'utf8');
-const V2 = '../design-lab/v2/styles/';
+const V2 = '../lenses/styles/';
 
 /** Every stylesheet the host imports to embed the lenses (src/screens/lensStyles.ts). The lab's reset.css and fonts.css retired with it (BACK-92 R4). */
 export const EMBED = ['tokens', 'base', 'scope', 'embed-fonts', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;

@@ -2,7 +2,7 @@
 
 <!-- impeccable:product-schema 1 -->
 
-> Scope: this record covers the V2 visual lab only (`app/src/design-lab/v2`). It is derived from the owner's written brief and the repo's `CLAUDE.md`, not from an interview round: the brief already answers users, purpose and constraints. Everything below is the brief's own statement, nothing inferred except where marked (inferred).
+> Scope: this record covers the V2 visual lab only (`app/src/lenses`). It is derived from the owner's written brief and the repo's `CLAUDE.md`, not from an interview round: the brief already answers users, purpose and constraints. Everything below is the brief's own statement, nothing inferred except where marked (inferred).
 
 ## Platform
 

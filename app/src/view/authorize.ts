@@ -1,7 +1,7 @@
 // BACK-73: V1 restricted-evidence non-disclosure. Technical-only evidence, and every claim resting only on it, is removed from
 // the world and investigation an unauthorized persona receives. Persona is a display switch, not authorization: this scopes
 // the synthetic demo data and no server-side identity, tenant or access enforcement exists or is claimed. Mirrors the V2
-// precedent in design-lab/v2/logic/authorize.ts.
+// precedent in lenses/logic/authorize.ts.
 import type {
   ConfidenceBasis, DisplayState, EvidenceReference, FactRef, Hypothesis, InvestigationData, MapNode, Persona,
 } from '../contract/types';

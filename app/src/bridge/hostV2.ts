@@ -4,15 +4,15 @@
 // map asks for (select a node, change scope, open another screen) becomes a host navigation. Synthetic demo data only; persona is
 // a display switch, not authorization.
 import { DOMAIN } from '../domain/fixture';
-import type { V2 } from '../design-lab/v2/context';
-import { translate } from '../design-lab/v2/i18n/t';
-import { DEFAULT_ROUTE, type Route as V2Route } from '../design-lab/v2/navigation/route';
-import type { ScreenId } from '../design-lab/v2/types';
+import type { V2 } from '../lenses/context';
+import { translate } from '../lenses/i18n/t';
+import { DEFAULT_ROUTE, type Route as V2Route } from '../lenses/navigation/route';
+import type { ScreenId } from '../lenses/types';
 import type { Provider } from '../contract/types';
 import { COPY } from '../i18n/strings';
 import { MAP_SCOPES, type MapScope, type Route } from '../nav/routes';
 import { toMapContext, toMapContextIn, type HostView, type MapContext } from './mapContext';
-import type { World as MapWorld } from '../design-lab/v2/types';
+import type { World as MapWorld } from '../lenses/types';
 
 /** How the adapter asks the host to go somewhere. The host decides what that means (a hash change). */
 export interface HostNav {

@@ -2,10 +2,10 @@
 // pos, stock-sync and inventory and the dependencies between them) is projected from src/domain (BACK-83). What is defined here
 // is only what V2 adds: the catalogue graph's other nodes and edges, layout, source events, a replay script and simulated agents.
 // Every value is invented. Keys use RT-DEMO-, links use *.example.invalid, nothing here is live telemetry.
-import { DOMAIN } from '../../../domain/fixture';
-import { EVIDENCE, EXTRA_EVIDENCE, SOURCES } from '../../../domain/records';
-import { toV2EdgeFacts, toV2EvidenceById, toV2NodeFacts } from '../../../domain/toV2';
-import type { DisplayState, SourceAuthority } from '../../../contract/types';
+import { DOMAIN } from '../../domain/fixture';
+import { EVIDENCE, EXTRA_EVIDENCE, SOURCES } from '../../domain/records';
+import { toV2EdgeFacts, toV2EvidenceById, toV2NodeFacts } from '../../domain/toV2';
+import type { DisplayState, SourceAuthority } from '../../contract/types';
 import type { Agent, Mission, ReplayEvent, SourceEvent, SourceMeta, World, WorldEdge, WorldNode } from '../types';
 
 /** Fixed "now" so every screen, test and screenshot is deterministic. V1 reads at 14:03 are 6 minutes old here. */

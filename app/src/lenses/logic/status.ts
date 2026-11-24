@@ -1,6 +1,6 @@
 // Display status for V2. Every verdict comes from the V1 contract rules; nothing here decides health on its own.
-import { effectiveFreshness, freshnessOf, resolveHealth, resolveLabel, worstFreshness } from '../../../contract/rules';
-import type { Connectivity, EvidenceReference, Freshness, Health, SourceAuthority, TruthLabel } from '../../../contract/types';
+import { effectiveFreshness, freshnessOf, resolveHealth, resolveLabel, worstFreshness } from '../../contract/rules';
+import type { Connectivity, EvidenceReference, Freshness, Health, SourceAuthority, TruthLabel } from '../../contract/types';
 import type { SourceMeta, World, WorldNode } from '../types';
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'unk';

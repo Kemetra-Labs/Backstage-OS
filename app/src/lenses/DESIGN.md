@@ -1,6 +1,6 @@
 # Kawalys V2 design system (lab)
 
-Recorded from the shipped CSS and components, not from intentions. Scope: `app/src/design-lab/v2` only. V1 keeps its own gold-on-navy system in `app/src/styles` and `css/app.css`; the two are never merged.
+Recorded from the shipped CSS and components, not from intentions. Scope: `app/src/lenses` only. V1 keeps its own gold-on-navy system in `app/src/styles` and `css/app.css`; the two are never merged.
 Mode (impeccable): **Operate**. Dense dark operations screens built from four owner reference images (`docs/design-lab/v2/reference/`).
 
 ## Direction

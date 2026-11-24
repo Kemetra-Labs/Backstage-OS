@@ -3,8 +3,8 @@
 Usage (from the repo root):
     python docs/design-lab/v2/tools/horizon.py
 
-Writes app/src/design-lab/v2/assets/horizon.webp. Nothing is cropped or traced from the owner reference images; the image
-is drawn from scratch with the V2 token colours below (copied from app/src/design-lab/v2/styles/tokens.css).
+Writes app/src/lenses/assets/horizon.webp. Nothing is cropped or traced from the owner reference images; the image
+is drawn from scratch with the V2 token colours below (copied from app/src/lenses/styles/tokens.css).
 
 Geometry contract with base.css: the image is laid over `.kv2-horizon` by its `::before`, which starts 28 % of the element
 height above it (block size 128 %). The planet is the ellipse centred on the bottom edge, with rx = width / 2 and
@@ -16,7 +16,7 @@ import os
 import numpy as np
 from PIL import Image, ImageFilter
 
-OUT = os.path.join('app', 'src', 'design-lab', 'v2', 'assets', 'horizon.webp')
+OUT = os.path.join('app', 'src', 'lenses', 'assets', 'horizon.webp')
 W, H = 2400, 900
 HEADROOM = 1.28  # must match `inset-block-start: -28%` in base.css
 SEED = 18

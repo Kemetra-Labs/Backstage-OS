@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { LANGS, openRoute } from './helpers';
 import { openScreen } from './lens-helpers';
 
-const V2 = new URL('../src/design-lab/v2/styles/', import.meta.url);
+const V2 = new URL('../src/lenses/styles/', import.meta.url);
 const EMBED = ['tokens', 'base', 'scope', 'embed-fonts', 'map', 'bc', 'observatory', 'replay', 'deck'];
 // url() would resolve against the page; the fonts themselves are covered by the static test (own family names only).
 // The semantic roles are part of the set too: the V1 bundle does not carry them yet (BACK-87 imports them), so the page gets them here.

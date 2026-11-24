@@ -6,10 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import { leaks } from '../../e2e/lens-helpers';
 import type { Persona } from '../contract/types';
-import { WORLD } from '../design-lab/v2/fixtures/world';
-import { authorizedWorld } from '../design-lab/v2/logic/authorize';
-import { sourceCounts, sourceStatus } from '../design-lab/v2/logic/status';
-import type { World } from '../design-lab/v2/types';
+import { WORLD } from '../lenses/fixtures/world';
+import { authorizedWorld } from '../lenses/logic/authorize';
+import { sourceCounts, sourceStatus } from '../lenses/logic/status';
+import type { World } from '../lenses/types';
 import { expectWorldReadOnlyThroughAuthorizedWorld } from './scopeGuard';
 
 const LAY: readonly Persona[] = ['owner', 'nontechnical'];
@@ -44,6 +44,6 @@ describe('Source Observatory evidence scoping', () => {
   });
 
   it('the screen reads its world only through authorizedWorld, never the unscoped fixture directly', () => {
-    expectWorldReadOnlyThroughAuthorizedWorld('../design-lab/v2/screens/SourceObservatory.tsx', 'SourceObservatoryLens.tsx');
+    expectWorldReadOnlyThroughAuthorizedWorld('../lenses/screens/SourceObservatory.tsx', 'SourceObservatoryLens.tsx');
   });
 });

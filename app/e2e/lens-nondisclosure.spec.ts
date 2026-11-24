@@ -4,9 +4,9 @@
 // that rested on it, and the counts that would change if it were silently dropped (evidence rows, links, story rows). A display persona
 // is not authorization; this checks the demo's scoping on synthetic data, not a server-side control.
 import { expect, test, type Page } from '@playwright/test';
-import { WORLD } from '../src/design-lab/v2/fixtures/world';
-import { authorizedWorld } from '../src/design-lab/v2/logic/authorize';
-import { TABLE } from '../src/design-lab/v2/i18n/t';
+import { WORLD } from '../src/lenses/fixtures/world';
+import { authorizedWorld } from '../src/lenses/logic/authorize';
+import { TABLE } from '../src/lenses/i18n/t';
 import { INV_DEMO_7 } from '../src/fixture/inv-demo-7';
 import { COPY } from '../src/i18n/strings';
 import { formatAge } from '../src/i18n/segments';

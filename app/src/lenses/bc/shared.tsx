@@ -1,5 +1,5 @@
 // Small pieces shared by the B+C pilot components: icon maps, copy keys, and the status words.
-import type { Connectivity, Freshness, Health, Provider } from '../../../contract/types';
+import type { Connectivity, Freshness, Health, Provider } from '../../contract/types';
 import type { IconName } from '../components/Icon';
 import { useV2 } from '../context';
 import type { K } from '../i18n/t';

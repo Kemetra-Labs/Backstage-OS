@@ -5,11 +5,11 @@
 import { describe, expect, it } from 'vitest';
 import { leaks } from '../../e2e/lens-helpers';
 import type { Persona } from '../contract/types';
-import { WORLD } from '../design-lab/v2/fixtures/world';
-import { authorizedWorld } from '../design-lab/v2/logic/authorize';
-import { deckCounts, filterMissions, STATUS_ORDER } from '../design-lab/v2/logic/deck';
-import { evidenceOf } from '../design-lab/v2/logic/evidence';
-import type { Mission, World } from '../design-lab/v2/types';
+import { WORLD } from '../lenses/fixtures/world';
+import { authorizedWorld } from '../lenses/logic/authorize';
+import { deckCounts, filterMissions, STATUS_ORDER } from '../lenses/logic/deck';
+import { evidenceOf } from '../lenses/logic/evidence';
+import type { Mission, World } from '../lenses/types';
 import { expectWorldReadOnlyThroughAuthorizedWorld } from './scopeGuard';
 
 const LAY: readonly Persona[] = ['owner', 'nontechnical'];
@@ -120,6 +120,6 @@ describe('Flight Deck: evidence scoping, with a control', () => {
   });
 
   it('the screen and its lens read the world only through authorizedWorld, never the unscoped fixture directly', () => {
-    expectWorldReadOnlyThroughAuthorizedWorld('../design-lab/v2/screens/AgentFlightDeck.tsx', 'AgentFlightDeckLens.tsx');
+    expectWorldReadOnlyThroughAuthorizedWorld('../lenses/screens/AgentFlightDeck.tsx', 'AgentFlightDeckLens.tsx');
   });
 });

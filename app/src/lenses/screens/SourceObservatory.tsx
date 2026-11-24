@@ -1,6 +1,6 @@
 // Screen B. Source Observatory: connectivity, evidence freshness and target health, shown as three independent readings.
 import { useMemo, useState } from 'react';
-import type { Provider } from '../../../contract/types';
+import type { Provider } from '../../contract/types';
 import { EvidenceItem } from '../components/evidence';
 import { Icon, type IconName } from '../components/Icon';
 import { Age, Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip } from '../components/ui';

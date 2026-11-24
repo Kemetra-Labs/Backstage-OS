@@ -5,10 +5,10 @@
 // BACK-84: the INV-DEMO-7 overlap (evidence E-1..E-9, nodes pos / stock-sync / inventory, the dependencies between them) is decided
 // once, by scopeFixture through domain/runtime. Every other record keeps keepRef. A structure outside the overlap that cites an
 // overlap record (the sentry node, edge d4, a mission, a replay row, a source's health basis) is pruned through the same decision.
-import { freshnessOf } from '../../../contract/rules';
-import type { DisplayState, EvidenceReference, Persona } from '../../../contract/types';
-import { canonicalComponent, canonicalFor, dependencyVerdict, evidenceVerdict } from '../../../domain/runtime';
-import { toV2NodeFacts } from '../../../domain/toV2';
+import { freshnessOf } from '../../contract/rules';
+import type { DisplayState, EvidenceReference, Persona } from '../../contract/types';
+import { canonicalComponent, canonicalFor, dependencyVerdict, evidenceVerdict } from '../../domain/runtime';
+import { toV2NodeFacts } from '../../domain/toV2';
 import type { Mission, ReplayEvent, SourceMeta, World, WorldEdge, WorldNode } from '../types';
 
 type Visible = (id: string) => boolean;

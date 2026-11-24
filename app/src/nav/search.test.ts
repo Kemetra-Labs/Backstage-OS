@@ -1,5 +1,5 @@
 // BACK-66 / BACK-92 R4: the host's one search box (src/shell/DemoSearch.tsx) offers only what the persona may read. These cases moved
-// here from the retired lab shell search (design-lab/v2/navigation/hits.ts and its block in logic/authorize.test.ts): the host search
+// here from the retired lab shell search (lenses/navigation/hits.ts and its block in logic/authorize.test.ts): the host search
 // is built from the persona-projected world, so a withheld record is never offered, labelled, counted or linked. Persona is a display
 // switch on synthetic data, not authorization.
 import { describe, expect, it } from 'vitest';

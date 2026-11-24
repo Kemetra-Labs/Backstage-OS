@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isForbiddenControlLabel } from '../../../contract/rules';
-import { COPY } from '../../../i18n/strings';
+import { isForbiddenControlLabel } from '../../contract/rules';
+import { COPY } from '../../i18n/strings';
 import { COMMON_CONTROL_KEYS } from './common';
 import { DECK_CONTROL_KEYS } from './deck';
 import { MAP_CONTROL_KEYS } from './map';

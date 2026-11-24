@@ -10,8 +10,8 @@ const read = (rel: string): string => readFileSync(new URL(rel, import.meta.url)
 const NAMES = ['embed-fonts', 'tokens', 'scope', 'base', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;
 const css: Record<string, string> = Object.fromEntries(NAMES.map((n) => [`./styles/${n}.css`, read(`./styles/${n}.css`)]));
 const src = import.meta.glob(['./**/*.ts', './**/*.tsx', '!./**/*.test.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
-const v1css: Record<string, string> = Object.fromEntries(['tokens', 'app'].map((n) => [n, read(`../../styles/${n}.css`)]));
-const v1main = import.meta.glob('../../main.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const v1css: Record<string, string> = Object.fromEntries(['tokens', 'app'].map((n) => [n, read(`../styles/${n}.css`)]));
+const v1main = import.meta.glob('../main.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 const tokens = css['./styles/tokens.css']!;
 const defined = new Set(Object.values(css).flatMap((t) => [...t.matchAll(/(--kv2-[a-z0-9-]+)\s*:/g)].map((m) => m[1]!)));
@@ -69,7 +69,7 @@ describe('V2 self-hosted assets (BACK-18)', () => {
 
   it('reference no hosted URL from any stylesheet or the HTML entry', () => {
     for (const [f, text] of Object.entries(css)) expect(text.replace(/\/\*[\s\S]*?\*\//g, ''), f).not.toMatch(/https?:\/\/|\/\/fonts\.|@import/);
-    expect(read('../../../index.html')).not.toMatch(/<link[^>]+href=["']https?:|<script[^>]+src=["']https?:/);
+    expect(read('../../index.html')).not.toMatch(/<link[^>]+href=["']https?:|<script[^>]+src=["']https?:/);
   });
 
   it('declare each face from a local woff2 only (no local() lookup), and every file and its licence ship', () => {

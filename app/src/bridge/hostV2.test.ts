@@ -3,10 +3,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Lang, Persona } from '../contract/types';
 import { DOMAIN } from '../domain/fixture';
-import { WORLD as V2 } from '../design-lab/v2/fixtures/world';
-import { translate } from '../design-lab/v2/i18n/t';
-import { authorizedWorld } from '../design-lab/v2/logic/authorize';
-import { DEFAULT_ROUTE } from '../design-lab/v2/navigation/route';
+import { WORLD as V2 } from '../lenses/fixtures/world';
+import { translate } from '../lenses/i18n/t';
+import { authorizedWorld } from '../lenses/logic/authorize';
+import { DEFAULT_ROUTE } from '../lenses/navigation/route';
 import { COPY } from '../i18n/strings';
 import { hrefFor, MAP_SCOPES, parseHash, type Route } from '../nav/routes';
 import { deckRoute, hostRouteFor, mapRoute, replayRoute, toV2 } from './hostV2';
