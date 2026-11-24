@@ -41,7 +41,7 @@ export function AgeBar({ s, compact = false, nums = true }: AgeBarProps) {
   const g = ageGeometry(s);
   const base = s.ageMinutes === null ? t('bc.never') : t('obs.read.age', { a: s.ageMinutes, m: s.ttlMinutes });
   const multiple = g.multiple !== null ? t('bc.over', { x: g.multiple }) : null;
-  const label = multiple ? `${base}, ${multiple}` : base;
+  const label = multiple ? `${base}${t('bc.sep')}${multiple}` : base;
   const tail = multiple ?? (compact || s.ageMinutes === null ? '' : t('bc.target', { m: s.ttlMinutes }));
   return (
     <div className="kv2-bc-age" data-state={g.state} role="img" aria-label={label}>
