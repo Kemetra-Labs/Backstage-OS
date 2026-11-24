@@ -3,7 +3,7 @@
 import { useApp } from '../app/AppContext';
 import { replayTimeRows, type OrderStatus } from '../bridge/replayTime';
 import { Lt, Tx } from '../lenses/components/ui';
-import { useV2 } from '../lenses/context';
+import { useLens } from '../lenses/useLens';
 import { WORLD } from '../lenses/fixtures/world';
 import { authorizedWorld } from '../lenses/logic/authorize';
 import type { K } from '../i18n';
@@ -13,7 +13,7 @@ const hhmm = (iso: string): string => `${iso.slice(5, 10)} ${iso.slice(11, 16)}`
 
 export function ReplayTimeBasis() {
   const { lang } = useApp();
-  const { route, t } = useV2();
+  const { route, t } = useLens();
   const copy = REPLAY_VIEW_COPY[lang].basis;
   const rows = replayTimeRows(authorizedWorld(WORLD, route.persona));
   const events = new Map(authorizedWorld(WORLD, route.persona).replay.map((e) => [e.id, e.key]));

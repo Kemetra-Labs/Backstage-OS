@@ -1,17 +1,27 @@
-// BACK-87: the host-owned presentation adapter for the B+C Mission Map. It builds the value the map's components read through
-// `useV2()` from the host's own state (persona, language, route), so the host stays the one authority. There is no V2Provider, no
-// state and no React in this file: the lens component supplies the result through the exported `V2Context`, and every change the
-// map asks for (select a node, change scope, open another screen) becomes a host navigation. Synthetic demo data only; persona is
-// a display switch, not authorization.
+// BACK-87, BACK-92 R7: the host-owned presentation adapter for the lenses (Mission Map, Source Observatory, Mission Replay, Agent
+// Flight Deck). It builds the value the lens components read through `useLens()` (src/lenses/useLens.ts) from the host's own state
+// (persona, language, route), so the host stays the one authority. There is no provider, no state and no React in this file: the
+// hook calls `toLensState` with the host's `useApp()` state, and every change a lens asks for (select a node, change scope, open
+// another screen) becomes a host navigation. Synthetic demo data only; persona is a display switch, not authorization.
 import { DOMAIN } from '../domain/fixture';
-import type { V2 } from '../lenses/context';
-import { COPY, translate } from '../i18n';
+import { COPY, translate, type Copy, type K, type Vars } from '../i18n';
 import { DEFAULT_ROUTE, type Route as V2Route } from '../lenses/navigation/route';
 import type { ScreenId } from '../lenses/types';
 import type { Provider } from '../contract/types';
 import { MAP_SCOPES, type MapScope, type Route } from '../nav/routes';
 import { toMapContext, toMapContextIn, type HostView, type MapContext } from './mapContext';
 import type { World as MapWorld } from '../lenses/types';
+
+/** What a lens reads: the route, language and persona, and a translator bound to them. */
+export interface LensState {
+  readonly route: V2Route;
+  readonly copy: Copy;
+  /** Translated string for the current language and persona. {braces} still present; render with <Tx>. */
+  readonly t: (key: K, vars?: Vars) => string;
+  /** Patch the route. `replace` avoids adding a history entry (used for state that is not a navigation). */
+  readonly go: (patch: Partial<V2Route>, replace?: boolean) => void;
+  readonly open: (screen: ScreenId, patch?: Partial<V2Route>) => void;
+}
 
 /** How the adapter asks the host to go somewhere. The host decides what that means (a hash change). */
 export interface HostNav {
@@ -52,8 +62,8 @@ export function hostRouteFor(screen: ScreenId, ctx: MapContext, patch?: Patch): 
   }
 }
 
-/** The `useV2()` value for the host's state. `world` is for tests: by default the persona's authorized world is used. */
-export function toV2(view: HostView, nav: HostNav, world?: MapWorld): V2 {
+/** The `useLens()` value for the host's state. `world` is for tests: by default the persona's authorized world is used. */
+export function toLensState(view: HostView, nav: HostNav, world?: MapWorld): LensState {
   const ctx = world ? toMapContextIn(view, world) : toMapContext(view);
   const onSources = view.route.name === 'sources';
   const replay = view.route.name === 'investigation' && view.route.view === 'replay' ? view.route : null;

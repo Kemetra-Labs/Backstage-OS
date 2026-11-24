@@ -6,7 +6,7 @@ import { EvidenceItem } from '../components/evidence';
 import { Icon, type IconName } from '../components/Icon';
 import { Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip, TruthChip, Tx } from '../components/ui';
 import { SourceRows } from '../components/SourceRows';
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import { WORLD } from '../fixtures/world';
 import { plain, type K } from '../../i18n';
 import { authorizedWorld } from '../logic/authorize';
@@ -26,7 +26,7 @@ type HoldTab = 'cor' | 'hyp' | 'gap';
 /** `embedded`: shown inside a host screen that already has the page's h1, so the title is an h2 and the pilot chip is left out. */
 export function MissionReplay({ embedded = false }: { readonly embedded?: boolean } = {}) {
   const H = embedded ? 'h2' : 'h1';
-  const { route, go, t, copy } = useV2();
+  const { route, go, t, copy } = useLens();
   const w = authorizedWorld(WORLD, route.persona);
   const events = w.replay;
   const n = events.length;

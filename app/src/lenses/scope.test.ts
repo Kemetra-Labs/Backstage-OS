@@ -108,6 +108,11 @@ describe('V2 sources', () => {
     for (const [f, text] of files) expect(text, f).not.toMatch(/api[_-]?key|secret|password|bearer\s|BEGIN [A-Z ]*PRIVATE/i);
   });
 
+  it('read their state only from the host through useLens: no lens creates or reads a context of its own (BACK-92 R7)', () => {
+    for (const [f, text] of files) expect(text, f).not.toMatch(/\b(createContext|useContext|V2Context|V2Provider|useV2)\b/);
+    expect(src['./useLens.ts']).toMatch(/useApp\(\)/);
+  });
+
   it('use dangerouslySetInnerHTML and eval nowhere', () => {
     for (const [f, text] of files) expect(text, f).not.toMatch(/dangerouslySetInnerHTML|\beval\s*\(|new Function\s*\(/);
   });

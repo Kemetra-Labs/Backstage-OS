@@ -2,7 +2,7 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import type { DisplayLabel, Provider } from '../../contract/types';
 import { formatAge, segments } from '../../i18n';
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import type { K, Vars } from '../../i18n';
 import type { Tone } from '../logic/status';
 import { Icon, type IconName } from './Icon';
@@ -19,19 +19,19 @@ export function Tx({ s }: { readonly s: string }) {
 }
 
 export function T({ k, v }: { readonly k: K; readonly v?: Vars }) {
-  const { t } = useV2();
+  const { t } = useLens();
   return <Tx s={t(k, v)} />;
 }
 
 export const Lt = ({ children }: { readonly children: ReactNode }) => <bdi dir="ltr" className="kv2-ltr">{children}</bdi>;
 
 export function Provider_({ p }: { readonly p: Provider }) {
-  const { copy } = useV2();
+  const { copy } = useLens();
   return <Lt>{copy.provider[p]}</Lt>;
 }
 
 export function Age({ minutes }: { readonly minutes: number | null }) {
-  const { route } = useV2();
+  const { route } = useLens();
   return <span>{formatAge(minutes, route.lang)}</span>;
 }
 
@@ -41,7 +41,7 @@ const TRUTH_ICON: Readonly<Record<DisplayLabel, IconName>> = {
 
 /** Truth label with an icon as well as colour, so it survives greyscale. Nontechnical gets the plain words. */
 export function TruthChip({ label }: { readonly label: DisplayLabel }) {
-  const { copy, route } = useV2();
+  const { copy, route } = useLens();
   const text = route.persona === 'nontechnical' ? copy.plainLabel[label] : copy.label[label];
   return (
     <span className="kv2-chip" data-truth={label}>
@@ -117,7 +117,7 @@ export function TabBar<V extends string>({ label, value, options, onChange, idPr
   readonly label: string; readonly value: V; readonly options: readonly Opt<V>[]; readonly onChange: (v: V) => void; readonly idPrefix: string;
 }) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
-  const { route } = useV2();
+  const { route } = useLens();
   const rtl = route.lang === 'ar';
   const onKey = (e: KeyboardEvent, i: number) => {
     const next = e.key === 'ArrowRight' ? (rtl ? -1 : 1) : e.key === 'ArrowLeft' ? (rtl ? 1 : -1) : e.key === 'Home' ? -99 : e.key === 'End' ? 99 : 0;

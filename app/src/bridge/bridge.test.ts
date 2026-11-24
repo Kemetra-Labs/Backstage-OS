@@ -231,18 +231,18 @@ describe('the bridge adds no second authority', () => {
   const sources = readdirSync(dir).filter((f) => /\.ts$/.test(f) && !/\.test\.ts$/.test(f)).map((f) => [f, readFileSync(join(dir, f), 'utf8')] as const);
 
   it('has source files to check', () => {
-    expect(sources.map(([f]) => f).sort()).toEqual(['hostV2.ts', 'identity.ts', 'mapContext.ts', 'replayTime.ts']);
+    expect(sources.map(([f]) => f).sort()).toEqual(['identity.ts', 'lensState.ts', 'mapContext.ts', 'replayTime.ts']);
   });
 
-  it('imports no React, no V2 provider or context at runtime, and holds no module state', () => {
+  it('imports no React, no lens provider, context or hook at runtime, and holds no module state', () => {
     // Comments may name what the file avoids; a type-only import carries no runtime. Everything else is checked.
     const code = (s: string): string => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/^import type [^;]*;\s*$/gm, '');
     for (const [f, text] of sources) {
       const src = code(text);
       expect(src, f).not.toMatch(/from 'react'|from "react"/);
-      // The lab's provider, shell, entry and search live in these; its pure route defaults and translator are fine to read.
-      expect(src, f).not.toMatch(/lenses\/(context|navigation\/(Shell|hits)|main|App)/);
-      expect(src, f).not.toMatch(/\b(useState|useReducer|useContext|createContext|V2Provider|useV2|localStorage|sessionStorage)\b/);
+      // The lens hook (BACK-92 R7) and the retired lab shell, entry and search; the pure route defaults are fine to read.
+      expect(src, f).not.toMatch(/lenses\/(useLens|context|navigation\/(Shell|hits)|main|App)/);
+      expect(src, f).not.toMatch(/\b(useState|useReducer|useContext|createContext|V2Provider|V2Context|useV2|useLens|useApp|localStorage|sessionStorage)\b/);
       expect(src, f).not.toMatch(/^\s*(let|var)\s/m);
     }
   });

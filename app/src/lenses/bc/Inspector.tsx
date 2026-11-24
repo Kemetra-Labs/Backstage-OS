@@ -3,7 +3,7 @@
 import { EvidenceItem } from '../components/evidence';
 import { Icon } from '../components/Icon';
 import { Age, Lt, Provider_, T, TabBar, TruthChip, Tx } from '../components/ui';
-import { useV2, type V2 } from '../context';
+import { useLens, type LensState } from '../useLens';
 import type { K } from '../../i18n';
 import { evidenceOf, evidenceView, nodeChip } from '../logic/evidence';
 import { linkCounts, neighbours } from '../logic/graph';
@@ -19,7 +19,7 @@ interface Props {
   readonly tab: BcTab;
   readonly setTab: (t: BcTab) => void;
   readonly isScope: boolean;
-  readonly onOpen: V2['open'];
+  readonly onOpen: LensState['open'];
 }
 
 function Head({ node, w, isScope }: { readonly node: WorldNode; readonly w: World; readonly isScope: boolean }) {
@@ -39,7 +39,7 @@ function Head({ node, w, isScope }: { readonly node: WorldNode; readonly w: Worl
 }
 
 export function Inspector({ w, node, tab, setTab, isScope, onOpen }: Props) {
-  const { route, t } = useV2();
+  const { route, t } = useLens();
   const words = useStatusWords();
   const refs = evidenceOf(w, node.evidence);
   const nb = neighbours(node.id, w.edges).map((id) => w.nodes.find((n) => n.id === id)!);

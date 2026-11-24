@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { EvidenceItem } from '../components/evidence';
 import { Icon, type IconName } from '../components/Icon';
 import { Age, Cosmos, Kpi, Lt, Panel, T, ToneChip, TruthChip, Tx } from '../components/ui';
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import { WORLD } from '../fixtures/world';
 import type { K } from '../../i18n';
 import { authorizedWorld } from '../logic/authorize';
@@ -40,7 +40,7 @@ const SATS: readonly { readonly id: string; readonly key: K; readonly icon: Icon
  */
 export function AgentFlightDeck({ embedded = false }: { readonly embedded?: boolean } = {}) {
   const H = embedded ? 'h2' : 'h1';
-  const { route, go, open, t, copy } = useV2();
+  const { route, go, open, t, copy } = useLens();
   const w = authorizedWorld(WORLD, route.persona);
   const persona = route.persona;
   const showIds = persona !== 'nontechnical';

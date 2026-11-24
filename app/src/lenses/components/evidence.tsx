@@ -1,12 +1,12 @@
 // Evidence row shared by all four screens, so the same item reads the same everywhere.
 import type { EvidenceReference } from '../../contract/types';
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import { evidenceView } from '../logic/evidence';
 import { Icon } from './Icon';
 import { Age, Lt, Provider_, ToneChip, TruthChip, Tx } from './ui';
 
 export function useEvTitle(): (id: string) => string {
-  const { copy, route, t } = useV2();
+  const { copy, route, t } = useLens();
   return (id) => {
     const v1 = copy.evidenceItem[id]?.[route.persona];
     if (v1) return v1;
@@ -22,7 +22,7 @@ interface Props {
 }
 
 export function EvidenceItem({ evidence, selected, onSelect, compact }: Props) {
-  const { copy, route } = useV2();
+  const { copy, route } = useLens();
   const title = useEvTitle();
   const v = evidenceView(evidence, route.persona);
   const showId = route.persona !== 'nontechnical';

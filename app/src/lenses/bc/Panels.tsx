@@ -1,7 +1,7 @@
 // Legend, orbit key, the three source readings, and the signal timeline of the B+C pilot.
 import { Icon } from '../components/Icon';
 import { Provider_, T } from '../components/ui';
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import type { K } from '../../i18n';
 import { bcFigures, formatAt, type Axis } from '../logic/bc';
 import { sourceStatus } from '../logic/status';
@@ -13,7 +13,7 @@ const Swatch = ({ truth }: { readonly truth: string }) => <i className="kv2-bc-l
 
 /** How we know a link, drawn the way the map draws it: pattern and marker shape, not colour alone. */
 export function Legend() {
-  const { copy, t } = useV2();
+  const { copy, t } = useLens();
   return (
     <ul className="kv2-bc-legend" aria-label={t('map.legend.title')}>
       <li><Swatch truth="observed" />{copy.label.observed}</li>
@@ -29,7 +29,7 @@ export function Legend() {
 
 /** States that orbit is the kind of system, not importance, and how many of each there are (counts of nodes by kind). */
 export function OrbitKey({ w }: { readonly w: World }) {
-  const { t } = useV2();
+  const { t } = useLens();
   const f = bcFigures(w);
   const items: ReadonlyArray<readonly [K, K, number]> = [
     ['bc.orbit.inner', 'map.f.products', f.products],
@@ -46,7 +46,7 @@ export function OrbitKey({ w }: { readonly w: World }) {
 
 /** The three readings as three independent counters with one pip per source. There is deliberately no combined figure. */
 export function ReadingsPanel({ w }: { readonly w: World }) {
-  const { t } = useV2();
+  const { t } = useLens();
   const f = bcFigures(w);
   const statuses = w.sources.map((s) => sourceStatus(s, w.now));
   const rows: ReadonlyArray<{ readonly axis: Axis; readonly head: K; readonly unit: K; readonly n: number; readonly sub: string; readonly icon: 'pulse' | 'clock' | 'target' }> = [
@@ -71,7 +71,7 @@ export function ReadingsPanel({ w }: { readonly w: World }) {
 
 /** The six source events in order, not to time scale. Marker tone and fill carry the event's tone. */
 export function Timeline({ w }: { readonly w: World }) {
-  const { route } = useV2();
+  const { route } = useLens();
   return (
     <section className="kv2-bc-tl" aria-labelledby="bc-tl-h" data-testid="bc-timeline">
       <h2 id="bc-tl-h"><Icon name="clock" size={15} /><T k="obs.tl" /><small><T k="bc.tl.sub" /></small></h2>

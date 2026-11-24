@@ -1,7 +1,7 @@
 // Atoms of the B+C pilot: status chip, age bar, source pips and the source ring. Each draws a number the screen also prints.
 import type { ReactNode } from 'react';
 import { Icon } from '../components/Icon';
-import { useV2 } from '../context';
+import { useLens } from '../useLens';
 import { ageGeometry, pipTone, ringShare, type Axis } from '../logic/bc';
 import type { SourceStatus, Tone } from '../logic/status';
 import { PROV_INITIAL, useStatusWords } from './shared';
@@ -37,7 +37,7 @@ interface AgeBarProps {
  * tick a hatched amber segment shows the overflow, and a cut mark says it runs off the track. Never capped at 100.
  */
 export function AgeBar({ s, compact = false, nums = true }: AgeBarProps) {
-  const { t } = useV2();
+  const { t } = useLens();
   const g = ageGeometry(s);
   const base = s.ageMinutes === null ? t('bc.never') : t('obs.read.age', { a: s.ageMinutes, m: s.ttlMinutes });
   const multiple = g.multiple !== null ? t('bc.over', { x: g.multiple }) : null;
@@ -63,7 +63,7 @@ export function AgeBar({ s, compact = false, nums = true }: AgeBarProps) {
 
 /** One pip per source, lettered by provider. Filled = confirmed, hatched = stale, dashed = not known. */
 export function Pips({ axis, statuses }: { readonly axis: Axis; readonly statuses: readonly SourceStatus[] }) {
-  const { copy } = useV2();
+  const { copy } = useLens();
   const words = useStatusWords();
   const word = (s: SourceStatus): string => (axis === 'connectivity' ? words.connectivity(s.connectivity) : axis === 'freshness' ? words.freshness(s.freshness) : words.health(s.health));
   const label = statuses.map((s) => `${copy.provider[s.provider]}: ${word(s)}`).join('; ');
