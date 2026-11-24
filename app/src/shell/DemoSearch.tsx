@@ -19,7 +19,8 @@ export function DemoSearch() {
         value={q}
         placeholder={shell.search.placeholder}
         autoComplete="off"
-        aria-controls="demo-search-results"
+        // Only reference the results list while it exists; a dangling id is invalid ARIA (axe, BACK-91).
+        aria-controls={open ? 'demo-search-results' : undefined}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Escape') setQ(''); }}
       />

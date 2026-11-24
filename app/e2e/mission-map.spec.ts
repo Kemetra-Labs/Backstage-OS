@@ -33,6 +33,55 @@ for (const lang of LANGS) {
   }
 }
 
+// BACK-91 (axe label-content-name-mismatch, WCAG 2.5.3 Label in Name): a speech-input user says what they see, so every word a node
+// shows (title, description on the selected card, status, read age) must appear in its accessible name as one unbroken run.
+const words = (s: string): string[] => s.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+const containsRun = (name: string[], run: string[]): boolean =>
+  run.length === 0 || name.some((_, i) => run.every((w, j) => name[i + j] === w));
+
+for (const lang of LANGS) {
+  for (const persona of ['owner', 'technical'] as const) {
+    test(`Mission Map ${lang}/${persona}: every node's accessible name contains its visible text, also on the selected card`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' }); // no intro, so every card is at rest and visible
+      await openRoute(page, '/map/retail-tower/inventory', { lang, persona });
+      await expect(node(page, 'inventory')).toHaveAttribute('aria-pressed', 'true');
+      const ids = await page.locator('.kv2-bc-node').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.node ?? ''));
+      expect(ids.length).toBe(10);
+      for (const id of ids) {
+        const el = node(page, id);
+        // The browser's computed accessible name (aria snapshot), not an attribute, so a name computed from content is checked too.
+        const name = /button "(.*)"/.exec(await el.ariaSnapshot())?.[1] ?? '';
+        const n = { id, visible: await el.evaluate((e) => (e as HTMLElement).innerText), name };
+        expect(words(n.visible).length, `${n.id} shows text`).toBeGreaterThan(0);
+        expect(containsRun(words(n.name), words(n.visible)), `${n.id}: name "${n.name}" must contain the visible "${n.visible}"`).toBe(true);
+      }
+    });
+  }
+}
+
+// BACK-91: on a narrow canvas unselected nodes hide their status chip, but a screen-reader user must still hear the status
+// (unknown is never healthy, and stale or unavailable must not sound like healthy). The name is computed from content, so the
+// chip may be visually hidden but never removed from the name.
+for (const lang of LANGS) {
+  test(`Mission Map ${lang} @375px: every node's accessible name still carries its status word`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openRoute(page, '/map', { lang, persona: 'owner', width: 375 });
+    // Phones open on the list; switch to the map, where unselected nodes hide their chip.
+    await page.locator('.kv2-bc-top .kv2-seg').last().locator('button').nth(0).click();
+    await expect(page.locator('[data-testid="bc-stage"]')).toHaveAttribute('data-mode', 'map');
+    // Precondition: an unselected chip takes no visible space at this width (so the test is about a hidden status).
+    expect(await page.locator('.kv2-bc-node:not([data-selected]) .kv2-chip').first().evaluate((e) => e.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+    const ids = await page.locator('.kv2-bc-node').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.node ?? ''));
+    for (const id of ids) {
+      const el = node(page, id);
+      const status = ((await el.locator('.kv2-chip').evaluate((e) => e.textContent ?? '')) || '').trim();
+      expect(status.length, `${id} has a status word`).toBeGreaterThan(0);
+      const name = /button "(.*)"/.exec(await el.ariaSnapshot())?.[1] ?? '';
+      expect(name, `${id}: the name must carry "${status}"`).toContain(status);
+    }
+  });
+}
+
 test('Mission Map: the host navigation has the entry, marks it current, and the title names the screen', async ({ page }) => {
   await openRoute(page, '/map', { lang: 'en', persona: 'owner' });
   await expect(page.locator('#sidenav a[data-nav="map"]')).toHaveAttribute('aria-current', 'page');

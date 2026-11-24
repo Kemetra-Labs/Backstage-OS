@@ -1,7 +1,7 @@
 import { ConfigError, loadDatabaseConfig } from '../../src/config/database-config';
 
-const APP = 'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys';
-const AUTH = 'postgresql://kawalys_auth:s3cret-auth@db.internal:5432/kawalys';
+const APP = 'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=verify-full';
+const AUTH = 'postgresql://kawalys_auth:s3cret-auth@db.internal:5432/kawalys?sslmode=verify-full';
 
 describe('loadDatabaseConfig', () => {
   it('returns null when neither URL is set (in-memory sessions, no evidence routes)', () => {
@@ -33,5 +33,53 @@ describe('loadDatabaseConfig', () => {
       expect(message).toMatch(/KAWALYS_DATABASE_URL_/);
       expect(message).not.toMatch(/hunter2|s3cret/);
     }
+  });
+
+  describe('TLS policy', () => {
+    const auth = AUTH;
+    const load = (appUrl: string) => () => loadDatabaseConfig({ KAWALYS_DATABASE_URL_APP: appUrl, KAWALYS_DATABASE_URL_AUTH: auth });
+
+    it('refuses a remote host without sslmode=verify-full, naming only the variable', () => {
+      for (const url of [
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=disable',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=require',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=prefer',
+      ]) {
+        expect(load(url)).toThrow(new ConfigError('KAWALYS_DATABASE_URL_APP must use sslmode=verify-full for a non-loopback host'));
+      }
+    });
+
+    it('accepts loopback hosts without TLS (local development and tests)', () => {
+      for (const host of ['localhost', '127.0.0.1', '[::1]']) {
+        expect(load(`postgres://kawalys_app:s3cret-app@${host}:5432/kawalys`)).not.toThrow();
+      }
+    });
+
+    it('refuses query parameters that pg would apply differently from the URL parser (duplicate sslmode, host override)', () => {
+      for (const url of [
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=verify-full&sslmode=disable',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=disable&sslmode=verify-full',
+        'postgres://kawalys_app:s3cret-app@localhost:5432/kawalys?host=db.evil.com',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=verify-full&host=other.internal',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=verify-full&ssl=false',
+        'postgres://kawalys_app:s3cret-app@db.internal:5432/kawalys?sslmode=verify-full&user=kawalys_migrator',
+      ]) {
+        expect(load(url)).toThrow(ConfigError);
+        let message = '';
+        try {
+          load(url)();
+        } catch (e) {
+          message = (e as Error).message;
+        }
+        expect(message).toMatch(/^KAWALYS_DATABASE_URL_APP /);
+        expect(message).not.toMatch(/s3cret|evil/);
+      }
+    });
+
+    it('accepts a pooled hostname for runtime logins (the workspace setting is transaction-local)', () => {
+      const pooled = 'postgres://kawalys_app:s3cret-app@ep-square-dew-bgjbfuyv-pooler.eu-central-1.aws.neon.tech/kawalys?sslmode=verify-full';
+      expect(load(pooled)).not.toThrow();
+    });
   });
 });

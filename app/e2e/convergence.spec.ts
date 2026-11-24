@@ -98,7 +98,8 @@ for (const lang of LANGS) {
         expect(leaks(await surface(page)), `${persona}/${lang} ${route}`).toEqual([]);
       }
       await openRoute(page, '/', { lang, persona, width: 1440 });
-      const box = page.locator('input[aria-controls="demo-search-results"]');
+      // By id: aria-controls is only set while the results list exists (BACK-91 axe fix), so it cannot locate the closed box.
+      const box = page.locator('#demo-search');
       for (const id of RESTRICTED) {
         await box.fill(id);
         // Search matches substrings, so "O-5" may find an unrelated id such as DEMO-5. What must hold is that no result is the restricted id.

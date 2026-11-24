@@ -257,7 +257,9 @@
   .kv2-bc-card small, .kv2-bc-cardread { display: none; }
   .kv2-bc-node:not([data-selected]) .kv2-bc-card { min-inline-size: 0; max-inline-size: 86px; padding: 1px 5px; border-color: transparent; border-radius: 5px; background: color-mix(in srgb, var(--kv2-bg) 72%, transparent); }
   .kv2-bc-node:not([data-selected]) .kv2-bc-card b { font-size: var(--kv2-t-xs); font-weight: 600; }
-  .kv2-bc-node:not([data-selected]) .kv2-bc-card .kv2-chip { display: none; }
+  /* Visually hidden, not display:none: the node's name is computed from the card, so the status word must stay in it for screen
+     readers (unknown is never healthy; BACK-91). Same properties as .kv2-sr in base.css. */
+  .kv2-bc-node:not([data-selected]) .kv2-bc-card .kv2-chip { position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 }
 @media (max-width: 1180px) {
   /* Stacked: title, risk pills, readings, filters, map, legend, timeline, inspector. The SPEC's bottom sheet (901 to 1180 px)
