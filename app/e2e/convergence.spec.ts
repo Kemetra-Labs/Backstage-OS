@@ -150,6 +150,68 @@ test('keyboard on every lens screen: the skip link moves focus to <main>', async
   }
 });
 
+// BACK-92 R3 (M11, from e2e-v2/interactions.spec.ts "review regressions"): the ?lang= seed is read once. After a switch back to English,
+// moving to another screen (a lens view or a V1 screen, by link or by address) and reloading never bring Arabic back, in the shell or
+// inside a lens.
+test('a ?lang= seed cannot override a later switch back to English', async ({ page }) => {
+  await openRoute(page, '/map', { lang: 'ar', persona: 'owner', width: 1440 });
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+  await page.getByRole('button', { name: 'EN', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  const english = async (where: string) => {
+    await expect(page.locator('html'), where).toHaveAttribute('lang', 'en');
+    await expect(page.locator('html'), where).toHaveAttribute('dir', 'ltr');
+    expect(/[؀-ۿ]/.test(await page.locator('main').innerText()), `${where}: Arabic text in main`).toBe(false);
+  };
+  await page.locator('#sidenav a[data-nav="sources"]').click();
+  await expect(page.locator('main')).toHaveAttribute('data-route', 'sources');
+  await english('sources');
+  await page.locator('.view-switch a[data-view="observatory"]').click();
+  await expect(page.locator('[data-testid="source-observatory-lens"]')).toBeVisible();
+  await english('observatory');
+  for (const route of ['/investigation/INV-DEMO-7/replay', '/agents/deck', '/']) {
+    await page.evaluate((r) => { window.location.hash = `#${r}`; }, route);
+    if (route !== '/') await expect(page.locator(LENS_READY)).toBeVisible();
+    await english(route);
+  }
+  await page.reload();
+  await expect(page.locator('h1')).toBeVisible();
+  await english('after reload');
+});
+
+// BACK-92 R3 (M16, from e2e-v2/structure.spec.ts and interactions.spec.ts "responsive nav"): at 375 px the side navigation is closed and
+// none of its links can take focus; the menu opens it, and Escape closes it again and returns focus to the menu button.
+for (const lang of LANGS) {
+  test(`at 375px the closed side navigation is not focusable, and Escape closes it ${lang}`, async ({ page }) => {
+    for (const route of [...LENSES, '/']) {
+      await openRoute(page, route, { lang, persona: 'owner', width: 375 });
+      const nav = page.locator('#sidenav');
+      const menu = page.locator('button[aria-controls="sidenav"]');
+      const focusable = () => nav.locator('a').evaluateAll((els) => els.filter((a) => { (a as HTMLElement).focus(); return document.activeElement === a; }).length);
+      await expect(menu).toBeVisible();
+      await expect(menu).toHaveAttribute('aria-expanded', 'false');
+      await expect(nav).toBeHidden();
+      expect(await nav.locator('a').count(), route).toBeGreaterThan(5);
+      expect(await focusable(), `${route}: a closed-menu link took focus`).toBe(0);
+      // Escape from the menu button.
+      await menu.click();
+      await expect(nav).toBeVisible();
+      await expect(menu).toHaveAttribute('aria-expanded', 'true');
+      await page.keyboard.press('Escape');
+      await expect(nav, route).toBeHidden();
+      await expect(menu).toHaveAttribute('aria-expanded', 'false');
+      await expect(menu).toBeFocused();
+      // Escape from a link inside the open menu: focus must not stay on a link that is now hidden.
+      await menu.click();
+      await nav.locator('a').first().focus();
+      await page.keyboard.press('Escape');
+      await expect(nav, route).toBeHidden();
+      await expect(menu).toBeFocused();
+      expect(await focusable(), `${route}: a link took focus after Escape`).toBe(0);
+    }
+  });
+}
+
 test('reduced motion on every screen: no running animation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const route of SCREENS) {
