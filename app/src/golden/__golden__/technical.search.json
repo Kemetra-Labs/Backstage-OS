@@ -1,0 +1,376 @@
+[
+  {
+    "href": "#/project/RT",
+    "id": "RT",
+    "kind": "project",
+    "label": "Retail Tower OS",
+    "technicalOnly": false,
+    "text": {
+      "ar": "نقاط البيع والمخزون والمدفوعات لفروع التجزئة.",
+      "en": "Point of sale, stock and payments for retail branches."
+    }
+  },
+  {
+    "href": "#/project/RT/pos",
+    "id": "RT/pos",
+    "kind": "component",
+    "label": "pos-client",
+    "technicalOnly": false,
+    "text": {
+      "ar": "Retail Tower OS",
+      "en": "Retail Tower OS"
+    }
+  },
+  {
+    "href": "#/project/RT/api-gateway",
+    "id": "RT/api-gateway",
+    "kind": "component",
+    "label": "api-gateway",
+    "technicalOnly": false,
+    "text": {
+      "ar": "Retail Tower OS",
+      "en": "Retail Tower OS"
+    }
+  },
+  {
+    "href": "#/project/RT/stock-sync",
+    "id": "RT/stock-sync",
+    "kind": "component",
+    "label": "stock-sync",
+    "technicalOnly": false,
+    "text": {
+      "ar": "Retail Tower OS",
+      "en": "Retail Tower OS"
+    }
+  },
+  {
+    "href": "#/project/RT/payments",
+    "id": "RT/payments",
+    "kind": "component",
+    "label": "payments",
+    "technicalOnly": false,
+    "text": {
+      "ar": "Retail Tower OS",
+      "en": "Retail Tower OS"
+    }
+  },
+  {
+    "href": "#/project/RT/inventory",
+    "id": "RT/inventory",
+    "kind": "component",
+    "label": "inventory",
+    "technicalOnly": false,
+    "text": {
+      "ar": "Retail Tower OS",
+      "en": "Retail Tower OS"
+    }
+  },
+  {
+    "href": "#/project/RT/reporting",
+    "id": "RT/reporting",
+    "kind": "component",
+    "label": "reporting",
+    "technicalOnly": false,
+    "text": {
+      "ar": "Retail Tower OS",
+      "en": "Retail Tower OS"
+    }
+  },
+  {
+    "href": "#/project/RT",
+    "id": "RT-DEMO-112",
+    "kind": "workItem",
+    "label": "RT-DEMO-112",
+    "technicalOnly": false,
+    "text": {
+      "ar": "stock-sync integration test flaky",
+      "en": "stock-sync integration test flaky"
+    }
+  },
+  {
+    "href": "#/project/KH",
+    "id": "KH",
+    "kind": "project",
+    "label": "Khepri",
+    "technicalOnly": false,
+    "text": {
+      "ar": "تطبيق ويب وواجهة برمجية لطلبات العملاء.",
+      "en": "Customer ordering web app and API."
+    }
+  },
+  {
+    "href": "#/project/KH/khepri-web",
+    "id": "KH/khepri-web",
+    "kind": "component",
+    "label": "khepri-web",
+    "technicalOnly": false,
+    "text": {
+      "ar": "Khepri",
+      "en": "Khepri"
+    }
+  },
+  {
+    "href": "#/project/KH/khepri-api",
+    "id": "KH/khepri-api",
+    "kind": "component",
+    "label": "khepri-api",
+    "technicalOnly": false,
+    "text": {
+      "ar": "Khepri",
+      "en": "Khepri"
+    }
+  },
+  {
+    "href": "#/project/KH/khepri-worker",
+    "id": "KH/khepri-worker",
+    "kind": "component",
+    "label": "khepri-worker",
+    "technicalOnly": false,
+    "text": {
+      "ar": "Khepri",
+      "en": "Khepri"
+    }
+  },
+  {
+    "href": "#/project/KH",
+    "id": "KH-DEMO-40",
+    "kind": "workItem",
+    "label": "KH-DEMO-40",
+    "technicalOnly": false,
+    "text": {
+      "ar": "staging error spike",
+      "en": "staging error spike"
+    }
+  },
+  {
+    "href": "#/project/SB",
+    "id": "SB",
+    "kind": "project",
+    "label": "Seshat-BI",
+    "technicalOnly": false,
+    "text": {
+      "ar": "التقارير والتحليلات لمديري الفروع.",
+      "en": "Reporting and analytics for branch managers."
+    }
+  },
+  {
+    "href": "#/investigation/INV-DEMO-7",
+    "id": "INV-DEMO-7",
+    "kind": "investigation",
+    "label": "INV-DEMO-7",
+    "technicalOnly": false,
+    "text": {
+      "ar": "فحص تكامل فاشل على main. قرار الإصدار بانتظار المراجعة.",
+      "en": "Integration check failing on main. Release decision waiting."
+    }
+  },
+  {
+    "href": "#/investigation/INV-DEMO-9",
+    "id": "INV-DEMO-9",
+    "kind": "investigation",
+    "label": "INV-DEMO-9",
+    "technicalOnly": false,
+    "text": {
+      "ar": "الفحوص ناجحة لكن الأخطاء ترتفع في تجهيز Khepri.",
+      "en": "Checks pass but staging errors rise on Khepri."
+    }
+  },
+  {
+    "href": "#/evidence/E-1?from=INV-DEMO-7",
+    "id": "E-1",
+    "kind": "evidence",
+    "label": "E-1",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-2?from=INV-DEMO-7",
+    "id": "E-2",
+    "kind": "evidence",
+    "label": "E-2",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-3?from=INV-DEMO-7",
+    "id": "E-3",
+    "kind": "evidence",
+    "label": "E-3",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-4?from=INV-DEMO-7",
+    "id": "E-4",
+    "kind": "evidence",
+    "label": "E-4",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-5?from=INV-DEMO-7",
+    "id": "E-5",
+    "kind": "evidence",
+    "label": "E-5",
+    "technicalOnly": true,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-6?from=INV-DEMO-7",
+    "id": "E-6",
+    "kind": "evidence",
+    "label": "E-6",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-7?from=INV-DEMO-7",
+    "id": "E-7",
+    "kind": "evidence",
+    "label": "E-7",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-11",
+    "id": "E-11",
+    "kind": "evidence",
+    "label": "E-11",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-12",
+    "id": "E-12",
+    "kind": "evidence",
+    "label": "E-12",
+    "technicalOnly": true,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-21?from=INV-DEMO-9",
+    "id": "E-21",
+    "kind": "evidence",
+    "label": "E-21",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-22?from=INV-DEMO-9",
+    "id": "E-22",
+    "kind": "evidence",
+    "label": "E-22",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-23?from=INV-DEMO-9",
+    "id": "E-23",
+    "kind": "evidence",
+    "label": "E-23",
+    "technicalOnly": true,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-24?from=INV-DEMO-9",
+    "id": "E-24",
+    "kind": "evidence",
+    "label": "E-24",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-31",
+    "id": "E-31",
+    "kind": "evidence",
+    "label": "E-31",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/evidence/E-41",
+    "id": "E-41",
+    "kind": "evidence",
+    "label": "E-41",
+    "technicalOnly": false,
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  {
+    "href": "#/decisions/DEC-DEMO-3",
+    "id": "DEC-DEMO-3",
+    "kind": "decision",
+    "label": "DEC-DEMO-3",
+    "technicalOnly": false,
+    "text": {
+      "ar": "تعليق الإصدار RT 2.14-rc حتى يُعاد التحقق من الفحص الفاشل؟",
+      "en": "Hold release RT 2.14-rc until the failing check is re-verified?"
+    }
+  },
+  {
+    "href": "#/decisions/DEC-DEMO-5",
+    "id": "DEC-DEMO-5",
+    "kind": "decision",
+    "label": "DEC-DEMO-5",
+    "technicalOnly": false,
+    "text": {
+      "ar": "إيقاف عمليات نشر Khepri الإضافية في التجهيز حتى يُفسَّر ارتفاع الأخطاء؟",
+      "en": "Pause further Khepri staging deploys until the error rise is explained?"
+    }
+  },
+  {
+    "href": "#/decisions/DEC-DEMO-1",
+    "id": "DEC-DEMO-1",
+    "kind": "decision",
+    "label": "DEC-DEMO-1",
+    "technicalOnly": false,
+    "text": {
+      "ar": "تجميد تغييرات بيانات الاختبار أسبوع الإصدار (سجل تاريخي تجريبي)",
+      "en": "Freeze test data changes during release week (synthetic historical record)"
+    }
+  }
+]

@@ -1,0 +1,2391 @@
+{
+  "activity": [
+    {
+      "actor": "source",
+      "evidenceId": "E-2",
+      "id": "ACT-1",
+      "minutesAgo": 41,
+      "projectId": "RT",
+      "text": {
+        "ar": "دمج تغيير بيانات الاختبار في {Retail Tower OS}.",
+        "en": "Test data change merged in {Retail Tower OS}."
+      },
+      "truth": "observed"
+    },
+    {
+      "actor": "source",
+      "evidenceId": "E-1",
+      "id": "ACT-2",
+      "investigationId": "INV-DEMO-7",
+      "minutesAgo": 6,
+      "projectId": "RT",
+      "text": {
+        "ar": "فشل فحص التكامل على {main}.",
+        "en": "Integration check failed on {main}."
+      },
+      "truth": "observed"
+    },
+    {
+      "actor": "agent",
+      "agentId": "AG-scout",
+      "id": "ACT-3",
+      "investigationId": "INV-DEMO-7",
+      "minutesAgo": 6,
+      "projectId": "RT",
+      "text": {
+        "ar": "محاكاة: فُتحت الحالة {INV-DEMO-7} للفحص الفاشل.",
+        "en": "Simulated: case {INV-DEMO-7} opened for the failing check."
+      },
+      "truth": "proposed"
+    },
+    {
+      "actor": "agent",
+      "agentId": "AG-collector",
+      "evidenceId": "E-3",
+      "id": "ACT-4",
+      "minutesAgo": 5,
+      "projectId": "RT",
+      "text": {
+        "ar": "محاكاة: رُبط عنصر العمل {RT-DEMO-112} بقاعدة مفتاح الإيداع.",
+        "en": "Simulated: work item {RT-DEMO-112} linked by commit-key rule."
+      },
+      "truth": "correlated"
+    },
+    {
+      "actor": "agent",
+      "agentId": "AG-collector",
+      "id": "ACT-5",
+      "investigationId": "INV-DEMO-7",
+      "minutesAgo": 5,
+      "projectId": "RT",
+      "text": {
+        "ar": "محاكاة: صيغت مسودة المقترح {DEC-DEMO-3} لمراجعة بشرية.",
+        "en": "Simulated: proposal {DEC-DEMO-3} drafted for human review."
+      },
+      "truth": "proposed"
+    },
+    {
+      "actor": "agent",
+      "agentId": "AG-scout",
+      "id": "ACT-6",
+      "investigationId": "INV-DEMO-9",
+      "minutesAgo": 19,
+      "projectId": "KH",
+      "text": {
+        "ar": "محاكاة: فُتحت الحالة {INV-DEMO-9} لإشارات متعارضة.",
+        "en": "Simulated: case {INV-DEMO-9} opened for conflicting signals."
+      },
+      "truth": "proposed"
+    },
+    {
+      "actor": "source",
+      "evidenceId": "E-24",
+      "id": "ACT-7",
+      "minutesAgo": 300,
+      "projectId": "KH",
+      "text": {
+        "ar": "أصبح {Jira} الخاص بـ {Khepri} غير متاح.",
+        "en": "{Jira} for {Khepri} became unavailable."
+      },
+      "truth": "unknown"
+    },
+    {
+      "actor": "human",
+      "agentId": "AG-guard",
+      "id": "ACT-8",
+      "minutesAgo": 1440,
+      "projectId": "RT",
+      "text": {
+        "ar": "أوقف مالك {release-guard} مؤقتًا (سجل تجريبي).",
+        "en": "An owner paused {release-guard} (synthetic record)."
+      },
+      "truth": "observed"
+    }
+  ],
+  "agents": [
+    {
+      "capabilities": [
+        {
+          "id": "read-ci",
+          "label": {
+            "ar": "قراءة نتائج التكامل المستمر (محاكاة)",
+            "en": "Read CI results (simulated)"
+          },
+          "status": "simulated"
+        },
+        {
+          "id": "open-case",
+          "label": {
+            "ar": "فتح حالة تحقيق (محاكاة)",
+            "en": "Open an investigation case (simulated)"
+          },
+          "status": "simulated"
+        }
+      ],
+      "id": "AG-scout",
+      "lastActivityMinutesAgo": 6,
+      "name": "triage-scout",
+      "projectIds": [
+        "RT",
+        "KH"
+      ],
+      "purpose": {
+        "ar": "يجمع الفحوص الفاشلة الجديدة في حالات تحقيق.",
+        "en": "Groups new failing checks into investigation cases."
+      },
+      "state": "watching"
+    },
+    {
+      "capabilities": [
+        {
+          "id": "correlate",
+          "label": {
+            "ar": "الربط وفق قاعدة مكتوبة (محاكاة)",
+            "en": "Correlate by written rule (simulated)"
+          },
+          "status": "simulated"
+        }
+      ],
+      "id": "AG-collector",
+      "lastActivityMinutesAgo": 5,
+      "name": "evidence-collector",
+      "projectIds": [
+        "RT",
+        "KH",
+        "SB"
+      ],
+      "purpose": {
+        "ar": "يربط الأدلة بالحالات وفق قواعد مكتوبة.",
+        "en": "Links evidence to cases by written rules."
+      },
+      "state": "idle"
+    },
+    {
+      "capabilities": [
+        {
+          "id": "draft-note",
+          "label": {
+            "ar": "كتابة مسودة مقترح (محاكاة)",
+            "en": "Draft a proposal (simulated)"
+          },
+          "status": "simulated"
+        }
+      ],
+      "id": "AG-guard",
+      "lastActivityMinutesAgo": 1440,
+      "name": "release-guard",
+      "projectIds": [
+        "RT"
+      ],
+      "purpose": {
+        "ar": "يكتب مسودات ملاحظات مخاطر الإصدار لمالك بشري.",
+        "en": "Drafts release-risk notes for a human owner."
+      },
+      "state": "paused"
+    },
+    {
+      "capabilities": [
+        {
+          "id": "write",
+          "label": {
+            "ar": "أي كتابة على الكود أو التكامل المستمر أو التذاكر",
+            "en": "Any write to code, CI or tickets"
+          },
+          "status": "not_available"
+        }
+      ],
+      "id": "AG-fixer",
+      "lastActivityMinutesAgo": null,
+      "name": "remediation",
+      "projectIds": [],
+      "purpose": {
+        "ar": "سيغيّر الكود أو البنية التحتية. ليس جزءًا من {Kawalys} في هذا الإصدار.",
+        "en": "Would change code or infrastructure. Not part of Kawalys in this version."
+      },
+      "state": "not_enabled"
+    }
+  ],
+  "decisions": [
+    {
+      "ageMinutes": 5,
+      "classification": "proposed",
+      "context": {
+        "ar": "الإصدار {RT 2.14-rc} مخطط في 18 نوفمبر. فحص التكامل الخاص به فاشل على {main}.",
+        "en": "Release {RT 2.14-rc} is planned for 18 Nov. Its integration check is failing on {main}."
+      },
+      "decidedIn": "RT-DEMO-112",
+      "hypotheses": [
+        {
+          "ar": "تغيير المنطقة الزمنية في بيانات الاختبار سبب الفشل. غير مؤكد.",
+          "en": "A test data timezone change caused the failure. Not confirmed."
+        }
+      ],
+      "id": "DEC-DEMO-3",
+      "investigationId": "INV-DEMO-7",
+      "nextStep": {
+        "nontechnical": {
+          "ar": "المراجعة في {RT-DEMO-112}: اختيار خيار مع مالك الإصدار.",
+          "en": "Review in {RT-DEMO-112}: choose an option with the release owner."
+        },
+        "owner": {
+          "ar": "المراجعة في {RT-DEMO-112}: اختيار خيار مع مالك الإصدار.",
+          "en": "Review in {RT-DEMO-112}: choose an option with the release owner."
+        },
+        "technical": {
+          "ar": "المراجعة في {RT-DEMO-112}: اختيار خيار مع مالك الإصدار.",
+          "en": "Review in {RT-DEMO-112}: choose an option with the release owner."
+        }
+      },
+      "observed": [
+        {
+          "classification": "observed",
+          "freshness": "current",
+          "id": "E-1",
+          "observation": {
+            "environment": "ci",
+            "id": "O-1",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T14:02:00Z",
+            "source": {
+              "ageMinutes": 6,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "github",
+              "synthetic": true,
+              "ttlSeconds": 1800
+            },
+            "sourceUrl": "https://github.example.invalid/run/DEMO-4471",
+            "target": {
+              "externalId": "#DEMO-4471",
+              "id": "check:integration-tests-stock-sync",
+              "kind": "check",
+              "label": "ci / integration-tests (stock-sync)"
+            }
+          },
+          "visibility": "all"
+        },
+        {
+          "classification": "observed",
+          "freshness": "current",
+          "id": "E-2",
+          "observation": {
+            "environment": "ci",
+            "id": "O-2",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T13:27:00Z",
+            "source": {
+              "ageMinutes": 6,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "github",
+              "synthetic": true,
+              "ttlSeconds": 1800
+            },
+            "sourceUrl": "https://github.example.invalid/pull/DEMO-88",
+            "target": {
+              "externalId": "PR #DEMO-88",
+              "id": "pr:DEMO-88",
+              "kind": "check",
+              "label": "fixture timezone update"
+            }
+          },
+          "visibility": "all"
+        },
+        {
+          "classification": "observed",
+          "freshness": "current",
+          "id": "E-4",
+          "observation": {
+            "environment": "ci",
+            "id": "O-4",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T13:51:00Z",
+            "source": {
+              "ageMinutes": 12,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "jira",
+              "synthetic": true,
+              "ttlSeconds": 7200
+            },
+            "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+            "target": {
+              "externalId": "RT-DEMO-112",
+              "id": "jira:RT-DEMO-112",
+              "kind": "workItem",
+              "label": "stock-sync integration test flaky"
+            }
+          },
+          "visibility": "all"
+        }
+      ],
+      "options": [
+        {
+          "benefit": {
+            "ar": "لا إصدار مع فحص فاشل غير مُفسَّر.",
+            "en": "No release with an unexplained failing check."
+          },
+          "evidence": [
+            {
+              "classification": "observed",
+              "freshness": "current",
+              "id": "E-1",
+              "observation": {
+                "environment": "ci",
+                "id": "O-1",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T14:02:00Z",
+                "source": {
+                  "ageMinutes": 6,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "github",
+                  "synthetic": true,
+                  "ttlSeconds": 1800
+                },
+                "sourceUrl": "https://github.example.invalid/run/DEMO-4471",
+                "target": {
+                  "externalId": "#DEMO-4471",
+                  "id": "check:integration-tests-stock-sync",
+                  "kind": "check",
+                  "label": "ci / integration-tests (stock-sync)"
+                }
+              },
+              "visibility": "all"
+            },
+            {
+              "classification": "observed",
+              "freshness": "current",
+              "id": "E-2",
+              "observation": {
+                "environment": "ci",
+                "id": "O-2",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T13:27:00Z",
+                "source": {
+                  "ageMinutes": 6,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "github",
+                  "synthetic": true,
+                  "ttlSeconds": 1800
+                },
+                "sourceUrl": "https://github.example.invalid/pull/DEMO-88",
+                "target": {
+                  "externalId": "PR #DEMO-88",
+                  "id": "pr:DEMO-88",
+                  "kind": "check",
+                  "label": "fixture timezone update"
+                }
+              },
+              "visibility": "all"
+            }
+          ],
+          "id": "A",
+          "risk": {
+            "ar": "قد يتأخر موعد 18 نوفمبر.",
+            "en": "The 18 Nov date may slip."
+          },
+          "suggested": true,
+          "title": {
+            "ar": "تعليق المرشح للإصدار حتى يُعاد التحقق من الفحص",
+            "en": "Hold the release candidate until the check is re-verified"
+          },
+          "unknowns": [
+            {
+              "ar": "المدة اللازمة لإعادة الفحص.",
+              "en": "How long a re-check takes."
+            }
+          ]
+        },
+        {
+          "benefit": {
+            "ar": "يبقى موعد الإصدار كما هو.",
+            "en": "Release date holds."
+          },
+          "evidence": [
+            {
+              "classification": "observed",
+              "freshness": "current",
+              "id": "E-4",
+              "observation": {
+                "environment": "ci",
+                "id": "O-4",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T13:51:00Z",
+                "source": {
+                  "ageMinutes": 12,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "jira",
+                  "synthetic": true,
+                  "ttlSeconds": 7200
+                },
+                "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+                "target": {
+                  "externalId": "RT-DEMO-112",
+                  "id": "jira:RT-DEMO-112",
+                  "kind": "workItem",
+                  "label": "stock-sync integration test flaky"
+                }
+              },
+              "visibility": "all"
+            },
+            {
+              "classification": "correlated",
+              "freshness": "current",
+              "id": "E-3",
+              "observation": {
+                "environment": "ci",
+                "id": "O-3",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T13:51:00Z",
+                "source": {
+                  "ageMinutes": 12,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "jira",
+                  "synthetic": true,
+                  "ttlSeconds": 7200
+                },
+                "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+                "target": {
+                  "externalId": "RT-DEMO-112",
+                  "id": "jira:RT-DEMO-112",
+                  "kind": "workItem",
+                  "label": "stock-sync integration test flaky"
+                }
+              },
+              "rule": "Jira key in the commit message of the merged PR",
+              "visibility": "all"
+            }
+          ],
+          "id": "B",
+          "risk": {
+            "ar": "قد يُشحن خلل حقيقي في مزامنة المخزون.",
+            "en": "A real stock-sync defect could ship."
+          },
+          "suggested": false,
+          "title": {
+            "ar": "الإبقاء على الموعد وقبول مخاطرة الاختبار",
+            "en": "Keep the date and accept the test risk"
+          },
+          "unknowns": [
+            {
+              "ar": "الأثر التشغيلي غير مُثبت في أي اتجاه.",
+              "en": "Runtime impact is not evidenced either way."
+            }
+          ]
+        },
+        {
+          "benefit": {
+            "ar": "يختبر الفرضية مباشرة.",
+            "en": "Tests the hypothesis directly."
+          },
+          "evidence": [
+            {
+              "classification": "observed",
+              "freshness": "current",
+              "id": "E-2",
+              "observation": {
+                "environment": "ci",
+                "id": "O-2",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T13:27:00Z",
+                "source": {
+                  "ageMinutes": 6,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "github",
+                  "synthetic": true,
+                  "ttlSeconds": 1800
+                },
+                "sourceUrl": "https://github.example.invalid/pull/DEMO-88",
+                "target": {
+                  "externalId": "PR #DEMO-88",
+                  "id": "pr:DEMO-88",
+                  "kind": "check",
+                  "label": "fixture timezone update"
+                }
+              },
+              "visibility": "all"
+            }
+          ],
+          "id": "C",
+          "risk": {
+            "ar": "قد يُخفي المشكلة إن كان الاختبار غير مستقر أصلًا.",
+            "en": "Masks the problem if the test was already flaky."
+          },
+          "suggested": false,
+          "title": {
+            "ar": "إرجاع تغيير بيانات الاختبار أولًا ثم القرار",
+            "en": "Revert the test data change first, then decide"
+          },
+          "unknowns": []
+        }
+      ],
+      "priority": "high",
+      "projectId": "RT",
+      "title": {
+        "nontechnical": {
+          "ar": "تعليق الإصدار {RT 2.14-rc} حتى يُعاد التحقق من الفحص الفاشل؟",
+          "en": "Hold release {RT 2.14-rc} until the failing check is re-verified?"
+        },
+        "owner": {
+          "ar": "تعليق الإصدار {RT 2.14-rc} حتى يُعاد التحقق من الفحص الفاشل؟",
+          "en": "Hold release {RT 2.14-rc} until the failing check is re-verified?"
+        },
+        "technical": {
+          "ar": "تعليق الإصدار {RT 2.14-rc} حتى يُعاد التحقق من الفحص الفاشل؟",
+          "en": "Hold release {RT 2.14-rc} until the failing check is re-verified?"
+        }
+      },
+      "unknowns": [
+        {
+          "ar": "الأثر على العملاء أو التشغيل: لا دليل.",
+          "en": "Customer or runtime impact: not evidenced."
+        },
+        {
+          "ar": "هل كان الاختبار غير مستقر قبل التغيير.",
+          "en": "Whether the test was already flaky before the change."
+        }
+      ]
+    },
+    {
+      "ageMinutes": 17,
+      "classification": "proposed",
+      "context": {
+        "ar": "الفحوص ناجحة، لكن الأخطاء ارتفعت في بيئة التجهيز. تعذرت قراءة عنصر العمل المرتبط.",
+        "en": "Checks pass, but staging errors rose. The linked work item could not be read."
+      },
+      "decidedIn": "KH-DEMO-40",
+      "hypotheses": [
+        {
+          "ar": "ارتفعت الأخطاء في بيئة التجهيز. لم يُحدَّد السبب بعد.",
+          "en": "Staging errors rose. The cause is not established yet."
+        }
+      ],
+      "id": "DEC-DEMO-5",
+      "investigationId": "INV-DEMO-9",
+      "nextStep": {
+        "nontechnical": {
+          "ar": "مالك {Khepri} يراجع في {KH-DEMO-40} عندما يصبح {Jira} مقروءًا مجددًا.",
+          "en": "The {Khepri} owner reviews in {KH-DEMO-40} once {Jira} is readable again."
+        },
+        "owner": {
+          "ar": "مالك {Khepri} يراجع في {KH-DEMO-40} عندما يصبح {Jira} مقروءًا مجددًا.",
+          "en": "The {Khepri} owner reviews in {KH-DEMO-40} once {Jira} is readable again."
+        },
+        "technical": {
+          "ar": "مالك {Khepri} يراجع في {KH-DEMO-40} عندما يصبح {Jira} مقروءًا مجددًا.",
+          "en": "The {Khepri} owner reviews in {KH-DEMO-40} once {Jira} is readable again."
+        }
+      },
+      "observed": [
+        {
+          "classification": "observed",
+          "freshness": "current",
+          "id": "E-21",
+          "observation": {
+            "environment": "ci",
+            "id": "O-21",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T14:04:00Z",
+            "source": {
+              "ageMinutes": 4,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "github",
+              "synthetic": true,
+              "ttlSeconds": 1800
+            },
+            "sourceUrl": "https://github.example.invalid/run/DEMO-5120",
+            "target": {
+              "id": "component:khepri-web",
+              "kind": "component",
+              "label": "khepri-web"
+            }
+          },
+          "visibility": "all"
+        },
+        {
+          "classification": "observed",
+          "freshness": "current",
+          "id": "E-22",
+          "observation": {
+            "environment": "staging",
+            "id": "O-22",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T14:05:00Z",
+            "source": {
+              "ageMinutes": 3,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "sentry",
+              "synthetic": true,
+              "ttlSeconds": 900
+            },
+            "target": {
+              "id": "component:khepri-api",
+              "kind": "component",
+              "label": "khepri-api"
+            }
+          },
+          "visibility": "all"
+        }
+      ],
+      "options": [
+        {
+          "benefit": {
+            "ar": "يحافظ على ثبات الأدلة أثناء الفحص.",
+            "en": "Keeps the evidence stable while it is checked."
+          },
+          "evidence": [
+            {
+              "classification": "observed",
+              "freshness": "current",
+              "id": "E-22",
+              "observation": {
+                "environment": "staging",
+                "id": "O-22",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T14:05:00Z",
+                "source": {
+                  "ageMinutes": 3,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "sentry",
+                  "synthetic": true,
+                  "ttlSeconds": 900
+                },
+                "target": {
+                  "id": "component:khepri-api",
+                  "kind": "component",
+                  "label": "khepri-api"
+                }
+              },
+              "visibility": "all"
+            }
+          ],
+          "id": "A",
+          "risk": {
+            "ar": "فرق أخرى تنتظر بيئة التجهيز.",
+            "en": "Other teams wait for staging."
+          },
+          "suggested": true,
+          "title": {
+            "ar": "إيقاف النشر في التجهيز وفحص ارتفاع الأخطاء",
+            "en": "Pause staging deploys and inspect the error spike"
+          },
+          "unknowns": [
+            {
+              "ar": "أي الفرق متوقفة.",
+              "en": "Which teams are blocked."
+            }
+          ]
+        },
+        {
+          "benefit": {
+            "ar": "لا تباطؤ في التسليم.",
+            "en": "No delivery slowdown."
+          },
+          "evidence": [
+            {
+              "classification": "observed",
+              "freshness": "current",
+              "id": "E-21",
+              "observation": {
+                "environment": "ci",
+                "id": "O-21",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T14:04:00Z",
+                "source": {
+                  "ageMinutes": 4,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "github",
+                  "synthetic": true,
+                  "ttlSeconds": 1800
+                },
+                "sourceUrl": "https://github.example.invalid/run/DEMO-5120",
+                "target": {
+                  "id": "component:khepri-web",
+                  "kind": "component",
+                  "label": "khepri-web"
+                }
+              },
+              "visibility": "all"
+            }
+          ],
+          "id": "B",
+          "risk": {
+            "ar": "قد تزيد الأخطاء ويصعب تتبعها.",
+            "en": "Errors may grow and become harder to trace."
+          },
+          "suggested": false,
+          "title": {
+            "ar": "متابعة النشر ومراقبة معدل الأخطاء",
+            "en": "Continue deploys and watch the error rate"
+          },
+          "unknowns": []
+        }
+      ],
+      "priority": "medium",
+      "projectId": "KH",
+      "title": {
+        "nontechnical": {
+          "ar": "إيقاف عمليات نشر {Khepri} الإضافية في التجهيز حتى يُفسَّر ارتفاع الأخطاء؟",
+          "en": "Pause further {Khepri} staging deploys until the error rise is explained?"
+        },
+        "owner": {
+          "ar": "إيقاف عمليات نشر {Khepri} الإضافية في التجهيز حتى يُفسَّر ارتفاع الأخطاء؟",
+          "en": "Pause further {Khepri} staging deploys until the error rise is explained?"
+        },
+        "technical": {
+          "ar": "إيقاف عمليات نشر {Khepri} الإضافية في التجهيز حتى يُفسَّر ارتفاع الأخطاء؟",
+          "en": "Pause further {Khepri} staging deploys until the error rise is explained?"
+        }
+      },
+      "unknowns": [
+        {
+          "ar": "حالة عنصر العمل: {Jira} غير متاح.",
+          "en": "Work item status: {Jira} unavailable."
+        },
+        {
+          "ar": "هل الإنتاج متأثر: لا يوجد مصدر للإنتاج.",
+          "en": "Whether production is affected: no production source."
+        }
+      ]
+    },
+    {
+      "ageMinutes": 20640,
+      "classification": "approved",
+      "context": {
+        "ar": "قرار سابق تجريبي مسجل في {Confluence}. يُعرض لتوضيح وسم «معتمد» فقط.",
+        "en": "A past, synthetic decision recorded in {Confluence}. Shown to illustrate the Approved label only."
+      },
+      "decidedIn": "KMC-DEMO-21",
+      "hypotheses": [],
+      "id": "DEC-DEMO-1",
+      "nextStep": {
+        "nontechnical": {
+          "ar": "لا خطوة: هذا سجل تاريخي.",
+          "en": "No step: this is a historical record."
+        },
+        "owner": {
+          "ar": "لا خطوة: هذا سجل تاريخي.",
+          "en": "No step: this is a historical record."
+        },
+        "technical": {
+          "ar": "لا خطوة: هذا سجل تاريخي.",
+          "en": "No step: this is a historical record."
+        }
+      },
+      "observed": [
+        {
+          "classification": "approved",
+          "freshness": "current",
+          "id": "E-41",
+          "observation": {
+            "environment": "unknown",
+            "id": "O-41",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-02T09:00:00Z",
+            "source": {
+              "ageMinutes": 30,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "confluence",
+              "synthetic": true,
+              "ttlSeconds": 86400
+            },
+            "sourceUrl": "https://confluence.example.invalid/KMC/DEMO-21",
+            "target": {
+              "externalId": "KMC-DEMO-21",
+              "id": "decision:DEC-DEMO-1",
+              "kind": "decision",
+              "label": "Release week fixture freeze"
+            }
+          },
+          "visibility": "all"
+        }
+      ],
+      "options": [],
+      "priority": "low",
+      "projectId": "RT",
+      "record": {
+        "classification": "approved",
+        "freshness": "current",
+        "id": "E-41",
+        "observation": {
+          "environment": "unknown",
+          "id": "O-41",
+          "ingestedAt": "2026-11-16T14:03:00Z",
+          "observedAt": "2026-11-02T09:00:00Z",
+          "source": {
+            "ageMinutes": 30,
+            "connectivity": "reachable",
+            "lastSuccessAt": "2026-11-16T14:03:00Z",
+            "provider": "confluence",
+            "synthetic": true,
+            "ttlSeconds": 86400
+          },
+          "sourceUrl": "https://confluence.example.invalid/KMC/DEMO-21",
+          "target": {
+            "externalId": "KMC-DEMO-21",
+            "id": "decision:DEC-DEMO-1",
+            "kind": "decision",
+            "label": "Release week fixture freeze"
+          }
+        },
+        "visibility": "all"
+      },
+      "title": {
+        "nontechnical": {
+          "ar": "تجميد تغييرات بيانات الاختبار أسبوع الإصدار (سجل تاريخي تجريبي)",
+          "en": "Freeze test data changes during release week (synthetic historical record)"
+        },
+        "owner": {
+          "ar": "تجميد تغييرات بيانات الاختبار أسبوع الإصدار (سجل تاريخي تجريبي)",
+          "en": "Freeze test data changes during release week (synthetic historical record)"
+        },
+        "technical": {
+          "ar": "تجميد تغييرات بيانات الاختبار أسبوع الإصدار (سجل تاريخي تجريبي)",
+          "en": "Freeze test data changes during release week (synthetic historical record)"
+        }
+      },
+      "unknowns": []
+    }
+  ],
+  "evidence": {
+    "E-1": {
+      "classification": "observed",
+      "freshness": "current",
+      "id": "E-1",
+      "observation": {
+        "environment": "ci",
+        "id": "O-1",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T14:02:00Z",
+        "source": {
+          "ageMinutes": 6,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "github",
+          "synthetic": true,
+          "ttlSeconds": 1800
+        },
+        "sourceUrl": "https://github.example.invalid/run/DEMO-4471",
+        "target": {
+          "externalId": "#DEMO-4471",
+          "id": "check:integration-tests-stock-sync",
+          "kind": "check",
+          "label": "ci / integration-tests (stock-sync)"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-11": {
+      "classification": "observed",
+      "freshness": "current",
+      "id": "E-11",
+      "observation": {
+        "environment": "ci",
+        "id": "O-11",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T13:58:00Z",
+        "source": {
+          "ageMinutes": 6,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "github",
+          "synthetic": true,
+          "ttlSeconds": 1800
+        },
+        "sourceUrl": "https://github.example.invalid/run/DEMO-4468",
+        "target": {
+          "id": "component:api-gateway",
+          "kind": "component",
+          "label": "api-gateway"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-2": {
+      "classification": "observed",
+      "freshness": "current",
+      "id": "E-2",
+      "observation": {
+        "environment": "ci",
+        "id": "O-2",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T13:27:00Z",
+        "source": {
+          "ageMinutes": 6,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "github",
+          "synthetic": true,
+          "ttlSeconds": 1800
+        },
+        "sourceUrl": "https://github.example.invalid/pull/DEMO-88",
+        "target": {
+          "externalId": "PR #DEMO-88",
+          "id": "pr:DEMO-88",
+          "kind": "check",
+          "label": "fixture timezone update"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-21": {
+      "classification": "observed",
+      "freshness": "current",
+      "id": "E-21",
+      "observation": {
+        "environment": "ci",
+        "id": "O-21",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T14:04:00Z",
+        "source": {
+          "ageMinutes": 4,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "github",
+          "synthetic": true,
+          "ttlSeconds": 1800
+        },
+        "sourceUrl": "https://github.example.invalid/run/DEMO-5120",
+        "target": {
+          "id": "component:khepri-web",
+          "kind": "component",
+          "label": "khepri-web"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-22": {
+      "classification": "observed",
+      "freshness": "current",
+      "id": "E-22",
+      "observation": {
+        "environment": "staging",
+        "id": "O-22",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T14:05:00Z",
+        "source": {
+          "ageMinutes": 3,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "sentry",
+          "synthetic": true,
+          "ttlSeconds": 900
+        },
+        "target": {
+          "id": "component:khepri-api",
+          "kind": "component",
+          "label": "khepri-api"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-24": {
+      "classification": "observed",
+      "freshness": "stale",
+      "id": "E-24",
+      "notReadReason": "unavailable",
+      "observation": null,
+      "visibility": "all"
+    },
+    "E-3": {
+      "classification": "correlated",
+      "freshness": "current",
+      "id": "E-3",
+      "observation": {
+        "environment": "ci",
+        "id": "O-3",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T13:51:00Z",
+        "source": {
+          "ageMinutes": 12,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "jira",
+          "synthetic": true,
+          "ttlSeconds": 7200
+        },
+        "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+        "target": {
+          "externalId": "RT-DEMO-112",
+          "id": "jira:RT-DEMO-112",
+          "kind": "workItem",
+          "label": "stock-sync integration test flaky"
+        }
+      },
+      "rule": "Jira key in the commit message of the merged PR",
+      "visibility": "all"
+    },
+    "E-31": {
+      "classification": "observed",
+      "freshness": "unknown",
+      "id": "E-31",
+      "notReadReason": "not_configured",
+      "observation": null,
+      "visibility": "all"
+    },
+    "E-4": {
+      "classification": "observed",
+      "freshness": "current",
+      "id": "E-4",
+      "observation": {
+        "environment": "ci",
+        "id": "O-4",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T13:51:00Z",
+        "source": {
+          "ageMinutes": 12,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "jira",
+          "synthetic": true,
+          "ttlSeconds": 7200
+        },
+        "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+        "target": {
+          "externalId": "RT-DEMO-112",
+          "id": "jira:RT-DEMO-112",
+          "kind": "workItem",
+          "label": "stock-sync integration test flaky"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-41": {
+      "classification": "approved",
+      "freshness": "current",
+      "id": "E-41",
+      "observation": {
+        "environment": "unknown",
+        "id": "O-41",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-02T09:00:00Z",
+        "source": {
+          "ageMinutes": 30,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "confluence",
+          "synthetic": true,
+          "ttlSeconds": 86400
+        },
+        "sourceUrl": "https://confluence.example.invalid/KMC/DEMO-21",
+        "target": {
+          "externalId": "KMC-DEMO-21",
+          "id": "decision:DEC-DEMO-1",
+          "kind": "decision",
+          "label": "Release week fixture freeze"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-6": {
+      "classification": "observed",
+      "freshness": "unknown",
+      "id": "E-6",
+      "notReadReason": "not_configured",
+      "observation": null,
+      "visibility": "all"
+    },
+    "E-7": {
+      "classification": "observed",
+      "freshness": "stale",
+      "id": "E-7",
+      "notReadReason": "unavailable",
+      "observation": null,
+      "visibility": "all"
+    }
+  },
+  "evidenceText": {
+    "E-11": {
+      "nontechnical": {
+        "ar": "نجح فحص الدخان للبوابة على {main}",
+        "en": "Gateway smoke check passed on {main}"
+      },
+      "owner": {
+        "ar": "نجح فحص الدخان للبوابة على {main}",
+        "en": "Gateway smoke check passed on {main}"
+      },
+      "technical": {
+        "ar": "نجح فحص الدخان للبوابة على {main}",
+        "en": "Gateway smoke check passed on {main}"
+      }
+    },
+    "E-21": {
+      "nontechnical": {
+        "ar": "نجحت فحوص ويب {Khepri}",
+        "en": "{Khepri} web checks passed"
+      },
+      "owner": {
+        "ar": "نجحت فحوص ويب {Khepri}",
+        "en": "{Khepri} web checks passed"
+      },
+      "technical": {
+        "ar": "نجحت فحوص ويب {Khepri}",
+        "en": "{Khepri} web checks passed"
+      }
+    },
+    "E-22": {
+      "nontechnical": {
+        "ar": "أخطاء {khepri-api} في ازدياد في التجهيز",
+        "en": "{khepri-api} errors rising in staging"
+      },
+      "owner": {
+        "ar": "أخطاء {khepri-api} في ازدياد في التجهيز",
+        "en": "{khepri-api} errors rising in staging"
+      },
+      "technical": {
+        "ar": "أخطاء {khepri-api} في ازدياد في التجهيز",
+        "en": "{khepri-api} errors rising in staging"
+      }
+    },
+    "E-24": {
+      "nontechnical": {
+        "ar": "عنصر العمل {KH-DEMO-40} (لم يُقرأ)",
+        "en": "Work item {KH-DEMO-40} (not read)"
+      },
+      "owner": {
+        "ar": "عنصر العمل {KH-DEMO-40} (لم يُقرأ)",
+        "en": "Work item {KH-DEMO-40} (not read)"
+      },
+      "technical": {
+        "ar": "عنصر العمل {KH-DEMO-40} (لم يُقرأ)",
+        "en": "Work item {KH-DEMO-40} (not read)"
+      }
+    },
+    "E-31": {
+      "nontechnical": {
+        "ar": "حالة خط {Seshat-BI} (لم تُقرأ)",
+        "en": "{Seshat-BI} pipeline status (not read)"
+      },
+      "owner": {
+        "ar": "حالة خط {Seshat-BI} (لم تُقرأ)",
+        "en": "{Seshat-BI} pipeline status (not read)"
+      },
+      "technical": {
+        "ar": "حالة خط {Seshat-BI} (لم تُقرأ)",
+        "en": "{Seshat-BI} pipeline status (not read)"
+      }
+    },
+    "E-41": {
+      "nontechnical": {
+        "ar": "تجميد أسبوع الإصدار مسجل في {Confluence}",
+        "en": "Release-week freeze recorded in {Confluence}"
+      },
+      "owner": {
+        "ar": "تجميد أسبوع الإصدار مسجل في {Confluence}",
+        "en": "Release-week freeze recorded in {Confluence}"
+      },
+      "technical": {
+        "ar": "تجميد أسبوع الإصدار مسجل في {Confluence}",
+        "en": "Release-week freeze recorded in {Confluence}"
+      }
+    }
+  },
+  "investigations": [
+    {
+      "componentId": "stock-sync",
+      "decisionId": "DEC-DEMO-3",
+      "evidence": [
+        {
+          "classification": "observed",
+          "freshness": "current",
+          "id": "E-1",
+          "observation": {
+            "environment": "ci",
+            "id": "O-1",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T14:02:00Z",
+            "source": {
+              "ageMinutes": 6,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "github",
+              "synthetic": true,
+              "ttlSeconds": 1800
+            },
+            "sourceUrl": "https://github.example.invalid/run/DEMO-4471",
+            "target": {
+              "externalId": "#DEMO-4471",
+              "id": "check:integration-tests-stock-sync",
+              "kind": "check",
+              "label": "ci / integration-tests (stock-sync)"
+            }
+          },
+          "visibility": "all"
+        },
+        {
+          "classification": "observed",
+          "freshness": "current",
+          "id": "E-2",
+          "observation": {
+            "environment": "ci",
+            "id": "O-2",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T13:27:00Z",
+            "source": {
+              "ageMinutes": 6,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "github",
+              "synthetic": true,
+              "ttlSeconds": 1800
+            },
+            "sourceUrl": "https://github.example.invalid/pull/DEMO-88",
+            "target": {
+              "externalId": "PR #DEMO-88",
+              "id": "pr:DEMO-88",
+              "kind": "check",
+              "label": "fixture timezone update"
+            }
+          },
+          "visibility": "all"
+        },
+        {
+          "classification": "correlated",
+          "freshness": "current",
+          "id": "E-3",
+          "observation": {
+            "environment": "ci",
+            "id": "O-3",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T13:51:00Z",
+            "source": {
+              "ageMinutes": 12,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "jira",
+              "synthetic": true,
+              "ttlSeconds": 7200
+            },
+            "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+            "target": {
+              "externalId": "RT-DEMO-112",
+              "id": "jira:RT-DEMO-112",
+              "kind": "workItem",
+              "label": "stock-sync integration test flaky"
+            }
+          },
+          "rule": "Jira key in the commit message of the merged PR",
+          "visibility": "all"
+        },
+        {
+          "classification": "observed",
+          "freshness": "current",
+          "id": "E-4",
+          "observation": {
+            "environment": "ci",
+            "id": "O-4",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T13:51:00Z",
+            "source": {
+              "ageMinutes": 12,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "jira",
+              "synthetic": true,
+              "ttlSeconds": 7200
+            },
+            "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+            "target": {
+              "externalId": "RT-DEMO-112",
+              "id": "jira:RT-DEMO-112",
+              "kind": "workItem",
+              "label": "stock-sync integration test flaky"
+            }
+          },
+          "visibility": "all"
+        },
+        {
+          "classification": "observed",
+          "freshness": "unknown",
+          "id": "E-6",
+          "notReadReason": "not_configured",
+          "observation": null,
+          "visibility": "all"
+        },
+        {
+          "classification": "observed",
+          "freshness": "stale",
+          "id": "E-7",
+          "notReadReason": "unavailable",
+          "observation": null,
+          "visibility": "all"
+        }
+      ],
+      "fullRoom": true,
+      "id": "INV-DEMO-7",
+      "missing": [
+        {
+          "ar": "حالة التشغيل: {Datadog} غير مُعدّ.",
+          "en": "Runtime health: {Datadog} not set up."
+        },
+        {
+          "ar": "مالك الخدمة: كتالوج {Port} غير متاح.",
+          "en": "Service owner: {Port} catalog unavailable."
+        }
+      ],
+      "projectId": "RT",
+      "startedMinutesAgo": 6,
+      "status": "open",
+      "title": {
+        "nontechnical": {
+          "ar": "فحص تكامل فاشل على {main}. قرار الإصدار بانتظار المراجعة.",
+          "en": "Integration check failing on {main}. Release decision waiting."
+        },
+        "owner": {
+          "ar": "فحص تكامل فاشل على {main}. قرار الإصدار بانتظار المراجعة.",
+          "en": "Integration check failing on {main}. Release decision waiting."
+        },
+        "technical": {
+          "ar": "فحص تكامل فاشل على {main}. قرار الإصدار بانتظار المراجعة.",
+          "en": "Integration check failing on {main}. Release decision waiting."
+        }
+      }
+    },
+    {
+      "componentId": "khepri-api",
+      "decisionId": "DEC-DEMO-5",
+      "evidence": [
+        {
+          "classification": "observed",
+          "freshness": "current",
+          "id": "E-21",
+          "observation": {
+            "environment": "ci",
+            "id": "O-21",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T14:04:00Z",
+            "source": {
+              "ageMinutes": 4,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "github",
+              "synthetic": true,
+              "ttlSeconds": 1800
+            },
+            "sourceUrl": "https://github.example.invalid/run/DEMO-5120",
+            "target": {
+              "id": "component:khepri-web",
+              "kind": "component",
+              "label": "khepri-web"
+            }
+          },
+          "visibility": "all"
+        },
+        {
+          "classification": "observed",
+          "freshness": "current",
+          "id": "E-22",
+          "observation": {
+            "environment": "staging",
+            "id": "O-22",
+            "ingestedAt": "2026-11-16T14:03:00Z",
+            "observedAt": "2026-11-16T14:05:00Z",
+            "source": {
+              "ageMinutes": 3,
+              "connectivity": "reachable",
+              "lastSuccessAt": "2026-11-16T14:03:00Z",
+              "provider": "sentry",
+              "synthetic": true,
+              "ttlSeconds": 900
+            },
+            "target": {
+              "id": "component:khepri-api",
+              "kind": "component",
+              "label": "khepri-api"
+            }
+          },
+          "visibility": "all"
+        },
+        {
+          "classification": "observed",
+          "freshness": "stale",
+          "id": "E-24",
+          "notReadReason": "unavailable",
+          "observation": null,
+          "visibility": "all"
+        }
+      ],
+      "fullRoom": false,
+      "id": "INV-DEMO-9",
+      "missing": [
+        {
+          "ar": "عنصر العمل {KH-DEMO-40}: {Jira} غير متاح، آخر قراءة قبل 5 س.",
+          "en": "Work item {KH-DEMO-40}: {Jira} unavailable, last read 5 h ago."
+        },
+        {
+          "ar": "مقاييس التشغيل: {Datadog} غير مُعدّ.",
+          "en": "Runtime metrics: {Datadog} not set up."
+        }
+      ],
+      "projectId": "KH",
+      "startedMinutesAgo": 19,
+      "status": "open",
+      "title": {
+        "nontechnical": {
+          "ar": "الفحوص ناجحة لكن الأخطاء ترتفع في تجهيز {Khepri}.",
+          "en": "Checks pass but staging errors rise on {Khepri}."
+        },
+        "owner": {
+          "ar": "الفحوص ناجحة لكن الأخطاء ترتفع في تجهيز {Khepri}.",
+          "en": "Checks pass but staging errors rise on {Khepri}."
+        },
+        "technical": {
+          "ar": "الفحوص ناجحة لكن الأخطاء ترتفع في تجهيز {Khepri}.",
+          "en": "Checks pass but staging errors rise on {Khepri}."
+        }
+      }
+    }
+  ],
+  "projects": [
+    {
+      "attention": [
+        {
+          "componentId": "stock-sync",
+          "decisionId": "DEC-DEMO-3",
+          "evidence": [
+            {
+              "classification": "observed",
+              "freshness": "current",
+              "id": "E-1",
+              "observation": {
+                "environment": "ci",
+                "id": "O-1",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T14:02:00Z",
+                "source": {
+                  "ageMinutes": 6,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "github",
+                  "synthetic": true,
+                  "ttlSeconds": 1800
+                },
+                "sourceUrl": "https://github.example.invalid/run/DEMO-4471",
+                "target": {
+                  "externalId": "#DEMO-4471",
+                  "id": "check:integration-tests-stock-sync",
+                  "kind": "check",
+                  "label": "ci / integration-tests (stock-sync)"
+                }
+              },
+              "visibility": "all"
+            },
+            {
+              "classification": "correlated",
+              "freshness": "current",
+              "id": "E-3",
+              "observation": {
+                "environment": "ci",
+                "id": "O-3",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T13:51:00Z",
+                "source": {
+                  "ageMinutes": 12,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "jira",
+                  "synthetic": true,
+                  "ttlSeconds": 7200
+                },
+                "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+                "target": {
+                  "externalId": "RT-DEMO-112",
+                  "id": "jira:RT-DEMO-112",
+                  "kind": "workItem",
+                  "label": "stock-sync integration test flaky"
+                }
+              },
+              "rule": "Jira key in the commit message of the merged PR",
+              "visibility": "all"
+            }
+          ],
+          "id": "ATT-RT-1",
+          "investigationId": "INV-DEMO-7",
+          "severity": "high",
+          "title": {
+            "nontechnical": {
+              "ar": "فحص تكامل فاشل على {main}؛ قرار الإصدار {RT 2.14-rc} بانتظار المراجعة.",
+              "en": "Integration check failing on {main}; release {RT 2.14-rc} decision waiting."
+            },
+            "owner": {
+              "ar": "فحص تكامل فاشل على {main}؛ قرار الإصدار {RT 2.14-rc} بانتظار المراجعة.",
+              "en": "Integration check failing on {main}; release {RT 2.14-rc} decision waiting."
+            },
+            "technical": {
+              "ar": "فحص تكامل فاشل على {main}؛ قرار الإصدار {RT 2.14-rc} بانتظار المراجعة.",
+              "en": "Integration check failing on {main}; release {RT 2.14-rc} decision waiting."
+            }
+          }
+        }
+      ],
+      "components": [
+        {
+          "environment": "production",
+          "id": "pos",
+          "layer": "client",
+          "name": "pos-client",
+          "note": {
+            "ar": "لا توجد مراقبة تشغيل مُعدّة.",
+            "en": "No runtime monitoring set up."
+          },
+          "pos": {
+            "col": 0,
+            "row": 1
+          },
+          "state": {
+            "basis": [],
+            "connectivity": "not_configured",
+            "freshness": "unknown",
+            "health": "unknown"
+          }
+        },
+        {
+          "environment": "ci",
+          "id": "api-gateway",
+          "layer": "edge",
+          "name": "api-gateway",
+          "pos": {
+            "col": 1,
+            "row": 1
+          },
+          "state": {
+            "basis": [
+              {
+                "classification": "observed",
+                "freshness": "current",
+                "id": "E-11",
+                "observation": {
+                  "environment": "ci",
+                  "id": "O-11",
+                  "ingestedAt": "2026-11-16T14:03:00Z",
+                  "observedAt": "2026-11-16T13:58:00Z",
+                  "source": {
+                    "ageMinutes": 6,
+                    "connectivity": "reachable",
+                    "lastSuccessAt": "2026-11-16T14:03:00Z",
+                    "provider": "github",
+                    "synthetic": true,
+                    "ttlSeconds": 1800
+                  },
+                  "sourceUrl": "https://github.example.invalid/run/DEMO-4468",
+                  "target": {
+                    "id": "component:api-gateway",
+                    "kind": "component",
+                    "label": "api-gateway"
+                  }
+                },
+                "visibility": "all"
+              }
+            ],
+            "connectivity": "reachable",
+            "freshness": "current",
+            "health": "healthy"
+          }
+        },
+        {
+          "checkFailing": true,
+          "environment": "ci",
+          "id": "stock-sync",
+          "investigationId": "INV-DEMO-7",
+          "layer": "service",
+          "name": "stock-sync",
+          "pos": {
+            "col": 2,
+            "row": 0
+          },
+          "state": {
+            "basis": [
+              {
+                "classification": "observed",
+                "freshness": "unknown",
+                "id": "E-6",
+                "notReadReason": "not_configured",
+                "observation": null,
+                "visibility": "all"
+              }
+            ],
+            "connectivity": "not_configured",
+            "freshness": "unknown",
+            "health": "unknown"
+          }
+        },
+        {
+          "environment": "staging",
+          "id": "payments",
+          "layer": "service",
+          "name": "payments",
+          "pos": {
+            "col": 2,
+            "row": 2
+          },
+          "state": {
+            "basis": [],
+            "connectivity": "reachable",
+            "freshness": "unknown",
+            "health": "unknown"
+          }
+        },
+        {
+          "environment": "staging",
+          "id": "inventory",
+          "layer": "data",
+          "name": "inventory",
+          "pos": {
+            "col": 3,
+            "row": 1
+          },
+          "state": {
+            "basis": [],
+            "connectivity": "reachable",
+            "freshness": "unknown",
+            "health": "unknown"
+          }
+        },
+        {
+          "environment": "unknown",
+          "id": "reporting",
+          "layer": "integration",
+          "name": "reporting",
+          "pos": {
+            "col": 4,
+            "row": 1
+          },
+          "state": {
+            "basis": [],
+            "connectivity": "not_configured",
+            "freshness": "unknown",
+            "health": "unknown"
+          }
+        }
+      ],
+      "delivery": [
+        {
+          "evidence": {
+            "classification": "observed",
+            "freshness": "current",
+            "id": "E-1",
+            "observation": {
+              "environment": "ci",
+              "id": "O-1",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T14:02:00Z",
+              "source": {
+                "ageMinutes": 6,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "github",
+                "synthetic": true,
+                "ttlSeconds": 1800
+              },
+              "sourceUrl": "https://github.example.invalid/run/DEMO-4471",
+              "target": {
+                "externalId": "#DEMO-4471",
+                "id": "check:integration-tests-stock-sync",
+                "kind": "check",
+                "label": "ci / integration-tests (stock-sync)"
+              }
+            },
+            "visibility": "all"
+          },
+          "id": "DLV-RT-1",
+          "kind": "check",
+          "ref": {
+            "externalId": "#DEMO-4471",
+            "id": "check:integration-tests-stock-sync",
+            "kind": "check",
+            "label": "ci / integration-tests (stock-sync)"
+          },
+          "status": "failing"
+        },
+        {
+          "evidence": {
+            "classification": "observed",
+            "freshness": "current",
+            "id": "E-2",
+            "observation": {
+              "environment": "ci",
+              "id": "O-2",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T13:27:00Z",
+              "source": {
+                "ageMinutes": 6,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "github",
+                "synthetic": true,
+                "ttlSeconds": 1800
+              },
+              "sourceUrl": "https://github.example.invalid/pull/DEMO-88",
+              "target": {
+                "externalId": "PR #DEMO-88",
+                "id": "pr:DEMO-88",
+                "kind": "check",
+                "label": "fixture timezone update"
+              }
+            },
+            "visibility": "all"
+          },
+          "id": "DLV-RT-2",
+          "kind": "pr",
+          "ref": {
+            "externalId": "PR #DEMO-88",
+            "id": "pr:DEMO-88",
+            "kind": "check",
+            "label": "fixture timezone update"
+          },
+          "status": "merged"
+        },
+        {
+          "evidence": {
+            "classification": "correlated",
+            "freshness": "current",
+            "id": "E-3",
+            "observation": {
+              "environment": "ci",
+              "id": "O-3",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T13:51:00Z",
+              "source": {
+                "ageMinutes": 12,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "jira",
+                "synthetic": true,
+                "ttlSeconds": 7200
+              },
+              "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+              "target": {
+                "externalId": "RT-DEMO-112",
+                "id": "jira:RT-DEMO-112",
+                "kind": "workItem",
+                "label": "stock-sync integration test flaky"
+              }
+            },
+            "rule": "Jira key in the commit message of the merged PR",
+            "visibility": "all"
+          },
+          "id": "DLV-RT-3",
+          "kind": "workItem",
+          "ref": {
+            "externalId": "RT-DEMO-112",
+            "id": "jira:RT-DEMO-112",
+            "kind": "workItem",
+            "label": "stock-sync integration test flaky"
+          },
+          "status": "in_progress"
+        },
+        {
+          "evidence": {
+            "classification": "observed",
+            "freshness": "current",
+            "id": "E-4",
+            "observation": {
+              "environment": "ci",
+              "id": "O-4",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T13:51:00Z",
+              "source": {
+                "ageMinutes": 12,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "jira",
+                "synthetic": true,
+                "ttlSeconds": 7200
+              },
+              "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+              "target": {
+                "externalId": "RT-DEMO-112",
+                "id": "jira:RT-DEMO-112",
+                "kind": "workItem",
+                "label": "stock-sync integration test flaky"
+              }
+            },
+            "visibility": "all"
+          },
+          "id": "DLV-RT-4",
+          "kind": "release",
+          "ref": {
+            "externalId": "RT 2.14-rc",
+            "id": "release:RT-2.14-rc",
+            "kind": "workItem",
+            "label": "RT 2.14-rc"
+          },
+          "status": "planned"
+        },
+        {
+          "evidence": {
+            "classification": "observed",
+            "freshness": "current",
+            "id": "E-11",
+            "observation": {
+              "environment": "ci",
+              "id": "O-11",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T13:58:00Z",
+              "source": {
+                "ageMinutes": 6,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "github",
+                "synthetic": true,
+                "ttlSeconds": 1800
+              },
+              "sourceUrl": "https://github.example.invalid/run/DEMO-4468",
+              "target": {
+                "id": "component:api-gateway",
+                "kind": "component",
+                "label": "api-gateway"
+              }
+            },
+            "visibility": "all"
+          },
+          "id": "DLV-RT-5",
+          "kind": "check",
+          "ref": {
+            "externalId": "#DEMO-4468",
+            "id": "check:gateway-smoke",
+            "kind": "check",
+            "label": "ci / smoke (api-gateway)"
+          },
+          "status": "passing"
+        }
+      ],
+      "edges": [
+        {
+          "basis": [
+            {
+              "classification": "observed",
+              "freshness": "stale",
+              "id": "E-7",
+              "notReadReason": "unavailable",
+              "observation": null,
+              "visibility": "all"
+            }
+          ],
+          "from": "pos",
+          "kind": "authored",
+          "to": "api-gateway"
+        },
+        {
+          "basis": [
+            {
+              "classification": "observed",
+              "freshness": "stale",
+              "id": "E-7",
+              "notReadReason": "unavailable",
+              "observation": null,
+              "visibility": "all"
+            }
+          ],
+          "from": "api-gateway",
+          "kind": "authored",
+          "to": "stock-sync"
+        },
+        {
+          "basis": [
+            {
+              "classification": "observed",
+              "freshness": "stale",
+              "id": "E-7",
+              "notReadReason": "unavailable",
+              "observation": null,
+              "visibility": "all"
+            }
+          ],
+          "from": "api-gateway",
+          "kind": "authored",
+          "to": "payments"
+        },
+        {
+          "basis": [
+            {
+              "classification": "observed",
+              "freshness": "stale",
+              "id": "E-7",
+              "notReadReason": "unavailable",
+              "observation": null,
+              "visibility": "all"
+            }
+          ],
+          "from": "stock-sync",
+          "kind": "authored",
+          "to": "inventory"
+        },
+        {
+          "basis": [],
+          "from": "payments",
+          "kind": "hypothesis",
+          "to": "inventory"
+        },
+        {
+          "basis": [],
+          "from": "inventory",
+          "kind": "provisional",
+          "to": "reporting"
+        }
+      ],
+      "environments": [
+        "ci",
+        "staging",
+        "production"
+      ],
+      "health": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "unknown",
+            "id": "E-6",
+            "notReadReason": "not_configured",
+            "observation": null,
+            "visibility": "all"
+          }
+        ],
+        "connectivity": "reachable",
+        "freshness": "stale",
+        "health": "unknown"
+      },
+      "id": "RT",
+      "name": "Retail Tower OS",
+      "sources": [
+        {
+          "ageMinutes": 6,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "github",
+          "synthetic": true,
+          "ttlSeconds": 1800
+        },
+        {
+          "ageMinutes": 12,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "jira",
+          "synthetic": true,
+          "ttlSeconds": 7200
+        },
+        {
+          "ageMinutes": 540,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "sentry",
+          "synthetic": true,
+          "ttlSeconds": 900
+        },
+        {
+          "ageMinutes": null,
+          "connectivity": "not_configured",
+          "lastSuccessAt": null,
+          "provider": "datadog",
+          "synthetic": true,
+          "ttlSeconds": 900
+        },
+        {
+          "ageMinutes": 1500,
+          "connectivity": "unavailable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "port",
+          "synthetic": true,
+          "ttlSeconds": 86400
+        }
+      ],
+      "summary": {
+        "ar": "نقاط البيع والمخزون والمدفوعات لفروع التجزئة.",
+        "en": "Point of sale, stock and payments for retail branches."
+      }
+    },
+    {
+      "attention": [
+        {
+          "componentId": "khepri-api",
+          "decisionId": "DEC-DEMO-5",
+          "evidence": [
+            {
+              "classification": "observed",
+              "freshness": "current",
+              "id": "E-21",
+              "observation": {
+                "environment": "ci",
+                "id": "O-21",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T14:04:00Z",
+                "source": {
+                  "ageMinutes": 4,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "github",
+                  "synthetic": true,
+                  "ttlSeconds": 1800
+                },
+                "sourceUrl": "https://github.example.invalid/run/DEMO-5120",
+                "target": {
+                  "id": "component:khepri-web",
+                  "kind": "component",
+                  "label": "khepri-web"
+                }
+              },
+              "visibility": "all"
+            },
+            {
+              "classification": "observed",
+              "freshness": "current",
+              "id": "E-22",
+              "observation": {
+                "environment": "staging",
+                "id": "O-22",
+                "ingestedAt": "2026-11-16T14:03:00Z",
+                "observedAt": "2026-11-16T14:05:00Z",
+                "source": {
+                  "ageMinutes": 3,
+                  "connectivity": "reachable",
+                  "lastSuccessAt": "2026-11-16T14:03:00Z",
+                  "provider": "sentry",
+                  "synthetic": true,
+                  "ttlSeconds": 900
+                },
+                "target": {
+                  "id": "component:khepri-api",
+                  "kind": "component",
+                  "label": "khepri-api"
+                }
+              },
+              "visibility": "all"
+            }
+          ],
+          "id": "ATT-KH-1",
+          "investigationId": "INV-DEMO-9",
+          "severity": "medium",
+          "title": {
+            "nontechnical": {
+              "ar": "إشارات متعارضة: الفحوص ناجحة لكن أخطاء بيئة التجهيز في ازدياد.",
+              "en": "Conflicting signals: checks pass, but staging errors are rising."
+            },
+            "owner": {
+              "ar": "إشارات متعارضة: الفحوص ناجحة لكن أخطاء بيئة التجهيز في ازدياد.",
+              "en": "Conflicting signals: checks pass, but staging errors are rising."
+            },
+            "technical": {
+              "ar": "إشارات متعارضة: الفحوص ناجحة لكن أخطاء بيئة التجهيز في ازدياد.",
+              "en": "Conflicting signals: checks pass, but staging errors are rising."
+            }
+          }
+        }
+      ],
+      "components": [
+        {
+          "environment": "ci",
+          "id": "khepri-web",
+          "layer": "client",
+          "name": "khepri-web",
+          "pos": {
+            "col": 0,
+            "row": 0
+          },
+          "state": {
+            "basis": [
+              {
+                "classification": "observed",
+                "freshness": "current",
+                "id": "E-21",
+                "observation": {
+                  "environment": "ci",
+                  "id": "O-21",
+                  "ingestedAt": "2026-11-16T14:03:00Z",
+                  "observedAt": "2026-11-16T14:04:00Z",
+                  "source": {
+                    "ageMinutes": 4,
+                    "connectivity": "reachable",
+                    "lastSuccessAt": "2026-11-16T14:03:00Z",
+                    "provider": "github",
+                    "synthetic": true,
+                    "ttlSeconds": 1800
+                  },
+                  "sourceUrl": "https://github.example.invalid/run/DEMO-5120",
+                  "target": {
+                    "id": "component:khepri-web",
+                    "kind": "component",
+                    "label": "khepri-web"
+                  }
+                },
+                "visibility": "all"
+              }
+            ],
+            "connectivity": "reachable",
+            "freshness": "current",
+            "health": "healthy"
+          }
+        },
+        {
+          "environment": "staging",
+          "id": "khepri-api",
+          "investigationId": "INV-DEMO-9",
+          "layer": "service",
+          "name": "khepri-api",
+          "pos": {
+            "col": 1,
+            "row": 0
+          },
+          "state": {
+            "basis": [
+              {
+                "classification": "observed",
+                "freshness": "current",
+                "id": "E-22",
+                "observation": {
+                  "environment": "staging",
+                  "id": "O-22",
+                  "ingestedAt": "2026-11-16T14:03:00Z",
+                  "observedAt": "2026-11-16T14:05:00Z",
+                  "source": {
+                    "ageMinutes": 3,
+                    "connectivity": "reachable",
+                    "lastSuccessAt": "2026-11-16T14:03:00Z",
+                    "provider": "sentry",
+                    "synthetic": true,
+                    "ttlSeconds": 900
+                  },
+                  "target": {
+                    "id": "component:khepri-api",
+                    "kind": "component",
+                    "label": "khepri-api"
+                  }
+                },
+                "visibility": "all"
+              }
+            ],
+            "connectivity": "reachable",
+            "freshness": "current",
+            "health": "degraded"
+          }
+        },
+        {
+          "environment": "unknown",
+          "id": "khepri-worker",
+          "layer": "service",
+          "name": "khepri-worker",
+          "pos": {
+            "col": 2,
+            "row": 0
+          },
+          "state": {
+            "basis": [],
+            "connectivity": "not_configured",
+            "freshness": "unknown",
+            "health": "unknown"
+          }
+        }
+      ],
+      "delivery": [
+        {
+          "evidence": {
+            "classification": "observed",
+            "freshness": "current",
+            "id": "E-21",
+            "observation": {
+              "environment": "ci",
+              "id": "O-21",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T14:04:00Z",
+              "source": {
+                "ageMinutes": 4,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "github",
+                "synthetic": true,
+                "ttlSeconds": 1800
+              },
+              "sourceUrl": "https://github.example.invalid/run/DEMO-5120",
+              "target": {
+                "id": "component:khepri-web",
+                "kind": "component",
+                "label": "khepri-web"
+              }
+            },
+            "visibility": "all"
+          },
+          "id": "DLV-KH-1",
+          "kind": "check",
+          "ref": {
+            "externalId": "#DEMO-5120",
+            "id": "check:khepri-web-ci",
+            "kind": "check",
+            "label": "ci / build (khepri-web)"
+          },
+          "status": "passing"
+        },
+        {
+          "evidence": {
+            "classification": "observed",
+            "freshness": "stale",
+            "id": "E-24",
+            "notReadReason": "unavailable",
+            "observation": null,
+            "visibility": "all"
+          },
+          "id": "DLV-KH-2",
+          "kind": "workItem",
+          "ref": {
+            "externalId": "KH-DEMO-40",
+            "id": "jira:KH-DEMO-40",
+            "kind": "workItem",
+            "label": "staging error spike"
+          },
+          "status": "unknown"
+        }
+      ],
+      "edges": [
+        {
+          "basis": [],
+          "from": "khepri-web",
+          "kind": "provisional",
+          "to": "khepri-api"
+        },
+        {
+          "basis": [],
+          "from": "khepri-api",
+          "kind": "provisional",
+          "to": "khepri-worker"
+        }
+      ],
+      "environments": [
+        "ci",
+        "staging"
+      ],
+      "health": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "current",
+            "id": "E-22",
+            "observation": {
+              "environment": "staging",
+              "id": "O-22",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T14:05:00Z",
+              "source": {
+                "ageMinutes": 3,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "sentry",
+                "synthetic": true,
+                "ttlSeconds": 900
+              },
+              "target": {
+                "id": "component:khepri-api",
+                "kind": "component",
+                "label": "khepri-api"
+              }
+            },
+            "visibility": "all"
+          }
+        ],
+        "connectivity": "reachable",
+        "freshness": "current",
+        "health": "degraded"
+      },
+      "id": "KH",
+      "name": "Khepri",
+      "sources": [
+        {
+          "ageMinutes": 4,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "github",
+          "synthetic": true,
+          "ttlSeconds": 1800
+        },
+        {
+          "ageMinutes": 300,
+          "connectivity": "unavailable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "jira",
+          "synthetic": true,
+          "ttlSeconds": 7200
+        },
+        {
+          "ageMinutes": 3,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "sentry",
+          "synthetic": true,
+          "ttlSeconds": 900
+        },
+        {
+          "ageMinutes": null,
+          "connectivity": "not_configured",
+          "lastSuccessAt": null,
+          "provider": "datadog",
+          "synthetic": true,
+          "ttlSeconds": 900
+        }
+      ],
+      "summary": {
+        "ar": "تطبيق ويب وواجهة برمجية لطلبات العملاء.",
+        "en": "Customer ordering web app and API."
+      }
+    },
+    {
+      "attention": [],
+      "components": [],
+      "delivery": [],
+      "edges": [],
+      "environments": [],
+      "health": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "unknown",
+            "id": "E-31",
+            "notReadReason": "not_configured",
+            "observation": null,
+            "visibility": "all"
+          }
+        ],
+        "connectivity": "not_configured",
+        "freshness": "unknown",
+        "health": "unknown"
+      },
+      "id": "SB",
+      "name": "Seshat-BI",
+      "sources": [
+        {
+          "ageMinutes": null,
+          "connectivity": "not_configured",
+          "lastSuccessAt": null,
+          "provider": "github",
+          "synthetic": true,
+          "ttlSeconds": 1800
+        },
+        {
+          "ageMinutes": 20,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "jira",
+          "synthetic": true,
+          "ttlSeconds": 7200
+        },
+        {
+          "ageMinutes": 45,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "confluence",
+          "synthetic": true,
+          "ttlSeconds": 86400
+        }
+      ],
+      "summary": {
+        "ar": "التقارير والتحليلات لمديري الفروع.",
+        "en": "Reporting and analytics for branch managers."
+      }
+    }
+  ]
+}

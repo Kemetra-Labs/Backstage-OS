@@ -1,0 +1,1034 @@
+{
+  "agents": [
+    {
+      "id": "AG-1",
+      "key": "ag.collector",
+      "role": "sensing"
+    },
+    {
+      "id": "AG-2",
+      "key": "ag.watcher",
+      "role": "sensing"
+    },
+    {
+      "id": "AG-3",
+      "key": "ag.correlator",
+      "role": "analysis"
+    },
+    {
+      "id": "AG-4",
+      "key": "ag.analyst",
+      "role": "analysis"
+    },
+    {
+      "id": "AG-5",
+      "key": "ag.drafter",
+      "role": "proposal"
+    }
+  ],
+  "edges": [
+    {
+      "a": "retail-tower",
+      "b": "stock-sync",
+      "basisKey": "edge.group",
+      "cls": "group",
+      "evidence": [],
+      "id": "g1",
+      "truth": "unknown"
+    },
+    {
+      "a": "retail-tower",
+      "b": "pos",
+      "basisKey": "edge.group",
+      "cls": "group",
+      "evidence": [],
+      "id": "g2",
+      "truth": "unknown"
+    },
+    {
+      "a": "retail-tower",
+      "b": "inventory",
+      "basisKey": "edge.group",
+      "cls": "group",
+      "evidence": [],
+      "id": "g3",
+      "truth": "unknown"
+    },
+    {
+      "a": "stock-sync",
+      "b": "github",
+      "basisKey": "edge.ciOnGithub",
+      "cls": "dep",
+      "evidence": [
+        "E-1"
+      ],
+      "id": "d1",
+      "truth": "observed"
+    },
+    {
+      "a": "stock-sync",
+      "b": "jira",
+      "basisKey": "edge.commitKey",
+      "cls": "dep",
+      "evidence": [
+        "E-3"
+      ],
+      "id": "d2",
+      "truth": "correlated"
+    },
+    {
+      "a": "stock-sync",
+      "b": "inventory",
+      "basisKey": "edge.readsInventory",
+      "cls": "dep",
+      "evidence": [],
+      "id": "d3",
+      "truth": "hypothesis"
+    },
+    {
+      "a": "inventory",
+      "b": "sentry",
+      "basisKey": "edge.errorsInSentry",
+      "cls": "dep",
+      "evidence": [
+        "E-5"
+      ],
+      "id": "d4",
+      "truth": "observed"
+    },
+    {
+      "a": "pos",
+      "b": "stock-sync",
+      "basisKey": "edge.posUnknown",
+      "cls": "dep",
+      "evidence": [],
+      "id": "d5",
+      "truth": "unknown"
+    },
+    {
+      "a": "retail-tower",
+      "b": "khepri",
+      "basisKey": "edge.notEvidenced",
+      "cls": "dep",
+      "evidence": [],
+      "id": "d6",
+      "truth": "unknown"
+    },
+    {
+      "a": "retail-tower",
+      "b": "seshat-bi",
+      "basisKey": "edge.notEvidenced",
+      "cls": "dep",
+      "evidence": [],
+      "id": "d7",
+      "truth": "unknown"
+    },
+    {
+      "a": "retail-tower",
+      "b": "port",
+      "basisKey": "edge.catalogUnavailable",
+      "cls": "dep",
+      "evidence": [
+        "E-7"
+      ],
+      "id": "d8",
+      "truth": "unknown"
+    }
+  ],
+  "evidenceById": {
+    "E-1": {
+      "classification": "observed",
+      "freshness": "current",
+      "id": "E-1",
+      "observation": {
+        "environment": "ci",
+        "id": "O-1",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T14:02:00Z",
+        "source": {
+          "ageMinutes": 6,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "github",
+          "synthetic": true,
+          "ttlSeconds": 1800
+        },
+        "sourceUrl": "https://github.example.invalid/run/DEMO-4471",
+        "target": {
+          "externalId": "#DEMO-4471",
+          "id": "check:integration-tests-stock-sync",
+          "kind": "check",
+          "label": "ci / integration-tests (stock-sync)"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-2": {
+      "classification": "observed",
+      "freshness": "current",
+      "id": "E-2",
+      "observation": {
+        "environment": "ci",
+        "id": "O-2",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T13:27:00Z",
+        "source": {
+          "ageMinutes": 6,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "github",
+          "synthetic": true,
+          "ttlSeconds": 1800
+        },
+        "sourceUrl": "https://github.example.invalid/pull/DEMO-88",
+        "target": {
+          "externalId": "PR #DEMO-88",
+          "id": "pr:DEMO-88",
+          "kind": "check",
+          "label": "fixture timezone update"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-3": {
+      "classification": "correlated",
+      "freshness": "current",
+      "id": "E-3",
+      "observation": {
+        "environment": "ci",
+        "id": "O-3",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T13:51:00Z",
+        "source": {
+          "ageMinutes": 12,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "jira",
+          "synthetic": true,
+          "ttlSeconds": 7200
+        },
+        "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+        "target": {
+          "externalId": "RT-DEMO-112",
+          "id": "jira:RT-DEMO-112",
+          "kind": "workItem",
+          "label": "stock-sync integration test flaky"
+        }
+      },
+      "rule": "Jira key in the commit message of the merged PR",
+      "visibility": "all"
+    },
+    "E-4": {
+      "classification": "observed",
+      "freshness": "current",
+      "id": "E-4",
+      "observation": {
+        "environment": "ci",
+        "id": "O-4",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T13:51:00Z",
+        "source": {
+          "ageMinutes": 12,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "jira",
+          "synthetic": true,
+          "ttlSeconds": 7200
+        },
+        "sourceUrl": "https://jira.example.invalid/browse/RT-DEMO-112",
+        "target": {
+          "externalId": "RT-DEMO-112",
+          "id": "jira:RT-DEMO-112",
+          "kind": "workItem",
+          "label": "stock-sync integration test flaky"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-5": {
+      "classification": "observed",
+      "freshness": "stale",
+      "id": "E-5",
+      "observation": {
+        "environment": "staging",
+        "id": "O-5",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T05:03:00Z",
+        "source": {
+          "ageMinutes": 540,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "sentry",
+          "synthetic": true,
+          "ttlSeconds": 900
+        },
+        "target": {
+          "id": "component:inventory",
+          "kind": "component",
+          "label": "Inventory service"
+        }
+      },
+      "visibility": "technical"
+    },
+    "E-6": {
+      "classification": "observed",
+      "freshness": "unknown",
+      "id": "E-6",
+      "notReadReason": "not_configured",
+      "observation": null,
+      "visibility": "all"
+    },
+    "E-7": {
+      "classification": "observed",
+      "freshness": "stale",
+      "id": "E-7",
+      "notReadReason": "unavailable",
+      "observation": null,
+      "visibility": "all"
+    },
+    "E-8": {
+      "classification": "observed",
+      "freshness": "current",
+      "id": "E-8",
+      "observation": {
+        "environment": "ci",
+        "id": "O-8",
+        "ingestedAt": "2026-11-16T14:03:00Z",
+        "observedAt": "2026-11-16T14:03:00Z",
+        "source": {
+          "ageMinutes": 6,
+          "connectivity": "reachable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "github",
+          "synthetic": true,
+          "ttlSeconds": 1800
+        },
+        "target": {
+          "id": "component:github",
+          "kind": "component",
+          "label": "GitHub API (synthetic)"
+        }
+      },
+      "visibility": "all"
+    },
+    "E-9": {
+      "classification": "observed",
+      "freshness": "stale",
+      "id": "E-9",
+      "observation": {
+        "environment": "ci",
+        "id": "O-9",
+        "ingestedAt": "2026-11-15T13:09:00Z",
+        "observedAt": "2026-11-15T13:09:00Z",
+        "source": {
+          "ageMinutes": 1500,
+          "connectivity": "unavailable",
+          "lastSuccessAt": "2026-11-16T14:03:00Z",
+          "provider": "port",
+          "synthetic": true,
+          "ttlSeconds": 86400
+        },
+        "target": {
+          "id": "component:port-catalog",
+          "kind": "component",
+          "label": "Port catalogue (synthetic)"
+        }
+      },
+      "visibility": "all"
+    }
+  },
+  "investigationId": "INV-DEMO-7",
+  "missions": [
+    {
+      "agent": "AG-1",
+      "evidence": [
+        "E-1",
+        "E-2"
+      ],
+      "human": "monitoring",
+      "id": "MSN-DEMO-1",
+      "key": "ms.ci",
+      "kind": "sensing",
+      "label": "observed",
+      "startedMinutesAgo": 7,
+      "status": "observing"
+    },
+    {
+      "agent": "AG-2",
+      "evidence": [
+        "E-5",
+        "E-9"
+      ],
+      "human": "monitoring",
+      "id": "MSN-DEMO-2",
+      "key": "ms.fresh",
+      "kind": "sensing",
+      "label": "observed",
+      "startedMinutesAgo": 9,
+      "status": "observing"
+    },
+    {
+      "agent": "AG-3",
+      "evidence": [
+        "E-3"
+      ],
+      "human": "reviewing",
+      "id": "MSN-DEMO-3",
+      "key": "ms.link",
+      "kind": "analysis",
+      "label": "correlated",
+      "startedMinutesAgo": 4,
+      "status": "analyzing"
+    },
+    {
+      "agent": "AG-4",
+      "evidence": [
+        "E-1",
+        "E-2",
+        "E-3"
+      ],
+      "human": "reviewing",
+      "id": "MSN-DEMO-4",
+      "key": "ms.hyp",
+      "kind": "analysis",
+      "label": "hypothesis",
+      "startedMinutesAgo": 2,
+      "status": "analyzing"
+    },
+    {
+      "agent": "AG-5",
+      "evidence": [
+        "E-1",
+        "E-3"
+      ],
+      "human": "needs_review",
+      "id": "MSN-DEMO-5",
+      "key": "ms.proposal",
+      "kind": "proposal",
+      "label": "proposed",
+      "startedMinutesAgo": 1,
+      "status": "waiting_review"
+    }
+  ],
+  "nodes": [
+    {
+      "evidence": [
+        "E-1",
+        "E-2"
+      ],
+      "id": "retail-tower",
+      "kind": "product",
+      "state": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "current",
+            "id": "E-1",
+            "observation": {
+              "environment": "ci",
+              "id": "O-1",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T14:02:00Z",
+              "source": {
+                "ageMinutes": 6,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "github",
+                "synthetic": true,
+                "ttlSeconds": 1800
+              },
+              "sourceUrl": "https://github.example.invalid/run/DEMO-4471",
+              "target": {
+                "externalId": "#DEMO-4471",
+                "id": "check:integration-tests-stock-sync",
+                "kind": "check",
+                "label": "ci / integration-tests (stock-sync)"
+              }
+            },
+            "visibility": "all"
+          }
+        ],
+        "connectivity": "not_configured",
+        "freshness": "unknown",
+        "health": "unknown"
+      },
+      "title": "Retail Tower OS",
+      "x": 500,
+      "y": 335
+    },
+    {
+      "evidence": [],
+      "id": "khepri",
+      "kind": "product",
+      "state": {
+        "basis": [],
+        "connectivity": "not_configured",
+        "freshness": "unknown",
+        "health": "healthy"
+      },
+      "title": "Khepri",
+      "x": 170,
+      "y": 150
+    },
+    {
+      "check": "failing",
+      "evidence": [
+        "E-1",
+        "E-2",
+        "E-3",
+        "E-6"
+      ],
+      "id": "stock-sync",
+      "kind": "project",
+      "state": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "unknown",
+            "id": "E-6",
+            "notReadReason": "not_configured",
+            "observation": null,
+            "visibility": "all"
+          }
+        ],
+        "connectivity": "not_configured",
+        "freshness": "unknown",
+        "health": "unknown"
+      },
+      "title": "stock-sync",
+      "x": 500,
+      "y": 120
+    },
+    {
+      "evidence": [],
+      "id": "pos",
+      "kind": "project",
+      "state": {
+        "basis": [],
+        "connectivity": "not_configured",
+        "freshness": "unknown",
+        "health": "unknown"
+      },
+      "title": "POS client",
+      "x": 300,
+      "y": 300
+    },
+    {
+      "descWithoutEvidence": "map.nl.inventory.none",
+      "evidence": [
+        "E-5"
+      ],
+      "id": "inventory",
+      "kind": "project",
+      "state": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "stale",
+            "id": "E-5",
+            "observation": {
+              "environment": "staging",
+              "id": "O-5",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T05:03:00Z",
+              "source": {
+                "ageMinutes": 540,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "sentry",
+                "synthetic": true,
+                "ttlSeconds": 900
+              },
+              "target": {
+                "id": "component:inventory",
+                "kind": "component",
+                "label": "Inventory service"
+              }
+            },
+            "visibility": "technical"
+          }
+        ],
+        "connectivity": "reachable",
+        "freshness": "stale",
+        "health": "healthy"
+      },
+      "title": "Inventory service",
+      "x": 700,
+      "y": 305
+    },
+    {
+      "evidence": [
+        "E-1",
+        "E-2",
+        "E-8"
+      ],
+      "id": "github",
+      "kind": "service",
+      "provider": "github",
+      "state": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "current",
+            "id": "E-8",
+            "observation": {
+              "environment": "ci",
+              "id": "O-8",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T14:03:00Z",
+              "source": {
+                "ageMinutes": 6,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "github",
+                "synthetic": true,
+                "ttlSeconds": 1800
+              },
+              "target": {
+                "id": "component:github",
+                "kind": "component",
+                "label": "GitHub API (synthetic)"
+              }
+            },
+            "visibility": "all"
+          }
+        ],
+        "connectivity": "reachable",
+        "freshness": "current",
+        "health": "healthy"
+      },
+      "title": "GitHub",
+      "x": 830,
+      "y": 140
+    },
+    {
+      "evidence": [
+        "E-3",
+        "E-4"
+      ],
+      "id": "jira",
+      "kind": "service",
+      "provider": "jira",
+      "state": {
+        "basis": [],
+        "connectivity": "reachable",
+        "freshness": "current",
+        "health": "healthy"
+      },
+      "title": "Jira",
+      "x": 850,
+      "y": 420
+    },
+    {
+      "evidence": [
+        "E-5"
+      ],
+      "id": "sentry",
+      "kind": "service",
+      "provider": "sentry",
+      "state": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "stale",
+            "id": "E-5",
+            "observation": {
+              "environment": "staging",
+              "id": "O-5",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T05:03:00Z",
+              "source": {
+                "ageMinutes": 540,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "sentry",
+                "synthetic": true,
+                "ttlSeconds": 900
+              },
+              "target": {
+                "id": "component:inventory",
+                "kind": "component",
+                "label": "Inventory service"
+              }
+            },
+            "visibility": "technical"
+          }
+        ],
+        "connectivity": "reachable",
+        "freshness": "stale",
+        "health": "healthy"
+      },
+      "title": "Sentry",
+      "x": 925,
+      "y": 255
+    },
+    {
+      "evidence": [
+        "E-7",
+        "E-9"
+      ],
+      "id": "port",
+      "kind": "service",
+      "provider": "port",
+      "state": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "stale",
+            "id": "E-9",
+            "observation": {
+              "environment": "ci",
+              "id": "O-9",
+              "ingestedAt": "2026-11-15T13:09:00Z",
+              "observedAt": "2026-11-15T13:09:00Z",
+              "source": {
+                "ageMinutes": 1500,
+                "connectivity": "unavailable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "port",
+                "synthetic": true,
+                "ttlSeconds": 86400
+              },
+              "target": {
+                "id": "component:port-catalog",
+                "kind": "component",
+                "label": "Port catalogue (synthetic)"
+              }
+            },
+            "visibility": "all"
+          }
+        ],
+        "connectivity": "unavailable",
+        "freshness": "stale",
+        "health": "unknown"
+      },
+      "title": "Port",
+      "x": 70,
+      "y": 300
+    },
+    {
+      "evidence": [],
+      "id": "seshat-bi",
+      "kind": "service",
+      "state": {
+        "basis": [],
+        "connectivity": "not_configured",
+        "freshness": "unknown",
+        "health": "degraded"
+      },
+      "title": "Seshat BI",
+      "x": 175,
+      "y": 450
+    }
+  ],
+  "now": "2026-11-16T14:09:00Z",
+  "replay": [
+    {
+      "clock": "14:02",
+      "evidence": "E-1",
+      "id": "R-1",
+      "key": "rp.checkFailed",
+      "kind": "event",
+      "label": "observed",
+      "stage": "observed"
+    },
+    {
+      "clock": "14:03",
+      "evidence": "E-2",
+      "id": "R-2",
+      "key": "rp.prMerged",
+      "kind": "event",
+      "label": "observed",
+      "stage": "observed"
+    },
+    {
+      "clock": "14:04",
+      "evidence": null,
+      "id": "R-3",
+      "key": "rp.ingested",
+      "kind": "event",
+      "label": "observed",
+      "stage": "ingested"
+    },
+    {
+      "clock": "14:05",
+      "evidence": "E-3",
+      "id": "R-4",
+      "key": "rp.linked",
+      "kind": "event",
+      "label": "correlated",
+      "stage": "correlated"
+    },
+    {
+      "clock": "14:06",
+      "evidence": "E-6",
+      "id": "R-5",
+      "key": "rp.gapRuntime",
+      "kind": "gap",
+      "label": "unknown",
+      "stage": "correlated"
+    },
+    {
+      "clock": "14:07",
+      "evidence": null,
+      "id": "R-6",
+      "key": "rp.hypothesis",
+      "kind": "event",
+      "label": "hypothesis",
+      "stage": "hypothesis"
+    },
+    {
+      "clock": "14:08",
+      "evidence": null,
+      "id": "R-7",
+      "key": "rp.proposed",
+      "kind": "event",
+      "label": "proposed",
+      "stage": "proposed"
+    }
+  ],
+  "sourceEvents": [
+    {
+      "at": "2026-11-15T13:09:00Z",
+      "axis": "connectivity",
+      "id": "S-1",
+      "key": "sev.portLast",
+      "provider": "port",
+      "tone": "bad"
+    },
+    {
+      "at": "2026-11-16T05:09:00Z",
+      "axis": "freshness",
+      "id": "S-2",
+      "key": "sev.sentryLast",
+      "provider": "sentry",
+      "tone": "ok"
+    },
+    {
+      "at": "2026-11-16T05:24:00Z",
+      "axis": "freshness",
+      "id": "S-3",
+      "key": "sev.sentryStale",
+      "provider": "sentry",
+      "tone": "warn"
+    },
+    {
+      "at": "2026-11-16T13:57:00Z",
+      "axis": "connectivity",
+      "id": "S-4",
+      "key": "sev.jiraRead",
+      "provider": "jira",
+      "tone": "ok"
+    },
+    {
+      "at": "2026-11-16T14:02:00Z",
+      "axis": "incident",
+      "id": "S-5",
+      "key": "sev.ciFailed",
+      "provider": "github",
+      "tone": "bad"
+    },
+    {
+      "at": "2026-11-16T14:03:00Z",
+      "axis": "connectivity",
+      "id": "S-6",
+      "key": "sev.githubRead",
+      "provider": "github",
+      "tone": "ok"
+    }
+  ],
+  "sources": [
+    {
+      "health": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "current",
+            "id": "E-8",
+            "observation": {
+              "environment": "ci",
+              "id": "O-8",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T14:03:00Z",
+              "source": {
+                "ageMinutes": 6,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "github",
+                "synthetic": true,
+                "ttlSeconds": 1800
+              },
+              "target": {
+                "id": "component:github",
+                "kind": "component",
+                "label": "GitHub API (synthetic)"
+              }
+            },
+            "visibility": "all"
+          }
+        ],
+        "connectivity": "reachable",
+        "freshness": "current",
+        "health": "healthy"
+      },
+      "kind": "integration",
+      "provider": "github",
+      "source": {
+        "ageMinutes": 6,
+        "connectivity": "reachable",
+        "lastSuccessAt": "2026-11-16T14:03:00Z",
+        "provider": "github",
+        "synthetic": true,
+        "ttlSeconds": 1800
+      },
+      "target": "GitHub API"
+    },
+    {
+      "health": {
+        "basis": [],
+        "connectivity": "reachable",
+        "freshness": "current",
+        "health": "healthy"
+      },
+      "kind": "integration",
+      "provider": "jira",
+      "source": {
+        "ageMinutes": 12,
+        "connectivity": "reachable",
+        "lastSuccessAt": "2026-11-16T14:03:00Z",
+        "provider": "jira",
+        "synthetic": true,
+        "ttlSeconds": 7200
+      },
+      "target": "Jira API"
+    },
+    {
+      "health": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "stale",
+            "id": "E-5",
+            "observation": {
+              "environment": "staging",
+              "id": "O-5",
+              "ingestedAt": "2026-11-16T14:03:00Z",
+              "observedAt": "2026-11-16T05:03:00Z",
+              "source": {
+                "ageMinutes": 540,
+                "connectivity": "reachable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "sentry",
+                "synthetic": true,
+                "ttlSeconds": 900
+              },
+              "target": {
+                "id": "component:inventory",
+                "kind": "component",
+                "label": "Inventory service"
+              }
+            },
+            "visibility": "technical"
+          }
+        ],
+        "connectivity": "reachable",
+        "freshness": "stale",
+        "health": "healthy"
+      },
+      "kind": "data",
+      "provider": "sentry",
+      "source": {
+        "ageMinutes": 540,
+        "connectivity": "reachable",
+        "lastSuccessAt": "2026-11-16T14:03:00Z",
+        "provider": "sentry",
+        "synthetic": true,
+        "ttlSeconds": 900
+      },
+      "target": "Sentry API"
+    },
+    {
+      "health": {
+        "basis": [],
+        "connectivity": "not_configured",
+        "freshness": "unknown",
+        "health": "unknown"
+      },
+      "kind": "data",
+      "provider": "datadog",
+      "source": {
+        "ageMinutes": null,
+        "connectivity": "not_configured",
+        "lastSuccessAt": null,
+        "provider": "datadog",
+        "synthetic": true,
+        "ttlSeconds": 900
+      },
+      "target": "Datadog API"
+    },
+    {
+      "health": {
+        "basis": [],
+        "connectivity": "not_configured",
+        "freshness": "unknown",
+        "health": "unknown"
+      },
+      "kind": "integration",
+      "provider": "confluence",
+      "source": {
+        "ageMinutes": null,
+        "connectivity": "not_configured",
+        "lastSuccessAt": null,
+        "provider": "confluence",
+        "synthetic": true,
+        "ttlSeconds": 3600
+      },
+      "target": "Confluence API"
+    },
+    {
+      "health": {
+        "basis": [
+          {
+            "classification": "observed",
+            "freshness": "stale",
+            "id": "E-9",
+            "observation": {
+              "environment": "ci",
+              "id": "O-9",
+              "ingestedAt": "2026-11-15T13:09:00Z",
+              "observedAt": "2026-11-15T13:09:00Z",
+              "source": {
+                "ageMinutes": 1500,
+                "connectivity": "unavailable",
+                "lastSuccessAt": "2026-11-16T14:03:00Z",
+                "provider": "port",
+                "synthetic": true,
+                "ttlSeconds": 86400
+              },
+              "target": {
+                "id": "component:port-catalog",
+                "kind": "component",
+                "label": "Port catalogue (synthetic)"
+              }
+            },
+            "visibility": "all"
+          }
+        ],
+        "connectivity": "unavailable",
+        "freshness": "stale",
+        "health": "unknown"
+      },
+      "kind": "integration",
+      "provider": "port",
+      "source": {
+        "ageMinutes": 1500,
+        "connectivity": "unavailable",
+        "lastSuccessAt": "2026-11-16T14:03:00Z",
+        "provider": "port",
+        "synthetic": true,
+        "ttlSeconds": 86400
+      },
+      "target": "Port API"
+    }
+  ]
+}
