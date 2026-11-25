@@ -277,6 +277,8 @@ A read-only view of what is visible to the caller, built on the evidence store. 
 | `GET /portfolio` | Session and `evidence.read`. `{ projects }`: each visible project with its granted sources, each source's read state and open-item counts with `complete`, **no items**. At most 100 projects, ordered by key. |
 | `GET /portfolio/:projectId` | Session and `evidence.read`. One project with the items of each source's latest read. 404 when the id is unknown, malformed or not visible. |
 
+**Response parity with the app (BACK-57).** The app does not call these routes. Its Portfolio screen renders a synthetic `GET /portfolio` body, `app/src/fixture/portfolio-response.json`, through its own copy of the response shapes. `test/portfolio/portfolio-parity.spec.ts` builds that body through the real read model and requires the file to match exactly, so the two copies cannot drift apart. After an intended model change, regenerate the file with `KAWALYS_WRITE_PORTFOLIO_FIXTURE=1` and review the diff. The test runs with the server suite, so an edit to the app file alone is not checked until the next server change.
+
 **Visibility.**
 - A project is listed only through a source the caller holds an active grant on. Only granted sources are listed and counted.
 - A project with no granted source, or with none at all, does not exist for that caller.

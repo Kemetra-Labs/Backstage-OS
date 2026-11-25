@@ -29,6 +29,18 @@ export interface PortfolioCopy {
     readonly notSetUp: (n: number) => string;
     readonly unknown: (n: number) => string;
   };
+  readonly github: {
+    readonly title: string;
+    readonly lede: string;
+    readonly demo: string;
+    readonly incomplete: string;
+    readonly status: Readonly<Record<'current' | 'stale' | 'notReadYet' | 'unknown' | 'unavailable', string>>;
+    readonly failure: Readonly<Record<'timeout' | 'network' | 'denied' | 'not_visible' | 'rate_limited' | 'unavailable' | 'malformed' | 'other', string>>;
+    readonly age: (minutes: number) => string;
+    readonly pullRequests: string;
+    readonly issues: string;
+    readonly atLeast: (n: number) => string;
+  };
   readonly env: Readonly<Record<Environment, string>>;
   readonly attentionList: {
     readonly title: string;
@@ -84,7 +96,28 @@ const en: PortfolioCopy = {
     stale: (n) => `${n} stale`,
     unavailable: (n) => `${n} unavailable`,
     notSetUp: (n) => `${n} not set up`,
-    unknown: (n) => `${n} never read`,
+    unknown: (n) => `${n} not read yet`,
+  },
+  github: {
+    title: 'GitHub reads',
+    lede: 'The latest read of each connected repository. These are read states, not a health claim.',
+    demo: 'Demo data: synthetic reads, not live',
+    incomplete: 'Part of this answer could not be read and is left out, so this list is incomplete.',
+    status: { current: 'Current', stale: 'Stale', notReadYet: 'Not read yet', unknown: 'Unknown', unavailable: 'Unavailable' },
+    failure: {
+      timeout: 'The read timed out.',
+      network: 'GitHub did not answer.',
+      denied: 'Access was denied.',
+      not_visible: 'Not visible to this connection.',
+      rate_limited: 'GitHub limited the reads; try later.',
+      unavailable: 'GitHub was unavailable.',
+      malformed: 'The answer could not be read.',
+      other: 'The read failed.',
+    },
+    age: (m) => `Read {${m}} min ago`,
+    pullRequests: 'Open pull requests',
+    issues: 'Open issues',
+    atLeast: (n) => `At least {${n}}`,
   },
   env: { ci: '{CI}', lab: 'Lab', staging: 'Staging', production: 'Production', unknown: 'Unknown' },
   attentionList: {
@@ -141,7 +174,28 @@ const ar: PortfolioCopy = {
     stale: (n) => `${n} قديمة`,
     unavailable: (n) => `${n} غير متاحة`,
     notSetUp: (n) => `${n} غير مُعدّة`,
-    unknown: (n) => `${n} لم تُقرأ قط`,
+    unknown: (n) => `${n} لم تُقرأ بعد`,
+  },
+  github: {
+    title: 'قراءات {GitHub}',
+    lede: 'آخر قراءة لكل مستودع متصل. هذه حالات قراءة، وليست حكمًا على السلامة.',
+    demo: 'بيانات تجريبية: قراءات مصطنعة، ليست مباشرة',
+    incomplete: 'تعذّرت قراءة جزء من هذه الإجابة فاستُبعد، لذا القائمة غير مكتملة.',
+    status: { current: 'حديثة', stale: 'قديمة', notReadYet: 'لم تُقرأ بعد', unknown: 'غير معروفة', unavailable: 'غير متاحة' },
+    failure: {
+      timeout: 'انتهت مهلة القراءة.',
+      network: 'لم يردّ {GitHub}.',
+      denied: 'رُفض الوصول.',
+      not_visible: 'غير مرئي لهذا الاتصال.',
+      rate_limited: 'حدّ {GitHub} من القراءات؛ حاول لاحقًا.',
+      unavailable: 'كان {GitHub} غير متاح.',
+      malformed: 'تعذّرت قراءة الإجابة.',
+      other: 'فشلت القراءة.',
+    },
+    age: (m) => `قُرئت قبل {${m}} دقيقة`,
+    pullRequests: 'طلبات الدمج المفتوحة',
+    issues: 'المشكلات المفتوحة',
+    atLeast: (n) => `{${n}} على الأقل`,
   },
   env: { ci: '{CI}', lab: 'مختبر', staging: 'تجهيز', production: 'إنتاج', unknown: 'غير معروفة' },
   attentionList: {

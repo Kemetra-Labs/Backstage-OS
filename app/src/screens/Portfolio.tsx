@@ -6,6 +6,7 @@ import { Segmented } from '../components/Segmented';
 import { portfolioView, type ProductFilter } from '../view/portfolioView';
 import '../styles/screens/portfolio.css';
 import { AttentionEvidence } from './portfolio/AttentionEvidence';
+import { GitHubReads } from './portfolio/GitHubReads';
 import { ProductEntry } from './portfolio/ProductEntry';
 import { hostCopy } from '../i18n/host';
 
@@ -30,6 +31,7 @@ export function Portfolio() {
       <Panel id="pf-attention" title={c.attentionList.title} tone="raised" testId="portfolio-attention">
         <AttentionEvidence items={v.attention} empty={v.attentionEmpty} />
       </Panel>
+      <GitHubReads />
     </>
   );
 }
