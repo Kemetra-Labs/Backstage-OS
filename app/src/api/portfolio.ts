@@ -21,7 +21,7 @@ const SERVER_STATES: readonly string[] = ['ok', 'stale', 'unknown', 'error', 'de
 const PROVIDERS: readonly string[] = ['github', 'jira', 'confluence', 'sentry', 'datadog', 'port'];
 const TITLE_MAX = 300;
 /** Bidi embedding, override and isolate controls: a title must not reorder the text around it (EN/AR). */
-const BIDI_CONTROLS = /[‪-‮⁦-⁩]/g;
+const BIDI_CONTROLS = /[\u202A-\u202E\u2066-\u2069]/g;
 
 export interface ParsedList {
   readonly state: ServerState;

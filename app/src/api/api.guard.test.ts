@@ -65,6 +65,11 @@ describe('src/api boundary', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('no file under src/api holds a raw bidi control character (Trojan Source); write \\u escapes instead', () => {
+    const offenders = files(API).filter((p) => /[\u202A-\u202E\u2066-\u2069]/.test(source(p))).map(rel);
+    expect(offenders).toEqual([]);
+  });
+
   it('the guard itself finds the adapter files it protects', () => {
     expect(files(API).filter((p) => !isTest(p)).map(rel).sort()).toEqual(['api/evidence.ts', 'api/portfolio.ts']);
   });

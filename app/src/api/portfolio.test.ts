@@ -165,7 +165,7 @@ describe('the response is untrusted', () => {
   });
 
   it('removes bidi override and isolate controls from titles (EN/AR), keeping the text', () => {
-    const title = '‮desrever‬ ⁧عنوان⁩';
+    const title = '\u202Edesrever\u202C \u2067عنوان\u2069';
     const items = toPortfolio(parsePortfolio({ projects: [detail([source({ items: [{ ...source().items[0], title }] })])] }), opts).projects[0]!.items;
     expect(items[0]!.observation!.target.label).toBe('desrever عنوان');
   });
