@@ -58,6 +58,9 @@ while IFS= read -r path; do
     docs/planning/G1/fixture/*|docs/planning/G1/holdout-v1/*) G1=true ;;
     # app/ before *.md: app unit tests assert on markdown inside app/ (e.g. the lens font SOURCE.md pins).
     # There is one app browser suite (app/e2e) since the standalone lens suite retired (BACK-92 R4), so every app/ path selects it.
+    # The server-built parity fixtures: server/test/portfolio/portfolio-parity.spec.ts and server/test/evidence/evidence-parity.spec.ts
+    # read them, so a change to one also needs the server suite.
+    app/src/fixture/*-response.json) APP=true APP_E2E=true SERVER=true ;;
     app/*) APP=true APP_E2E=true ;;
     *.md) ;;
     server/*) SERVER=true ;;

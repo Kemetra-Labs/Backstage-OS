@@ -101,6 +101,13 @@ case_with bash -c 'echo x >> app/src/main.tsx'
 out="$(bash "$CLASSIFIER" pull_request "$BASE_SHA" HEAD 2>/dev/null)"
 if grep -q '^app_v2=' <<<"$out"; then FAIL=$((FAIL + 1)); echo "FAIL: the retired app_v2 flag is still printed" >&2; else PASS=$((PASS + 1)); fi
 
+# The server parity specs read the server-built response fixtures in app/src/fixture, so a change to one selects server too.
+case_with bash -c 'mkdir -p app/src/fixture && echo x >> app/src/fixture/evidence-response.json'
+check "server-built parity fixture" "$APP_ALL server" selective pull_request "$BASE_SHA"
+
+case_with bash -c 'mkdir -p app/src/fixture && echo x >> app/src/fixture/world.ts'
+check "other app fixture file: no server" "$APP_ALL" selective pull_request "$BASE_SHA"
+
 case_with bash -c 'echo x > app/tsconfig.json'
 check "other app file (shared config)" "$APP_ALL" selective pull_request "$BASE_SHA"
 
