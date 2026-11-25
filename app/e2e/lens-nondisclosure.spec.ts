@@ -12,8 +12,8 @@ import { COPY } from '../src/i18n/strings';
 import { formatAge } from '../src/i18n/format';
 import { LANGS } from './helpers';
 import { waitForIntroDone } from './lens-fidelity';
-import { leaks as probe, type Leak } from './leaks';
-import { openScreen, setMapMode } from './lens-helpers';
+import { expectNoLeaks, explain, leaksIn, leaks as probe, type Leak } from './leaks';
+import { openScreen, SCREENS, setMapMode } from './lens-helpers';
 
 const LAY = ['owner', 'nontechnical'] as const;
 type Lang = (typeof LANGS)[number];
@@ -173,3 +173,98 @@ test('persona switch on one page: Replay evidence 7 to 6, Deck rows 2 to 1, and 
   await page.getByRole('button', { name: L.technical, exact: true }).click();
   await expect(page.locator('#bcinsp-panel .kv2-insp-desc')).toHaveText(text('map.nl.inventory', 'en'));
 });
+
+
+// ---- BACK-66 / BACK-30 audit (2026-11-25): the vectors the matrix above did not yet reach. Persona is a display switch on synthetic
+// data, not authorization (X02/X04 are not delivered); these check the demo's scoping only.
+
+const searchHits = (page: Page): Promise<string> =>
+  page.locator('.search-pop').evaluate((el) => [...el.querySelectorAll('li a')].map((a) => `${a.textContent ?? ''} ${a.getAttribute('href') ?? ''}`).join('\n'));
+const mapRow = (page: Page, id: string) => page.locator(`tr:has(button[data-node="${id}"])`);
+
+for (const persona of LAY) {
+  for (const lang of LANGS) {
+    // Phones open the map on its list, the inspector stacks under it and the navigation moves behind a menu: a different render path
+    // from the 1440 px matrix above. Every screen, then the map list, the inspector tabs and the open menu, all through the one probe.
+    test(`375 px ${persona}/${lang}: no trace of a withheld record on any screen, in the phone map list, its inspector or the open menu`, async ({ page }) => {
+      for (const route of SCREENS) {
+        await openScreen(page, route, { lang, persona, width: 375 });
+        await expectNoLeaks(page, `375 ${persona}/${lang} ${route}`);
+      }
+      await openScreen(page, '/map/all/sentry', { lang, persona, width: 375 });
+      await expect(page.locator('[data-testid="bc-stage"]')).toHaveAttribute('data-mode', 'list');
+      for (const tab of ['evidence', 'sources'] as const) {
+        await page.locator(`#bcinsp-tab-${tab}`).click();
+        await expect(page.locator(`#bcinsp-tab-${tab}`)).toHaveAttribute('aria-selected', 'true');
+        await expectNoLeaks(page, `375 ${persona}/${lang} map ${tab}`);
+      }
+      await expect(mapRow(page, 'sentry').locator('.kv2-bc-num')).toHaveText('0');
+      await page.locator('.menu-btn').click();
+      await expect(page.locator('.menu-btn')).toHaveAttribute('aria-expanded', 'true');
+      await expectNoLeaks(page, `375 ${persona}/${lang} open menu`);
+    });
+
+    // BACK-30 on the list view: the map-mode checks above read the Inventory chip and d4 on the canvas only.
+    test(`BACK-30 list ${persona}/${lang}: Inventory's row is not Stale, Sentry's row counts no evidence, and d4 is drawn nowhere`, async ({ page }) => {
+      await openScreen(page, '/map/all/inventory', { lang, persona, width: 1440 });
+      await setMapMode(page, 'map');
+      await waitForIntroDone(page);
+      await expect(page.locator('.kv2-bc-edge')).not.toHaveCount(0);
+      await expect(page.locator('.kv2-bc-edge[data-id="d4"]')).toHaveCount(0);
+      await setMapMode(page, 'list');
+      await expect(mapRow(page, 'inventory')).toHaveCount(1);
+      await expect(mapRow(page, 'inventory')).not.toContainText(text('chip.stale', lang));
+      await expect(mapRow(page, 'sentry').locator('.kv2-bc-num')).toHaveText('0');
+      const inv = scoped(persona).nodes.find((n) => n.id === 'inventory')!;
+      await expect(mapRow(page, 'inventory').locator('.kv2-bc-num')).toHaveText(String(inv.evidence.length));
+      await expect(page.locator('.kv2-bc-links tr[data-link="d4"]')).toHaveCount(0);
+      expect(await leaks(page, lang)).toEqual([]);
+    });
+
+    // Search suggestions for broad queries a curious viewer would type: id prefixes, the provider, the placeholder word, the record's
+    // own wording. Every suggestion (label, kind and link) and the whole page after typing go through the probe.
+    test(`search suggestions ${persona}/${lang}: broad queries offer nothing that names or links a withheld record`, async ({ page }) => {
+      await openScreen(page, '/', { lang, persona, width: 1440 });
+      const box = page.locator('#demo-search');
+      const e5 = COPY[lang].evidenceItem['E-5']!.technical.replace(/[{}]/g, '');
+      for (const q of ['E-', 'O-', 'E-1', 'E-2', 'sentry', 'restricted', e5.slice(0, 6)]) {
+        await box.fill(q);
+        await expect(page.locator('.search-pop')).toBeVisible();
+        const found = leaksIn(await searchHits(page));
+        expect(found, `query "${q}"\n${explain(found)}`).toEqual([]);
+        await expectNoLeaks(page, `search "${q}"`, { ignore: [q] });
+      }
+    });
+  }
+}
+
+// Positive control for the list checks above: Technical's Sentry row does count E-5, and Inventory's row is Stale.
+test('BACK-30 list Technical: Sentry counts its record and Inventory is Stale (so the lay checks are not vacuous)', async ({ page }) => {
+  await openScreen(page, '/map/all/inventory', { lang: 'en', persona: 'technical', width: 1440 });
+  await setMapMode(page, 'list');
+  await expect(mapRow(page, 'sentry').locator('.kv2-bc-num')).toHaveText('1');
+  await expect(mapRow(page, 'inventory')).toContainText(text('chip.stale', 'en'));
+});
+
+for (const lang of LANGS) {
+  // Cached state: the search index is memoized on the world and the popup stays open across a persona switch. Technical's hit on a
+  // withheld record must vanish from the same open popup the moment it re-renders for a lay persona, and return for Technical.
+  test(`search cached state ${lang}: Technical's E-12 suggestion leaves the open popup on a switch to a lay persona, and returns`, async ({ page }) => {
+    const L = COPY[lang].persona;
+    await openScreen(page, '/', { lang, persona: 'technical', width: 1440 });
+    await page.locator('#demo-search').fill('E-1');
+    const e12 = page.locator('.search-pop a[href*="/evidence/E-12"]');
+    await expect(e12).toHaveCount(1);
+    for (const p of ['owner', 'nontechnical'] as const) {
+      await page.getByRole('button', { name: L[p], exact: true }).click();
+      await expect(page.locator('#demo-search')).toHaveValue('E-1');
+      await expect(page.locator('.search-pop')).toBeVisible();
+      await expect(e12).toHaveCount(0);
+      const found = leaksIn(await searchHits(page));
+      expect(found, `${p}\n${explain(found)}`).toEqual([]);
+      await expectNoLeaks(page, `${p} after the switch with the popup open`, { ignore: ['E-1'] });
+    }
+    await page.getByRole('button', { name: L.technical, exact: true }).click();
+    await expect(e12).toHaveCount(1);
+  });
+}
