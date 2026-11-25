@@ -22,7 +22,7 @@ export function EvidenceLinks({ items, investigationId }: Props) {
     <Panel id="sum-evidence-title" title={c.summary.evidenceTitle} testId="summary-evidence">
       <ul className="evidence-list">
         {items.map((e) => (
-          <li key={e.id} className={`evidence-item${e.notReadReason || e.restricted ? ' not-read' : ''}`} data-evidence-row={e.id}>
+          <li key={e.id} className={`evidence-item${e.notReadReason ? ' not-read' : ''}`} data-evidence-row={e.id}>
             <TruthChip label={e.label} style={style} copy={copy} />
             <span className="evidence-text"><Text s={evidenceTitleFor(world, e.id, persona, lang)} /></span>
             <span className="evidence-status"><Text s={evidenceStatusText(e, copy, lang)} /></span>

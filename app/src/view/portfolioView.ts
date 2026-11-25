@@ -58,7 +58,7 @@ export interface ProductEntry {
 
 export interface EvidenceRow {
   readonly view: EvidenceView;
-  /** Persona title with {braces}; restricted items carry the restriction text, never their title. */
+  /** Persona title with {braces}. */
   readonly title: string;
 }
 

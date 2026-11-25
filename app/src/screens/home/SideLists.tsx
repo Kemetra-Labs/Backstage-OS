@@ -18,7 +18,6 @@ export function InvestigationPreviews({ items }: { readonly items: readonly Home
           <p className="home-row-title"><LP t={i.title} /></p>
           <p className="note">
             <bdi dir="ltr">{i.projectName}</bdi> · {h.investigations.started(formatAge(i.startedMinutesAgo, lang))} · {h.investigations.evidenceCount(i.evidenceCount)}
-            {i.restrictedCount > 0 ? ` · ${h.investigations.restrictedCount(i.restrictedCount)}` : ''}
           </p>
           <div className="home-links">
             <a className="btn btn-quiet btn-link" href={hrefFor({ name: 'investigation', id: i.id })}>

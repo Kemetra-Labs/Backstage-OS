@@ -57,7 +57,7 @@ export function Supporting({ ex }: { readonly ex: ExplorerView }) {
           <h3 className="support-title">{c.context}</h3>
           <div className="link-row">
             {link(hrefFor({ name: 'project', projectId: project.id }), c.viewProject(project.name))}
-            {component && persona !== 'nontechnical' && !ex.view.restricted &&
+            {component && persona !== 'nontechnical' &&
               link(hrefFor({ name: 'project', projectId: project.id, componentId: component.id }), c.viewComponent(component.name))}
           </div>
         </div>

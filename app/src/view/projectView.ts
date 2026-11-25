@@ -142,7 +142,6 @@ export interface DeliveryRow {
   readonly truth: DisplayLabel;
   readonly freshness: Freshness;
   readonly ageMinutes: number | null;
-  readonly restricted: boolean;
   readonly notReadReason?: NonNullable<EvidenceView['notReadReason']>;
 }
 
@@ -156,7 +155,6 @@ export function deliveryRows(p: WorldProject, persona: Persona, lang: Lang): rea
       truth: v.label,
       freshness: v.freshness,
       ageMinutes: v.ageMinutes,
-      restricted: v.restricted === true,
       ...(v.notReadReason ? { notReadReason: v.notReadReason } : {}),
     };
   });
@@ -165,7 +163,7 @@ export function deliveryRows(p: WorldProject, persona: Persona, lang: Lang): rea
 // ---- Selected component -----------------------------------------------------------------------------------------
 export interface LinkedEvidence {
   readonly id: string;
-  /** Persona title with {braces}; "Restricted to Technical" for restricted items. */
+  /** Persona title with {braces}. */
   readonly title: string;
   readonly view: EvidenceView;
 }

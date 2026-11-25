@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { EvidenceReference, Persona } from '../contract/types';
+import type { Persona } from '../contract/types';
 import { WORLD as V1_WORLD } from '../fixture/world';
 import { EVIDENCE, INV_DEMO_7, SOURCES } from '../fixture/inv-demo-7';
 import { authorizedWorld } from '../lenses/logic/authorize';
@@ -172,10 +172,9 @@ describe('canonical fixture parity', () => {
     expect(v1Edge()?.basis.map((b) => b.id)).toEqual(['E-7']);
   });
 
-  it('V1 evidence view for Owner is restricted but still carries E-5 today (pins the known divergence)', () => {
-    const v = evidenceViewFor('owner', EVIDENCE.sentryErrors);
-    expect(v.restricted).toBe(true);
-    expect(v.id).toBe('E-5');
+  it('V1 has no evidence view of E-5 for Owner: the scoped world omits it and the projection refuses it (BACK-73, BACK-92 R7)', () => {
+    expect(v1Authorized(V1_WORLD, 'owner').evidence['E-5']).toBeUndefined();
+    expect(() => evidenceViewFor('owner', EVIDENCE.sentryErrors)).toThrow(/unscoped evidence/);
   });
 
   // Known divergences. Each is expected to fail until the named follow-up lands.
@@ -183,11 +182,5 @@ describe('canonical fixture parity', () => {
     const edge = v1Edge();
     expect(edge).toBeDefined();
     expect(edge?.kind).toBe(toV1EdgeKind('hypothesis'));
-  });
-
-  // Follow-up: S2 / BACK-73.
-  it.fails('V1 evidence view hides the Technical-only id from Owner (S2 / BACK-73)', () => {
-    const ref: EvidenceReference = EVIDENCE.sentryErrors;
-    expect(evidenceViewFor('owner', ref).id).not.toBe('E-5');
   });
 });

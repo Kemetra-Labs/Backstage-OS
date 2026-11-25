@@ -62,7 +62,3 @@ export function contextOfEvidence(w: World, evidenceId: string): { investigation
   const project = investigation ? projectById(w, investigation.projectId) : undefined;
   return { ...(investigation ? { investigation } : {}), ...(project ? { project } : {}) };
 }
-
-/** Evidence a persona may see in detail. Technical-only items are reported as restricted for everyone else. */
-export const isRestrictedFor = (e: EvidenceReference, persona: Persona): boolean =>
-  e.visibility === 'technical' && persona !== 'technical';

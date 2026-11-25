@@ -42,22 +42,20 @@ export interface TimelineRow {
 export interface TimelineSplit {
   /** Items with an observation time a persona may see, newest first. */
   readonly timed: readonly TimelineRow[];
-  /** Unread or restricted items: no time to place, never shown as a time. */
+  /** Unread items: no time to place, never shown as a time. */
   readonly untimed: readonly TimelineRow[];
 }
 
 export function evidenceTimeline(refs: readonly EvidenceReference[], persona: Persona): TimelineSplit {
   const rows = refs.map((r): TimelineRow => {
-    const view = evidenceViewFor(persona, r);
-    return { id: r.id, view, minutesAgo: view.restricted ? null : observedMinutesAgo(r) };
+    return { id: r.id, view: evidenceViewFor(persona, r), minutesAgo: observedMinutesAgo(r) };
   });
   const timed = rows.filter((r) => r.minutesAgo !== null).sort((a, b) => (a.minutesAgo ?? 0) - (b.minutesAgo ?? 0));
   return { timed, untimed: rows.filter((r) => r.minutesAgo === null) };
 }
 
-/** One status line for a list row: restriction or not-read reason first, otherwise provider and freshness in words. */
+/** One status line for a list row: not-read reason first, otherwise provider and freshness in words. */
 export function evidenceStatusText(v: EvidenceView, copy: Copy, lang: Lang): string {
-  if (v.restricted) return copy.restricted;
   if (v.notReadReason) return copy.notRead[v.notReadReason];
   const provider = v.provider ? `{${copy.provider[v.provider]}} · ` : '';
   const age = v.freshness === 'stale' ? ` · ${formatAge(v.ageMinutes, lang)}` : '';

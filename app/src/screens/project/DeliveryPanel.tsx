@@ -23,9 +23,7 @@ export function DeliveryPanel({ rows }: { readonly rows: readonly DeliveryRow[] 
               <p><Text s={r.label} /></p>
               <p className="proj-chips">
                 <span className={`proj-state proj-state-${r.status}`}>{t.statusLabel}: {t.status[r.status]}</span>
-                {r.restricted ? (
-                  <span className="note">{copy.restricted}</span>
-                ) : r.notReadReason ? (
+                {r.notReadReason ? (
                   <>
                     <TruthChip label="unknown" style={style} copy={copy} />
                     <span className="note">{copy.notRead[r.notReadReason]}</span>

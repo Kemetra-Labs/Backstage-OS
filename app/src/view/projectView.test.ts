@@ -4,6 +4,7 @@ import {
   DEFAULT_FILTERS, attentionFor, deliveryRows, filterComponents, layersOf, linkedEvidence, mapFor, risksFor, segLabel,
   sourceRows, unknownReason,
 } from './projectView';
+import { authorizedWorld } from './authorize';
 import { componentById, projectById } from './world';
 
 const RT = projectById(WORLD, 'RT')!;
@@ -135,7 +136,7 @@ describe('delivery rows and persona redaction', () => {
 
   it('turns a not-read item into unknown status with its reason', () => {
     const r = deliveryRows(KH, 'owner', 'en').find((x) => x.id === 'DLV-KH-2')!;
-    expect(r).toMatchObject({ status: 'unknown', truth: 'unknown', notReadReason: 'unavailable', restricted: false });
+    expect(r).toMatchObject({ status: 'unknown', truth: 'unknown', notReadReason: 'unavailable' });
   });
 
   it('is empty for Seshat-BI', () => {
@@ -151,17 +152,18 @@ describe('selected component evidence', () => {
     expect(rows[1]?.title).toContain('integration-tests');
   });
 
-  it('gives Owner and Nontechnical redacted titles and restricted items as restricted (raw, unprojected input: defence in depth)', () => {
+  it('gives Owner and Nontechnical redacted titles, no row for withheld evidence, and refuses unscoped input (BACK-92 R7)', () => {
     for (const persona of ['owner', 'nontechnical'] as const) {
-      const text = linkedEvidence(WORLD, RT, comp('stock-sync'), persona, 'en').map((r) => r.title).join(' ');
+      const w = authorizedWorld(WORLD, persona);
+      const rt = projectById(w, 'RT')!;
+      const text = linkedEvidence(w, rt, componentById(rt, 'stock-sync')!, persona, 'en').map((r) => r.title).join(' ');
       expect(text).not.toContain('integration-tests');
       expect(text).not.toContain('#DEMO-4471');
+      // Inventory rests only on Technical-only E-5: the scoped world gives it no linked row at all, not a placeholder.
+      expect(linkedEvidence(w, rt, componentById(rt, 'inventory')!, persona, 'en')).toEqual([]);
+      expect(() => linkedEvidence(WORLD, RT, comp('inventory'), persona, 'en')).toThrow(/unscoped evidence/);
     }
-    const inv = linkedEvidence(WORLD, RT, comp('inventory'), 'owner', 'en');
-    expect(inv).toHaveLength(1);
-    expect(inv[0]?.view.restricted).toBe(true);
-    expect(inv[0]?.title).toBe('Restricted to Technical');
-    expect(linkedEvidence(WORLD, RT, comp('inventory'), 'technical', 'en')[0]?.view.restricted).toBeUndefined();
+    expect(linkedEvidence(WORLD, RT, comp('inventory'), 'technical', 'en').map((r) => r.id)).toEqual(['E-5']);
   });
 
   it('has no evidence for a component with an empty basis and no attention', () => {

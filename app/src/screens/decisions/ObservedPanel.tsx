@@ -9,12 +9,11 @@ import { useDecisionsUi } from './useDecisionsUi';
 
 const asView = (r: EvidenceRow): EvidenceView => ({
   id: r.id, label: r.label, freshness: r.freshness, ageMinutes: r.ageMinutes, inert: true,
-  ...(r.restricted ? { restricted: true as const } : {}),
   ...(r.provider ? { provider: r.provider } : {}),
   ...(r.notReadReason ? { notReadReason: r.notReadReason } : {}),
 });
 
-/** Observed facts only: what was read, with provenance. Not-read and restricted items stay listed. */
+/** Observed facts only: what was read, with provenance. Not-read items stay listed. */
 export function ObservedPanel({ rows, from }: { readonly rows: readonly EvidenceRow[]; readonly from?: string }) {
   const { lang, copy, c, style } = useDecisionsUi();
   return (
@@ -22,7 +21,7 @@ export function ObservedPanel({ rows, from }: { readonly rows: readonly Evidence
       <p className="note">{c.observedNote}</p>
       <ul className="evidence-list">
         {rows.map((r) => (
-          <li key={r.id} className={`evidence-item${r.notReadReason || r.restricted ? ' not-read' : ''}`} data-evidence={r.id}>
+          <li key={r.id} className={`evidence-item${r.notReadReason ? ' not-read' : ''}`} data-evidence={r.id}>
             <TruthChip label={r.label} style={style} copy={copy} />
             <span className="evidence-text"><Text s={r.title} /></span>
             <span className="evidence-status"><Text s={statusLine(asView(r), copy, lang)} /></span>

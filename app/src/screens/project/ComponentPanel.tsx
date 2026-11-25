@@ -21,29 +21,23 @@ function EvidenceRow({ item, caseId }: { readonly item: LinkedEvidence; readonly
   return (
     <li className="row-item" data-evidence={item.id}>
       <p><Text s={item.title} /></p>
-      {v.restricted ? (
-        <p className="note">{copy.restricted}</p>
-      ) : (
-        <p className="proj-chips">
-          <TruthChip label={v.label} style={style} copy={copy} />
-          <span className="note">
-            {v.notReadReason ? (
-              copy.notRead[v.notReadReason]
-            ) : (
-              <>
-                {v.provider && <><bdi dir="ltr">{copy.provider[v.provider]}</bdi> · </>}
-                {copy.freshness[v.freshness]}{age}
-              </>
-            )}
-          </span>
-        </p>
-      )}
+      <p className="proj-chips">
+        <TruthChip label={v.label} style={style} copy={copy} />
+        <span className="note">
+          {v.notReadReason ? (
+            copy.notRead[v.notReadReason]
+          ) : (
+            <>
+              {v.provider && <><bdi dir="ltr">{copy.provider[v.provider]}</bdi> · </>}
+              {copy.freshness[v.freshness]}{age}
+            </>
+          )}
+        </span>
+      </p>
       {v.targetLabel && <p className="note">{t.target}: <bdi dir="ltr" className="ltr">{v.targetLabel}</bdi></p>}
-      {!v.restricted && (
-        <a className="btn btn-quiet btn-link" href={hrefFor({ name: 'evidence', id: item.id, ...(caseId ? { from: caseId } : {}) })}>
-          <Text s={t.inspect(item.id)} />
-        </a>
-      )}
+      <a className="btn btn-quiet btn-link" href={hrefFor({ name: 'evidence', id: item.id, ...(caseId ? { from: caseId } : {}) })}>
+        <Text s={t.inspect(item.id)} />
+      </a>
     </li>
   );
 }

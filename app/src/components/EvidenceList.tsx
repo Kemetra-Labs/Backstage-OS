@@ -14,9 +14,8 @@ interface Props {
   readonly onOpen: (id: string, opener: HTMLButtonElement) => void;
 }
 
-/** Status line from the view only. Restricted items show nothing but the restriction. */
+/** Status line from the view only. */
 export const statusLine = (e: EvidenceView, copy: Copy, lang: Lang): string => {
-  if (e.restricted) return copy.restricted;
   if (e.notReadReason) return copy.notRead[e.notReadReason];
   const provider = e.provider ? `{${copy.provider[e.provider]}} · ` : '';
   return `${provider}${formatAge(e.ageMinutes, lang)} · ${copy.freshness[e.freshness]}`;
@@ -24,16 +23,16 @@ export const statusLine = (e: EvidenceView, copy: Copy, lang: Lang): string => {
 
 /** Persona-specific title: Owner gets a summary, Nontechnical plain words, Technical the job and ids. */
 export const evidenceTitle = (copy: Copy, e: EvidenceView, persona: Persona): string =>
-  e.restricted ? copy.restricted : (copy.evidenceItem[e.id]?.[persona] ?? e.id);
+  copy.evidenceItem[e.id]?.[persona] ?? e.id;
 
-/** Evidence items, read and not read. Not-read items stay visible with their reason; restricted items are counted. */
+/** Evidence items, read and not read. Not-read items stay visible with their reason. */
 export function EvidenceList({ items, persona, labelStyle, copy, lang, onOpen }: Props) {
   return (
     <section className="evidence" aria-labelledby="evidence-title">
       <h2 id="evidence-title">{copy.evidenceTitle}</h2>
       <ul className="evidence-list">
         {items.map((e) => (
-          <li key={e.id} className={`evidence-item${e.notReadReason || e.restricted ? ' not-read' : ''}`} data-evidence={e.id}>
+          <li key={e.id} className={`evidence-item${e.notReadReason ? ' not-read' : ''}`} data-evidence={e.id}>
             <TruthChip label={e.label} style={labelStyle} copy={copy} />
             <span className="evidence-text"><Text s={evidenceTitle(copy, e, persona)} /></span>
             <span className="evidence-status"><Text s={statusLine(e, copy, lang)} /></span>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WORLD } from '../fixture/world';
+import { authorizedWorld } from './authorize';
 import { deliveryLabelFor, evidenceTitleFor, evidenceViewFor } from './evidence';
 
 const ev = (id: string) => {
@@ -21,9 +22,11 @@ describe('evidenceViewFor', () => {
     expect(evidenceViewFor('owner', ev('E-1')).observedAt).toBeDefined();
     expect(evidenceViewFor('nontechnical', ev('E-1')).observedAt).toBeUndefined();
   });
-  it('technical-only evidence is restricted for other personas (raw, unprojected input: defence in depth)', () => {
-    expect(evidenceViewFor('owner', ev('E-12'))).toEqual({ id: 'E-12', label: 'unknown', freshness: 'unknown', ageMinutes: null, inert: true, restricted: true });
-    expect(evidenceViewFor('technical', ev('E-12')).restricted).toBeUndefined();
+  it('fails closed on a Technical-only record for other personas: no placeholder view exists (BACK-92 R7, defence in depth)', () => {
+    for (const p of ['owner', 'nontechnical'] as const) {
+      for (const id of ['E-5', 'E-12', 'E-23']) expect(() => evidenceViewFor(p, ev(id)), `${p}/${id}`).toThrow(/unscoped evidence/);
+    }
+    expect(evidenceViewFor('technical', ev('E-12'))).toMatchObject({ id: 'E-12', provider: expect.any(String) });
   });
   it('unread evidence is unknown with its reason', () => {
     expect(evidenceViewFor('owner', ev('E-24'))).toMatchObject({ label: 'unknown', freshness: 'unknown', notReadReason: 'unavailable' });
@@ -38,9 +41,16 @@ describe('evidenceTitleFor', () => {
     expect(evidenceTitleFor(WORLD, 'E-1', 'technical', 'en')).toContain('integration-tests');
     expect(evidenceTitleFor(WORLD, 'E-1', 'owner', 'en')).not.toContain('integration-tests');
     expect(evidenceTitleFor(WORLD, 'E-22', 'owner', 'ar')).toMatch(/[\u0600-\u06FF]/);
-    expect(evidenceTitleFor(WORLD, 'E-12', 'owner', 'en')).toBe('Restricted to Technical');
     expect(evidenceTitleFor(WORLD, 'E-12', 'technical', 'en')).toContain('payments');
     expect(evidenceTitleFor(WORLD, 'nope', 'owner', 'en')).toBe('{nope}');
+  });
+  it('never takes a title from the static copy for an id the scoped world does not hold (BACK-92 R7)', () => {
+    for (const p of ['owner', 'nontechnical'] as const) {
+      const w = authorizedWorld(WORLD, p);
+      // E-5 has a title for every persona in strings.ts; the scoped world withholds it, so only the bare id may come back.
+      for (const id of ['E-5', 'E-12', 'E-23']) expect(evidenceTitleFor(w, id, p, 'en'), `${p}/${id}`).toBe(`{${id}}`);
+      expect(() => evidenceTitleFor(WORLD, 'E-12', p, 'en')).toThrow(/unscoped evidence/);
+    }
   });
 });
 
