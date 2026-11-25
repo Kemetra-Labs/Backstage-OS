@@ -38,7 +38,7 @@ seed_repo() {
 # Prints the selected suites in a fixed order, e.g. "root app" or "none".
 selected() {
   local out="$1" s=""
-  for k in root app app_v1 server g1; do
+  for k in root app app_e2e server g1; do
     grep -qx "$k=true" <<<"$out" && s="$s $k"
   done
   s="${s# }"
@@ -63,10 +63,10 @@ check() {
 commit_change() { git add -A && git commit -qm change; }
 case_with() { seed_repo "$WORK/r"; "$@"; commit_change; }
 
-ALL="root app app_v1 server g1"
-# Any app/ change runs the app typecheck and unit tests (`app`) and the one app browser suite (`app_v1`, app/e2e). The V2 lab suite
-# and its flag (app_v2) retired with the lab entry (BACK-92 R4).
-APP_ALL="app app_v1"
+ALL="root app app_e2e server g1"
+# Any app/ change runs the app typecheck and unit tests (`app`) and the one app browser suite (`app_e2e`, app/e2e). The standalone
+# lens suite and its flag (app_v2) retired with its entry (BACK-92 R4).
+APP_ALL="app app_e2e"
 
 # Backend-only, like PR #79 (server plus documentation).
 case_with bash -c 'echo x >> server/src/main.ts; echo x >> server/migrations/0001.sql; echo x >> docs/qa/report.md'
