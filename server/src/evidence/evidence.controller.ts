@@ -18,8 +18,9 @@ import {
 } from '@nestjs/common';
 import { RequireCapability, WorkspaceGuard, type WorkspaceRequest } from '../auth/workspace.guard';
 import type { WorkspacePrincipal } from '../auth/workspace-resolver';
-import { EvidenceRepository, type DecisionInput } from './evidence.repository';
-import { NotVisibleError, UUID } from './evidence.types';
+import { decisionBody, noteBody } from './evidence.body';
+import { EvidenceRepository } from './evidence.repository';
+import { NotVisibleError, RefusedError, UUID } from './evidence.types';
 
 export const EVIDENCE_REPOSITORY = Symbol('KAWALYS_EVIDENCE_REPOSITORY');
 
@@ -33,22 +34,6 @@ function workspaceOf(req: Req): WorkspacePrincipal {
 
 const optionalId = (value: unknown): string | undefined | null =>
   value === undefined ? undefined : typeof value === 'string' ? value : null;
-
-/** No NUL and no unpaired surrogate: PostgreSQL jsonb would reject them later with a 500. */
-function storableText(v: string): boolean {
-  return !v.includes(String.fromCharCode(0)) && (v as unknown as { isWellFormed(): boolean }).isWellFormed();
-}
-
-function decisionBody(body: unknown, investigationId: string): DecisionInput {
-  const b = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
-  const { decision, rationale, evidenceIds } = b;
-  const text = (v: unknown, max: number) => typeof v === 'string' && v.trim().length > 0 && v.length <= max && storableText(v);
-  if (!text(decision, 2000) || !text(rationale, 4000)) throw new BadRequestException();
-  if (!Array.isArray(evidenceIds) || evidenceIds.length > 50 || !evidenceIds.every((id) => typeof id === 'string')) {
-    throw new BadRequestException();
-  }
-  return { investigationId, decision: decision as string, rationale: rationale as string, evidenceIds: evidenceIds as string[] };
-}
 
 @Controller()
 @UseGuards(WorkspaceGuard)
@@ -85,12 +70,28 @@ export class EvidenceController {
     if (!UUID.test(investigationId)) throw new NotFoundException();
     const input = decisionBody(body, investigationId);
     const principal = workspaceOf(req);
-    try {
-      const id = await this.repo.recordDecision(principal.workspaceId, principal.userId, input, req.requestId ?? null);
-      return { id };
-    } catch (err) {
-      if (err instanceof NotVisibleError) throw new NotFoundException();
-      throw err;
-    }
+    return written(() => this.repo.recordDecision(principal.workspaceId, principal.userId, input, req.requestId ?? null));
+  }
+
+  /** A user-written Correlation or Hypothesis citing one source's visible evidence (BACK-50). */
+  @Post('investigations/:id/notes')
+  @RequireCapability('note.create')
+  @HttpCode(201)
+  async note(@Req() req: Req, @Param('id') investigationId: string, @Body() body: unknown) {
+    if (!UUID.test(investigationId)) throw new NotFoundException();
+    const input = noteBody(body, investigationId);
+    const principal = workspaceOf(req);
+    return written(() => this.repo.recordNote(principal.workspaceId, principal.userId, input, req.requestId ?? null));
+  }
+}
+
+/** Invisible or absent answers 404; a rule broken over visible rows answers 400. */
+async function written(write: () => Promise<string>): Promise<{ id: string }> {
+  try {
+    return { id: await write() };
+  } catch (err) {
+    if (err instanceof NotVisibleError) throw new NotFoundException();
+    if (err instanceof RefusedError) throw new BadRequestException();
+    throw err;
   }
 }

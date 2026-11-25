@@ -6,7 +6,7 @@ import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import type { EvidenceRepository } from '../../src/evidence/evidence.repository';
 import { NotVisibleError } from '../../src/evidence/evidence.types';
 import { INVESTIGATION_LIMIT, InvestigationRepository } from '../../src/investigations/investigation.repository';
-import { expectNotFound, expectSessionRequired, startOwnerApp, type OwnerApp } from '../db/owner-app';
+import { evidenceCount, expectNotFound, expectSessionRequired, startOwnerApp, type OwnerApp } from '../db/owner-app';
 
 let t: OwnerApp | undefined;
 let db: OwnerApp['db'];
@@ -36,8 +36,7 @@ afterAll(async () => {
   await t?.stop();
 }, 60_000);
 
-const evidenceRows = (inv: string) =>
-  runWithWorkspaceContext(db!.app, ws, async (c) => Number((await c.query<{ n: string }>('SELECT count(*) AS n FROM evidence WHERE investigation_id = $1', [inv])).rows[0]!.n));
+const evidenceRows = (inv: string) => evidenceCount(db!, ws, inv);
 
 /** A project whose only source grant is revoked: it and its investigation no longer exist for the owner. */
 async function hiddenInvestigation(key: string): Promise<{ project: string; investigation: string }> {
