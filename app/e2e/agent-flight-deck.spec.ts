@@ -71,9 +71,11 @@ test('Flight Deck: selecting a mission is a navigation; Back, Forward and a deep
   expect(await hash(page)).toBe(second);
   expect(first.length).toBeGreaterThan(0);
   await openRoute(page, '/agents/deck/MSN-DEMO-1', { lang: 'en', persona: 'owner', width: 1440 });
-  await expect(lens(page).locator('#mission .kv2-md-grid > div').first().locator('dd')).toHaveText(translate('ag.collector', 'en', 'owner'));
+  // BACK-102: the agent is the roster's triage-scout (a proper name), with the role its missions give it.
+  const agentCell = `triage-scout ${translate('deck.q.sensing', 'en', 'owner')}`;
+  await expect(lens(page).locator('#mission .kv2-md-grid > div').first().locator('dd')).toHaveText(agentCell);
   await page.reload();
-  await expect(lens(page).locator('#mission .kv2-md-grid > div').first().locator('dd')).toHaveText(translate('ag.collector', 'en', 'owner'));
+  await expect(lens(page).locator('#mission .kv2-md-grid > div').first().locator('dd')).toHaveText(agentCell);
   await page.getByRole('button', { name: COPY.en.persona.technical, exact: true }).click();
   await page.getByRole('button', { name: 'عربي', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');

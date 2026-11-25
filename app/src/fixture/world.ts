@@ -4,7 +4,7 @@
 // Owner and Nontechnical text never names job names, run ids or PR ids (same rule as inv-demo-7).
 import type { DisplayState, EvidenceReference, Observation, SourceAuthority, EntityRef, Provider } from '../contract/types';
 import type {
-  ActivityEvent, AgentDemo, ByPersonaL10n, Decision, GraphEdge, GraphNode, InvestigationSummary, L10n, Mission, MissionAgent,
+  ActivityEvent, AgentDemo, ByPersonaL10n, Decision, GraphEdge, GraphNode, InvestigationSummary, L10n, Mission,
   ProjectLink, ReplayEvent, SourceEvent, SourceMeta, World, WorldProject,
 } from '../contract/world';
 import { DOMAIN } from '../domain/fixture';
@@ -313,7 +313,7 @@ const agents: readonly AgentDemo[] = [
       { id: 'read-ci', label: l('Read CI results (simulated)', 'قراءة نتائج التكامل المستمر (محاكاة)'), status: 'simulated' },
       { id: 'open-case', label: l('Open an investigation case (simulated)', 'فتح حالة تحقيق (محاكاة)'), status: 'simulated' },
     ] },
-  { id: 'AG-collector', name: 'evidence-collector', state: 'idle', projectIds: ['RT', 'KH', 'SB'], lastActivityMinutesAgo: 5,
+  { id: 'AG-collector', name: 'evidence-collector', state: 'watching', projectIds: ['RT', 'KH', 'SB'], lastActivityMinutesAgo: 5,
     purpose: l('Links evidence to cases by written rules.', 'يربط الأدلة بالحالات وفق قواعد مكتوبة.'),
     capabilities: [
       { id: 'correlate', label: l('Correlate by written rule (simulated)', 'الربط وفق قاعدة مكتوبة (محاكاة)'), status: 'simulated' },
@@ -478,20 +478,15 @@ const REPLAY: readonly ReplayEvent[] = [
   { id: 'R-7', clock: '14:08', stage: 'proposed', label: 'proposed', evidence: null, kind: 'event', key: 'rp.proposed' },
 ];
 
-const AGENTS: readonly MissionAgent[] = [
-  { id: 'AG-1', key: 'ag.collector', role: 'sensing' },
-  { id: 'AG-2', key: 'ag.watcher', role: 'sensing' },
-  { id: 'AG-3', key: 'ag.correlator', role: 'analysis' },
-  { id: 'AG-4', key: 'ag.analyst', role: 'analysis' },
-  { id: 'AG-5', key: 'ag.drafter', role: 'proposal' },
-];
-
+// Missions are worked by the one agent roster (agents, above), consistent with its activity log: triage-scout senses (it reads CI),
+// evidence-collector correlates, tests the hypothesis and drafted proposal DEC-DEMO-3 (ACT-4, ACT-5). A paused or not-enabled agent
+// owns no active mission (fixture/mission.test.ts pins both rules).
 const MISSIONS: readonly Mission[] = [
-  { id: 'MSN-DEMO-1', agent: 'AG-1', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 7, label: 'observed', evidence: ['E-1', 'E-2'], key: 'ms.ci' },
-  { id: 'MSN-DEMO-2', agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 9, label: 'observed', evidence: ['E-5', 'E-9'], key: 'ms.fresh' },
-  { id: 'MSN-DEMO-3', agent: 'AG-3', kind: 'analysis', status: 'analyzing', human: 'reviewing', startedMinutesAgo: 4, label: 'correlated', evidence: ['E-3'], key: 'ms.link' },
-  { id: 'MSN-DEMO-4', agent: 'AG-4', kind: 'analysis', status: 'analyzing', human: 'reviewing', startedMinutesAgo: 2, label: 'hypothesis', evidence: ['E-1', 'E-2', 'E-3'], key: 'ms.hyp' },
-  { id: 'MSN-DEMO-5', agent: 'AG-5', kind: 'proposal', status: 'waiting_review', human: 'needs_review', startedMinutesAgo: 1, label: 'proposed', evidence: ['E-1', 'E-3'], key: 'ms.proposal' },
+  { id: 'MSN-DEMO-1', agent: 'AG-scout', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 7, label: 'observed', evidence: ['E-1', 'E-2'], key: 'ms.ci' },
+  { id: 'MSN-DEMO-2', agent: 'AG-scout', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 9, label: 'observed', evidence: ['E-5', 'E-9'], key: 'ms.fresh' },
+  { id: 'MSN-DEMO-3', agent: 'AG-collector', kind: 'analysis', status: 'analyzing', human: 'reviewing', startedMinutesAgo: 4, label: 'correlated', evidence: ['E-3'], key: 'ms.link' },
+  { id: 'MSN-DEMO-4', agent: 'AG-collector', kind: 'analysis', status: 'analyzing', human: 'reviewing', startedMinutesAgo: 2, label: 'hypothesis', evidence: ['E-1', 'E-2', 'E-3'], key: 'ms.hyp' },
+  { id: 'MSN-DEMO-5', agent: 'AG-collector', kind: 'proposal', status: 'waiting_review', human: 'needs_review', startedMinutesAgo: 1, label: 'proposed', evidence: ['E-1', 'E-3'], key: 'ms.proposal' },
 ];
 
 // The canonical case records (E-1..E-9, in their canonical order) first, then the records outside it. Each is defined once.
@@ -514,6 +509,5 @@ export const WORLD: World = {
   sources: SOURCE_LIST,
   sourceTimeline: SOURCE_EVENTS,
   replay: REPLAY,
-  missionAgents: AGENTS,
   missions: MISSIONS,
 };

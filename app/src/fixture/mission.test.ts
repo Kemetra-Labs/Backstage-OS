@@ -26,12 +26,28 @@ describe('one shared synthetic world', () => {
     for (const n of w.graph.nodes) for (const id of n.evidence) expect(w.evidence[id], `${n.id}:${id}`).toBeDefined();
     for (const r of w.replay) if (r.evidence) expect(w.evidence[r.evidence], r.id).toBeDefined();
     for (const m of w.missions) {
-      expect(w.missionAgents.some((a) => a.id === m.agent), m.id).toBe(true);
+      expect(w.agents.some((a) => a.id === m.agent), m.id).toBe(true);
       for (const id of m.evidence) expect(w.evidence[id], `${m.id}:${id}`).toBeDefined();
     }
     const providers = new Set(w.sources.map((s) => s.provider));
     for (const n of w.graph.nodes) if (n.provider) expect(providers.has(n.provider), n.id).toBe(true);
     for (const s of w.sourceTimeline) expect(providers.has(s.provider), s.id).toBe(true);
+  });
+
+  it('every mission is worked by an agent of the one roster (World.agents)', () => {
+    const roster = new Set(w.agents.map((a) => a.id));
+    for (const m of w.missions) expect(roster.has(m.agent), `${m.id}: ${m.agent}`).toBe(true);
+    expect([...new Set(w.missions.map((m) => m.agent))].sort()).toEqual(['AG-collector', 'AG-scout']);
+  });
+
+  it('a paused or not-enabled agent owns no active mission, and an agent with an active mission is shown as working', () => {
+    for (const a of w.agents) {
+      const active = w.missions.filter((m) => m.agent === a.id && m.status !== 'idle');
+      if (a.state === 'paused' || a.state === 'not_enabled') expect(active.map((m) => m.id), a.id).toEqual([]);
+      if (active.length > 0) expect(a.state, a.id).toBe('watching');
+    }
+    // Not vacuous: the roster has a paused and a not-enabled agent, and both working agents have active missions.
+    expect(w.agents.map((a) => a.state).sort()).toEqual(['not_enabled', 'paused', 'watching', 'watching']);
   });
 
   it('has unique ids', () => {

@@ -8,7 +8,7 @@ import { useLens } from '../useLens';
 import { WORLD } from '../../fixture/world';
 import type { K } from '../../i18n';
 import { authorizedWorld } from '../../view/authorize';
-import { STATUS_ORDER, deckCounts, filterMissions } from '../logic/deck';
+import { STATUS_ORDER, agentRoles, deckCounts, filterMissions } from '../logic/deck';
 import { evidenceOf } from '../logic/evidence';
 import { hhmm, sourceCounts, sourceStatus, type Tone } from '../logic/status';
 import type { AgentStatus, Mission, MissionKind } from '../../contract/world';
@@ -25,11 +25,12 @@ const SECTIONS = [
   { id: 'audit', key: 'deck.jump.audit' },
 ] as const satisfies readonly { id: string; key: K }[];
 
-const SATS: readonly { readonly id: string; readonly key: K; readonly icon: IconName; readonly agents: readonly string[] }[] = [
-  { id: 'correlate', key: 'deck.sat.correlate', icon: 'network', agents: ['AG-3'] },
-  { id: 'hypothesis', key: 'deck.sat.hypothesis', icon: 'bulb', agents: ['AG-4'] },
-  { id: 'sense', key: 'deck.sat.sense', icon: 'chart', agents: ['AG-1', 'AG-2'] },
-  { id: 'proposal', key: 'deck.sat.proposal', icon: 'doc', agents: ['AG-5'] },
+// A satellite is a stage of the pipeline, shown with the status of the first mission at that stage.
+const SATS: readonly { readonly id: string; readonly key: K; readonly icon: IconName; readonly missions: readonly string[] }[] = [
+  { id: 'correlate', key: 'deck.sat.correlate', icon: 'network', missions: ['MSN-DEMO-3'] },
+  { id: 'hypothesis', key: 'deck.sat.hypothesis', icon: 'bulb', missions: ['MSN-DEMO-4'] },
+  { id: 'sense', key: 'deck.sat.sense', icon: 'chart', missions: ['MSN-DEMO-1', 'MSN-DEMO-2'] },
+  { id: 'proposal', key: 'deck.sat.proposal', icon: 'doc', missions: ['MSN-DEMO-5'] },
 ];
 
 /**
@@ -50,7 +51,9 @@ export function AgentFlightDeck({ embedded = false }: { readonly embedded?: bool
   const [kind, setKind] = useState<MissionKind | 'all'>('all');
   const rows = filterMissions(w.missions, { agent, status }).filter((m) => kind === 'all' || m.kind === kind);
   const sel = w.missions.find((m) => m.id === route.msn) ?? w.missions[0]!;
-  const agentOf = (m: Mission) => w.missionAgents.find((a) => a.id === m.agent)!;
+  const agentOf = (m: Mission) => w.agents.find((a) => a.id === m.agent)!;
+  // An agent's role is the kinds of mission it works, derived from the missions, never stored.
+  const roleOf = (id: string): string => agentRoles(w, id).map((k) => t(`deck.q.${k}` as K)).join(' · ');
   const srcStatuses = w.sources.map((s) => sourceStatus(s, w.now));
   const sc = sourceCounts(srcStatuses);
   const review = w.missions.filter((m) => m.human === 'needs_review');
@@ -66,8 +69,8 @@ export function AgentFlightDeck({ embedded = false }: { readonly embedded?: bool
     document.getElementById(`${id}-h`)?.focus({ preventScroll: true });
   };
 
-  const satStatus = (agents: readonly string[]): AgentStatus => {
-    const m = w.missions.find((x) => agents.includes(x.agent));
+  const satStatus = (missions: readonly string[]): AgentStatus => {
+    const m = w.missions.find((x) => missions.includes(x.id));
     return m ? m.status : 'idle';
   };
 
@@ -111,7 +114,7 @@ export function AgentFlightDeck({ embedded = false }: { readonly embedded?: bool
               <i className="kv2-ring-b" aria-hidden="true" />
               <div className="kv2-core"><span><Icon name="layers" size={40} /></span><b><T k="deck.core" /></b><small><T k="deck.core.sub" /> <Lt>Retail Tower OS</Lt></small></div>
               {SATS.map((s) => {
-                const st = satStatus(s.agents);
+                const st = satStatus(s.missions);
                 return (
                   <div key={s.id} className="kv2-sat" data-sat={s.id} data-tone={STATUS_TONE[st]}>
                     <span className="kv2-sat-orb"><Icon name={s.icon} size={22} /></span>
@@ -129,7 +132,7 @@ export function AgentFlightDeck({ embedded = false }: { readonly embedded?: bool
             <label className="kv2-select"><span><T k="deck.f.agent" /></span>
               <select value={agent} onChange={(e) => setAgent(e.target.value)}>
                 <option value="all">{t('deck.f.all.agents')}</option>
-                {w.missionAgents.map((a) => <option key={a.id} value={a.id}>{t(a.key as K)}</option>)}
+                {w.agents.map((a) => <option key={a.id} value={a.id} dir="ltr">{a.name}</option>)}
               </select><Icon name="chevron" size={14} />
             </label>
             <label className="kv2-select"><span><T k="deck.f.status" /></span>
@@ -161,7 +164,7 @@ export function AgentFlightDeck({ embedded = false }: { readonly embedded?: bool
                   <tr key={m.id} data-selected={sel.id === m.id || undefined} data-human={m.human}>
                     <th scope="row">
                       <button type="button" aria-pressed={sel.id === m.id} onClick={() => go({ msn: m.id })}><T k={m.key as K} /></button>
-                      <small><T k={agentOf(m).key as K} />{showIds && <> <Lt>{m.id}</Lt></>}</small>
+                      <small><Lt>{agentOf(m).name}</Lt>{showIds && <> <Lt>{m.id}</Lt></>}</small>
                     </th>
                     <td><ToneChip tone={STATUS_TONE[m.status]}><T k={statusKey(m.status)} /></ToneChip></td>
                     <td className="kv2-focus"><T k={`${m.key}.focus` as K} /></td>
@@ -182,7 +185,7 @@ export function AgentFlightDeck({ embedded = false }: { readonly embedded?: bool
               <h3><T k={sel.key as K} /></h3>
               <p className="kv2-md-focus"><T k={`${sel.key}.focus` as K} /></p>
               <dl className="kv2-md-grid">
-                <div><dt><T k="deck.md.agent" /></dt><dd><T k={agentOf(sel).key as K} /></dd></div>
+                <div><dt><T k="deck.md.agent" /></dt><dd><Lt>{agentOf(sel).name}</Lt> <span className="kv2-muted" data-testid="agent-role">{roleOf(sel.agent)}</span></dd></div>
                 <div><dt><T k="deck.th.status" /></dt><dd><ToneChip tone={STATUS_TONE[sel.status]}><T k={statusKey(sel.status)} /></ToneChip></dd></div>
                 <div><dt><T k="deck.md.started" /></dt><dd><Age minutes={sel.startedMinutesAgo} /></dd></div>
                 <div><dt><T k="deck.md.events" /></dt><dd><T k="deck.md.events.unknown" /></dd></div>

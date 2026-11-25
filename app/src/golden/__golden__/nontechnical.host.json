@@ -158,7 +158,7 @@
         "ar": "يربط الأدلة بالحالات وفق قواعد مكتوبة.",
         "en": "Links evidence to cases by written rules."
       },
-      "state": "idle"
+      "state": "watching"
     },
     {
       "capabilities": [

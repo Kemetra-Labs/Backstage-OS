@@ -1,29 +1,105 @@
 {
   "agents": [
     {
-      "id": "AG-1",
-      "key": "ag.collector",
-      "role": "sensing"
+      "capabilities": [
+        {
+          "id": "read-ci",
+          "label": {
+            "ar": "قراءة نتائج التكامل المستمر (محاكاة)",
+            "en": "Read CI results (simulated)"
+          },
+          "status": "simulated"
+        },
+        {
+          "id": "open-case",
+          "label": {
+            "ar": "فتح حالة تحقيق (محاكاة)",
+            "en": "Open an investigation case (simulated)"
+          },
+          "status": "simulated"
+        }
+      ],
+      "id": "AG-scout",
+      "lastActivityMinutesAgo": 6,
+      "name": "triage-scout",
+      "projectIds": [
+        "RT",
+        "KH"
+      ],
+      "purpose": {
+        "ar": "يجمع الفحوص الفاشلة الجديدة في حالات تحقيق.",
+        "en": "Groups new failing checks into investigation cases."
+      },
+      "state": "watching"
     },
     {
-      "id": "AG-2",
-      "key": "ag.watcher",
-      "role": "sensing"
+      "capabilities": [
+        {
+          "id": "correlate",
+          "label": {
+            "ar": "الربط وفق قاعدة مكتوبة (محاكاة)",
+            "en": "Correlate by written rule (simulated)"
+          },
+          "status": "simulated"
+        }
+      ],
+      "id": "AG-collector",
+      "lastActivityMinutesAgo": 5,
+      "name": "evidence-collector",
+      "projectIds": [
+        "RT",
+        "KH",
+        "SB"
+      ],
+      "purpose": {
+        "ar": "يربط الأدلة بالحالات وفق قواعد مكتوبة.",
+        "en": "Links evidence to cases by written rules."
+      },
+      "state": "watching"
     },
     {
-      "id": "AG-3",
-      "key": "ag.correlator",
-      "role": "analysis"
+      "capabilities": [
+        {
+          "id": "draft-note",
+          "label": {
+            "ar": "كتابة مسودة مقترح (محاكاة)",
+            "en": "Draft a proposal (simulated)"
+          },
+          "status": "simulated"
+        }
+      ],
+      "id": "AG-guard",
+      "lastActivityMinutesAgo": 1440,
+      "name": "release-guard",
+      "projectIds": [
+        "RT"
+      ],
+      "purpose": {
+        "ar": "يكتب مسودات ملاحظات مخاطر الإصدار لمالك بشري.",
+        "en": "Drafts release-risk notes for a human owner."
+      },
+      "state": "paused"
     },
     {
-      "id": "AG-4",
-      "key": "ag.analyst",
-      "role": "analysis"
-    },
-    {
-      "id": "AG-5",
-      "key": "ag.drafter",
-      "role": "proposal"
+      "capabilities": [
+        {
+          "id": "write",
+          "label": {
+            "ar": "أي كتابة على الكود أو التكامل المستمر أو التذاكر",
+            "en": "Any write to code, CI or tickets"
+          },
+          "status": "not_available"
+        }
+      ],
+      "id": "AG-fixer",
+      "lastActivityMinutesAgo": null,
+      "name": "remediation",
+      "projectIds": [],
+      "purpose": {
+        "ar": "سيغيّر الكود أو البنية التحتية. ليس جزءًا من {Kawalys} في هذا الإصدار.",
+        "en": "Would change code or infrastructure. Not part of Kawalys in this version."
+      },
+      "state": "not_enabled"
     }
   ],
   "edges": [
@@ -304,7 +380,7 @@
   "investigationId": "INV-DEMO-7",
   "missions": [
     {
-      "agent": "AG-1",
+      "agent": "AG-scout",
       "evidence": [
         "E-1",
         "E-2"
@@ -318,7 +394,7 @@
       "status": "observing"
     },
     {
-      "agent": "AG-2",
+      "agent": "AG-scout",
       "evidence": [
         "E-9"
       ],
@@ -331,7 +407,7 @@
       "status": "observing"
     },
     {
-      "agent": "AG-3",
+      "agent": "AG-collector",
       "evidence": [
         "E-3"
       ],
@@ -344,7 +420,7 @@
       "status": "analyzing"
     },
     {
-      "agent": "AG-4",
+      "agent": "AG-collector",
       "evidence": [
         "E-1",
         "E-2",
@@ -359,7 +435,7 @@
       "status": "analyzing"
     },
     {
-      "agent": "AG-5",
+      "agent": "AG-collector",
       "evidence": [
         "E-1",
         "E-3"

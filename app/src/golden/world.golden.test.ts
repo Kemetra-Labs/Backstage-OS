@@ -53,7 +53,7 @@ function lensOf(p: P): unknown {
   const w: World = authorizedWorld(WORLD, p);
   return {
     now: w.now, investigationId: w.investigationId, nodes: w.graph.nodes.map(withoutLink), edges: w.graph.edges, sources: w.sources,
-    sourceEvents: w.sourceTimeline, replay: w.replay, agents: w.missionAgents, missions: w.missions, evidenceById: byId(caseEvidence(w)),
+    sourceEvents: w.sourceTimeline, replay: w.replay, agents: w.agents, missions: w.missions, evidenceById: byId(caseEvidence(w)),
   };
 }
 function investigationOf(p: P): unknown {

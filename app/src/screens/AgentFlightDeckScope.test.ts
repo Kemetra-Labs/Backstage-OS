@@ -15,7 +15,7 @@ import { expectWorldReadOnlyThroughAuthorizedWorld } from './scopeGuard';
 const LAY: readonly Persona[] = ['owner', 'nontechnical'];
 const ALL: readonly Persona[] = ['technical', 'owner', 'nontechnical'];
 
-const base: Omit<Mission, 'id' | 'evidence' | 'label'> = { agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, key: 'ms.fresh' };
+const base: Omit<Mission, 'id' | 'evidence' | 'label'> = { agent: 'AG-scout', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, key: 'ms.fresh' };
 const onlyRestricted: Mission = { ...base, id: 'MSN-X1', label: 'observed', evidence: ['E-5'] };
 const missingEvidence: Mission = { ...base, id: 'MSN-X2', label: 'observed', evidence: ['E-404'] };
 const alreadyUnknown: Mission = { ...base, id: 'MSN-X3', label: 'unknown', evidence: [] };
@@ -27,7 +27,7 @@ const mission = (w: World, id: string): Mission => w.missions.find((m) => m.id =
 const deckData = (w: World): string => JSON.stringify({ missions: w.missions, evidence: w.missions.map((m) => evidenceOf(w, m.evidence)), counts: deckCounts(w) });
 
 describe('Flight Deck: zero inputs', () => {
-  const empty: World = { ...WORLD, missions: [], missionAgents: [] };
+  const empty: World = { ...WORLD, missions: [], agents: [] };
 
   it('no missions and no agents give zero counts, never a missing or invented number', () => {
     const c = deckCounts(empty);
@@ -38,7 +38,7 @@ describe('Flight Deck: zero inputs', () => {
 
   it('filtering an empty list, or matching nothing, gives an empty list', () => {
     expect(filterMissions([], { agent: 'all', status: 'all' })).toEqual([]);
-    expect(filterMissions(WORLD.missions, { agent: 'AG-1', status: 'idle' })).toEqual([]);
+    expect(filterMissions(WORLD.missions, { agent: 'AG-scout', status: 'idle' })).toEqual([]);
   });
 
   it('every persona still gets an (empty) world without throwing', () => {

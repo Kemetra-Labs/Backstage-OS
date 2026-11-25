@@ -239,16 +239,9 @@ export type AgentStatus = 'observing' | 'analyzing' | 'drafting' | 'waiting_revi
 export type MissionKind = 'sensing' | 'analysis' | 'proposal';
 export type HumanState = 'monitoring' | 'reviewing' | 'needs_review';
 
-/** Interim (BACK-102): the Flight Deck's own agents, until the mission agents become the World.agents roster. */
-export interface MissionAgent {
-  readonly id: string;
-  readonly key: string;
-  readonly role: MissionKind;
-}
-
 export interface Mission {
   readonly id: string;
-  /** The agent working the mission. */
+  /** The id of the agent working the mission: an entry of World.agents. */
   readonly agent: string;
   readonly kind: MissionKind;
   readonly status: AgentStatus;
@@ -290,7 +283,5 @@ export interface World {
   readonly sources: readonly SourceMeta[];
   readonly sourceTimeline: readonly SourceEvent[];
   readonly replay: readonly ReplayEvent[];
-  /** Interim (BACK-102): removed when the missions name World.agents. */
-  readonly missionAgents: readonly MissionAgent[];
   readonly missions: readonly Mission[];
 }

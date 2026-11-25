@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { WORLD } from '../../fixture/world';
 import { authorizedWorld } from '../../view/authorize';
 import { buildHash, DEFAULT_ROUTE, parseRoute } from '../navigation/route';
-import { deckCounts, filterMissions } from './deck';
+import { agentRoles, deckCounts, filterMissions } from './deck';
 import { CANVAS, HOME_VIEW, ZOOM_MAX, ZOOM_MIN, clampZoom, filterSet, focusView, kindCounts, linkCounts, neighbours, nextByDirection, scopeSet, zoomAt } from './graph';
 import { SPEEDS, STEP_MS, advance, clampMs, gapsAt, indexAt, milestonesAt, msOfIndex, stageAt, totalMs } from './replay';
 
@@ -143,13 +143,21 @@ describe('replay', () => {
 describe('deck', () => {
   it('derives counts from the missions, with no invented activity totals', () => {
     const c = deckCounts(WORLD);
-    expect(c).toMatchObject({ agents: 5, active: 5, needsReview: 1, reviewing: 2, monitoring: 2 });
+    expect(c).toMatchObject({ agents: 4, active: 5, needsReview: 1, reviewing: 2, monitoring: 2 });
     expect(Object.values(c.byStatus).reduce((a, b) => a + b, 0)).toBe(WORLD.missions.length);
   });
 
   it('filters by agent and status', () => {
-    expect(filterMissions(WORLD.missions, { agent: 'AG-3', status: 'all' })).toHaveLength(1);
+    expect(filterMissions(WORLD.missions, { agent: 'AG-collector', status: 'all' }).map((m) => m.id)).toEqual(['MSN-DEMO-3', 'MSN-DEMO-4', 'MSN-DEMO-5']);
+    expect(filterMissions(WORLD.missions, { agent: 'AG-guard', status: 'all' })).toEqual([]);
     expect(filterMissions(WORLD.missions, { agent: 'all', status: 'waiting_review' }).map((m) => m.id)).toEqual(['MSN-DEMO-5']);
-    expect(filterMissions(WORLD.missions, { agent: 'AG-1', status: 'idle' })).toHaveLength(0);
+    expect(filterMissions(WORLD.missions, { agent: 'AG-scout', status: 'idle' })).toHaveLength(0);
+  });
+
+  it('derives an agent role from its missions, in queue order, and none for an agent without missions', () => {
+    expect(agentRoles(WORLD, 'AG-scout')).toEqual(['sensing']);
+    expect(agentRoles(WORLD, 'AG-collector')).toEqual(['analysis', 'proposal']);
+    expect(agentRoles(WORLD, 'AG-guard')).toEqual([]);
+    expect(agentRoles(WORLD, 'AG-fixer')).toEqual([]);
   });
 });

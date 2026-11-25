@@ -106,7 +106,7 @@ describe('authorizedWorld', () => {
 // BACK-66: the replay, mission and search projections. The shipped fixture has no replay row or mission that rests ONLY on E-5,
 // so these use a constructed world: the rule has to hold for data the fixture does not happen to contain.
 const restrictedRow: ReplayEvent = { id: 'R-X', clock: '14:10', stage: 'correlated', label: 'observed', evidence: 'E-5', kind: 'event', key: 'rp.checkFailed' };
-const restrictedOnly: Mission = { id: 'MSN-X', agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, label: 'observed', evidence: ['E-5'], key: 'ms.fresh' };
+const restrictedOnly: Mission = { id: 'MSN-X', agent: 'AG-scout', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, label: 'observed', evidence: ['E-5'], key: 'ms.fresh' };
 const CONSTRUCTED: World = { ...WORLD, replay: [...WORLD.replay, restrictedRow], missions: [...WORLD.missions, restrictedOnly] };
 
 describe('authorizedWorld, replay rows and missions (BACK-66)', () => {
