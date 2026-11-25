@@ -4,7 +4,9 @@
 // shows its failure, and `ok` needs every part of the latest read to be ok. The server does not
 // compute `stale`: it returns lastReadAt, and the client applies freshness with `state` winning.
 import type { Endpoint } from '../connectors/github/github.observer';
-import type { EvidenceState } from '../evidence/evidence.types';
+import { worstState, type EvidenceState } from '../evidence/evidence.types';
+
+export { worstState };
 
 export interface SourceRef {
   readonly id: string;
@@ -64,14 +66,6 @@ export interface SourceSummary extends SourceRef {
 export interface ProjectSummary extends ProjectRef {
   readonly state: EvidenceState;
   readonly sources: readonly SourceSummary[];
-}
-
-/** Worst first is the one that needs attention most. `ok` is only ever the best of all-ok. */
-const SEVERITY: Readonly<Record<EvidenceState, number>> = { ok: 0, stale: 1, unknown: 2, error: 3, denied: 4 };
-
-export function worstState(states: readonly EvidenceState[]): EvidenceState {
-  if (states.length === 0) return 'unknown';
-  return states.reduce((a, b) => (SEVERITY[b] > SEVERITY[a] ? b : a));
 }
 
 const LIST_KIND: Readonly<Record<'pull_requests' | 'issues', PortfolioItem['kind']>> = { pull_requests: 'pull_request', issues: 'issue' };

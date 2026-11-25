@@ -35,7 +35,7 @@ NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental
 | `DELETE /auth/session` | Session required. Revokes the current session and clears the cookie (204). |
 | `DELETE /auth/sessions` | Session required. Revokes every session of the signed-in user (204). |
 | `GET /demo/evidence/:id` | Session required. Synthetic evidence. Fixture ids `E-1` (visible to all) and `E-5` (technical persona only). Persona comes from `x-kawalys-demo-persona`: `technical`, `owner` or `nontechnical` (default). |
-| `GET /evidence`, `GET /evidence/:id`, `POST /investigations/:id/decisions` | Exist **only when both database URLs are set** (see Evidence API below). Session plus a workspace capability required. Without the database they answer 404. |
+| `GET /evidence`, `GET /evidence/:id`, `POST /investigations/:id/decisions`, `POST /investigations/:id/notes` | Exist **only when both database URLs are set** (see Evidence API below). Session plus a workspace capability required. Without the database they answer 404. |
 | `GET /portfolio`, `GET /portfolio/:projectId` | Same conditions as the evidence routes, read-only, `evidence.read`. See Portfolio API below. |
 | `GET /investigations`, `GET /investigations/:id` | Same conditions as the evidence routes, read-only, `evidence.read`. See Investigation API below. |
 
@@ -159,6 +159,7 @@ Local code and tests only (owner approved gate A on 2026-11-23). Active only whe
 | --- | --- |
 | `evidence.read` | yes |
 | `decision.create` | yes |
+| `note.create` | yes (BACK-50: a user-written Correlation or Hypothesis) |
 | `source.connect` | yes |
 | `source.disconnect` | yes |
 | `audit.read` | yes |
@@ -188,7 +189,7 @@ Local code and tests only (owner approved gate A on 2026-11-23). Nothing is prov
 
 **Source grants.** A grant is one user's permission to see one source's evidence. Revocation is one-way (a trigger permits only setting `revoked_at` once; no delete). Reads require an active grant for the reading user. Connecting reuses an existing source only in the same project and only for a user who held a grant on it before (reconnecting after their own disconnect, audited as `source.reconnected`); nobody can attach themselves to a source someone else connected. Connecting with an active grant is a no-op. The repository does not check capabilities: any future route must require `source.connect` / `source.disconnect` first.
 
-**Decisions and citations.** What a `HumanDecision` cites is stored as `evidence_citations` rows, not in its payload (`{ decision, rationale }` only). A reader sees a decision only if every evidence row it cites is visible to that reader, so a decision (its citations or its rationale) never reveals that restricted evidence exists; the decider also loses sight of it after disconnecting a cited source. A reader also sees a decision only if they can see its project (the shared `PROJECT_VISIBLE` rule, the same as its investigation), so a decision that cites nothing never reveals a hidden project. Records carry `citations` (empty for non-decisions).
+**Decisions and citations.** What a `HumanDecision` cites is stored as `evidence_citations` rows, not in its payload (`{ decision, rationale }` only). A reader sees a decision only if every evidence row it cites is visible to that reader, so a decision (its citations or its rationale) never reveals that restricted evidence exists; the decider also loses sight of it after disconnecting a cited source. A reader also sees a decision only if they can see its project (the shared `PROJECT_VISIBLE` rule, the same as its investigation), so a decision that cites nothing never reveals a hidden project. Records carry `citations`: what a decision or a user note cites, empty for connector evidence. A note's citations all come from the note's own source (see Notes below).
 
 **Ingestion** is server-internal: there is no HTTP route for it. A batch is all-or-nothing, and is refused for a source without an active grant or with an investigation of another project. Ingestion and decisions share-lock the grant rows they rely on, so a concurrent revocation cannot slip in between the check and the insert.
 
@@ -199,6 +200,7 @@ Local code and tests only (owner approved gate A on 2026-11-23). Nothing is prov
 | `GET /evidence` | Needs a session and `evidence.read`. Optional filters `sourceId`, `investigationId`, `projectId`. An unknown, malformed or repeated filter value gives an empty list. Returns `{ items }`, newest first, capped at 500 rows. |
 | `GET /evidence/:id` | Needs a session and `evidence.read`. 404 when the record is absent or not visible to the caller. |
 | `POST /investigations/:id/decisions` | Needs a session and `decision.create`. Body `{ decision, rationale, evidenceIds }` (text without NUL or unpaired surrogates; at most 50 ids). The investigation must be visible to the caller (an active grant on a source of its project, the rule `GET /investigations/:id` uses), else 404 and nothing is written (tightened in the BACK-50 server slice). Every cited id must be source evidence of the investigation's project, visible to the caller. The decision and its audit row commit in one transaction. Returns 201 `{ id }`. |
+| `POST /investigations/:id/notes` | Needs a session and `note.create`. Body `{ type, text, evidenceIds }`: `type` must be given and be `Correlation` or `Hypothesis` (BACK-54, no save without an explicit type), `text` up to 4000 characters with the same text rules, 1 to 50 ids. 404, nothing written, for an investigation or a cited id the caller cannot see; 400 for a missing or wrong type, no citations, or citations from two sources. The note and its audit row (`note.recorded`) commit in one transaction. Returns 201 `{ id }`. |
 
 Failures follow the same fixed-envelope policy as authentication (404 for denied or invisible, 400 for an invalid body, 500 for a database failure).
 
@@ -209,7 +211,7 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 **Known limits:**
 
 - Projects and sources have no write routes, and investigations have read routes only (see Investigation API below).
-- Correlation and Hypothesis evidence each come from one source; multi-source derivation needs a later design.
+- Correlation and Hypothesis evidence each come from one source, including user notes: a note cannot link evidence of two sources (for example a GitHub pull request and a monitoring alert). Doing that safely needs a schema change and its own visibility rule; it is not built. This already applies today to two repositories of one project: a note citing both is refused with 400.
 - The list is capped at 500 rows and has no pagination or truncation flag yet.
 - Database-role hardening not done yet: `kawalys_app` could insert a `HumanDecision` row directly without an audit row, or a grant for any user id; the application never does, and a later slice can enforce it in the database.
 - There is no way yet for an administrator to revoke another user's grant (single owner).
@@ -260,11 +262,11 @@ Read-only routes for investigations. No new capability, schema or dependency.
 
 **What the room shows.** It shows investigation-scoped evidence only. Connector observations belong to no investigation (`investigation_id` is null), so they appear under `GET /portfolio/:projectId`; they are never linked to an investigation automatically.
 
-**Not in this slice (owner decision needed).** A user-written Correlation or Hypothesis note, and BACK-54's "API rejects save without explicit type", are blocked:
-- The schema requires every non-decision row to come from exactly one source (`(type = 'HumanDecision') = (source_id IS NULL)`).
-- No capability covers writing a note.
-
-The options are: a note cites exactly one source's evidence and inherits that source; a migration allowing user-authored inference without a source; or deferring notes. Each needs a new capability.
+**Notes** (owner decision 2026-11-25, option a). A user writes a `Correlation` or `Hypothesis` with `POST /investigations/:id/notes` (`note.create`). No schema change:
+- It must cite at least one evidence row, and every cited row must come from the same source. The note is stored with that `source_id` (the schema requires one source for every non-decision row), so whoever can see the note can see everything it cites, and nobody else sees it.
+- Cited rows must be visible source evidence of the investigation's project; another note of the same source may be cited, a decision may not.
+- Its `state` is the worst state of what it cites, so a note built on `unknown` evidence never shows as `ok`. `source_ref` is `kawalys:note`; the payload is `{ text }`.
+- Citations go to `evidence_citations` like a decision's. Notes do not change `GET /portfolio`, which reads connector observations only.
 
 ## Portfolio API (BACK-49 slice 2)
 

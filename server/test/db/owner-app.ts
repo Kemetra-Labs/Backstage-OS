@@ -4,6 +4,7 @@ import type { INestApplication } from '@nestjs/common';
 import pg from 'pg';
 import request from 'supertest';
 import { WorkspaceResolver } from '../../src/auth/workspace-resolver';
+import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { createApp } from '../../src/create-app';
 import { EvidenceRepository } from '../../src/evidence/evidence.repository';
 import { FakeIdentityVerifier, OWNER, TOKENS } from '../auth/_helpers';
@@ -54,6 +55,13 @@ export async function startOwnerApp(): Promise<OwnerApp> {
       }
     },
   };
+}
+
+/** How many evidence rows belong to an investigation (to prove a refused write wrote nothing). */
+export async function evidenceCount(db: KawalysDb, ws: string, investigationId: string): Promise<number> {
+  return runWithWorkspaceContext(db.app, ws, async (c) =>
+    Number((await c.query<{ n: string }>('SELECT count(*) AS n FROM evidence WHERE investigation_id = $1', [investigationId])).rows[0]!.n),
+  );
 }
 
 export function expectNotFound(res: request.Response): void {

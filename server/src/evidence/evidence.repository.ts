@@ -7,12 +7,16 @@ import { insertAuditRowInTransaction, type TransactionalAuditRow } from '../audi
 import { runWithWorkspaceContext } from '../db/workspace-context';
 import {
   EVIDENCE_STATES,
+  NOTE_TYPES,
   NotVisibleError,
+  RefusedError,
   UUID,
+  worstState,
   type EvidenceFilter,
   type EvidenceRecord,
   type EvidenceState,
   type EvidenceType,
+  type NoteType,
 } from './evidence.types';
 import { PROJECT_VISIBLE } from './visibility';
 
@@ -31,6 +35,13 @@ export interface DecisionInput {
   readonly investigationId: string;
   readonly decision: string;
   readonly rationale: string;
+  readonly evidenceIds: readonly string[];
+}
+
+export interface NoteInput {
+  readonly investigationId: string;
+  readonly type: NoteType;
+  readonly text: string;
   readonly evidenceIds: readonly string[];
 }
 
@@ -256,33 +267,10 @@ export class EvidenceRepository {
    * share-locked so a concurrent revocation cannot slip in between the check and the insert.
    */
   async recordDecision(workspaceId: string, actor: string, input: DecisionInput, requestId: string | null): Promise<string> {
-    if (!UUID.test(input.investigationId) || input.evidenceIds.some((id) => !UUID.test(id))) throw new NotVisibleError();
-    const cited = [...new Set(input.evidenceIds.map((id) => id.toLowerCase()))];
+    const cited = citedIds(input);
     return this.inWorkspace(workspaceId, async (c) => {
-      // Same visibility as GET /investigations/:id (PROJECT_VISIBLE, written as a join so the grant rows
-      // can be share-locked): an investigation the decider cannot see does not exist for them, and a
-      // concurrent revocation waits for this decision or wins outright, as on the citation path below.
-      const inv = await c.query<{ project_id: string }>(
-        `SELECT i.project_id FROM investigations i
-           JOIN sources vs ON vs.project_id = i.project_id
-           JOIN source_grants vg ON vg.source_id = vs.id AND vg.user_id = $1 AND vg.revoked_at IS NULL
-          WHERE i.id = $2
-          FOR SHARE OF vg`,
-        [actor, input.investigationId],
-      );
-      const projectId = inv.rows[0]?.project_id;
-      if (!projectId) throw new NotVisibleError('investigation not visible');
-      if (cited.length > 0) {
-        const { rows } = await c.query<{ id: string }>(
-          `SELECT e.id FROM evidence e
-             JOIN source_grants g ON g.source_id = e.source_id AND g.user_id = $1 AND g.revoked_at IS NULL
-            WHERE e.id = ANY($2::uuid[]) AND e.project_id = $3 AND e.type <> 'HumanDecision'
-            FOR SHARE OF g`,
-          [actor, cited, projectId],
-        );
-        // At most one active grant per (source, user) (partial unique index), so one row per id.
-        if (new Set(rows.map((r) => r.id)).size !== cited.length) throw new NotVisibleError('cited evidence not visible');
-      }
+      const projectId = await visibleInvestigationProject(c, actor, input.investigationId);
+      await visibleCitations(c, actor, cited, projectId);
       const payload = { decision: input.decision, rationale: input.rationale };
       const { rows } = await c.query<{ id: string }>(
         `INSERT INTO evidence (workspace_id, project_id, source_id, investigation_id, type, state, source_ref, observed_at, payload)
@@ -290,17 +278,98 @@ export class EvidenceRepository {
         [workspaceId, projectId, input.investigationId, JSON.stringify(payload)],
       );
       const id = rows[0]!.id;
-      if (cited.length > 0) {
-        await c.query(
-          `INSERT INTO evidence_citations (workspace_id, project_id, decision_id, evidence_id)
-           SELECT $1, $2, $3, unnest($4::uuid[])`,
-          [workspaceId, projectId, id, cited],
-        );
-      }
+      await insertCitations(c, workspaceId, projectId, id, cited);
       await this.audit(c, { ...auditRow(workspaceId, actor, 'decision.recorded', 'evidence', id), requestId });
       return id;
     });
   }
+
+  /**
+   * A user-written Correlation or Hypothesis (BACK-50, owner decision option a), its citations and its
+   * audit row, in one transaction. It must cite at least one row; every cited row must be visible
+   * source evidence of the investigation's project, and all of them must come from ONE source, which
+   * the note inherits. A non-decision row is visible through a grant on its own source, so a reader who
+   * can see the note can see everything it cites. Its state is the worst cited state: a note built on
+   * unknown evidence is never shown as ok. Invisible ids answer like absent ones (NotVisibleError).
+   */
+  async recordNote(workspaceId: string, actor: string, input: NoteInput, requestId: string | null): Promise<string> {
+    if (!(NOTE_TYPES as readonly string[]).includes(input.type)) throw new RefusedError('a note is a Correlation or a Hypothesis');
+    const cited = citedIds(input);
+    if (cited.length === 0) throw new RefusedError('a note must cite evidence');
+    return this.inWorkspace(workspaceId, async (c) => {
+      const projectId = await visibleInvestigationProject(c, actor, input.investigationId);
+      const rows = await visibleCitations(c, actor, cited, projectId);
+      const sources = new Set(rows.map((r) => r.source_id));
+      if (sources.size !== 1) throw new RefusedError('cited evidence must come from one source');
+      const [sourceId] = sources;
+      const { rows: inserted } = await c.query<{ id: string }>(
+        `INSERT INTO evidence (workspace_id, project_id, source_id, investigation_id, type, state, source_ref, observed_at, payload)
+         VALUES ($1, $2, $3, $4, $5, $6, 'kawalys:note', now(), $7::jsonb) RETURNING id`,
+        [workspaceId, projectId, sourceId, input.investigationId, input.type, worstState(rows.map((r) => r.state)), JSON.stringify({ text: input.text })],
+      );
+      const id = inserted[0]!.id;
+      await insertCitations(c, workspaceId, projectId, id, cited);
+      await this.audit(c, { ...auditRow(workspaceId, actor, 'note.recorded', 'evidence', id), requestId });
+      return id;
+    });
+  }
+}
+
+type Client = Pick<pg.PoolClient, 'query'>;
+
+/** Lower-cased, de-duplicated citation ids; any malformed id answers like an invisible one. */
+function citedIds(input: { readonly investigationId: string; readonly evidenceIds: readonly string[] }): string[] {
+  if (!UUID.test(input.investigationId) || input.evidenceIds.some((id) => !UUID.test(id))) throw new NotVisibleError();
+  return [...new Set(input.evidenceIds.map((id) => id.toLowerCase()))];
+}
+
+/**
+ * The project of an investigation the actor can see (PROJECT_VISIBLE, the rule of GET /investigations/:id,
+ * written as a join so the grant rows can be share-locked): a concurrent revocation waits for this
+ * write or wins outright. An investigation the actor cannot see does not exist for them.
+ */
+async function visibleInvestigationProject(c: Client, actor: string, investigationId: string): Promise<string> {
+  const { rows } = await c.query<{ project_id: string }>(
+    `SELECT i.project_id FROM investigations i
+       JOIN sources vs ON vs.project_id = i.project_id
+       JOIN source_grants vg ON vg.source_id = vs.id AND vg.user_id = $1 AND vg.revoked_at IS NULL
+      WHERE i.id = $2
+      FOR SHARE OF vg`,
+    [actor, investigationId],
+  );
+  const projectId = rows[0]?.project_id;
+  if (!projectId) throw new NotVisibleError('investigation not visible');
+  return projectId;
+}
+
+interface CitedRow {
+  id: string;
+  source_id: string;
+  state: EvidenceState;
+}
+
+/** Every cited id is source evidence of `projectId` that the actor can see now (grants share-locked). */
+async function visibleCitations(c: Client, actor: string, cited: readonly string[], projectId: string): Promise<CitedRow[]> {
+  if (cited.length === 0) return [];
+  const { rows } = await c.query<CitedRow>(
+    `SELECT e.id, e.source_id, e.state FROM evidence e
+       JOIN source_grants g ON g.source_id = e.source_id AND g.user_id = $1 AND g.revoked_at IS NULL
+      WHERE e.id = ANY($2::uuid[]) AND e.project_id = $3 AND e.type <> 'HumanDecision'
+      FOR SHARE OF g`,
+    [actor, cited, projectId],
+  );
+  // At most one active grant per (source, user) (partial unique index), so one row per id.
+  if (new Set(rows.map((r) => r.id)).size !== cited.length) throw new NotVisibleError('cited evidence not visible');
+  return rows;
+}
+
+async function insertCitations(c: Client, workspaceId: string, projectId: string, citing: string, cited: readonly string[]): Promise<void> {
+  if (cited.length === 0) return;
+  await c.query(
+    `INSERT INTO evidence_citations (workspace_id, project_id, decision_id, evidence_id)
+     SELECT $1, $2, $3, unnest($4::uuid[])`,
+    [workspaceId, projectId, citing, cited],
+  );
 }
 
 function auditRow(workspaceId: string, actor: string, action: string, targetType: string, targetId: string): TransactionalAuditRow {
