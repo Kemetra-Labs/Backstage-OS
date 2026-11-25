@@ -20,15 +20,17 @@ const status = (code: number, headers: Record<string, string> = {}): GitHubRespo
 describe('a reachable repository', () => {
   it('returns one repository, one pull request and one issue as ok Observations dated at the read', async () => {
     const items = await run(happyScript()).result;
-    expect(items.map((i) => i.payload['kind'])).toEqual(['repository', 'pull_request', 'issue']);
+    expect(items.map((i) => i.payload['kind'])).toEqual(['repository', 'list_page', 'pull_request', 'list_page', 'issue']);
     expect(items.every((i) => i.type === 'Observation' && i.state === 'ok' && i.sourceId === sourceId)).toBe(true);
     expect(items.every((i) => i.observedAt.getTime() === now.getTime())).toBe(true);
     expect(items.map((i) => i.sourceRef)).toEqual([
       `github:${OWNER_REPO}`,
+      `github:${OWNER_REPO}#pulls`,
       `github:${OWNER_REPO}#pull/12`,
+      `github:${OWNER_REPO}#issues`,
       `github:${OWNER_REPO}#issue/7`,
     ]);
-    expect(items[1]!.payload).toEqual({
+    expect(items[2]!.payload).toEqual({
       kind: 'pull_request',
       number: 12,
       title: 'Add the portfolio route',
@@ -37,6 +39,14 @@ describe('a reachable repository', () => {
       updatedAt: '2026-11-24T08:00:00.000Z',
       url: 'https://github.com/Kemetra-Labs/Backstage-OS/pull/12',
     });
+  });
+
+  it('records each page against the page size, counting the raw page (pull requests in /issues included)', async () => {
+    const pages = (await run(happyScript()).result).filter((i) => i.payload['kind'] === 'list_page').map((i) => i.payload);
+    expect(pages).toEqual([
+      { kind: 'list_page', endpoint: 'pull_requests', returned: 1, pageSize: 20 },
+      { kind: 'list_page', endpoint: 'issues', returned: 2, pageSize: 20 },
+    ]);
   });
 
   it('skips pull requests that the issues endpoint also returns', async () => {
@@ -192,7 +202,7 @@ describe('failures are recorded, never reported as ok', () => {
       expect.objectContaining({ state: 'error', sourceRef: `github:${OWNER_REPO}#pulls`, payload: { kind: 'source_status', endpoint: 'pull_requests', reason: 'malformed' } }),
     ]);
     expect(items.some((i) => i.payload['kind'] === 'pull_request')).toBe(false);
-    expect(items.filter((i) => i.state === 'ok').map((i) => i.payload['kind'])).toEqual(['repository', 'issue']);
+    expect(items.filter((i) => i.state === 'ok').map((i) => i.payload['kind'])).toEqual(['repository', 'list_page', 'issue']);
   });
 
   it('refuses a page longer than requested instead of storing or truncating it', async () => {

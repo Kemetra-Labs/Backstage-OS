@@ -36,6 +36,7 @@ NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental
 | `DELETE /auth/sessions` | Session required. Revokes every session of the signed-in user (204). |
 | `GET /demo/evidence/:id` | Session required. Synthetic evidence. Fixture ids `E-1` (visible to all) and `E-5` (technical persona only). Persona comes from `x-kawalys-demo-persona`: `technical`, `owner` or `nontechnical` (default). |
 | `GET /evidence`, `GET /evidence/:id`, `POST /investigations/:id/decisions` | Exist **only when both database URLs are set** (see Evidence API below). Session plus a workspace capability required. Without the database they answer 404. |
+| `GET /portfolio`, `GET /portfolio/:projectId` | Same conditions as the evidence routes, read-only, `evidence.read`. See Portfolio API below. |
 
 Every route is protected unless it is marked `@Public()` (the guard is global), so a new controller is denied by default.
 
@@ -217,7 +218,7 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 Code and canned-response tests only. **No transport, no network, no token, no GitHub App.** A real transport waits for the BACK-52 gates: X02/X04 and owner authorization of one exact repository and its scopes.
 
 - `src/connectors/github/github.transport.ts`: the read-only port (`get` only, so a write cannot be expressed) and `GitHubTransportFailure` (`network` or `timeout`). Nothing in `src/` implements it.
-- `src/connectors/github/github.observer.ts`: `observeRepository(transport, { sourceId, externalRef }, now)` reads the repository, then up to 20 open pull requests and 20 open issues (issues that are pull requests are skipped). It returns `ObservationInput[]` for `EvidenceRepository.ingest()`. Nothing calls it yet.
+- `src/connectors/github/github.observer.ts`: `observeRepository(transport, { sourceId, externalRef }, now)` reads the repository, then up to 20 open pull requests and 20 open issues (issues that are pull requests are skipped). It returns `ObservationInput[]` for `EvidenceRepository.ingest()`. Nothing calls it yet. Each list that was read also gets a `list_page` record, `{ endpoint, returned, pageSize }`. `returned` is the raw page length, so it includes the pull requests that `/issues` lists. A full page means there may be more.
 - `observedAt` is the time of the read. The item's own update time is `payload.updatedAt`.
 - Only allow-listed fields are stored (X04). Items keep number, title, state, draft and `updatedAt`. The repository keeps `fullName`, `defaultBranch`, `archived`, `private` and `pushedAt`. No bodies, logins, emails, avatars or descriptions.
 - Text is cut to 300 whole characters. NUL is removed and an unpaired surrogate is replaced, because PostgreSQL `jsonb` rejects both and `ingest()` is all-or-nothing.
@@ -245,6 +246,50 @@ BACK-52's original acceptance criterion says 401/403 should become Unknown. The 
 
 Tests: `test/connectors/github/` (canned responses, mutation-checked), plus a Docker database test that stores every state through `ingest()`.
 
+## Portfolio API (BACK-49 slice 2)
+
+A read-only view of what is visible to the caller, built on the evidence store. No new capability, schema or dependency.
+
+| Route | Behaviour |
+| --- | --- |
+| `GET /portfolio` | Session and `evidence.read`. `{ projects }`: each visible project with its granted sources, each source's read state and open-item counts with `complete`, **no items**. At most 100 projects, ordered by key. |
+| `GET /portfolio/:projectId` | Session and `evidence.read`. One project with the items of each source's latest read. 404 when the id is unknown, malformed or not visible. |
+
+**Visibility.**
+- A project is listed only through a source the caller holds an active grant on. Only granted sources are listed and counted.
+- A project with no granted source, or with none at all, does not exist for that caller.
+- Another workspace is excluded by RLS.
+- The persona header is never read.
+
+**The latest read.** It is the newest ingest batch of the source that holds a repository-level record (`kind: repository`, or a `source_status` for `endpoint: repository`). A batch is one `ingest()` transaction, so its rows share the database-set `received_at`, which the app role cannot write. Items come only from that batch, so:
+- A closed pull request, gone from the newest read, is not shown.
+- Newer rows of another kind (a later Hypothesis) never hide the read.
+
+**States are facts, never derived as healthy** (`src/portfolio/portfolio.model.ts`):
+
+| Case | Source `state` / `reason` |
+| --- | --- |
+| Connected, never read | `unknown` / `never_read`, no counts |
+| Repository read failed | that failure (for example `denied` / `not_visible`), lists `unknown` / `not_read`, no items |
+| A list failed | that list's failure; the other list keeps its count; the source is the worse of the two |
+| A status row that claims `ok`, a repository record that is not `ok`, or a stored item that no longer reads as an item | `error` / `malformed` |
+| Two repository-level records in one batch (two reads in one transaction) | `error` / `ambiguous_read`, no items; the reads are never mixed |
+| Everything read | `ok`, with counts (0 is a real count) |
+
+**Counts are counts of one page, not totals.**
+- Each list's `complete` is `true` when GitHub returned less than a full page, so `count` is the total.
+- It is `false` for a full page: there may be more, and `count` is only a lower bound (for example, show "20+").
+- It is `null` when unknown (no `list_page` record) or not read.
+- An issues page full of pull requests can give `count: 0, complete: false`.
+
+A project's `state` is the worst of its sources, in the order `ok` < `stale` < `unknown` < `error` < `denied`. With no visible source it is `unknown`. The server never computes `stale`: it returns `lastReadAt`, and the client applies freshness, with `state` taking priority over freshness.
+
+**Deferred.**
+- BACK-49's role filter (Technical sees technical items): only the `owner` role exists, and the persona header is not authorization.
+- Pagination beyond 100 projects, and real totals beyond one page per list.
+- An index on `evidence (workspace_id, source_id, received_at DESC)`. Today the latest-read query scans each source's whole history through `evidence_by_source`, which is harmless with no real ingestion yet. Add it in a later migration, before a transport polls (schema changes are not part of this slice).
+- Nothing ingests real data yet: there is still no GitHub transport.
+
 ## Known limits
 
 - Rate limiting on `POST /auth/session` is a process-local fixed window (one shared key behind loopback); a restart resets it.
@@ -261,6 +306,8 @@ Tests: `test/connectors/github/` (canned responses, mutation-checked), plus a Do
 [THIRD_PARTY.md](THIRD_PARTY.md) for paths, pinned SHAs, strategy and licence.
 
 ## Rollback
+
+To remove only the Portfolio API (BACK-49 slice 2): delete `server/src/portfolio/` and `server/test/portfolio/`, remove its two imports and the `PortfolioModule.register` line from `server/src/create-app.ts`, and revert its README edits.
 
 To remove only the GitHub observation mapper (BACK-52 mock slice): delete `server/src/connectors/` and `server/test/connectors/`, and revert its edits to `server/README.md`, `server/THIRD_PARTY.md` and the `description` in `server/package.json`. Nothing else imports it.
 

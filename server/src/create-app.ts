@@ -11,6 +11,8 @@ import { PostgresSessionStore } from "./auth/session/postgres-session-store";
 import { WorkspaceResolver } from "./auth/workspace-resolver";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { EvidenceRepository } from "./evidence/evidence.repository";
+import { PortfolioModule } from "./portfolio/portfolio.module";
+import { PortfolioRepository } from "./portfolio/portfolio.repository";
 import { SafeErrorFilter } from "./http/safe-error.filter";
 import { requestIdMiddleware } from "./http/request-id";
 
@@ -40,7 +42,10 @@ export async function createApp(
 
   const imports: (Type<unknown> | DynamicModule)[] = [AppModule, AuthModule.register(auth)];
   // Evidence routes exist only with the database; the global AuthGuard protects them like every route.
-  if (db && workspaces) imports.push(EvidenceModule.register(new EvidenceRepository(db.appPool), workspaces));
+  if (db && workspaces) {
+    imports.push(EvidenceModule.register(new EvidenceRepository(db.appPool), workspaces));
+    imports.push(PortfolioModule.register(new PortfolioRepository(db.appPool), workspaces));
+  }
 
   @Module({ imports, controllers: extraControllers })
   class RootModule {}

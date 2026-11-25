@@ -37,7 +37,7 @@ const observe = (script: ReturnType<typeof happyScript>, externalRef = OWNER_REP
 describe('GitHub observations in the evidence store', () => {
   it('stores a reachable repository and reads it back with its source reference', async () => {
     const ids = await repo.ingest(ws, await observe(happyScript()));
-    expect(ids).toHaveLength(3);
+    expect(ids).toHaveLength(5);
     const refs = (await repo.list(ws, owner, { sourceId })).map((e) => e.sourceRef);
     expect(refs).toEqual(expect.arrayContaining([`github:${OWNER_REPO}`, `github:${OWNER_REPO}#pull/12`, `github:${OWNER_REPO}#issue/7`]));
   });
@@ -60,14 +60,14 @@ describe('GitHub observations in the evidence store', () => {
     script[`/repos/${OWNER_REPO}/pulls`] = ok(
       Array.from({ length: 20 }, (_, i) => ({ number: i + 1, title: long, state: 'open', draft: false, updated_at: '2026-11-24T08:00:00Z', html_url: null })),
     );
-    expect(await repo.ingest(ws, await observe(script))).toHaveLength(22);
+    expect(await repo.ingest(ws, await observe(script))).toHaveLength(24);
   });
 
   it('stores a title with an emoji at the cut point, a NUL and an unpaired surrogate (jsonb would reject them raw)', async () => {
     const script = happyScript();
     const title = `${'x'.repeat(299)}\u{1F600}${String.fromCharCode(0)}\ud83d`;
     script[`/repos/${OWNER_REPO}/pulls`] = ok([{ number: 99, title, state: 'open', draft: false, updated_at: '2026-11-24T08:00:00Z' }]);
-    expect(await repo.ingest(ws, await observe(script))).toHaveLength(3);
+    expect(await repo.ingest(ws, await observe(script))).toHaveLength(5);
     const stored = (await repo.list(ws, owner, { sourceId })).find((e) => e.sourceRef === `github:${OWNER_REPO}#pull/99`)!;
     expect(Array.from(stored.payload['title'] as string)).toHaveLength(300);
   });
