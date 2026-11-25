@@ -5,7 +5,7 @@
 import type { DisplayState, EvidenceReference, Observation, SourceAuthority, EntityRef, Provider } from '../contract/types';
 import type {
   ActivityEvent, AgentDemo, ByPersonaL10n, Decision, GraphEdge, GraphNode, InvestigationSummary, L10n, Mission, MissionAgent,
-  ReplayEvent, SourceEvent, SourceMeta, World, WorldProject,
+  ProjectLink, ReplayEvent, SourceEvent, SourceMeta, World, WorldProject,
 } from '../contract/world';
 import { DOMAIN } from '../domain/fixture';
 import { toV1ComponentFacts } from '../domain/toV1';
@@ -415,10 +415,26 @@ const state = (health: DisplayState['health'], basis: DisplayState['basis'], c: 
 });
 const svc = (p: SourceMeta['provider']): DisplayState => SOURCE_LIST.find((s) => s.provider === p)!.health;
 
+// Which portfolio project a graph node is (BACK-85). Only RT is verified, and structurally, not by name: project RT owns the
+// components pos, stock-sync and inventory, the canonical domain model owns exactly those ids, and the graph groups the same three
+// ids under retail-tower (edges g1 to g3). A similar name is not proof of one entity.
+const RT_LINK: ProjectLink = {
+  project: 'RT', status: 'verified',
+  basis: 'Project RT owns pos, stock-sync and inventory; the canonical domain model owns those ids; the graph groups them under retail-tower.',
+};
+const KH_LINK: ProjectLink = {
+  project: 'KH', status: 'unresolved',
+  basis: 'Same display name only. No shared component, evidence or dependency, and the two disagree on health.',
+};
+const SB_LINK: ProjectLink = {
+  project: 'SB', status: 'ambiguous',
+  basis: 'SB is a project on the portfolio, seshat-bi is a service on the graph. Similar names are not proof of one entity.',
+};
+
 // Layout is a 1000 x 600 canvas. The hub sits at the centre; nothing here is a measurement, only placement.
 const NODES: readonly GraphNode[] = [
-  { id: 'retail-tower', kind: 'product', title: 'Retail Tower OS', x: 500, y: 335, state: state('unknown', [EVIDENCE.checkFailed]), evidence: ['E-1', 'E-2'] },
-  { id: 'khepri', kind: 'product', title: 'Khepri', x: 170, y: 150, state: state('healthy', []), evidence: [] },
+  { id: 'retail-tower', kind: 'product', title: 'Retail Tower OS', x: 500, y: 335, projectLink: RT_LINK, state: state('unknown', [EVIDENCE.checkFailed]), evidence: ['E-1', 'E-2'] },
+  { id: 'khepri', kind: 'product', title: 'Khepri', x: 170, y: 150, projectLink: KH_LINK, state: state('healthy', []), evidence: [] },
   { id: 'stock-sync', kind: 'project', title: 'stock-sync', x: 500, y: 120, ...toV2NodeFacts(DOMAIN, 'stock-sync') },
   { id: 'pos', kind: 'project', title: 'POS client', x: 300, y: 300, ...toV2NodeFacts(DOMAIN, 'pos') },
   { id: 'inventory', kind: 'project', title: 'Inventory service', x: 700, y: 305, ...toV2NodeFacts(DOMAIN, 'inventory'), descWithoutEvidence: 'map.nl.inventory.none' },
@@ -426,7 +442,7 @@ const NODES: readonly GraphNode[] = [
   { id: 'jira', kind: 'service', title: 'Jira', x: 850, y: 420, provider: 'jira', state: svc('jira'), evidence: ['E-3', 'E-4'] },
   { id: 'sentry', kind: 'service', title: 'Sentry', x: 925, y: 255, provider: 'sentry', state: svc('sentry'), evidence: ['E-5'] },
   { id: 'port', kind: 'service', title: 'Port', x: 70, y: 300, provider: 'port', state: svc('port'), evidence: ['E-7', 'E-9'] },
-  { id: 'seshat-bi', kind: 'service', title: 'Seshat BI', x: 175, y: 450, state: state('degraded', []), evidence: [] },
+  { id: 'seshat-bi', kind: 'service', title: 'Seshat BI', x: 175, y: 450, projectLink: SB_LINK, state: state('degraded', []), evidence: [] },
 ];
 
 const EDGES: readonly GraphEdge[] = [

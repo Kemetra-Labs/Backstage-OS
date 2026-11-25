@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { INV_DEMO_7 } from '../fixture/inv-demo-7';
 import { buildIndex } from '../nav/search';
-import type { World } from '../contract/world';
+import type { GraphNode, World } from '../contract/world';
 import { WORLD } from '../fixture/world';
 import { authorizedInvestigation, authorizedWorld } from '../view/authorize';
 import { summaryFor } from '../view/investigationView';
@@ -44,11 +44,15 @@ function hostOf(p: P): unknown {
   };
 }
 const searchOf = (p: P): unknown => buildIndex(authorizedWorld(WORLD, p));
+// A graph node's projectLink (BACK-102) moved the identity table of src/bridge/identity.ts onto the nodes. It is structural, never
+// rendered and never scoped, and bridge.test.ts pins it; it is left out here so the file still compares the recorded data.
+const withoutLink = ({ projectLink: _link, ...n }: GraphNode): Omit<GraphNode, 'projectLink'> => n;
+
 /** The mission sections of the world as the persona receives it. */
 function lensOf(p: P): unknown {
   const w: World = authorizedWorld(WORLD, p);
   return {
-    now: w.now, investigationId: w.investigationId, nodes: w.graph.nodes, edges: w.graph.edges, sources: w.sources,
+    now: w.now, investigationId: w.investigationId, nodes: w.graph.nodes.map(withoutLink), edges: w.graph.edges, sources: w.sources,
     sourceEvents: w.sourceTimeline, replay: w.replay, agents: w.missionAgents, missions: w.missions, evidenceById: byId(caseEvidence(w)),
   };
 }

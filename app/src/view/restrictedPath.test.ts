@@ -87,7 +87,11 @@ describe('V1 host source has no restricted-placeholder path and no unscoped fixt
 
   it('only App.tsx reads the V1 world and investigation fixtures, and scopes them before any screen sees them', () => {
     const readers = files.filter((f) => /from '[./]*fixture\/(world|inv-demo-7)'/.test(f.text)).map((f) => f.file).sort();
-    expect(readers).toEqual(['App.tsx', 'bridge/mapContext.ts', 'shell/TopBar.tsx']);
+    expect(readers).toEqual(['App.tsx', 'bridge/identity.ts', 'bridge/mapContext.ts', 'shell/TopBar.tsx']);
+    // The identity links are structural: identity.ts reads the graph nodes' projectLink and nothing that carries evidence.
+    const identity = files.find((f) => f.file === 'bridge/identity.ts')?.text ?? '';
+    expect(identity.match(/\bWORLD\.[\w.]+/g)).toEqual(['WORLD.graph.nodes.flatMap']);
+    expect(identity.replace(/\/\/.*$/gm, '')).not.toMatch(/\.evidence\b|\.state\b|\.health\b/);
     // The map context resolves a selection against the persona's authorized world only, never the fixture itself.
     const map = files.find((f) => f.file === 'bridge/mapContext.ts')?.text ?? '';
     expect(map.match(/\bWORLD\b/g)?.length).toBe(2);

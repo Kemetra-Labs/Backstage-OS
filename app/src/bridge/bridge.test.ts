@@ -60,6 +60,20 @@ describe('identity crosswalk is pinned to the fixtures', () => {
     expect(IDENTITIES.filter((e) => e.status === 'verified').map((e) => e.host)).toEqual(['RT']);
     for (const e of IDENTITIES) expect(e.basis.length, e.host).toBeGreaterThan(20);
   });
+
+  it('is read from the graph nodes\' projectLink, not kept as a second table (BACK-102)', () => {
+    const linked = V2.graph.nodes.filter((n) => n.projectLink).map((n) => ({ host: n.projectLink!.project, map: n.id, status: n.projectLink!.status }));
+    expect(IDENTITIES.map((e) => ({ host: e.host, map: e.map, status: e.status }))).toEqual(linked);
+    expect(linked).toEqual([
+      { host: 'RT', map: 'retail-tower', status: 'verified' },
+      { host: 'KH', map: 'khepri', status: 'unresolved' },
+      { host: 'SB', map: 'seshat-bi', status: 'ambiguous' },
+    ]);
+    // A link is structural: authorizedWorld never changes it for any persona.
+    for (const p of ['owner', 'technical', 'nontechnical'] as const) {
+      expect(authorizedWorld(V2, p).graph.nodes.filter((n) => n.projectLink).map((n) => n.projectLink)).toEqual(linked.map((l) => V2.graph.nodes.find((n) => n.id === l.map)!.projectLink));
+    }
+  });
 });
 
 describe('resolution is explicit about what it does not know', () => {

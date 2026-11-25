@@ -155,6 +155,19 @@ export type NodeKind = 'product' | 'project' | 'service';
 export type EdgeTruth = TruthLabel | 'unknown';
 export type EdgeClass = 'group' | 'dep';
 
+export type IdentityStatus = 'verified' | 'unresolved' | 'ambiguous';
+
+/**
+ * How a graph node relates to a portfolio project. Only 'verified' is an identity: the two are one entity, shown on both the Project
+ * screen and the map. 'unresolved' and 'ambiguous' record a candidate that is NOT the same entity, and why. Never inferred from a name.
+ */
+export interface ProjectLink {
+  readonly project: ProjectId;
+  readonly status: IdentityStatus;
+  /** Why the link has this status. Written for a reviewer, never rendered; tests pin it to the fixture. */
+  readonly basis: string;
+}
+
 /** A node of the mission graph. Not a WorldComponent: it carries canvas layout and stands for a product, project or service. */
 export interface GraphNode {
   readonly id: string;
@@ -164,6 +177,8 @@ export interface GraphNode {
   readonly x: number;
   readonly y: number;
   readonly provider?: Provider;
+  /** The portfolio project this node is, or is only a candidate for (see ProjectLink). */
+  readonly projectLink?: ProjectLink;
   readonly state: DisplayState;
   readonly check?: 'failing';
   /** Evidence ids this node is backed by (ids of World.evidence). */
