@@ -1,7 +1,7 @@
 // SPEC section 2 "figure to derivation" table, asserted against WORLD so the derivation cannot drift, plus the pilot's
 // orbit geometry and its honesty rules (unknown is never healthy, stale links are flagged, restricted evidence is hidden).
 import { describe, expect, it } from 'vitest';
-import { HUB_ID, ORBIT_ANGLE, nodePoint, nodePoints } from '../fixtures/orbit-layout';
+import { HUB_ID, ORBIT_ANGLE, nodePoint, nodePoints } from './orbit-layout';
 import { WORLD } from '../../fixture/world';
 import { authorizedWorld } from './authorize';
 import { ageGeometry, bcFigures, curve, edgeRestricted, edgeStale, formatAt, parseSeed, pipTone, ringShare } from './bc';

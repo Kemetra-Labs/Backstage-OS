@@ -6,12 +6,14 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isForbiddenControlLabel } from '../src/contract/rules';
 import { translate } from '../src/i18n/index';
-import { MISSIONS } from '../src/lenses/fixtures/world';
+import { WORLD } from '../src/fixture/world';
 import { COPY } from '../src/i18n/strings';
 import { LANGS, openRoute, PERSONAS, WIDTHS } from './helpers';
 import { blurRadii, expectRenderedAA, waitForAnimationsSettled } from './lens-fidelity';
 import { expectNoLeaks, RESTRICTED_IDS } from './leaks';
 import { hash, openScreen } from './lens-helpers';
+
+const MISSIONS = WORLD.missions;
 
 const LAY = ['owner', 'nontechnical'] as const;
 const lens = (page: Page) => page.locator('[data-testid="agent-deck-lens"]');

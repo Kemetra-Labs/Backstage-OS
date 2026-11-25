@@ -4,7 +4,7 @@ import type { CSSProperties, KeyboardEvent, MutableRefObject } from 'react';
 import { Icon } from '../components/Icon';
 import { Lt, Tx } from '../components/ui';
 import { useLens } from '../useLens';
-import { DEFAULT_BEND, HUB_ID, LINK_BEND } from '../fixtures/orbit-layout';
+import { DEFAULT_BEND, HUB_ID, LINK_BEND } from '../logic/orbit-layout';
 import { type K } from '../../i18n';
 import { curve, edgeStale, isIncident } from '../logic/bc';
 import { nodeChip } from '../logic/evidence';

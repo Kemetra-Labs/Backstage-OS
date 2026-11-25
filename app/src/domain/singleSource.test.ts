@@ -27,7 +27,7 @@ describe('domain is the one source for the INV-DEMO-7 overlap', () => {
   });
 
   it('no consumer fixture holds a second copy of E-1..E-9', () => {
-    const consumers = [...nonTest('fixture'), 'lenses/fixtures/world.ts'];
+    const consumers = nonTest('fixture');
     for (const f of consumers) expect(read(f), f).not.toMatch(/id:\s*'E-[1-9]'/);
   });
 

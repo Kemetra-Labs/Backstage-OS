@@ -2,13 +2,14 @@
 // *.example.invalid. Story: the Retail Tower CI failure (#DEMO-4471) makes Retail Tower need attention, points at
 // stock-sync, links RT-DEMO-112, is worked in INV-DEMO-7 and ends in proposed decision DEC-DEMO-3 for a human.
 // Owner and Nontechnical text never names job names, run ids or PR ids (same rule as inv-demo-7).
-import type { EvidenceReference, Observation, SourceAuthority, EntityRef, Provider } from '../contract/types';
+import type { DisplayState, EvidenceReference, Observation, SourceAuthority, EntityRef, Provider } from '../contract/types';
 import type {
-  ActivityEvent, AgentDemo, ByPersonaL10n, Decision, InvestigationSummary, L10n, World, WorldProject,
+  ActivityEvent, AgentDemo, ByPersonaL10n, Decision, GraphEdge, GraphNode, InvestigationSummary, L10n, Mission, MissionAgent,
+  ReplayEvent, SourceEvent, SourceMeta, World, WorldProject,
 } from '../contract/world';
 import { DOMAIN } from '../domain/fixture';
 import { toV1ComponentFacts } from '../domain/toV1';
-import { MISSION_SECTIONS } from '../lenses/fixtures/world';
+import { toV2EdgeFacts, toV2NodeFacts } from '../domain/toV2';
 import { EXTRA_EVIDENCE } from '../domain/records';
 import { EVIDENCE, SOURCES } from './inv-demo-7';
 
@@ -363,6 +364,120 @@ const evidenceText: Readonly<Record<string, ByPersonaL10n>> = {
   'E-41': same(l('Release-week freeze recorded in {Confluence}', 'تجميد أسبوع الإصدار مسجل في {Confluence}')),
 };
 
+// ---- The mission: graph, sources, timelines and missions ---------------------------------------------------------
+// The INV-DEMO-7 overlap (the five sources, evidence E-1..E-9, the components pos, stock-sync and inventory and the
+// dependencies between them) is projected from src/domain (BACK-83). Defined here: the mission graph's other nodes and
+// edges, layout, source events, a replay script and simulated missions.
+
+/** Fixed "now" so every screen, test and screenshot is deterministic. Reads at 14:03 are 6 minutes old here. */
+const NOW = DOMAIN.now;
+
+/** E-8: a current Observed read of GitHub itself. It is why GitHub may show Healthy and nothing else may. */
+const ghProbe = EXTRA_EVIDENCE.githubProbe;
+
+/** E-9: Port's last good read, a day old. Evidence that it once answered, not that it is healthy now. */
+const portLast = EXTRA_EVIDENCE.portLastRead;
+
+/** Confluence as the mission reads it: a known provider type that is not set up there. Never read. */
+const confluence: SourceAuthority = {
+  provider: 'confluence', connectivity: 'not_configured', lastSuccessAt: null, ageMinutes: null, ttlSeconds: 3600, synthetic: true,
+};
+
+const none = (c: DisplayState['connectivity'], f: DisplayState['freshness']): DisplayState => ({
+  connectivity: c, freshness: f, health: 'unknown', basis: [],
+});
+
+const SOURCE_LIST: readonly SourceMeta[] = [
+  {
+    provider: 'github', kind: 'integration', target: 'GitHub API', source: SOURCES.github,
+    health: { connectivity: 'reachable', freshness: 'current', health: 'healthy', basis: [ghProbe] },
+  },
+  {
+    // Claimed healthy with no evidence: the contract turns this into Unknown.
+    provider: 'jira', kind: 'integration', target: 'Jira API', source: SOURCES.jira,
+    health: { connectivity: 'reachable', freshness: 'current', health: 'healthy', basis: [] },
+  },
+  {
+    // Claimed healthy on a stale read: Unknown.
+    provider: 'sentry', kind: 'data', target: 'Sentry API', source: SOURCES.sentry,
+    health: { connectivity: 'reachable', freshness: 'stale', health: 'healthy', basis: [EVIDENCE.sentryErrors] },
+  },
+  { provider: 'datadog', kind: 'data', target: 'Datadog API', source: SOURCES.datadog, health: none('not_configured', 'unknown') },
+  { provider: 'confluence', kind: 'integration', target: 'Confluence API', source: confluence, health: none('not_configured', 'unknown') },
+  {
+    provider: 'port', kind: 'integration', target: 'Port API', source: SOURCES.port,
+    health: { connectivity: 'unavailable', freshness: 'stale', health: 'unknown', basis: [portLast] },
+  },
+];
+
+const state = (health: DisplayState['health'], basis: DisplayState['basis'], c: DisplayState['connectivity'] = 'not_configured', f: DisplayState['freshness'] = 'unknown'): DisplayState => ({
+  connectivity: c, freshness: f, health, basis,
+});
+const svc = (p: SourceMeta['provider']): DisplayState => SOURCE_LIST.find((s) => s.provider === p)!.health;
+
+// Layout is a 1000 x 600 canvas. The hub sits at the centre; nothing here is a measurement, only placement.
+const NODES: readonly GraphNode[] = [
+  { id: 'retail-tower', kind: 'product', title: 'Retail Tower OS', x: 500, y: 335, state: state('unknown', [EVIDENCE.checkFailed]), evidence: ['E-1', 'E-2'] },
+  { id: 'khepri', kind: 'product', title: 'Khepri', x: 170, y: 150, state: state('healthy', []), evidence: [] },
+  { id: 'stock-sync', kind: 'project', title: 'stock-sync', x: 500, y: 120, ...toV2NodeFacts(DOMAIN, 'stock-sync') },
+  { id: 'pos', kind: 'project', title: 'POS client', x: 300, y: 300, ...toV2NodeFacts(DOMAIN, 'pos') },
+  { id: 'inventory', kind: 'project', title: 'Inventory service', x: 700, y: 305, ...toV2NodeFacts(DOMAIN, 'inventory'), descWithoutEvidence: 'map.nl.inventory.none' },
+  { id: 'github', kind: 'service', title: 'GitHub', x: 830, y: 140, provider: 'github', state: svc('github'), evidence: ['E-1', 'E-2', 'E-8'] },
+  { id: 'jira', kind: 'service', title: 'Jira', x: 850, y: 420, provider: 'jira', state: svc('jira'), evidence: ['E-3', 'E-4'] },
+  { id: 'sentry', kind: 'service', title: 'Sentry', x: 925, y: 255, provider: 'sentry', state: svc('sentry'), evidence: ['E-5'] },
+  { id: 'port', kind: 'service', title: 'Port', x: 70, y: 300, provider: 'port', state: svc('port'), evidence: ['E-7', 'E-9'] },
+  { id: 'seshat-bi', kind: 'service', title: 'Seshat BI', x: 175, y: 450, state: state('degraded', []), evidence: [] },
+];
+
+const EDGES: readonly GraphEdge[] = [
+  { id: 'g1', a: 'retail-tower', b: 'stock-sync', cls: 'group', truth: 'unknown', basisKey: 'edge.group', evidence: [] },
+  { id: 'g2', a: 'retail-tower', b: 'pos', cls: 'group', truth: 'unknown', basisKey: 'edge.group', evidence: [] },
+  { id: 'g3', a: 'retail-tower', b: 'inventory', cls: 'group', truth: 'unknown', basisKey: 'edge.group', evidence: [] },
+  { id: 'd1', a: 'stock-sync', b: 'github', cls: 'dep', truth: 'observed', basisKey: 'edge.ciOnGithub', evidence: ['E-1'] },
+  { id: 'd2', a: 'stock-sync', b: 'jira', cls: 'dep', truth: 'correlated', basisKey: 'edge.commitKey', evidence: ['E-3'] },
+  { id: 'd3', a: 'stock-sync', b: 'inventory', cls: 'dep', basisKey: 'edge.readsInventory', ...toV2EdgeFacts(DOMAIN, 'stock-sync', 'inventory') },
+  { id: 'd4', a: 'inventory', b: 'sentry', cls: 'dep', truth: 'observed', basisKey: 'edge.errorsInSentry', evidence: ['E-5'] },
+  { id: 'd5', a: 'pos', b: 'stock-sync', cls: 'dep', basisKey: 'edge.posUnknown', ...toV2EdgeFacts(DOMAIN, 'pos', 'stock-sync') },
+  { id: 'd6', a: 'retail-tower', b: 'khepri', cls: 'dep', truth: 'unknown', basisKey: 'edge.notEvidenced', evidence: [] },
+  { id: 'd7', a: 'retail-tower', b: 'seshat-bi', cls: 'dep', truth: 'unknown', basisKey: 'edge.notEvidenced', evidence: [] },
+  { id: 'd8', a: 'retail-tower', b: 'port', cls: 'dep', truth: 'unknown', basisKey: 'edge.catalogUnavailable', evidence: ['E-7'] },
+];
+
+const SOURCE_EVENTS: readonly SourceEvent[] = [
+  { id: 'S-1', at: '2026-11-15T13:09:00Z', provider: 'port', axis: 'connectivity', tone: 'bad', key: 'sev.portLast' },
+  { id: 'S-2', at: '2026-11-16T05:09:00Z', provider: 'sentry', axis: 'freshness', tone: 'ok', key: 'sev.sentryLast' },
+  { id: 'S-3', at: '2026-11-16T05:24:00Z', provider: 'sentry', axis: 'freshness', tone: 'warn', key: 'sev.sentryStale' },
+  { id: 'S-4', at: '2026-11-16T13:57:00Z', provider: 'jira', axis: 'connectivity', tone: 'ok', key: 'sev.jiraRead' },
+  { id: 'S-5', at: '2026-11-16T14:02:00Z', provider: 'github', axis: 'incident', tone: 'bad', key: 'sev.ciFailed' },
+  { id: 'S-6', at: '2026-11-16T14:03:00Z', provider: 'github', axis: 'connectivity', tone: 'ok', key: 'sev.githubRead' },
+];
+
+const REPLAY: readonly ReplayEvent[] = [
+  { id: 'R-1', clock: '14:02', stage: 'observed', label: 'observed', evidence: 'E-1', kind: 'event', key: 'rp.checkFailed' },
+  { id: 'R-2', clock: '14:03', stage: 'observed', label: 'observed', evidence: 'E-2', kind: 'event', key: 'rp.prMerged' },
+  { id: 'R-3', clock: '14:04', stage: 'ingested', label: 'observed', evidence: null, kind: 'event', key: 'rp.ingested' },
+  { id: 'R-4', clock: '14:05', stage: 'correlated', label: 'correlated', evidence: 'E-3', kind: 'event', key: 'rp.linked' },
+  { id: 'R-5', clock: '14:06', stage: 'correlated', label: 'unknown', evidence: 'E-6', kind: 'gap', key: 'rp.gapRuntime' },
+  { id: 'R-6', clock: '14:07', stage: 'hypothesis', label: 'hypothesis', evidence: null, kind: 'event', key: 'rp.hypothesis' },
+  { id: 'R-7', clock: '14:08', stage: 'proposed', label: 'proposed', evidence: null, kind: 'event', key: 'rp.proposed' },
+];
+
+const AGENTS: readonly MissionAgent[] = [
+  { id: 'AG-1', key: 'ag.collector', role: 'sensing' },
+  { id: 'AG-2', key: 'ag.watcher', role: 'sensing' },
+  { id: 'AG-3', key: 'ag.correlator', role: 'analysis' },
+  { id: 'AG-4', key: 'ag.analyst', role: 'analysis' },
+  { id: 'AG-5', key: 'ag.drafter', role: 'proposal' },
+];
+
+const MISSIONS: readonly Mission[] = [
+  { id: 'MSN-DEMO-1', agent: 'AG-1', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 7, label: 'observed', evidence: ['E-1', 'E-2'], key: 'ms.ci' },
+  { id: 'MSN-DEMO-2', agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 9, label: 'observed', evidence: ['E-5', 'E-9'], key: 'ms.fresh' },
+  { id: 'MSN-DEMO-3', agent: 'AG-3', kind: 'analysis', status: 'analyzing', human: 'reviewing', startedMinutesAgo: 4, label: 'correlated', evidence: ['E-3'], key: 'ms.link' },
+  { id: 'MSN-DEMO-4', agent: 'AG-4', kind: 'analysis', status: 'analyzing', human: 'reviewing', startedMinutesAgo: 2, label: 'hypothesis', evidence: ['E-1', 'E-2', 'E-3'], key: 'ms.hyp' },
+  { id: 'MSN-DEMO-5', agent: 'AG-5', kind: 'proposal', status: 'waiting_review', human: 'needs_review', startedMinutesAgo: 1, label: 'proposed', evidence: ['E-1', 'E-3'], key: 'ms.proposal' },
+];
+
 // The canonical case records (E-1..E-9, in their canonical order) first, then the records outside it. Each is defined once.
 const allEvidence: Readonly<Record<string, EvidenceReference>> = Object.fromEntries(
   [...Object.values(E), ...Object.values(EXTRA_EVIDENCE), ...Object.values(X)].map((e) => [e.id, e]),
@@ -376,5 +491,13 @@ export const WORLD: World = {
   activity,
   evidence: allEvidence,
   evidenceText,
-  ...MISSION_SECTIONS,
+  sourceProbes: [ghProbe.id, portLast.id],
+  now: NOW,
+  investigationId: DOMAIN.investigationId,
+  graph: { nodes: NODES, edges: EDGES },
+  sources: SOURCE_LIST,
+  sourceTimeline: SOURCE_EVENTS,
+  replay: REPLAY,
+  missionAgents: AGENTS,
+  missions: MISSIONS,
 };

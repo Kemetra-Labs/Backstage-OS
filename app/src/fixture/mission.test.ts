@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { resolveHealth, resolveLabel, effectiveFreshness } from '../../contract/rules';
-import { INV_DEMO_7 } from '../../fixture/inv-demo-7';
-import { authorizedWorld } from '../logic/authorize';
-import { evidenceView, nodeChip } from '../logic/evidence';
-import { isRiskNode, nodeStatus, sourceCounts, sourceStatus } from '../logic/status';
-import { WORLD } from '../../fixture/world';
-import { NOW } from './world';
+import { resolveHealth, resolveLabel, effectiveFreshness } from '../contract/rules';
+import { INV_DEMO_7 } from './inv-demo-7';
+import { authorizedWorld } from '../lenses/logic/authorize';
+import { evidenceView, nodeChip } from '../lenses/logic/evidence';
+import { isRiskNode, nodeStatus, sourceCounts, sourceStatus } from '../lenses/logic/status';
+import { WORLD } from './world';
+
+const NOW = WORLD.now;
 
 const w = WORLD;
 

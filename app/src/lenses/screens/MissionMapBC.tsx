@@ -9,7 +9,7 @@ import { Ledger, LinksTable, Matrix } from '../bc/Tables';
 import { Icon } from '../components/Icon';
 import { Cosmos, Kpi, Panel, Seg, T } from '../components/ui';
 import { useLens } from '../useLens';
-import { nodePoints } from '../fixtures/orbit-layout';
+import { nodePoints } from '../logic/orbit-layout';
 import { WORLD } from '../../fixture/world';
 import { authorizedWorld } from '../logic/authorize';
 import type { K } from '../../i18n';

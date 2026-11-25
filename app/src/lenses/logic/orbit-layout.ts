@@ -1,7 +1,7 @@
 // Placement constants for the B+C pilot, kept beside the fixture and outside World semantics (SPEC section 2).
 // An angle only says where on its kind's orbit a node sits. It carries no meaning and is never derived from data.
 import type { World, GraphNode } from '../../contract/world';
-import { BC_CANVAS, orbitOf, orbitPosition, type Point } from '../logic/orbit';
+import { BC_CANVAS, orbitOf, orbitPosition, type Point } from './orbit';
 
 /** The node drawn at the centre of every orbit. It is the same node V2's map treats as the hub. */
 export const HUB_ID = 'retail-tower';
