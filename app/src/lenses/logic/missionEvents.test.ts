@@ -7,8 +7,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { TABLE } from '../../i18n';
-import { WORLD } from '../fixtures/world';
-import type { Mission } from '../types';
+import { WORLD } from '../../fixture/world';
+import type { Mission } from '../../contract/world';
 
 const source = (relative: string): string => readFileSync(join(__dirname, relative), 'utf8');
 /** Source with comments and string literals removed, so a comment or a translation key such as deck.md.events cannot trip a guard. */
@@ -25,7 +25,7 @@ describe('mission events are not defined (owner decision, BACK-90) and the field
     // @ts-expect-error the field was removed; this line fails `tsc` if `events` is ever added back to Mission.
     const read = (m: Mission): number => m.events;
     expect(typeof read).toBe('function');
-    expect(code('../types.ts')).not.toMatch(/events/);
+    expect(code('../../contract/world.ts')).not.toMatch(/events/);
   });
 
   it('the Flight Deck screen never reads a mission events figure', () => {

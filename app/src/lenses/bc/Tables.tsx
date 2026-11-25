@@ -7,7 +7,7 @@ import type { K } from '../../i18n';
 import { bcFigures, edgeRestricted, edgeStale } from '../logic/bc';
 import { nodeChip } from '../logic/evidence';
 import { sourceStatus } from '../logic/status';
-import type { World } from '../types';
+import type { World } from '../../contract/world';
 import { AgeBar, StatusChip } from './atoms';
 import { NODE_ICON, PROV_ICON, useChipText, useStatusWords } from './shared';
 
@@ -26,7 +26,7 @@ interface RowProps {
 export function Ledger({ w, active, sel, onSelect }: RowProps & { readonly sel: string; readonly onSelect: (id: string) => void }) {
   const { t } = useLens();
   const chipText = useChipText();
-  const rows = KINDS.flatMap((k) => w.nodes.filter((n) => n.kind === k && active.has(n.id)));
+  const rows = KINDS.flatMap((k) => w.graph.nodes.filter((n) => n.kind === k && active.has(n.id)));
   return (
     <div className="kv2-table-wrap" tabIndex={0} role="region" aria-label={t('bc.ledger')}>
       <table className="kv2-table kv2-bc-ledger">
@@ -105,8 +105,8 @@ export function Matrix({ w }: { readonly w: World }) {
 /** From, To, how we know, and the basis. A stale link says so; restricted evidence reveals only that it exists. */
 export function LinksTable({ w, active }: RowProps) {
   const { route, t } = useLens();
-  const title = (id: string): string => w.nodes.find((n) => n.id === id)?.title ?? id;
-  const edges = w.edges.filter((e) => active.has(e.a) && active.has(e.b));
+  const title = (id: string): string => w.graph.nodes.find((n) => n.id === id)?.title ?? id;
+  const edges = w.graph.edges.filter((e) => active.has(e.a) && active.has(e.b));
   return (
     <div className="kv2-table-wrap" tabIndex={0} role="region" aria-label={t('map.cap.links')}>
       <table className="kv2-table kv2-bc-links">

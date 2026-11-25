@@ -7,9 +7,9 @@
 // not in that world, restricted or foreign, becomes "no selection" and never appears in the output. Persona is a display switch,
 // not authorization; no server-side identity is claimed. Synthetic data only.
 import type { Lang, Persona } from '../contract/types';
-import { WORLD as MAP_WORLD } from '../lenses/fixtures/world';
+import { WORLD } from '../fixture/world';
 import { authorizedWorld } from '../lenses/logic/authorize';
-import type { World as MapWorld } from '../lenses/types';
+import type { World as MapWorld } from '../contract/world';
 import type { MapScope, Route } from '../nav/routes';
 import { COMPONENT_PROJECT, isSharedComponent, mapIdOfProject, projectOfMapId } from './identity';
 
@@ -47,9 +47,9 @@ export const MAP_DEFAULT_SCOPE: MapScope = 'retail-tower';
 
 /** An id is selectable only when the authorized world holds that node. */
 export const permittedNode = (world: MapWorld, id: string): string | null =>
-  world.nodes.some((n) => n.id === id) ? id : null;
+  world.graph.nodes.some((n) => n.id === id) ? id : null;
 
-const authorized = (persona: Persona): MapWorld => authorizedWorld(MAP_WORLD, persona);
+const authorized = (persona: Persona): MapWorld => authorizedWorld(WORLD, persona);
 
 /** `toMapContext` against an explicit authorized world. */
 export function toMapContextIn(view: HostView, world: MapWorld): MapContext {

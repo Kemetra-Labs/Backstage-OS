@@ -7,24 +7,14 @@
 // overlap record (the sentry node, edge d4, a mission, a replay row, a source's health basis) is pruned through the same decision.
 import { freshnessOf } from '../../contract/rules';
 import type { DisplayState, EvidenceReference, Persona } from '../../contract/types';
-import { canonicalComponent, canonicalFor, dependencyVerdict, evidenceVerdict } from '../../domain/runtime';
+import { canonicalComponent, canonicalFor, dependencyVerdict } from '../../domain/runtime';
 import { toV2NodeFacts } from '../../domain/toV2';
-import type { Mission, ReplayEvent, SourceMeta, World, WorldEdge, WorldNode } from '../types';
+import type { Mission, ReplayEvent, SourceMeta, World, GraphEdge, GraphNode } from '../../contract/world';
 
 type Visible = (id: string) => boolean;
 type Keep = (r: EvidenceReference) => boolean;
 
-const memo = new WeakMap<World, Map<Persona, World>>();
-
-/** The rule for evidence the canonical fixture does not own. */
-const keepRef = (r: EvidenceReference): boolean => r.visibility !== 'technical';
-
-const keepFor = (persona: Persona): Keep => (r) => {
-  const v = evidenceVerdict(persona, r.id);
-  return v === 'foreign' ? keepRef(r) : v === 'visible';
-};
-
-function scopeState(state: DisplayState, sources: readonly SourceMeta[], provider: WorldNode['provider'], keep: Keep): DisplayState {
+function scopeState(state: DisplayState, sources: readonly SourceMeta[], provider: GraphNode['provider'], keep: Keep): DisplayState {
   const basis = state.basis.filter(keep);
   if (basis.length === state.basis.length) return state;
   if (basis.length > 0) return { ...state, basis };
@@ -34,7 +24,7 @@ function scopeState(state: DisplayState, sources: readonly SourceMeta[], provide
   return { ...state, basis, health: 'unknown', freshness: src ? freshnessOf(src) : 'unknown' };
 }
 
-function scopeNode(n: WorldNode, visible: Visible, sources: readonly SourceMeta[], keep: Keep, persona: Persona): WorldNode {
+function scopeNode(n: GraphNode, visible: Visible, sources: readonly SourceMeta[], keep: Keep, persona: Persona): GraphNode {
   const { descWithoutEvidence, ...rest } = n;
   // An overlap node takes its state and evidence ids from the scoped canonical fixture; any other node is scoped here.
   const canon = canonicalComponent(persona, n.id);
@@ -48,7 +38,7 @@ function scopeNode(n: WorldNode, visible: Visible, sources: readonly SourceMeta[
   return { ...rest, state, evidence, ...(withheldAll && descWithoutEvidence ? { descKey: descWithoutEvidence } : {}) };
 }
 
-function scopeEdge(e: WorldEdge, visible: Visible): WorldEdge {
+function scopeEdge(e: GraphEdge, visible: Visible): GraphEdge {
   return { ...e, evidence: e.evidence.filter(visible) };
 }
 
@@ -76,7 +66,7 @@ function scopeMission(m: Mission, visible: Visible): Mission {
 
 // An overlap dependency is kept, or removed, by the scoped canonical fixture and carries its truth and evidence ids. Any other link
 // is removed when its only evidence was restricted; links that never had evidence stay.
-function scopeEdges(list: readonly WorldEdge[], visible: Visible, persona: Persona): WorldEdge[] {
+function scopeEdges(list: readonly GraphEdge[], visible: Visible, persona: Persona): GraphEdge[] {
   return list.flatMap((e) => {
     const d = e.cls === 'dep' ? dependencyVerdict(persona, e.a, e.b) : ({ kind: 'foreign' } as const);
     if (d.kind === 'withheld') return [];
@@ -85,28 +75,22 @@ function scopeEdges(list: readonly WorldEdge[], visible: Visible, persona: Perso
   });
 }
 
-function build(w: World, persona: Persona): World {
-  const keep = keepFor(persona);
-  const evidenceById = Object.fromEntries(Object.entries(w.evidenceById).filter(([, r]) => keep(r)));
-  const visible: Visible = (id) => evidenceById[id] !== undefined;
+/** The mission sections of the world as this persona may see them. `keep` and `visible` are the world's one evidence decision. */
+export function scopeMissionSections(
+  w: World, persona: Persona, keep: Keep, visible: Visible,
+): Pick<World, 'graph' | 'sources' | 'replay' | 'missions' | 'sourceProbes'> {
   const sources = w.sources.map((s) => scopeSource(s, keep));
   return {
-    ...w,
-    nodes: w.nodes.map((n) => scopeNode(n, visible, sources, keep, persona)),
-    edges: scopeEdges(w.edges, visible, persona),
+    graph: {
+      nodes: w.graph.nodes.map((n) => scopeNode(n, visible, sources, keep, persona)),
+      edges: scopeEdges(w.graph.edges, visible, persona),
+    },
     sources,
     replay: w.replay.filter((r) => keepReplay(r, visible)),
     missions: w.missions.map((m) => scopeMission(m, visible)),
-    evidenceById,
+    sourceProbes: w.sourceProbes.filter(visible),
   };
 }
 
-/** The world as this persona is authorized to see it. Technical gets the input itself; others never receive a restricted record. */
-export function authorizedWorld(w: World, persona: Persona): World {
-  if (persona === 'technical') return w;
-  let byPersona = memo.get(w);
-  if (!byPersona) { byPersona = new Map(); memo.set(w, byPersona); }
-  let scoped = byPersona.get(persona);
-  if (!scoped) { scoped = build(w, persona); byPersona.set(persona, scoped); }
-  return scoped;
-}
+/** The one authorizedWorld (src/view/authorize.ts) scopes the whole world; the mission sections through scopeMissionSections. */
+export { authorizedWorld } from '../../view/authorize';

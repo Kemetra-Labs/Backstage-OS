@@ -4,9 +4,9 @@
 // Every value is invented. Keys use RT-DEMO-, links use *.example.invalid, nothing here is live telemetry.
 import { DOMAIN } from '../../domain/fixture';
 import { EVIDENCE, EXTRA_EVIDENCE, SOURCES } from '../../domain/records';
-import { toV2EdgeFacts, toV2EvidenceById, toV2NodeFacts } from '../../domain/toV2';
+import { toV2EdgeFacts, toV2NodeFacts } from '../../domain/toV2';
 import type { DisplayState, SourceAuthority } from '../../contract/types';
-import type { Agent, Mission, ReplayEvent, SourceEvent, SourceMeta, World, WorldEdge, WorldNode } from '../types';
+import type { MissionAgent, Mission, ReplayEvent, SourceEvent, SourceMeta, World, GraphEdge, GraphNode } from '../../contract/world';
 
 /** Fixed "now" so every screen, test and screenshot is deterministic. V1 reads at 14:03 are 6 minutes old here. */
 export const NOW = DOMAIN.now;
@@ -55,7 +55,7 @@ const state = (health: DisplayState['health'], basis: DisplayState['basis'], c: 
 const svc = (p: SourceMeta['provider']): DisplayState => SOURCE_LIST.find((s) => s.provider === p)!.health;
 
 // Layout is a 1000 x 600 canvas. The hub sits at the centre; nothing here is a measurement, only placement.
-export const NODES: readonly WorldNode[] = [
+export const NODES: readonly GraphNode[] = [
   { id: 'retail-tower', kind: 'product', title: 'Retail Tower OS', x: 500, y: 335, state: state('unknown', [EVIDENCE.checkFailed]), evidence: ['E-1', 'E-2'] },
   { id: 'khepri', kind: 'product', title: 'Khepri', x: 170, y: 150, state: state('healthy', []), evidence: [] },
   { id: 'stock-sync', kind: 'project', title: 'stock-sync', x: 500, y: 120, ...toV2NodeFacts(DOMAIN, 'stock-sync') },
@@ -68,7 +68,7 @@ export const NODES: readonly WorldNode[] = [
   { id: 'seshat-bi', kind: 'service', title: 'Seshat BI', x: 175, y: 450, state: state('degraded', []), evidence: [] },
 ];
 
-export const EDGES: readonly WorldEdge[] = [
+export const EDGES: readonly GraphEdge[] = [
   { id: 'g1', a: 'retail-tower', b: 'stock-sync', cls: 'group', truth: 'unknown', basisKey: 'edge.group', evidence: [] },
   { id: 'g2', a: 'retail-tower', b: 'pos', cls: 'group', truth: 'unknown', basisKey: 'edge.group', evidence: [] },
   { id: 'g3', a: 'retail-tower', b: 'inventory', cls: 'group', truth: 'unknown', basisKey: 'edge.group', evidence: [] },
@@ -101,7 +101,7 @@ export const REPLAY: readonly ReplayEvent[] = [
   { id: 'R-7', clock: '14:08', stage: 'proposed', label: 'proposed', evidence: null, kind: 'event', key: 'rp.proposed' },
 ];
 
-export const AGENTS: readonly Agent[] = [
+export const AGENTS: readonly MissionAgent[] = [
   { id: 'AG-1', key: 'ag.collector', role: 'sensing' },
   { id: 'AG-2', key: 'ag.watcher', role: 'sensing' },
   { id: 'AG-3', key: 'ag.correlator', role: 'analysis' },
@@ -117,15 +117,15 @@ export const MISSIONS: readonly Mission[] = [
   { id: 'MSN-DEMO-5', agent: 'AG-5', kind: 'proposal', status: 'waiting_review', human: 'needs_review', startedMinutesAgo: 1, label: 'proposed', evidence: ['E-1', 'E-3'], key: 'ms.proposal' },
 ];
 
-export const WORLD: World = {
+/** The mission sections of the one World (src/fixture/world.ts composes them with the portfolio sections). */
+export const MISSION_SECTIONS: Pick<World, 'sourceProbes' | 'now' | 'investigationId' | 'graph' | 'sources' | 'sourceTimeline' | 'replay' | 'missionAgents' | 'missions'> = {
+  sourceProbes: [ghProbe.id, portLast.id],
   now: NOW,
   investigationId: DOMAIN.investigationId,
-  nodes: NODES,
-  edges: EDGES,
+  graph: { nodes: NODES, edges: EDGES },
   sources: SOURCE_LIST,
-  sourceEvents: SOURCE_EVENTS,
+  sourceTimeline: SOURCE_EVENTS,
   replay: REPLAY,
-  agents: AGENTS,
+  missionAgents: AGENTS,
   missions: MISSIONS,
-  evidenceById: toV2EvidenceById(DOMAIN),
 };

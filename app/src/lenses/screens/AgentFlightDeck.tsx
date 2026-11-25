@@ -5,13 +5,13 @@ import { EvidenceItem } from '../components/evidence';
 import { Icon, type IconName } from '../components/Icon';
 import { Age, Cosmos, Kpi, Lt, Panel, T, ToneChip, TruthChip, Tx } from '../components/ui';
 import { useLens } from '../useLens';
-import { WORLD } from '../fixtures/world';
+import { WORLD } from '../../fixture/world';
 import type { K } from '../../i18n';
 import { authorizedWorld } from '../logic/authorize';
 import { STATUS_ORDER, deckCounts, filterMissions } from '../logic/deck';
 import { evidenceOf } from '../logic/evidence';
 import { hhmm, sourceCounts, sourceStatus, type Tone } from '../logic/status';
-import type { AgentStatus, Mission, MissionKind } from '../types';
+import type { AgentStatus, Mission, MissionKind } from '../../contract/world';
 
 const STATUS_TONE: Readonly<Record<AgentStatus, Tone>> = { observing: 'ok', analyzing: 'warn', drafting: 'unk', waiting_review: 'warn', idle: 'unk' };
 const HUMAN_TONE = { monitoring: 'unk', reviewing: 'ok', needs_review: 'warn' } as const;
@@ -50,7 +50,7 @@ export function AgentFlightDeck({ embedded = false }: { readonly embedded?: bool
   const [kind, setKind] = useState<MissionKind | 'all'>('all');
   const rows = filterMissions(w.missions, { agent, status }).filter((m) => kind === 'all' || m.kind === kind);
   const sel = w.missions.find((m) => m.id === route.msn) ?? w.missions[0]!;
-  const agentOf = (m: Mission) => w.agents.find((a) => a.id === m.agent)!;
+  const agentOf = (m: Mission) => w.missionAgents.find((a) => a.id === m.agent)!;
   const srcStatuses = w.sources.map((s) => sourceStatus(s, w.now));
   const sc = sourceCounts(srcStatuses);
   const review = w.missions.filter((m) => m.human === 'needs_review');
@@ -129,7 +129,7 @@ export function AgentFlightDeck({ embedded = false }: { readonly embedded?: bool
             <label className="kv2-select"><span><T k="deck.f.agent" /></span>
               <select value={agent} onChange={(e) => setAgent(e.target.value)}>
                 <option value="all">{t('deck.f.all.agents')}</option>
-                {w.agents.map((a) => <option key={a.id} value={a.id}>{t(a.key as K)}</option>)}
+                {w.missionAgents.map((a) => <option key={a.id} value={a.id}>{t(a.key as K)}</option>)}
               </select><Icon name="chevron" size={14} />
             </label>
             <label className="kv2-select"><span><T k="deck.f.status" /></span>

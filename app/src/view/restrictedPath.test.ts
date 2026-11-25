@@ -87,7 +87,11 @@ describe('V1 host source has no restricted-placeholder path and no unscoped fixt
 
   it('only App.tsx reads the V1 world and investigation fixtures, and scopes them before any screen sees them', () => {
     const readers = files.filter((f) => /from '[./]*fixture\/(world|inv-demo-7)'/.test(f.text)).map((f) => f.file).sort();
-    expect(readers).toEqual(['App.tsx', 'shell/TopBar.tsx']);
+    expect(readers).toEqual(['App.tsx', 'bridge/mapContext.ts', 'shell/TopBar.tsx']);
+    // The map context resolves a selection against the persona's authorized world only, never the fixture itself.
+    const map = files.find((f) => f.file === 'bridge/mapContext.ts')?.text ?? '';
+    expect(map.match(/\bWORLD\b/g)?.length).toBe(2);
+    expect(map).toMatch(/authorizedWorld\(WORLD, persona\)/);
     expect(files.find((f) => f.file === 'shell/TopBar.tsx')?.text).toMatch(/import \{ SOURCES \} from '\.\.\/fixture\/inv-demo-7';/);
     const app = files.find((f) => f.file === 'App.tsx')?.text ?? '';
     expect(app).toMatch(/authorizedWorld\(WORLD, persona\)/);

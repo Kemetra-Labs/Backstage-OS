@@ -1,5 +1,5 @@
 // Agent Flight Deck logic. All agents are simulated; these are counts and filters over fixed fixture rows.
-import type { AgentStatus, Mission, World } from '../types';
+import type { AgentStatus, Mission, World } from '../../contract/world';
 
 export interface DeckCounts {
   readonly agents: number;
@@ -14,7 +14,7 @@ export function deckCounts(w: World): DeckCounts {
   const byStatus: Record<AgentStatus, number> = { observing: 0, analyzing: 0, drafting: 0, waiting_review: 0, idle: 0 };
   for (const m of w.missions) byStatus[m.status] += 1;
   return {
-    agents: w.agents.length,
+    agents: w.missionAgents.length,
     active: w.missions.filter((m) => m.status !== 'idle').length,
     needsReview: w.missions.filter((m) => m.human === 'needs_review').length,
     reviewing: w.missions.filter((m) => m.human === 'reviewing').length,

@@ -10,7 +10,7 @@ import { Icon } from '../components/Icon';
 import { Cosmos, Kpi, Panel, Seg, T } from '../components/ui';
 import { useLens } from '../useLens';
 import { nodePoints } from '../fixtures/orbit-layout';
-import { WORLD } from '../fixtures/world';
+import { WORLD } from '../../fixture/world';
 import { authorizedWorld } from '../logic/authorize';
 import type { K } from '../../i18n';
 import { bcFigures } from '../logic/bc';
@@ -35,7 +35,7 @@ export function MissionMapBC() {
   const fig = useMemo(() => bcFigures(w), [w]);
   // With no node chosen: the scoped system when a scope other than the default is set (as in V2), else the approved render's stock-sync.
   const fallback = fallbackNode(route.scope);
-  const sel = w.nodes.find((n) => n.id === (route.node ?? fallback)) ?? w.nodes[0]!;
+  const sel = w.graph.nodes.find((n) => n.id === (route.node ?? fallback)) ?? w.graph.nodes[0]!;
   // Scope and filter dim in the map and hide in the list, as in V2. Nothing is removed from the world.
   const active = useMemo(() => {
     const a = scopeSet(route.scope, w);
@@ -67,7 +67,7 @@ export function MissionMapBC() {
               <span><T k="map.scope.label" /></span>
               <select value={route.scope} onChange={(e) => go({ scope: e.target.value, node: null })} aria-label={t('map.scope.label')}>
                 <option value="all">{t('scope.all')}</option>
-                {SCOPES.map((id) => <option key={id} value={id} dir="ltr">{w.nodes.find((n) => n.id === id)!.title}</option>)}
+                {SCOPES.map((id) => <option key={id} value={id} dir="ltr">{w.graph.nodes.find((n) => n.id === id)!.title}</option>)}
               </select>
               <Icon name="chevron" size={14} />
             </label>

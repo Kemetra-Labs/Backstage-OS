@@ -11,6 +11,7 @@ import type {
 } from '../contract/world';
 import { canonicalComponent, canonicalFor, evidenceVerdict } from '../domain/runtime';
 import { toV1ComponentFacts } from '../domain/toV1';
+import { scopeMissionSections } from '../lenses/logic/authorize';
 
 /** True when this persona may not read the evidence item. The rule for evidence the canonical fixture does not own. */
 export const isWithheld = (e: EvidenceReference, persona: Persona): boolean =>
@@ -117,6 +118,7 @@ function buildWorld(w: World, persona: Persona): World {
     activity: scopeActivity(w.activity, visibleId),
     evidence,
     evidenceText,
+    ...scopeMissionSections(w, persona, keep, visibleId),
   };
 }
 

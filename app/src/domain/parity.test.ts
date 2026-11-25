@@ -4,11 +4,11 @@ import { WORLD as V1_WORLD } from '../fixture/world';
 import { EVIDENCE, INV_DEMO_7, SOURCES } from '../fixture/inv-demo-7';
 import { authorizedWorld } from '../lenses/logic/authorize';
 import { nodeStatus } from '../lenses/logic/status';
-import { WORLD } from '../lenses/fixtures/world';
-import type { WorldNode } from '../lenses/types';
+import { WORLD } from '../fixture/world';
+import type { GraphNode } from '../contract/world';
 import { authorizedWorld as v1Authorized } from '../view/authorize';
 import { evidenceViewFor } from '../view/evidence';
-import { triadOf } from '../view/world';
+import { caseEvidence, catalogueEvidence, triadOf } from '../view/world';
 import { DOMAIN } from './fixture';
 import { scopeFixture } from './scope';
 import { toV1EdgeKind, toV1Evidence, toV1Nodes } from './toV1';
@@ -18,7 +18,7 @@ import type { DomainFixture } from './types';
 const SHARED = ['pos', 'stock-sync', 'inventory'] as const;
 const isShared = (id: string): boolean => (SHARED as readonly string[]).includes(id);
 
-const slice = (n: WorldNode) => ({
+const slice = (n: GraphNode) => ({
   id: n.id, state: n.state, evidence: n.evidence, ...(n.check !== undefined ? { check: n.check } : {}),
 });
 const byId = <T extends { id: string }>(xs: readonly T[], id: string): T => {
@@ -26,6 +26,8 @@ const byId = <T extends { id: string }>(xs: readonly T[], id: string): T => {
   if (!x) throw new Error(`missing ${id}`);
   return x;
 };
+/** The mission's case evidence of a world, by id: what the mission screens list. */
+const caseMap = (w: Parameters<typeof caseEvidence>[0]) => Object.fromEntries(caseEvidence(w).map((e) => [e.id, e]));
 const edgeKey = (e: { a: string; b: string }): string => e.a + e.b;
 
 describe('canonical fixture parity', () => {
@@ -38,12 +40,12 @@ describe('canonical fixture parity', () => {
   });
 
   it('toV2 evidence equals the V2 evidenceById', () => {
-    expect(toV2EvidenceById(DOMAIN)).toEqual(WORLD.evidenceById);
+    expect(toV2EvidenceById(DOMAIN)).toEqual(caseMap(WORLD));
   });
 
   it('the V2 dep edges between shared components are the canonical dependencies', () => {
     const expected = [...toV2Edges(DOMAIN)].sort((x, y) => edgeKey(x).localeCompare(edgeKey(y)));
-    const actual = WORLD.edges
+    const actual = WORLD.graph.edges
       .filter((e) => e.cls === 'dep' && isShared(e.a) && isShared(e.b))
       .map((e) => ({ a: e.a, b: e.b, truth: e.truth, evidence: e.evidence }))
       .sort((x, y) => edgeKey(x).localeCompare(edgeKey(y)));
@@ -62,7 +64,7 @@ describe('canonical fixture parity', () => {
         const want = { health: triadOf(c.state).health, freshness: triadOf(c.state).freshness, check: c.check === 'failing', basis: c.state.basis.map((b) => b.id) };
         const k1 = byId(v1rt.components, c.id);
         const got1 = { health: triadOf(k1.state).health, freshness: triadOf(k1.state).freshness, check: k1.checkFailing === true, basis: k1.state.basis.map((b) => b.id) };
-        const k2 = byId(w2.nodes, c.id);
+        const k2 = byId(w2.graph.nodes, c.id);
         const st2 = nodeStatus(k2);
         const got2 = { health: st2.health, freshness: st2.freshness, check: st2.checkFailing, basis: k2.state.basis.map((b) => b.id) };
         expect(got1, `V1 ${p}/${c.id}`).toEqual(want);
@@ -75,9 +77,9 @@ describe('canonical fixture parity', () => {
       const scoped = scopeFixture(DOMAIN, p);
       const canonV1 = toV1Evidence(scoped).map((e) => e.id).sort();
       const inCanon = new Set(Object.keys(DOMAIN.evidence));
-      const v1ids = Object.keys(v1Authorized(V1_WORLD, p).evidence).filter((id) => inCanon.has(id)).sort();
+      const v1ids = catalogueEvidence(v1Authorized(V1_WORLD, p)).map((e) => e.id).filter((id) => inCanon.has(id)).sort();
       expect(v1ids).toEqual(canonV1);
-      expect(Object.keys(authorizedWorld(WORLD, p).evidenceById).sort()).toEqual(Object.keys(scoped.evidence).sort());
+      expect(Object.keys(caseMap(authorizedWorld(WORLD, p))).sort()).toEqual(Object.keys(scoped.evidence).sort());
     });
 
     it(`source provenance for the five sources is the same object through V1 and V2 for ${p}`, () => {
@@ -92,7 +94,7 @@ describe('canonical fixture parity', () => {
   it('Unknown is never Healthy for a lay persona where the basis is withheld, in either consumer', () => {
     for (const p of ['owner', 'nontechnical'] as const) {
       expect(triadOf(byId(byId(v1Authorized(V1_WORLD, p).projects, 'RT').components, 'inventory').state).health).toBe('unknown');
-      expect(nodeStatus(byId(authorizedWorld(WORLD, p).nodes, 'inventory')).health).toBe('unknown');
+      expect(nodeStatus(byId(authorizedWorld(WORLD, p).graph.nodes, 'inventory')).health).toBe('unknown');
     }
     expect(triadOf(byId(byId(V1_WORLD.projects, 'RT').components, 'inventory').state).health).toBe('unknown');
   });
@@ -118,9 +120,9 @@ describe('canonical fixture parity', () => {
     it(`scoped V2 projection equals authorizedWorld for ${p}`, () => {
       const f = scopeFixture(DOMAIN, p);
       const w = authorizedWorld(WORLD, p);
-      expect(toV2EvidenceById(f)).toEqual(w.evidenceById);
+      expect(toV2EvidenceById(f)).toEqual(caseMap(w));
       const nodes = toV2Nodes(f);
-      for (const id of SHARED) expect(byId(nodes, id)).toEqual(slice(byId(w.nodes, id)));
+      for (const id of SHARED) expect(byId(nodes, id)).toEqual(slice(byId(w.graph.nodes, id)));
       const technicalIds = Object.values(DOMAIN.evidence).filter((e) => e.visibility === 'technical').map((e) => e.id);
       expect(technicalIds.length).toBeGreaterThan(0);
       const json = JSON.stringify(f);

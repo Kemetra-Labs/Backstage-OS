@@ -1,15 +1,17 @@
 // BACK-30 (M05-D05-B): a viewer not authorized for a Technical-only record must not be able to tell it exists.
 // Persona is a display switch, not authorization: this scopes the demo world only and claims no server-side enforcement.
 import { describe, expect, it } from 'vitest';
-import { WORLD } from '../fixtures/world';
+import { WORLD } from '../../fixture/world';
 import { TABLE } from '../../i18n';
-import type { Mission, ReplayEvent, World } from '../types';
+import type { Mission, ReplayEvent, World } from '../../contract/world';
+import { caseEvidence } from '../../view/world';
 import { authorizedWorld } from './authorize';
 import { nodeStatus } from './status';
 import { gapsAt, indexAt, milestonesAt, msOfIndex, stageAt, totalMs } from './replay';
 
 const UNAUTHORIZED = ['owner', 'nontechnical'] as const;
-const technicalRecords = Object.values(WORLD.evidenceById).filter((r) => r.visibility === 'technical');
+// The mission's case evidence (E-1..E-9). Technical-only records outside it are covered by src/view/authorize.test.ts.
+const technicalRecords = caseEvidence(WORLD).filter((r) => r.visibility === 'technical');
 
 describe('authorizedWorld', () => {
   it('returns the same world for Technical', () => {
@@ -17,7 +19,7 @@ describe('authorizedWorld', () => {
   });
 
   it('leaves every node description to Technical', () => {
-    expect(authorizedWorld(WORLD, 'technical').nodes.some((n) => n.descKey)).toBe(false);
+    expect(authorizedWorld(WORLD, 'technical').graph.nodes.some((n) => n.descKey)).toBe(false);
   });
 
   it('the fixture has a Technical-only record to hide (guards the tests below against passing vacuously)', () => {
@@ -32,7 +34,7 @@ describe('authorizedWorld', () => {
         const json = JSON.stringify(w);
         expect(json).not.toContain('E-5');
         // A node's own title is its catalogue name, independent of any evidence, so it is not a leak of the record's target.
-        const noTitles = JSON.stringify({ ...w, nodes: w.nodes.map((n) => ({ ...n, title: '' })) });
+        const noTitles = JSON.stringify({ ...w, graph: { ...w.graph, nodes: w.graph.nodes.map((n) => ({ ...n, title: '' })) } });
         for (const r of technicalRecords) {
           expect(json).not.toContain(r.id);
           const t = r.observation?.target;
@@ -42,12 +44,12 @@ describe('authorizedWorld', () => {
       });
 
       it('removes the link built only on Technical-only evidence', () => {
-        expect(w.edges.find((e) => e.id === 'd4')).toBeUndefined();
-        expect(w.edges.length).toBe(WORLD.edges.length - 1);
+        expect(w.graph.edges.find((e) => e.id === 'd4')).toBeUndefined();
+        expect(w.graph.edges.length).toBe(WORLD.graph.edges.length - 1);
       });
 
       it('turns a node whose only basis was removed into unknown, never healthy and never stale', () => {
-        const inv = w.nodes.find((n) => n.id === 'inventory')!;
+        const inv = w.graph.nodes.find((n) => n.id === 'inventory')!;
         const st = nodeStatus(inv);
         expect(st.health).not.toBe('healthy');
         expect(st.health).toBe('unknown');
@@ -57,16 +59,16 @@ describe('authorizedWorld', () => {
       });
 
       it('swaps the Inventory overview description, whose only basis was the restricted record, for the generic no-evidence one', () => {
-        const inv = w.nodes.find((n) => n.id === 'inventory')!;
+        const inv = w.graph.nodes.find((n) => n.id === 'inventory')!;
         expect(inv.descKey).toBe('map.nl.inventory.none');
         expect(TABLE['map.nl.inventory.none']).toEqual(['The inventory service. No evidence has been read for it.', 'خدمة المخزون. لم تُقرأ أدلة لها.']);
         // Only that node: others keep the description their authorized evidence supports, and the declaration itself is not exposed.
-        expect(w.nodes.filter((n) => n.descKey).map((n) => n.id)).toEqual(['inventory']);
-        expect(w.nodes.some((n) => 'descWithoutEvidence' in n)).toBe(false);
+        expect(w.graph.nodes.filter((n) => n.descKey).map((n) => n.id)).toEqual(['inventory']);
+        expect(w.graph.nodes.some((n) => 'descWithoutEvidence' in n)).toBe(false);
       });
 
       it('keeps the Sentry node, with no evidence, and every source authority unchanged', () => {
-        const sentry = w.nodes.find((n) => n.id === 'sentry')!;
+        const sentry = w.graph.nodes.find((n) => n.id === 'sentry')!;
         expect(sentry).toBeDefined();
         expect(sentry.evidence).toEqual([]);
         // Source reachability, age and TTL are authorized for everyone. Only the Technical-only record leaves a source's health basis
@@ -85,7 +87,7 @@ describe('authorizedWorld', () => {
 
       it('keeps a record independently supported by authorized evidence', () => {
         expect(w.missions.find((m) => m.id === 'MSN-DEMO-2')!.evidence).toEqual(['E-9']);
-        expect(w.evidenceById['E-9']).toBeDefined();
+        expect(w.evidence['E-9']).toBeDefined();
       });
 
       it('is memoized per persona', () => {
@@ -94,8 +96,8 @@ describe('authorizedWorld', () => {
       });
 
       it('does not mutate the source world', () => {
-        expect(WORLD.evidenceById['E-5']).toBeDefined();
-        expect(WORLD.edges.find((e) => e.id === 'd4')).toBeDefined();
+        expect(WORLD.evidence['E-5']).toBeDefined();
+        expect(WORLD.graph.edges.find((e) => e.id === 'd4')).toBeDefined();
       });
     });
   }
@@ -215,12 +217,12 @@ describe('sequential record ids leave no hole for a lay persona (blocked: displa
   };
 
   it('the full fixture numbers its INV-DEMO-7 evidence without holes (control)', () => {
-    expect(holes(Object.keys(WORLD.evidenceById))).toEqual([]);
+    expect(holes(caseEvidence(WORLD).map((e) => e.id))).toEqual([]);
   });
 
   for (const p of UNAUTHORIZED) {
     it.fails(`${p}: the evidence ids received leave no hole in the numbering`, () => {
-      expect(holes(Object.keys(authorizedWorld(WORLD, p).evidenceById))).toEqual([]);
+      expect(holes(caseEvidence(authorizedWorld(WORLD, p)).map((e) => e.id))).toEqual([]);
     });
   }
 });

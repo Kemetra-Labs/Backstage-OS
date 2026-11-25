@@ -5,11 +5,11 @@
 import { describe, expect, it } from 'vitest';
 import { leaksIn as leaks } from '../../e2e/leaks';
 import type { Persona } from '../contract/types';
-import { WORLD } from '../lenses/fixtures/world';
+import { WORLD } from '../fixture/world';
 import { authorizedWorld } from '../lenses/logic/authorize';
 import { deckCounts, filterMissions, STATUS_ORDER } from '../lenses/logic/deck';
 import { evidenceOf } from '../lenses/logic/evidence';
-import type { Mission, World } from '../lenses/types';
+import type { Mission, World } from '../contract/world';
 import { expectWorldReadOnlyThroughAuthorizedWorld } from './scopeGuard';
 
 const LAY: readonly Persona[] = ['owner', 'nontechnical'];
@@ -27,7 +27,7 @@ const mission = (w: World, id: string): Mission => w.missions.find((m) => m.id =
 const deckData = (w: World): string => JSON.stringify({ missions: w.missions, evidence: w.missions.map((m) => evidenceOf(w, m.evidence)), counts: deckCounts(w) });
 
 describe('Flight Deck: zero inputs', () => {
-  const empty: World = { ...WORLD, missions: [], agents: [] };
+  const empty: World = { ...WORLD, missions: [], missionAgents: [] };
 
   it('no missions and no agents give zero counts, never a missing or invented number', () => {
     const c = deckCounts(empty);

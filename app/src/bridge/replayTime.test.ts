@@ -2,7 +2,7 @@
 // Persona is a display switch on synthetic data, not authorization.
 import { describe, expect, it } from 'vitest';
 import type { Persona } from '../contract/types';
-import { WORLD } from '../lenses/fixtures/world';
+import { WORLD } from '../fixture/world';
 import { authorizedWorld } from '../lenses/logic/authorize';
 import { replayTimeRows } from './replayTime';
 
@@ -28,7 +28,7 @@ describe('replay time semantics', () => {
           expect(row.order, `${p} ${e.id}`).toBe('unknown');
         } else {
           // Evidence may be readable yet carry no observation (a gap record): then there is still no time.
-          expect(row.observedAt, `${p} ${e.id}`).toBe(authorizedWorld(WORLD, p).evidenceById[e.evidence]?.observation?.observedAt ?? null);
+          expect(row.observedAt, `${p} ${e.id}`).toBe(authorizedWorld(WORLD, p).evidence[e.evidence]?.observation?.observedAt ?? null);
         }
       }
     }
@@ -52,7 +52,7 @@ describe('replay time semantics', () => {
         { id: 'b', clock: '10:01', stage: 'observed', label: 'observed', evidence: 'y', kind: 'event', key: 'k' },
         { id: 'c', clock: '10:02', stage: 'ingested', label: 'observed', evidence: null, kind: 'event', key: 'k' },
       ],
-      evidenceById: {
+      evidence: {
         x: { observation: { observedAt: '2026-11-16T09:00:00Z' } },
         y: { observation: { observedAt: '2026-11-16T09:30:00Z' } },
       },
@@ -63,7 +63,7 @@ describe('replay time semantics', () => {
   it('treats evidence it cannot read as no time at all', () => {
     const w = {
       replay: [{ id: 'a', clock: '10:00', stage: 'observed', label: 'observed', evidence: 'gone', kind: 'event', key: 'k' }],
-      evidenceById: {},
+      evidence: {},
     } as unknown as Parameters<typeof replayTimeRows>[0];
     expect(replayTimeRows(w)).toEqual([{ id: 'a', step: 1, processedAt: '10:00', observedAt: null, order: 'unknown' }]);
   });
@@ -87,8 +87,8 @@ type TimeWorld = Parameters<typeof replayTimeRows>[0];
 type Obs = { observation: { observedAt: string } | null; notReadReason?: string };
 const ev = (id: string, evidence: string | null, clock: string, kind: 'event' | 'gap' = 'event') =>
   ({ id, clock, stage: 'observed', label: 'observed', evidence, kind, key: 'k' });
-const world = (replay: readonly ReturnType<typeof ev>[], evidenceById: Record<string, Obs>): TimeWorld =>
-  ({ replay, evidenceById }) as unknown as TimeWorld;
+const world = (replay: readonly ReturnType<typeof ev>[], evidence: Record<string, Obs>): TimeWorld =>
+  ({ replay, evidence }) as unknown as TimeWorld;
 const read = (iso: string): Obs => ({ observation: { observedAt: iso } });
 const orders = (w: TimeWorld) => replayTimeRows(w).map((r) => r.order);
 

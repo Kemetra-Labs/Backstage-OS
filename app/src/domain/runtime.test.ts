@@ -10,7 +10,7 @@ import type { Persona } from '../contract/types';
 import { WORLD as V1_WORLD } from '../fixture/world';
 import { INV_DEMO_7 } from '../fixture/inv-demo-7';
 import { authorizedInvestigation, authorizedWorld as v1Authorized } from '../view/authorize';
-import { WORLD as V2_WORLD } from '../lenses/fixtures/world';
+import { WORLD as V2_WORLD } from '../fixture/world';
 import { authorizedWorld as v2Authorized } from '../lenses/logic/authorize';
 import { DOMAIN } from './fixture';
 import { canonicalComponent, canonicalFor, dependencyVerdict, evidenceVerdict } from './runtime';
@@ -71,12 +71,12 @@ describe('the worlds the screens receive carry the scoped canonical facts', () =
     const scoped = canonicalFor(p);
     const w = v2Authorized(V2_WORLD, p);
     for (const c of DOMAIN.components) {
-      const n = w.nodes.find((x) => x.id === c.id)!;
+      const n = w.graph.nodes.find((x) => x.id === c.id)!;
       const f = toV2NodeFacts(scoped, c.id);
       expect({ state: n.state, evidence: n.evidence, check: n.check }, `V2 node ${c.id}`).toEqual({ state: f.state, evidence: f.evidence, check: f.check });
     }
     for (const d of DOMAIN.dependencies) {
-      const e = w.edges.find((x) => x.cls === 'dep' && x.a === d.from && x.b === d.to)!;
+      const e = w.graph.edges.find((x) => x.cls === 'dep' && x.a === d.from && x.b === d.to)!;
       expect({ truth: e.truth, evidence: e.evidence }, `V2 edge ${d.from}-${d.to}`).toEqual(toV2EdgeFacts(scoped, d.from, d.to));
     }
   });
@@ -99,7 +99,7 @@ describe('scopeFixture is the only authority for overlap records (mutation proof
 
   const consumers = async () => ({
     v1: await import('../view/authorize'), v1w: await import('../fixture/world'), v1i: await import('../fixture/inv-demo-7'),
-    v2: await import('../lenses/logic/authorize'), v2w: await import('../lenses/fixtures/world'),
+    v2: await import('../lenses/logic/authorize'), v2w: await import('../fixture/world'),
   });
 
   // `withhold(id)`: mark one canonical record Technical-only in the canonical fixture only. The V1 and V2 objects for it still say
@@ -146,10 +146,10 @@ describe('scopeFixture is the only authority for overlap records (mutation proof
       const w2 = c.v2.authorizedWorld(c.v2w.WORLD, p);
       // The canary: E-5 is an overlap record, so only scopeFixture keeps it from lay personas.
       expect(w1.evidence['E-5'], `V1 ${p}`).toBeDefined();
-      expect(w2.evidenceById['E-5'], `V2 ${p}`).toBeDefined();
+      expect(w2.evidence['E-5'], `V2 ${p}`).toBeDefined();
       // E-12 is not an overlap record: each consumer's own rule still withholds it.
       expect(w1.evidence['E-12'], `V1 ${p} E-12`).toBeUndefined();
-      expect(w2.evidenceById['E-23'], `V2 ${p} E-23`).toBeUndefined();
+      expect(w2.evidence['E-23'], `V2 ${p} E-23`).toBeUndefined();
     }
   });
 });

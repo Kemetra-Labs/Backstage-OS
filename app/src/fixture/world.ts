@@ -8,6 +8,8 @@ import type {
 } from '../contract/world';
 import { DOMAIN } from '../domain/fixture';
 import { toV1ComponentFacts } from '../domain/toV1';
+import { MISSION_SECTIONS } from '../lenses/fixtures/world';
+import { EXTRA_EVIDENCE } from '../domain/records';
 import { EVIDENCE, SOURCES } from './inv-demo-7';
 
 const l = (en: string, ar: string): L10n => ({ en, ar });
@@ -361,8 +363,9 @@ const evidenceText: Readonly<Record<string, ByPersonaL10n>> = {
   'E-41': same(l('Release-week freeze recorded in {Confluence}', 'تجميد أسبوع الإصدار مسجل في {Confluence}')),
 };
 
+// The canonical case records (E-1..E-9, in their canonical order) first, then the records outside it. Each is defined once.
 const allEvidence: Readonly<Record<string, EvidenceReference>> = Object.fromEntries(
-  [...Object.values(E), ...Object.values(X)].map((e) => [e.id, e]),
+  [...Object.values(E), ...Object.values(EXTRA_EVIDENCE), ...Object.values(X)].map((e) => [e.id, e]),
 );
 
 export const WORLD: World = {
@@ -373,4 +376,5 @@ export const WORLD: World = {
   activity,
   evidence: allEvidence,
   evidenceText,
+  ...MISSION_SECTIONS,
 };

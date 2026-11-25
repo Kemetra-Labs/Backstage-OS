@@ -58,18 +58,18 @@ describe('changing the canonical record changes both consumers', () => {
     });
     const v1 = await import('../fixture/world');
     const v1Nodes = await import('../fixture/inv-demo-7');
-    const v2 = await import('../lenses/fixtures/world');
+    const v2 = await import('../fixture/world');
 
     const inv1 = v1.WORLD.projects.find((p) => p.id === 'RT')!.components.find((c) => c.id === 'inventory')!;
     expect(inv1.state.health).toBe('degraded');
     expect(inv1.state.basis.map((b) => b.id)).toEqual(['E-1']);
     expect(v1Nodes.NODES.find((n) => n.id === 'inventory')!.state.health).toBe('degraded');
 
-    const inv2 = v2.WORLD.nodes.find((n) => n.id === 'inventory')!;
+    const inv2 = v2.WORLD.graph.nodes.find((n) => n.id === 'inventory')!;
     expect(inv2.state.health).toBe('degraded');
     expect(inv2.state.basis.map((b) => b.id)).toEqual(['E-1']);
     expect(inv2.evidence).toEqual(['E-1']);
-    const d3 = v2.WORLD.edges.find((e) => e.id === 'd3')!;
+    const d3 = v2.WORLD.graph.edges.find((e) => e.id === 'd3')!;
     expect(d3.truth).toBe('observed');
     expect(d3.evidence).toEqual(['E-1']);
   });

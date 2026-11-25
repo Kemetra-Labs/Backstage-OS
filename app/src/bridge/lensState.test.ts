@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Lang, Persona } from '../contract/types';
 import { DOMAIN } from '../domain/fixture';
-import { WORLD as V2 } from '../lenses/fixtures/world';
+import { WORLD as V2 } from '../fixture/world';
 import { translate } from '../i18n';
 import { authorizedWorld } from '../lenses/logic/authorize';
 import { DEFAULT_ROUTE } from '../lenses/navigation/route';
@@ -25,7 +25,7 @@ describe('the Mission Map route becomes a map context', () => {
   it('opens on the lab default scope when the route names none, and the route scopes are real map nodes', () => {
     expect(MAP_DEFAULT_SCOPE).toBe(DEFAULT_ROUTE.scope);
     expect(toMapContext(view('owner', 'en', '#/map'))).toMatchObject({ scope: 'retail-tower', node: null, origin: 'map' });
-    for (const s of MAP_SCOPES.filter((x) => x !== 'all')) expect(V2.nodes.some((n) => n.id === s), s).toBe(true);
+    for (const s of MAP_SCOPES.filter((x) => x !== 'all')) expect(V2.graph.nodes.some((n) => n.id === s), s).toBe(true);
   });
 
   it('takes scope and node from the route, for any node of the persona\'s authorized world', () => {
@@ -140,7 +140,7 @@ describe('the host adapter builds the map\'s useLens value from host state', () 
 
   it('uses the world it is given: a node outside it is not selected', () => {
     const w = authorizedWorld(V2, 'owner');
-    const trimmed = { ...w, nodes: w.nodes.filter((x) => x.id !== 'pos') };
+    const trimmed = { ...w, graph: { ...w.graph, nodes: w.graph.nodes.filter((x) => x.id !== 'pos') } };
     expect(toLensState(view('owner', 'en', '#/map/retail-tower/pos'), nav(), trimmed).route.node).toBeNull();
     expect(toLensState(view('owner', 'en', '#/map/retail-tower/pos'), nav(), w).route.node).toBe('pos');
   });

@@ -6,6 +6,7 @@ import type { EvidenceReference, Lang, Persona } from '../contract/types';
 import type { DeliveryItem, World } from '../contract/world';
 import type { EvidenceView } from './viewFor';
 import { hostCopy } from '../i18n/host';
+import { evidenceById } from './world';
 
 /**
  * Fails closed when a Technical-only record reaches a lay persona's projection. The record was withheld by authorizedWorld /
@@ -54,7 +55,7 @@ export function evidenceViewFor(persona: Persona, ref: EvidenceReference, rawOut
  * An id the world does not hold (unknown, or withheld from this persona) gets the id itself, never a title from the static copy.
  */
 export function evidenceTitleFor(w: World, id: string, persona: Persona, lang: Lang): string {
-  const ref = w.evidence[id];
+  const ref = evidenceById(w, id);
   if (!ref) return `{${id}}`;
   assertAuthorized(ref, persona);
   return hostCopy('COPY', lang).evidenceItem[id]?.[persona] ?? w.evidenceText[id]?.[persona][lang] ?? `{${id}}`;

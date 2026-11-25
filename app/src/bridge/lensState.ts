@@ -6,11 +6,11 @@
 import { DOMAIN } from '../domain/fixture';
 import { hostCopy, translate, type Copy, type K, type Vars } from '../i18n';
 import { DEFAULT_ROUTE, type Route as V2Route } from '../lenses/navigation/route';
-import type { ScreenId } from '../lenses/types';
+import type { ScreenId } from '../lenses/navigation/route';
 import type { Provider } from '../contract/types';
 import { MAP_SCOPES, type MapScope, type Route } from '../nav/routes';
 import { toMapContext, toMapContextIn, type HostView, type MapContext } from './mapContext';
-import type { World as MapWorld } from '../lenses/types';
+import type { World as MapWorld } from '../contract/world';
 
 /** What a lens reads: the route, language and persona, and a translator bound to them. */
 export interface LensState {

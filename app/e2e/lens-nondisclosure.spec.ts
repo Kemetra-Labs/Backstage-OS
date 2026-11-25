@@ -4,7 +4,8 @@
 // that rested on it, and the counts that would change if it were silently dropped (evidence rows, links, story rows). A display persona
 // is not authorization; this checks the demo's scoping on synthetic data, not a server-side control.
 import { expect, test, type Page } from '@playwright/test';
-import { WORLD } from '../src/lenses/fixtures/world';
+import { WORLD } from '../src/fixture/world';
+import { caseEvidence } from '../src/view/world';
 import { authorizedWorld } from '../src/lenses/logic/authorize';
 import { TABLE } from '../src/i18n/index';
 import { INV_DEMO_7 } from '../src/fixture/inv-demo-7';
@@ -19,15 +20,15 @@ const LAY = ['owner', 'nontechnical'] as const;
 type Lang = (typeof LANGS)[number];
 const text = (key: keyof typeof TABLE, lang: Lang): string => (TABLE[key] as readonly [string, string])[lang === 'ar' ? 1 : 0].replace(/[{}]/g, '');
 const squash = (s: string): string => s.replace(/\s+/g, ' ').trim();
-const SCOPED_EDGES = authorizedWorld(WORLD, 'owner').edges.length;
+const SCOPED_EDGES = authorizedWorld(WORLD, 'owner').graph.edges.length;
 const scoped = (persona: (typeof LAY)[number]) => authorizedWorld(WORLD, persona);
-const READABLE = (persona: (typeof LAY)[number]): number => INV_DEMO_7.evidence.filter((e) => scoped(persona).evidenceById[e.id] !== undefined).length;
+const READABLE = (persona: (typeof LAY)[number]): number => INV_DEMO_7.evidence.filter((e) => scoped(persona).evidence[e.id] !== undefined).length;
 
 // What a viewer could read about the restricted record: every withheld token (id, observation id, title in every persona's wording and
 // both languages, rule, link, placeholder copy) comes from the shared probe in leaks.ts (BACK-92 R7). The one extra is the record's age
 // text: it is also the Sentry source's own authorized last-read age, so it cannot be a page-wide token and is matched only inside the
 // map inspector for Inventory, whose only provider came from E-5.
-const E5 = WORLD.evidenceById['E-5']!;
+const E5 = WORLD.evidence['E-5']!;
 
 /** Everything a viewer, a screen reader, a tooltip or the address could hold that names the restricted record (or, in the map inspector, its age). */
 async function leaks(page: Page, lang: Lang, opts: { readonly inspectorAge?: boolean } = {}): Promise<Leak[]> {
@@ -95,7 +96,7 @@ for (const persona of LAY) {
       // Authorized records stay: every GitHub record the persona may read, E-8 included.
       await page.locator('.kv2-scard[data-provider="github"]').click();
       await page.locator('#obsinsp-tab-evidence').click();
-      const github = Object.values(scoped(persona).evidenceById).filter((e) => e.observation?.source.provider === 'github');
+      const github = caseEvidence(scoped(persona)).filter((e) => e.observation?.source.provider === 'github');
       expect(github.map((e) => e.id)).toContain('E-8');
       await expect(page.locator('#obsinsp-panel .kv2-ev-list li')).toHaveCount(github.length);
     });
@@ -215,7 +216,7 @@ for (const persona of LAY) {
       await expect(mapRow(page, 'inventory')).toHaveCount(1);
       await expect(mapRow(page, 'inventory')).not.toContainText(text('chip.stale', lang));
       await expect(mapRow(page, 'sentry').locator('.kv2-bc-num')).toHaveText('0');
-      const inv = scoped(persona).nodes.find((n) => n.id === 'inventory')!;
+      const inv = scoped(persona).graph.nodes.find((n) => n.id === 'inventory')!;
       await expect(mapRow(page, 'inventory').locator('.kv2-bc-num')).toHaveText(String(inv.evidence.length));
       await expect(page.locator('.kv2-bc-links tr[data-link="d4"]')).toHaveCount(0);
       expect(await leaks(page, lang)).toEqual([]);

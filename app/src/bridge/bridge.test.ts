@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { Lang, Persona } from '../contract/types';
 import { DOMAIN } from '../domain/fixture';
 import { WORLD as V1 } from '../fixture/world';
-import { WORLD as V2 } from '../lenses/fixtures/world';
+import { WORLD as V2 } from '../fixture/world';
 import { authorizedWorld } from '../lenses/logic/authorize';
 import { hrefFor, parseHash, type Route } from '../nav/routes';
 import { COMPONENT_PROJECT, IDENTITIES, isSharedComponent, mapIdOfProject, projectOfMapId } from './identity';
@@ -26,33 +26,33 @@ describe('identity crosswalk is pinned to the fixtures', () => {
   });
 
   it('every map id is a node of the V2 fixture, of the kind the crosswalk records', () => {
-    for (const e of IDENTITIES) expect(V2.nodes.find((n) => n.id === e.map)?.kind, e.map).toBe(e.mapKind);
+    for (const e of IDENTITIES) expect(V2.graph.nodes.find((n) => n.id === e.map)?.kind, e.map).toBe(e.mapKind);
   });
 
   it('RT is verified structurally: the host, the canonical model and the map agree on the same components', () => {
     const rt = V1.projects.find((p) => p.id === 'RT')!;
     const canonical = DOMAIN.components.map((c) => c.id);
     for (const id of canonical) expect(rt.components.map((c) => c.id), `V1 RT has ${id}`).toContain(id);
-    const grouped = V2.edges.filter((e) => e.cls === 'group' && e.a === 'retail-tower').map((e) => e.b).sort();
+    const grouped = V2.graph.edges.filter((e) => e.cls === 'group' && e.a === 'retail-tower').map((e) => e.b).sort();
     expect(grouped).toEqual([...canonical].sort());
     expect(rt.name).toBe('Retail Tower OS');
-    expect(V2.nodes.find((n) => n.id === 'retail-tower')!.title).toBe('Retail Tower OS');
+    expect(V2.graph.nodes.find((n) => n.id === 'retail-tower')!.title).toBe('Retail Tower OS');
   });
 
   it('KH is not verified: a similar name only, with no shared component and no shared evidence', () => {
     const kh = V1.projects.find((p) => p.id === 'KH')!;
-    const khepri = V2.nodes.find((n) => n.id === 'khepri')!;
+    const khepri = V2.graph.nodes.find((n) => n.id === 'khepri')!;
     expect(kh.name).toBe(khepri.title);
-    const mapIds = new Set(V2.nodes.map((n) => n.id));
+    const mapIds = new Set(V2.graph.nodes.map((n) => n.id));
     expect(kh.components.filter((c) => mapIds.has(c.id))).toEqual([]);
-    expect(V2.edges.filter((e) => e.cls === 'group' && e.a === 'khepri')).toEqual([]);
+    expect(V2.graph.edges.filter((e) => e.cls === 'group' && e.a === 'khepri')).toEqual([]);
     expect(khepri.evidence).toEqual([]);
     expect(IDENTITIES.find((e) => e.host === 'KH')!.status).toBe('unresolved');
   });
 
   it('SB is ambiguous: a project on the host side, a service on the map side', () => {
     expect(V1.projects.some((p) => p.id === 'SB')).toBe(true);
-    expect(V2.nodes.find((n) => n.id === 'seshat-bi')!.kind).toBe('service');
+    expect(V2.graph.nodes.find((n) => n.id === 'seshat-bi')!.kind).toBe('service');
     expect(IDENTITIES.find((e) => e.host === 'SB')!.status).toBe('ambiguous');
   });
 
@@ -134,7 +134,7 @@ describe('the host route becomes a map context, and nothing else', () => {
 
   it('a selection the persona\'s authorized world does not hold is cleared', () => {
     const w = authorizedWorld(V2, 'owner');
-    const trimmed = { ...w, nodes: w.nodes.filter((n) => n.id !== 'inventory') };
+    const trimmed = { ...w, graph: { ...w.graph, nodes: w.graph.nodes.filter((n) => n.id !== 'inventory') } };
     expect(permittedNode(w, 'inventory')).toBe('inventory');
     expect(permittedNode(trimmed, 'inventory')).toBeNull();
     expect(toMapContextIn(view('owner', 'en', '#/project/RT/inventory'), trimmed).node).toBeNull();
@@ -202,7 +202,7 @@ describe('a map selection becomes a host route, reversibly', () => {
 
   it('has no route for a node the persona\'s authorized world does not hold', () => {
     const w = authorizedWorld(V2, 'owner');
-    const trimmed = { ...w, nodes: w.nodes.filter((n) => n.id !== 'stock-sync') };
+    const trimmed = { ...w, graph: { ...w.graph, nodes: w.graph.nodes.filter((n) => n.id !== 'stock-sync') } };
     expect(toHostRouteIn({ scope: 'retail-tower', node: 'stock-sync' }, trimmed)).toBeNull();
     expect(toHostRouteIn({ scope: 'retail-tower', node: 'pos' }, trimmed)).not.toBeNull();
   });

@@ -1,11 +1,11 @@
 // Projection of the canonical fixture onto the V2 lens world shapes (the slices the canonical model owns).
 import type { EvidenceReference } from '../contract/types';
-import type { WorldEdge, WorldNode } from '../lenses/types';
+import type { GraphEdge, GraphNode } from '../contract/world';
 import { resolveEvidence } from './resolve';
 import type { ComponentId, DomainFixture } from './types';
 
-export type V2NodeSlice = Pick<WorldNode, 'id' | 'state' | 'evidence' | 'check'>;
-export type V2EdgeSlice = Pick<WorldEdge, 'a' | 'b' | 'truth' | 'evidence'>;
+export type V2NodeSlice = Pick<GraphNode, 'id' | 'state' | 'evidence' | 'check'>;
+export type V2EdgeSlice = Pick<GraphEdge, 'a' | 'b' | 'truth' | 'evidence'>;
 
 export function toV2Nodes(f: DomainFixture): V2NodeSlice[] {
   return f.components.map((c) => ({

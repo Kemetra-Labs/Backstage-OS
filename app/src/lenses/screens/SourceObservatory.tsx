@@ -5,12 +5,12 @@ import { EvidenceItem } from '../components/evidence';
 import { Icon, type IconName } from '../components/Icon';
 import { Age, Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip } from '../components/ui';
 import { useLens } from '../useLens';
-import { WORLD } from '../fixtures/world';
+import { caseEvidence } from '../../view/world';
+import { WORLD } from '../../fixture/world';
 import type { K } from '../../i18n';
 import { authorizedWorld } from '../logic/authorize';
-import { evidenceOf } from '../logic/evidence';
 import { hhmm, sourceCounts, sourceStatus, type SourceStatus, type Tone } from '../logic/status';
-import type { SourceAxis, SourceEvent, SourceKind, SourceMeta } from '../types';
+import type { SourceAxis, SourceEvent, SourceKind, SourceMeta } from '../../contract/world';
 
 const ICON: Readonly<Record<Provider, IconName>> = { github: 'code', jira: 'board', sentry: 'radar', datadog: 'pulse', confluence: 'book', port: 'db' };
 type KindFilter = 'all' | SourceKind;
@@ -106,7 +106,7 @@ export function SourceObservatory({ embedded = false }: { readonly embedded?: bo
   const stale = statuses.filter((x) => x.s.freshness === 'stale').length;
   const unavailable = statuses.filter((x) => x.s.connectivity === 'unavailable').length;
   const notSet = statuses.filter((x) => x.s.connectivity === 'not_configured').length;
-  const events = [...w.sourceEvents].sort((a, b) => a.at.localeCompare(b.at));
+  const events = [...w.sourceTimeline].sort((a, b) => a.at.localeCompare(b.at));
   const shown = events.filter((e) => axis === 'all' || e.axis === axis);
   const countOf = (a: AxisFilter) => (a === 'all' ? events.length : events.filter((e) => e.axis === a).length);
   const select = (p: Provider) => go({ src: p });
@@ -259,7 +259,7 @@ function SourceInspector({ m, s, tab }: { readonly m: SourceMeta; readonly s: So
   );
 
   if (tab === 'evidence') {
-    const refs = evidenceOf(w, Object.keys(w.evidenceById)).filter((e) => e.observation?.source.provider === m.provider);
+    const refs = caseEvidence(w).filter((e) => e.observation?.source.provider === m.provider);
     return (
       <>
         {head}
