@@ -12,7 +12,14 @@ const API = join(SRC, 'api');
 
 /** The only files outside src/api that may import it, and the synthetic body they read. */
 const ALLOWED_IMPORTERS = ['view/githubReadView.ts', 'view/githubReadView.test.ts'];
-const FIXTURES = ['fixture/portfolio-response.json', 'fixture/portfolio-project-response.json'];
+const FIXTURES = [
+  'fixture/portfolio-response.json',
+  'fixture/portfolio-project-response.json',
+  // BACK-98 parity fixtures, read only by src/api/parity.test.ts.
+  'fixture/evidence-response.json',
+  'fixture/investigation-response.json',
+  'fixture/decisions-response.json',
+];
 const REQUEST = /\bfetch\b|XMLHttpRequest|WebSocket|EventSource|sendBeacon|https?:\/\//;
 
 function files(dir: string): string[] {

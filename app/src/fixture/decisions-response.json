@@ -1,0 +1,16 @@
+{
+  "items": [
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "investigationId": "00000000-0000-4000-8000-000000000004",
+      "decision": "Revert pull request #42 on main and re-run checkout-e2e",
+      "rationale": "Synthetic example: the correlation and the failed run point to #42; a revert is cheap to undo.",
+      "citations": [
+        "00000000-0000-4000-8000-000000000006",
+        "00000000-0000-4000-8000-000000000001"
+      ],
+      "createdBy": "00000000-0000-4000-8000-000000000010",
+      "createdAt": "2026-11-25T12:00:00.000Z"
+    }
+  ]
+}
