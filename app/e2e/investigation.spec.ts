@@ -202,3 +202,20 @@ test('reduced motion: no running animations when the drawer opens', async ({ pag
   await expect(page.getByRole('dialog')).toBeVisible();
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
 });
+
+// BACK-62: a stale evidence row is visibly different from a current one (not only in its text).
+for (const lang of LANGS) {
+  test(`stale rows ${lang}: styled apart from current rows, with freshness on every row`, async ({ page }) => {
+    await load(page, { lang, persona: 'technical' });
+    const rows = page.locator('.evidence-list > li[data-evidence]');
+    const n = await rows.count();
+    expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i++) await expect(rows.nth(i)).toHaveAttribute('data-freshness', /^(current|stale|unknown)$/);
+    const stale = page.locator('li[data-evidence][data-freshness="stale"]').first();
+    const current = page.locator('li[data-evidence][data-freshness="current"]').first();
+    await expect(stale).toHaveClass(/fresh-stale/);
+    const side = (l: typeof stale) => l.evaluate((el) => getComputedStyle(el).borderInlineStartStyle);
+    expect(await side(stale)).toBe('solid');
+    expect(await side(current)).not.toBe('solid');
+  });
+}

@@ -1,5 +1,7 @@
 import { useApp } from '../../app/AppContext';
+import { evidenceRowClass } from '../../components/EvidenceList';
 import { Panel } from '../../components/Panel';
+import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import { hrefFor } from '../../nav/routes';
@@ -20,9 +22,12 @@ export function EvidenceLinks({ items, investigationId }: Props) {
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
   return (
     <Panel id="sum-evidence-title" title={c.summary.evidenceTitle} testId="summary-evidence">
+      {items.length === 0 ? (
+        <StateBlock kind="empty" title={copy.noEvidence.title} body={copy.noEvidence.body} />
+      ) : (
       <ul className="evidence-list">
         {items.map((e) => (
-          <li key={e.id} className={`evidence-item${e.notReadReason ? ' not-read' : ''}`} data-evidence-row={e.id}>
+          <li key={e.id} className={evidenceRowClass(e)} data-evidence-row={e.id} data-freshness={e.freshness}>
             <TruthChip label={e.label} style={style} copy={copy} />
             <span className="evidence-text"><Text s={evidenceTitleFor(world, e.id, persona, lang)} /></span>
             <span className="evidence-status"><Text s={evidenceStatusText(e, copy, lang)} /></span>
@@ -32,6 +37,7 @@ export function EvidenceLinks({ items, investigationId }: Props) {
           </li>
         ))}
       </ul>
+      )}
     </Panel>
   );
 }

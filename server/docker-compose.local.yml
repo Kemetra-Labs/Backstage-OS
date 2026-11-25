@@ -1,0 +1,24 @@
+# Disposable local Postgres for development only (BACK-61). Start it with `npm run local:up` from server/.
+# Published on 127.0.0.1 only, data in a named volume that `npm run local:down` deletes. No password is stored
+# here: `npm run local:up` generates one per machine (server/.local-stack/credentials.json, gitignored, 0600) and
+# passes it in KAWALYS_LOCAL_PG_PASSWORD. Without it Postgres refuses to initialise.
+# Never point this at, or copy these values to, a provisioned database.
+name: kawalys-local
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: kawalys_local_admin
+      POSTGRES_PASSWORD: ${KAWALYS_LOCAL_PG_PASSWORD:-}
+      POSTGRES_DB: kawalys
+    ports:
+      - "127.0.0.1:${KAWALYS_LOCAL_PG_PORT:-55432}:5432"
+    volumes:
+      - kawalys-local-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kawalys_local_admin -d kawalys"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  kawalys-local-pg:

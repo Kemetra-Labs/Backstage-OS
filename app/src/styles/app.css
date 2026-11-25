@@ -150,6 +150,10 @@ html[lang="ar"] .truth { font: 600 12px/1.3 var(--f-ar); letter-spacing: 0; text
 }
 .evidence-status { font-size: 13px; color: var(--ink-2); }
 .not-read .evidence-status { color: var(--unk); }
+/* BACK-62: stale and unknown rows differ from current by colour and by a side rule, so they survive greyscale. */
+.evidence-item.fresh-stale { border-inline-start: 3px solid var(--amber); padding-inline-start: 10px; }
+.evidence-item.fresh-stale .evidence-status { color: var(--amber); }
+.evidence-item.fresh-unknown { border-inline-start: 3px dotted var(--unk-line); padding-inline-start: 10px; }
 
 .btn {
   min-height: 44px; padding: 0 14px; border-radius: var(--r-md); border: 1px solid var(--gold-line);

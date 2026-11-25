@@ -24,6 +24,40 @@ NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental
 
 `KAWALYS_BFF_PORT` sets the port (default `8787`). The server binds `127.0.0.1` only.
 
+## Local run with synthetic data (BACK-61)
+
+One command starts a disposable PostgreSQL and fills it with **synthetic** data. It needs Docker (with Compose) and no external credential. Run from `server/`:
+
+```bash
+npm ci
+npm run local:up     # start Postgres, build, provision, migrate and seed (safe to run again)
+npm run local:down   # stop it and delete its volume (all local data)
+```
+
+- `docker-compose.local.yml` starts `postgres:17-alpine`, published on `127.0.0.1:55432` only (`KAWALYS_LOCAL_PG_PORT` changes the port), and a named volume. No password is committed: on first run `local:up` generates four random passwords (container admin and the three roles) into `server/.local-stack/credentials.json` (gitignored, mode 0600) and reuses them afterwards. If that file is lost while the volume exists, run `npm run local:down` and start again. `local:up` runs Docker by absolute path (`/usr/bin`, `/usr/local/bin`, `/opt/homebrew/bin`, or Docker Desktop on Windows), never through `PATH`; set `KAWALYS_DOCKER_BIN` to another absolute path if yours is elsewhere.
+- `node dist/ops/local-up.js` (`src/ops/local-up.ts`, `src/ops/local-stack.ts`) refuses a non-loopback host and `NODE_ENV=production`. It creates the three roles only when missing (`provisionRoles`, `provisionDatabase`, with the generated role passwords), applies pending migrations (`runMigrations`), then seeds through the production code: `DatabaseOwnerDirectory` binds the owner identity, `WorkspaceResolver` creates the owner workspace, and `EvidenceRepository` writes the rest. RLS, grants and audit rows apply as at runtime. Each step reuses its existing row, so a second run adds nothing.
+- Seeded: one workspace and owner user, project `demo-storefront`, GitHub source `example-org/demo-storefront`, four Observations (`ok`, `stale`, `error`, `unknown`), one investigation, one Correlation and one HumanDecision citing the correlation and the failed run. Every payload is marked `synthetic: true`; nothing comes from GitHub.
+- The owner is a synthetic identity (`LOCAL_SYNTHETIC_OWNER`) that no real token can match. If `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set when you run `local:up`, the seed binds that owner instead, so a later owner-lab sign-in sees the data. Only one owner can be bound: to switch, run `npm run local:down` and start again.
+
+What you'll see (ids differ):
+
+```
+provisioned roles kawalys_migrator, kawalys_app, kawalys_auth and schema kawalys
+applied: 0001_foundation.sql, 0002_identity.sql, 0003_evidence.sql
+seeded for the synthetic local owner (no Descope configured):
+...
+evidence      6 visible to the owner (6 created by this run):
+  HumanDecision ok      kawalys:decision  cites 2
+  Observation   ok      github:example-org/demo-storefront#actions/runs/1001
+  Observation   unknown github:example-org/demo-storefront#deployments
+  Correlation   ok      github:example-org/demo-storefront#pull/42
+  Observation   error   github:example-org/demo-storefront#actions/runs/1002
+  Observation   stale   github:example-org/demo-storefront#pulls
+audit rows    5: owner.bound, project.created, source.connected, investigation.created, decision.recorded
+```
+
+The command ends by printing the two `export KAWALYS_DATABASE_URL_*` lines for the local roles. With them set, `npm start` boots against the seeded database (`GET /process` answers 200), but **every protected route stays deny-all** (`GET /evidence` answers 404): there is no local sign-in and no auth bypass. The data becomes reachable over HTTP only after the owner configures Descope and signs in through the owner lab. Until then the seed is verified through the repository layer (the printed summary and `test/ops/local-stack.spec.ts`). The app (`app/`) and the prototype never call the server.
+
 ## Routes
 
 | Route | Behaviour |
@@ -38,6 +72,7 @@ NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental
 | `GET /evidence`, `GET /evidence/:id`, `POST /investigations/:id/decisions`, `POST /investigations/:id/notes` | Exist **only when both database URLs are set** (see Evidence API below). Session plus a workspace capability required. Without the database they answer 404. |
 | `GET /portfolio`, `GET /portfolio/:projectId` | Same conditions as the evidence routes, read-only, `evidence.read`. See Portfolio API below. |
 | `GET /investigations`, `GET /investigations/:id` | Same conditions as the evidence routes, read-only, `evidence.read`. See Investigation API below. |
+| `GET /decisions` | Same conditions as the evidence routes, read-only, `evidence.read`. Recent human decisions with creator and time. See Recent decisions below. |
 
 Every route is protected unless it is marked `@Public()` (the guard is global), so a new controller is denied by default.
 
@@ -204,6 +239,16 @@ Local code and tests only (owner approved gate A on 2026-11-23). Nothing is prov
 
 Failures follow the same fixed-envelope policy as authentication (404 for denied or invisible, 400 for an invalid body, 500 for a database failure).
 
+### Recent decisions (BACK-59)
+
+`GET /decisions` (`src/evidence/evidence.controller.ts`, `EvidenceRepository.recentDecisions`) lists human decisions, newest first by the time the database stored them. Read-only: there is no update or delete route.
+
+- Needs a session and `evidence.read` (404 otherwise, like every refusal). Exists only when both database URLs are set.
+- Query: `limit` from 1 to 100, default 20; any other value, or a repeated one, is 400 `validation_error`. Optional `investigationId`: an unknown, malformed or repeated value gives `{ items: [] }`, like the `GET /evidence` filter.
+- Returns `{ items: [{ id, investigationId, decision, rationale, citations, createdBy, createdAt }] }`. `createdBy` is the user id of the `decision.recorded` audit row that `POST /investigations/:id/decisions` writes in the same transaction (joined at read time; no schema change). `createdAt` is the evidence row's `received_at`, which only the database sets. `createdBy` is null only for a decision row written without its audit row, which the application never does (see the role-hardening limit below).
+- Visibility is the one `GET /evidence` uses: a decision is absent unless its project and every row it cites are visible to the reader, so a decision citing evidence of a disconnected source, an uncited decision of a hidden project, and another workspace's decisions never appear.
+- Append-only: `kawalys_app` holds no UPDATE or DELETE on `evidence`, `evidence_citations` or `audit_events`, and ALWAYS-enabled triggers refuse both even for a superuser in replica mode. A changed decision is a new decision. `test/evidence/decisions-db.spec.ts` covers this, the visibility cases and the parameter bounds.
+
 **Restart test.** `test/evidence/evidence-http.spec.ts` proves that evidence, decisions and sessions survive a full restart with new pools.
 
 **Reuse strategy: BUILD.** The evidence contract is Kawalys-owned and no Retail Tower evidence code fits. It uses the S1 adapted workspace context and audit row writer.
@@ -314,6 +359,21 @@ A project's `state` is the worst of its sources, in the order `ok` < `stale` < `
 - An index on `evidence (workspace_id, source_id, received_at DESC)`. Today the latest-read query scans each source's whole history through `evidence_by_source`, which is harmless with no real ingestion yet. Add it in a later migration, before a transport polls (schema changes are not part of this slice).
 - Nothing ingests real data yet: there is still no GitHub transport.
 
+## Jira and Confluence observation mappers (BACK-53 mock slice)
+
+Mock only: code and canned-response tests. **No transport, no network, no token, no MCP connection, no dependency.** Nothing in `src/` implements the ports and nothing calls the mappers yet. A real transport waits for the BACK-53 gates (owner authorization of exact projects and spaces, and their scopes).
+
+- `src/connectors/atlassian/atlassian.transport.ts`: the shared read-only port (`get` only) and `AtlassianTransportFailure` (`network` or `timeout`). `jira.transport.ts` and `confluence.transport.ts` name it per product.
+- `src/connectors/jira/jira.observer.ts`: `observeJiraProjects(transport, { sourceId, site, projectKeys }, now, { ttlMs })` reads up to 20 most recently updated issues per project key and keeps `key`, `summary`, `statusCategory` (`new`, `indeterminate` or `done`), `updatedAt` and `url`.
+- `src/connectors/confluence/confluence.observer.ts`: `observeConfluenceSpaces(transport, { sourceId, site, spaceKeys }, now, { ttlMs })` reads each space, then up to 20 most recently modified current pages, and keeps `pageId`, `title`, `spaceKey`, `lastModified`, `version` and `url`.
+- Failures follow the GitHub table above (429 only for rate limits). A failed project or space is isolated from the others. A failed space read stops that space. One bad item fails its project or space list (`malformed`), and an item from another project or space is `ref_mismatch`: no record is invented or partly kept.
+- Keys are validated before any request (at most 10, unique; Jira `^[A-Z][A-Z0-9_]{1,9}$`, Confluence `^[A-Z0-9]{1,32}$`); anything else makes no request and records `error` / `invalid_ref`.
+- An answer whose `date` header is older than the TTL (default 15 minutes) yields `stale` items, never `ok`. An unreadable `date` is `malformed`.
+- A link is built only as `https://<name>.atlassian.net/browse/<key>` or `/wiki/spaces/<key>/pages/<id>`, and only when the configured `site` is exactly an https `atlassian.net` origin. Otherwise `url` is null. Upstream `self` and `_links` values are never stored.
+- No database test: `sources.provider` only allows `github` (migrations/0003), so ingesting these needs a schema change in a later slice.
+
+Tests: `test/connectors/jira/`, `test/connectors/confluence/` (mutation-checked), and `test/connectors/read-only-guard.spec.ts`, which fails if a module under `src/connectors/{jira,confluence,atlassian}` imports a network library, calls `fetch` or reads the environment, or if the port gains a method other than `get`.
+
 ## Known limits
 
 - Rate limiting on `POST /auth/session` is a process-local fixed window (one shared key behind loopback); a restart resets it.
@@ -334,6 +394,8 @@ A project's `state` is the worst of its sources, in the order `ok` < `stale` < `
 To remove only the Investigation API (BACK-50 server slice): delete `server/src/investigations/` and `server/test/investigations/`, remove its two imports and the `InvestigationModule.register` line from `server/src/create-app.ts`, and revert its README edits. The shared rule `server/src/evidence/visibility.ts` is also used by the portfolio and by `recordDecision`; to remove it, restore their previous predicates.
 
 To remove only the Portfolio API (BACK-49 slice 2): delete `server/src/portfolio/` and `server/test/portfolio/`, remove its two imports and the `PortfolioModule.register` line from `server/src/create-app.ts`, and revert its README edits.
+
+To remove only the Jira and Confluence mappers (BACK-53 mock slice): delete `server/src/connectors/{jira,confluence,atlassian}/`, `server/test/connectors/{jira,confluence}/` and `server/test/connectors/read-only-guard.spec.ts`, and revert their README section and `description` edit.
 
 To remove only the GitHub observation mapper (BACK-52 mock slice): delete `server/src/connectors/` and `server/test/connectors/`, and revert its edits to `server/README.md`, `server/THIRD_PARTY.md` and the `description` in `server/package.json`. Nothing else imports it.
 

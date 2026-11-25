@@ -63,7 +63,8 @@ for (const route of ROUTES) {
         if (lang === 'ar') expect(await latinOutsideIsolates(page)).toEqual([]);
         // Copy tokens are always rendered through Text: a visible brace means a raw copy string leaked.
         expect(await page.locator('body').innerText(), 'raw {token} braces').not.toMatch(/[{}]/);
-        await expect(page.locator('.demo')).toBeVisible();
+        // A screen may carry more than one demo marker (Portfolio also marks its GitHub reads, #106): the page marker must show.
+        await expect(page.locator('.demo').first()).toBeVisible();
         expect(errors).toEqual([]);
       });
     }

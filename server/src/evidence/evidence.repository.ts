@@ -6,12 +6,14 @@ import type pg from 'pg';
 import { insertAuditRowInTransaction, type TransactionalAuditRow } from '../audit/audit-row.writer';
 import { runWithWorkspaceContext } from '../db/workspace-context';
 import {
+  DECISION_LIMIT_MAX,
   EVIDENCE_STATES,
   NOTE_TYPES,
   NotVisibleError,
   RefusedError,
   UUID,
   worstState,
+  type DecisionRecord,
   type EvidenceFilter,
   type EvidenceRecord,
   type EvidenceState,
@@ -83,6 +85,16 @@ interface Row {
   received_at: Date;
   payload: Record<string, unknown>;
   citations: string[];
+}
+
+interface DecisionRow {
+  id: string;
+  investigation_id: string;
+  decision: string | null;
+  rationale: string | null;
+  received_at: Date;
+  citations: string[];
+  created_by: string | null;
 }
 
 const toRecord = (r: Row): EvidenceRecord => ({
@@ -258,6 +270,43 @@ export class EvidenceRepository {
     return this.inWorkspace(workspaceId, async (c) => {
       const { rows } = await c.query<Row>(`SELECT ${COLUMNS} FROM evidence e WHERE ${VISIBLE} AND e.id = $2`, [user, id]);
       return rows[0] ? toRecord(rows[0]) : null;
+    });
+  }
+
+  /**
+   * Recent human decisions the user can see (BACK-59), newest first, optionally of one investigation.
+   * The same VISIBLE rule as list() and get(): a decision is hidden unless its project and every row it
+   * cites are visible. The creator comes from the `decision.recorded` audit row that recordDecision()
+   * writes in the same transaction; no schema change. A malformed investigation id matches nothing.
+   */
+  async recentDecisions(workspaceId: string, user: string, filter: { investigationId?: string; limit: number }): Promise<DecisionRecord[]> {
+    if (filter.investigationId !== undefined && !UUID.test(filter.investigationId)) return [];
+    if (!Number.isInteger(filter.limit) || filter.limit < 1 || filter.limit > DECISION_LIMIT_MAX) throw new RangeError('invalid decision limit');
+    return this.inWorkspace(workspaceId, async (c) => {
+      const { rows } = await c.query<DecisionRow>(
+        `SELECT e.id, e.investigation_id, e.payload->>'decision' AS decision, e.payload->>'rationale' AS rationale,
+                e.received_at,
+                COALESCE((SELECT array_agg(c.evidence_id::text ORDER BY c.evidence_id) FROM evidence_citations c
+                           WHERE c.decision_id = e.id), '{}') AS citations,
+                (SELECT a.actor_user_id FROM audit_events a
+                  WHERE a.target_type = 'evidence' AND a.target_id = e.id AND a.action = 'decision.recorded'
+                  ORDER BY a.occurred_at, a.id LIMIT 1) AS created_by
+           FROM evidence e
+          WHERE e.type = 'HumanDecision' AND ${VISIBLE}
+            AND ($2::uuid IS NULL OR e.investigation_id = $2)
+          ORDER BY e.received_at DESC, e.id
+          LIMIT $3`,
+        [user, filter.investigationId ?? null, filter.limit],
+      );
+      return rows.map((r) => ({
+        id: r.id,
+        investigationId: r.investigation_id,
+        decision: r.decision ?? '',
+        rationale: r.rationale ?? '',
+        citations: r.citations,
+        createdBy: r.created_by,
+        createdAt: r.received_at.toISOString(),
+      }));
     });
   }
 

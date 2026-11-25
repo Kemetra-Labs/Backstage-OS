@@ -6,13 +6,15 @@
     "node": ">=24"
   },
   "license": "Apache-2.0",
-  "description": "Kawalys BFF: synthetic routes, owner-only auth, PostgreSQL evidence API, GitHub observation mapper with no transport (no source access, no secrets)",
+  "description": "Kawalys BFF: synthetic routes, owner-only auth, PostgreSQL evidence API, GitHub, Jira and Confluence observation mappers with no transport (no source access, no secrets)",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "check": "npm run typecheck && npm test",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "local:up": "npm run build && node dist/ops/local-up.js",
+    "local:down": "docker compose -f docker-compose.local.yml down -v"
   },
   "dependencies": {
     "@nestjs/common": "12.6.0",
