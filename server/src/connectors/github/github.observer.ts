@@ -139,60 +139,61 @@ function itemPayload(kind: 'pull_request' | 'issue', item: unknown, ref: string)
   return kind === 'pull_request' ? { ...base, draft: draft === true, ...tail } : { ...base, ...tail };
 }
 
+/** A page longer than requested is not a page we asked for: it is refused, not truncated. */
 function list(body: unknown): unknown[] {
-  if (!Array.isArray(body)) throw new Malformed();
+  if (!Array.isArray(body) || body.length > PAGE_SIZE) throw new Malformed();
   return body;
 }
 
+type Make = (state: EvidenceState, sourceRef: string, payload: Record<string, unknown>) => ObservationInput;
+
+const statusPayload = (endpoint: Endpoint, reason: StatusReason) => ({ kind: 'source_status', endpoint, reason });
+
+const LISTS: readonly { endpoint: Endpoint; kind: 'pull_request' | 'issue'; segment: string; refPart: string }[] = [
+  { endpoint: 'pull_requests', kind: 'pull_request', segment: 'pulls', refPart: 'pull' },
+  { endpoint: 'issues', kind: 'issue', segment: 'issues', refPart: 'issue' },
+];
+
+/** One list endpoint: its items as ok Observations, or exactly one status record. */
+async function observeList(transport: GitHubReadTransport, ref: string, spec: (typeof LISTS)[number], make: Make): Promise<ObservationInput[]> {
+  const root = `github:${ref}`;
+  const statusRef = `${root}#${spec.segment}`;
+  const answer = await read(transport, `/repos/${ref}/${spec.segment}?state=open&sort=updated&direction=desc&per_page=${PAGE_SIZE}`);
+  if (!answer.ok) return [make(answer.state, statusRef, statusPayload(spec.endpoint, answer.reason))];
+  try {
+    // The issues endpoint also lists pull requests; they are observed through /pulls.
+    const items = list(answer.body).filter((i) => !(spec.kind === 'issue' && isObject(i) && 'pull_request' in i));
+    return items.map((i) => itemPayload(spec.kind, i, ref)).map((p) => make('ok', `${root}#${spec.refPart}/${p['number'] as number}`, p));
+  } catch {
+    // One bad item poisons its endpoint: a partial list would look complete.
+    return [make('error', statusRef, statusPayload(spec.endpoint, 'malformed'))];
+  }
+}
+
+/**
+ * Observe one GitHub repository through a read-only transport: the repository, then its open pull
+ * requests and issues (one page each). Never throws for an upstream failure: every failure is a
+ * `source_status` Observation that is never `ok`. A failed repository read stops the run; a failed
+ * list is isolated from the other list. The result is ready for EvidenceRepository.ingest().
+ */
 export async function observeRepository(transport: GitHubReadTransport, source: GitHubSource, now: Date): Promise<ObservationInput[]> {
   const at = new Date(now.getTime());
-  const observation = (state: EvidenceState, sourceRef: string, payload: Record<string, unknown>): ObservationInput => ({
-    sourceId: source.sourceId,
-    type: 'Observation',
-    state,
-    sourceRef,
-    observedAt: at,
-    payload,
-  });
-  const failure = (endpoint: Endpoint, sourceRef: string, state: EvidenceState, reason: StatusReason) =>
-    observation(state, sourceRef, { kind: 'source_status', endpoint, reason });
+  const make: Make = (state, sourceRef, payload) => ({ sourceId: source.sourceId, type: 'Observation', state, sourceRef, observedAt: at, payload });
 
   const ref = source.externalRef;
-  if (!REPO_REF.test(ref)) return [failure('repository', 'github:invalid-ref', 'error', 'invalid_ref')];
+  if (!REPO_REF.test(ref)) return [make('error', 'github:invalid-ref', statusPayload('repository', 'invalid_ref'))];
   const root = `github:${ref}`;
-  const base = `/repos/${ref}`;
-  const query = `?state=open&sort=updated&direction=desc&per_page=${PAGE_SIZE}`;
 
-  const repo = await read(transport, base);
-  if (!repo.ok) return [failure('repository', root, repo.state, repo.reason)];
+  const repo = await read(transport, `/repos/${ref}`);
+  if (!repo.ok) return [make(repo.state, root, statusPayload('repository', repo.reason))];
   let repoPayload: Record<string, unknown>;
   try {
     repoPayload = repositoryPayload(repo.body, ref);
   } catch (err) {
-    return [failure('repository', root, 'error', err instanceof RefMismatch ? 'ref_mismatch' : 'malformed')];
+    return [make('error', root, statusPayload('repository', err instanceof RefMismatch ? 'ref_mismatch' : 'malformed'))];
   }
-  const out: ObservationInput[] = [observation('ok', root, repoPayload)];
 
-  const lists: readonly [Endpoint, 'pull_request' | 'issue', string, string][] = [
-    ['pull_requests', 'pull_request', 'pulls', 'pull'],
-    ['issues', 'issue', 'issues', 'issue'],
-  ];
-  for (const [endpoint, kind, segment, refPart] of lists) {
-    const answer = await read(transport, `${base}/${segment}${query}`);
-    const statusRef = `${root}#${segment}`;
-    if (!answer.ok) {
-      out.push(failure(endpoint, statusRef, answer.state, answer.reason));
-      continue;
-    }
-    try {
-      // The issues endpoint also lists pull requests; they are observed through /pulls.
-      const items = list(answer.body).filter((i) => !(kind === 'issue' && isObject(i) && 'pull_request' in i));
-      const mapped = items.map((i) => itemPayload(kind, i, ref));
-      out.push(...mapped.map((p) => observation('ok', `${root}#${refPart}/${p['number'] as number}`, p)));
-    } catch {
-      // One bad item poisons its endpoint: a partial list would look complete.
-      out.push(failure(endpoint, statusRef, 'error', 'malformed'));
-    }
-  }
+  const out: ObservationInput[] = [make('ok', root, repoPayload)];
+  for (const spec of LISTS) out.push(...(await observeList(transport, ref, spec, make)));
   return out;
 }

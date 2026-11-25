@@ -195,6 +195,15 @@ describe('failures are recorded, never reported as ok', () => {
     expect(items.filter((i) => i.state === 'ok').map((i) => i.payload['kind'])).toEqual(['repository', 'issue']);
   });
 
+  it('refuses a page longer than requested instead of storing or truncating it', async () => {
+    const script = happyScript();
+    const item = (n: number) => ({ number: n, title: 't', state: 'open', updated_at: '2026-11-24T08:00:00Z' });
+    script[`/repos/${OWNER_REPO}/pulls`] = ok(Array.from({ length: 21 }, (_, i) => item(i + 1)));
+    const items = await run(script).result;
+    expect(items.some((i) => i.payload['kind'] === 'pull_request')).toBe(false);
+    expect(statuses(items)).toEqual([expect.objectContaining({ state: 'error', payload: { kind: 'source_status', endpoint: 'pull_requests', reason: 'malformed' } })]);
+  });
+
   it('a failing issues endpoint is isolated from the pull requests', async () => {
     const script = happyScript();
     script[`/repos/${OWNER_REPO}/issues`] = new GitHubTransportFailure('timeout');
