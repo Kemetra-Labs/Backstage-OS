@@ -154,16 +154,23 @@ const LISTS: readonly { endpoint: Endpoint; kind: 'pull_request' | 'issue'; segm
   { endpoint: 'issues', kind: 'issue', segment: 'issues', refPart: 'issue' },
 ];
 
-/** One list endpoint: its items as ok Observations, or exactly one status record. */
+/**
+ * One list endpoint: a `list_page` record and its items as ok Observations, or exactly one status
+ * record. The page record says how many entries GitHub returned against the page size: a full page
+ * means there may be more, so a reader must not present the item count as the total.
+ */
 async function observeList(transport: GitHubReadTransport, ref: string, spec: (typeof LISTS)[number], make: Make): Promise<ObservationInput[]> {
   const root = `github:${ref}`;
   const statusRef = `${root}#${spec.segment}`;
   const answer = await read(transport, `/repos/${ref}/${spec.segment}?state=open&sort=updated&direction=desc&per_page=${PAGE_SIZE}`);
   if (!answer.ok) return [make(answer.state, statusRef, statusPayload(spec.endpoint, answer.reason))];
   try {
+    const page = list(answer.body);
     // The issues endpoint also lists pull requests; they are observed through /pulls.
-    const items = list(answer.body).filter((i) => !(spec.kind === 'issue' && isObject(i) && 'pull_request' in i));
-    return items.map((i) => itemPayload(spec.kind, i, ref)).map((p) => make('ok', `${root}#${spec.refPart}/${p['number'] as number}`, p));
+    const items = page.filter((i) => !(spec.kind === 'issue' && isObject(i) && 'pull_request' in i));
+    const pageRecord = make('ok', statusRef, { kind: 'list_page', endpoint: spec.endpoint, returned: page.length, pageSize: PAGE_SIZE });
+    const itemRecords = items.map((i) => itemPayload(spec.kind, i, ref)).map((p) => make('ok', `${root}#${spec.refPart}/${p['number'] as number}`, p));
+    return [pageRecord, ...itemRecords];
   } catch {
     // One bad item poisons its endpoint: a partial list would look complete.
     return [make('error', statusRef, statusPayload(spec.endpoint, 'malformed'))];
