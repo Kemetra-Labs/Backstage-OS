@@ -20,7 +20,7 @@ import { RequireCapability, WorkspaceGuard, type WorkspaceRequest } from '../aut
 import type { WorkspacePrincipal } from '../auth/workspace-resolver';
 import { decisionBody, noteBody } from './evidence.body';
 import { EvidenceRepository } from './evidence.repository';
-import { NotVisibleError, RefusedError, UUID } from './evidence.types';
+import { DECISION_LIMIT_DEFAULT, DECISION_LIMIT_MAX, NotVisibleError, RefusedError, UUID } from './evidence.types';
 
 export const EVIDENCE_REPOSITORY = Symbol('KAWALYS_EVIDENCE_REPOSITORY');
 
@@ -34,6 +34,15 @@ function workspaceOf(req: Req): WorkspacePrincipal {
 
 const optionalId = (value: unknown): string | undefined | null =>
   value === undefined ? undefined : typeof value === 'string' ? value : null;
+
+/** `limit` is absent (the default) or one decimal integer from 1 to the maximum; anything else is a 400. */
+export function decisionLimit(value: unknown): number {
+  if (value === undefined) return DECISION_LIMIT_DEFAULT;
+  if (typeof value !== 'string' || !/^[0-9]{1,3}$/.test(value)) throw new BadRequestException();
+  const n = Number(value);
+  if (n < 1 || n > DECISION_LIMIT_MAX) throw new BadRequestException();
+  return n;
+}
 
 @Controller()
 @UseGuards(WorkspaceGuard)
@@ -61,6 +70,21 @@ export class EvidenceController {
     const record = await this.repo.get(principal.workspaceId, principal.userId, id);
     if (!record) throw new NotFoundException();
     return record;
+  }
+
+  /**
+   * Recent human decisions with who recorded them and when (BACK-59), newest first. Read-only. The same
+   * visibility as GET /evidence: an invisible decision is absent. A malformed or repeated
+   * `investigationId` matches nothing, like the GET /evidence filter; a bad `limit` is a 400.
+   */
+  @Get('decisions')
+  @RequireCapability('evidence.read')
+  async decisions(@Req() req: Req, @Query() query: Record<string, unknown>) {
+    const limit = decisionLimit(query['limit']);
+    const investigationId = optionalId(query['investigationId']);
+    if (investigationId === null) return { items: [] };
+    const principal = workspaceOf(req);
+    return { items: await this.repo.recentDecisions(principal.workspaceId, principal.userId, { investigationId, limit }) };
   }
 
   @Post('investigations/:id/decisions')

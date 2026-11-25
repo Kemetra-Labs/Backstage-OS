@@ -38,6 +38,7 @@ NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental
 | `GET /evidence`, `GET /evidence/:id`, `POST /investigations/:id/decisions`, `POST /investigations/:id/notes` | Exist **only when both database URLs are set** (see Evidence API below). Session plus a workspace capability required. Without the database they answer 404. |
 | `GET /portfolio`, `GET /portfolio/:projectId` | Same conditions as the evidence routes, read-only, `evidence.read`. See Portfolio API below. |
 | `GET /investigations`, `GET /investigations/:id` | Same conditions as the evidence routes, read-only, `evidence.read`. See Investigation API below. |
+| `GET /decisions` | Same conditions as the evidence routes, read-only, `evidence.read`. Recent human decisions with creator and time. See Recent decisions below. |
 
 Every route is protected unless it is marked `@Public()` (the guard is global), so a new controller is denied by default.
 
@@ -203,6 +204,16 @@ Local code and tests only (owner approved gate A on 2026-11-23). Nothing is prov
 | `POST /investigations/:id/notes` | Needs a session and `note.create`. Body `{ type, text, evidenceIds }`: `type` must be given and be `Correlation` or `Hypothesis` (BACK-54, no save without an explicit type), `text` up to 4000 characters with the same text rules, 1 to 50 ids. 404, nothing written, for an investigation or a cited id the caller cannot see; 400 for a missing or wrong type, no citations, or citations from two sources. The note and its audit row (`note.recorded`) commit in one transaction. Returns 201 `{ id }`. |
 
 Failures follow the same fixed-envelope policy as authentication (404 for denied or invisible, 400 for an invalid body, 500 for a database failure).
+
+### Recent decisions (BACK-59)
+
+`GET /decisions` (`src/evidence/evidence.controller.ts`, `EvidenceRepository.recentDecisions`) lists human decisions, newest first by the time the database stored them. Read-only: there is no update or delete route.
+
+- Needs a session and `evidence.read` (404 otherwise, like every refusal). Exists only when both database URLs are set.
+- Query: `limit` from 1 to 100, default 20; any other value, or a repeated one, is 400 `validation_error`. Optional `investigationId`: an unknown, malformed or repeated value gives `{ items: [] }`, like the `GET /evidence` filter.
+- Returns `{ items: [{ id, investigationId, decision, rationale, citations, createdBy, createdAt }] }`. `createdBy` is the user id of the `decision.recorded` audit row that `POST /investigations/:id/decisions` writes in the same transaction (joined at read time; no schema change). `createdAt` is the evidence row's `received_at`, which only the database sets. `createdBy` is null only for a decision row written without its audit row, which the application never does (see the role-hardening limit below).
+- Visibility is the one `GET /evidence` uses: a decision is absent unless its project and every row it cites are visible to the reader, so a decision citing evidence of a disconnected source, an uncited decision of a hidden project, and another workspace's decisions never appear.
+- Append-only: `kawalys_app` holds no UPDATE or DELETE on `evidence`, `evidence_citations` or `audit_events`, and ALWAYS-enabled triggers refuse both even for a superuser in replica mode. A changed decision is a new decision. `test/evidence/decisions-db.spec.ts` covers this, the visibility cases and the parameter bounds.
 
 **Restart test.** `test/evidence/evidence-http.spec.ts` proves that evidence, decisions and sessions survive a full restart with new pools.
 

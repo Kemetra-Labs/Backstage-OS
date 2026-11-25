@@ -36,6 +36,24 @@ export interface EvidenceRecord {
   readonly citations: readonly string[];
 }
 
+/** One HumanDecision as the recent-decisions list returns it (BACK-59). */
+export interface DecisionRecord {
+  readonly id: string;
+  readonly investigationId: string;
+  readonly decision: string;
+  readonly rationale: string;
+  readonly citations: readonly string[];
+  /** The deciding user, from the `decision.recorded` audit row written in the same transaction.
+   * Null only for a row inserted without that audit row, which the application never does. */
+  readonly createdBy: string | null;
+  /** When the database stored the decision (`received_at`, set by the database alone). */
+  readonly createdAt: string;
+}
+
+/** GET /decisions page size: the default and the most a caller may ask for. */
+export const DECISION_LIMIT_DEFAULT = 20;
+export const DECISION_LIMIT_MAX = 100;
+
 export interface EvidenceFilter {
   readonly sourceId?: string;
   readonly investigationId?: string;
