@@ -325,6 +325,21 @@ A project's `state` is the worst of its sources, in the order `ok` < `stale` < `
 - An index on `evidence (workspace_id, source_id, received_at DESC)`. Today the latest-read query scans each source's whole history through `evidence_by_source`, which is harmless with no real ingestion yet. Add it in a later migration, before a transport polls (schema changes are not part of this slice).
 - Nothing ingests real data yet: there is still no GitHub transport.
 
+## Jira and Confluence observation mappers (BACK-53 mock slice)
+
+Mock only: code and canned-response tests. **No transport, no network, no token, no MCP connection, no dependency.** Nothing in `src/` implements the ports and nothing calls the mappers yet. A real transport waits for the BACK-53 gates (owner authorization of exact projects and spaces, and their scopes).
+
+- `src/connectors/atlassian/atlassian.transport.ts`: the shared read-only port (`get` only) and `AtlassianTransportFailure` (`network` or `timeout`). `jira.transport.ts` and `confluence.transport.ts` name it per product.
+- `src/connectors/jira/jira.observer.ts`: `observeJiraProjects(transport, { sourceId, site, projectKeys }, now, { ttlMs })` reads up to 20 most recently updated issues per project key and keeps `key`, `summary`, `statusCategory` (`new`, `indeterminate` or `done`), `updatedAt` and `url`.
+- `src/connectors/confluence/confluence.observer.ts`: `observeConfluenceSpaces(transport, { sourceId, site, spaceKeys }, now, { ttlMs })` reads each space, then up to 20 most recently modified current pages, and keeps `pageId`, `title`, `spaceKey`, `lastModified`, `version` and `url`.
+- Failures follow the GitHub table above (429 only for rate limits). A failed project or space is isolated from the others. A failed space read stops that space. One bad item fails its project or space list (`malformed`), and an item from another project or space is `ref_mismatch`: no record is invented or partly kept.
+- Keys are validated before any request (at most 10, unique; Jira `^[A-Z][A-Z0-9_]{1,9}$`, Confluence `^[A-Z0-9]{1,32}$`); anything else makes no request and records `error` / `invalid_ref`.
+- An answer whose `date` header is older than the TTL (default 15 minutes) yields `stale` items, never `ok`. An unreadable `date` is `malformed`.
+- A link is built only as `https://<name>.atlassian.net/browse/<key>` or `/wiki/spaces/<key>/pages/<id>`, and only when the configured `site` is exactly an https `atlassian.net` origin. Otherwise `url` is null. Upstream `self` and `_links` values are never stored.
+- No database test: `sources.provider` only allows `github` (migrations/0003), so ingesting these needs a schema change in a later slice.
+
+Tests: `test/connectors/jira/`, `test/connectors/confluence/` (mutation-checked), and `test/connectors/read-only-guard.spec.ts`, which fails if a module under `src/connectors/{jira,confluence,atlassian}` imports a network library, calls `fetch` or reads the environment, or if the port gains a method other than `get`.
+
 ## Known limits
 
 - Rate limiting on `POST /auth/session` is a process-local fixed window (one shared key behind loopback); a restart resets it.
@@ -345,6 +360,8 @@ A project's `state` is the worst of its sources, in the order `ok` < `stale` < `
 To remove only the Investigation API (BACK-50 server slice): delete `server/src/investigations/` and `server/test/investigations/`, remove its two imports and the `InvestigationModule.register` line from `server/src/create-app.ts`, and revert its README edits. The shared rule `server/src/evidence/visibility.ts` is also used by the portfolio and by `recordDecision`; to remove it, restore their previous predicates.
 
 To remove only the Portfolio API (BACK-49 slice 2): delete `server/src/portfolio/` and `server/test/portfolio/`, remove its two imports and the `PortfolioModule.register` line from `server/src/create-app.ts`, and revert its README edits.
+
+To remove only the Jira and Confluence mappers (BACK-53 mock slice): delete `server/src/connectors/{jira,confluence,atlassian}/`, `server/test/connectors/{jira,confluence}/` and `server/test/connectors/read-only-guard.spec.ts`, and revert their README section and `description` edit.
 
 To remove only the GitHub observation mapper (BACK-52 mock slice): delete `server/src/connectors/` and `server/test/connectors/`, and revert its edits to `server/README.md`, `server/THIRD_PARTY.md` and the `description` in `server/package.json`. Nothing else imports it.
 

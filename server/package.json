@@ -6,7 +6,7 @@
     "node": ">=24"
   },
   "license": "Apache-2.0",
-  "description": "Kawalys BFF: synthetic routes, owner-only auth, PostgreSQL evidence API, GitHub observation mapper with no transport (no source access, no secrets)",
+  "description": "Kawalys BFF: synthetic routes, owner-only auth, PostgreSQL evidence API, GitHub, Jira and Confluence observation mappers with no transport (no source access, no secrets)",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
