@@ -24,7 +24,7 @@ export function violations(text: string): string[] {
   const found: string[] = [];
   for (const m of text.matchAll(new RegExp(`\\b(${TREE})\\[`, 'g'))) found.push(`${m[1]}[…]`);
   for (const m of text.matchAll(/import\s*\{([^}]*)\}\s*from\s*'[./]*i18n[^']*'/g)) {
-    for (const item of m[1].split(',').map((s) => s.trim())) {
+    for (const item of (m[1] ?? '').split(',').map((s) => s.trim())) {
       if (new RegExp(`^(${TREE})$`).test(item)) found.push(`import ${item}`);
     }
   }
