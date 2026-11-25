@@ -54,11 +54,6 @@ export const DECK = {
   'deck.h.monitoring': ['Monitoring', 'مراقبة'],
   'deck.h.reviewing': ['Reviewing', 'قيد المراجعة'],
   'deck.h.needs_review': ['Needs review', 'تحتاج مراجعة'],
-  'ag.collector': ['Evidence collector', 'جامع الأدلة'],
-  'ag.watcher': ['Source watcher', 'مراقب المصادر'],
-  'ag.correlator': ['Correlator', 'رابط الأدلة'],
-  'ag.analyst': ['Hypothesis analyst', 'محلّل الفرضيات'],
-  'ag.drafter': ['Proposal drafter', 'صائغ الاقتراحات'],
   'ms.ci': {
     owner: ['Watch the failing integration check', 'متابعة فحص التكامل الفاشل'],
     technical: ['Watch the {stock-sync} check on {main}', 'متابعة فحص {stock-sync} على {main}'],
@@ -127,6 +122,6 @@ export const DECK = {
 
 export const DECK_CONTROL_KEYS = [
   'deck.jump.fleet', 'deck.jump.activity', 'deck.jump.mission', 'deck.jump.cap', 'deck.jump.oversight', 'deck.jump.audit', 'deck.audit.open',
-  'ms.ci', 'ms.fresh', 'ms.link', 'ms.hyp', 'ms.proposal', 'ag.collector', 'ag.watcher', 'ag.correlator', 'ag.analyst', 'ag.drafter',
+  'ms.ci', 'ms.fresh', 'ms.link', 'ms.hyp', 'ms.proposal',
   'deck.q.sensing', 'deck.q.analysis', 'deck.q.proposal',
 ] as const;

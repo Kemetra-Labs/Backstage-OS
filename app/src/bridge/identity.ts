@@ -1,82 +1,60 @@
-// BACK-85 (S5a): the typed identity crosswalk between the host app (V1 projects, `#/project/<id>`) and the B+C map lens (V2 nodes).
-// Only verified identities are mapped. A similar name is not proof: a project that is not verified resolves to 'unresolved' or
+// BACK-85 (S5a), BACK-102: the typed identity between a portfolio project (`#/project/<id>`) and a node of the mission graph. It is
+// read from the one world: a graph node that is a project carries a `projectLink` (contract/world.ts), so there is no second table.
+// Only verified links are identities. A similar name is not proof: a project whose link is not verified resolves to 'unresolved' or
 // 'ambiguous' and the caller must treat it as having no counterpart. Nothing here renames an id, a route or a fixture, and nothing
-// here holds state. Synthetic demo data only; persona is a display switch, not authorization.
+// here holds state. The links are structural (no evidence, never scoped by persona), so the fixture is read as is. Synthetic demo
+// data only; persona is a display switch, not authorization.
+import type { IdentityStatus, NodeKind, ProjectId } from '../contract/world';
 import { DOMAIN } from '../domain/fixture';
-import type { NodeKind } from '../lenses/types';
+import { WORLD } from '../fixture/world';
 
-export type IdentityStatus = 'verified' | 'unresolved' | 'ambiguous';
+export type { IdentityStatus };
 
 export interface IdentityEntry {
-  /** The host (V1) project id, as in `#/project/<id>`. Always a project. */
-  readonly host: string;
-  /** The map (V2) node id and the kind the V2 fixture gives it. */
+  /** The portfolio project id, as in `#/project/<id>`. Always a project. */
+  readonly host: ProjectId;
+  /** The graph node id and the kind the graph gives it. */
   readonly map: string;
   readonly mapKind: NodeKind;
   readonly status: IdentityStatus;
-  /** Why the entry has this status. Written for a reviewer; tests pin it to the fixtures. */
+  /** Why the entry has this status. Written for a reviewer; tests pin it to the fixture. */
   readonly basis: string;
 }
 
-/**
- * The enumeration of every host project against its candidate map node.
- * - RT is verified structurally, not by name: V1's RT owns the components pos, stock-sync and inventory, the canonical domain
- *   model (BACK-83/84) owns exactly those ids, and V2 groups the same three ids under `retail-tower` (edges g1 to g3).
- * - KH has the same display name as `khepri` but shares no component, evidence or dependency with it, and the two fixtures
- *   disagree on its health (V1 degraded, V2 healthy with no basis). Name alone is not identity.
- * - SB is a project in V1 and a service in V2. A product or project and a service with similar names are not the same entity.
- */
-export const IDENTITIES = [
-  {
-    host: 'RT', map: 'retail-tower', mapKind: 'product', status: 'verified',
-    basis: 'V1 project RT owns pos, stock-sync and inventory; the canonical domain model owns those ids; V2 groups them under retail-tower.',
-  },
-  {
-    host: 'KH', map: 'khepri', mapKind: 'product', status: 'unresolved',
-    basis: 'Same display name only. No shared component, evidence or dependency, and the fixtures disagree on health.',
-  },
-  {
-    host: 'SB', map: 'seshat-bi', mapKind: 'service', status: 'ambiguous',
-    basis: 'V1 SB is a project, V2 seshat-bi is a service. Similar names are not proof of one entity.',
-  },
-] as const satisfies readonly IdentityEntry[];
-
-type Entry = (typeof IDENTITIES)[number];
-export type VerifiedEntry = Extract<Entry, { readonly status: 'verified' }>;
-/** The host project ids that have a verified map counterpart, and the map ids they map to. */
-export type VerifiedHostId = VerifiedEntry['host'];
-export type VerifiedMapId = VerifiedEntry['map'];
+/** Every graph node that carries a project link, as an entry: the enumeration of each project against its candidate node. */
+export const IDENTITIES: readonly IdentityEntry[] = WORLD.graph.nodes.flatMap((n) =>
+  n.projectLink ? [{ host: n.projectLink.project, map: n.id, mapKind: n.kind, status: n.projectLink.status, basis: n.projectLink.basis }] : []);
 
 /** The result of a lookup. Nothing falls back to a guess: only 'verified' carries an id. */
 export type Resolution<T extends string = string> =
   | { readonly kind: 'verified'; readonly id: T }
   | { readonly kind: 'unresolved' }
   | { readonly kind: 'ambiguous' }
-  /** The id is not in the crosswalk at all (unknown or foreign). */
+  /** The id is not linked at all (unknown or foreign). */
   | { readonly kind: 'foreign' };
 
-function resolveEntry<T extends string>(e: Entry | undefined, pick: (v: VerifiedEntry) => T): Resolution<T> {
+function resolveEntry<T extends string>(e: IdentityEntry | undefined, pick: (v: IdentityEntry) => T): Resolution<T> {
   if (!e) return { kind: 'foreign' };
-  if (e.status === 'verified') return { kind: 'verified', id: pick(e as VerifiedEntry) };
+  if (e.status === 'verified') return { kind: 'verified', id: pick(e) };
   return { kind: e.status };
 }
 
-const byHost = new Map<string, Entry>(IDENTITIES.map((e) => [e.host, e]));
-const byMap = new Map<string, Entry>(IDENTITIES.map((e) => [e.map, e]));
+const byHost = new Map<string, IdentityEntry>(IDENTITIES.map((e) => [e.host, e]));
+const byMap = new Map<string, IdentityEntry>(IDENTITIES.map((e) => [e.map, e]));
 
-/** Host project id to map node id. */
-export const mapIdOfProject = (host: string): Resolution<VerifiedMapId> => resolveEntry(byHost.get(host), (v) => v.map);
+/** Portfolio project id to graph node id. */
+export const mapIdOfProject = (host: string): Resolution => resolveEntry(byHost.get(host), (v) => v.map);
 
-/** Map node id to host project id. The inverse of `mapIdOfProject` on verified entries. */
-export const projectOfMapId = (map: string): Resolution<VerifiedHostId> => resolveEntry(byMap.get(map), (v) => v.host);
+/** Graph node id to portfolio project id. The inverse of `mapIdOfProject` on verified entries. */
+export const projectOfMapId = (map: string): Resolution<ProjectId> => resolveEntry(byMap.get(map), (v) => v.host);
 
-/** The one host project that owns the shared (canonical) components. */
-export const COMPONENT_PROJECT: VerifiedHostId = 'RT';
+/** The one project that owns the shared (canonical) components. */
+export const COMPONENT_PROJECT: ProjectId = 'RT';
 
 const sharedComponentIds: ReadonlySet<string> = new Set(DOMAIN.components.map((c) => c.id));
 
 /**
- * True when the id names a component both the host and the map share, as owned by the canonical domain model. A component
- * the host has and the map lacks (payments, api-gateway) or the reverse (github) is not shared.
+ * True when the id names a component both the project and the graph share, as owned by the canonical domain model. A component
+ * the project has and the graph lacks (payments, api-gateway) or the reverse (github) is not shared.
  */
 export const isSharedComponent = (id: string): boolean => sharedComponentIds.has(id);

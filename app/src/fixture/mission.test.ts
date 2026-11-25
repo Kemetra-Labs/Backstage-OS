@@ -1,39 +1,57 @@
 import { describe, expect, it } from 'vitest';
-import { resolveHealth, resolveLabel, effectiveFreshness } from '../../contract/rules';
-import { INV_DEMO_7 } from '../../fixture/inv-demo-7';
-import { authorizedWorld } from '../logic/authorize';
-import { evidenceView, nodeChip } from '../logic/evidence';
-import { isRiskNode, nodeStatus, sourceCounts, sourceStatus } from '../logic/status';
-import { NOW, WORLD } from './world';
+import { resolveHealth, resolveLabel, effectiveFreshness } from '../contract/rules';
+import { INV_DEMO_7 } from './inv-demo-7';
+import { authorizedWorld } from '../view/authorize';
+import { evidenceView, nodeChip } from '../lenses/logic/evidence';
+import { isRiskNode, nodeStatus, sourceCounts, sourceStatus } from '../lenses/logic/status';
+import { WORLD } from './world';
+
+const NOW = WORLD.now;
 
 const w = WORLD;
 
 describe('one shared synthetic world', () => {
-  it('reuses V1 identities: the same investigation and every V1 evidence id', () => {
+  it('reuses host identities: the same investigation and every host evidence id', () => {
     expect(w.investigationId).toBe(INV_DEMO_7.id);
-    for (const e of INV_DEMO_7.evidence) expect(w.evidenceById[e.id], e.id).toBe(e);
+    for (const e of INV_DEMO_7.evidence) expect(w.evidence[e.id], e.id).toBe(e);
   });
 
   it('only references things that exist', () => {
-    const nodeIds = new Set(w.nodes.map((n) => n.id));
-    for (const e of w.edges) {
+    const nodeIds = new Set(w.graph.nodes.map((n) => n.id));
+    for (const e of w.graph.edges) {
       expect(nodeIds.has(e.a), e.id).toBe(true);
       expect(nodeIds.has(e.b), e.id).toBe(true);
-      for (const id of e.evidence) expect(w.evidenceById[id], `${e.id}:${id}`).toBeDefined();
+      for (const id of e.evidence) expect(w.evidence[id], `${e.id}:${id}`).toBeDefined();
     }
-    for (const n of w.nodes) for (const id of n.evidence) expect(w.evidenceById[id], `${n.id}:${id}`).toBeDefined();
-    for (const r of w.replay) if (r.evidence) expect(w.evidenceById[r.evidence], r.id).toBeDefined();
+    for (const n of w.graph.nodes) for (const id of n.evidence) expect(w.evidence[id], `${n.id}:${id}`).toBeDefined();
+    for (const r of w.replay) if (r.evidence) expect(w.evidence[r.evidence], r.id).toBeDefined();
     for (const m of w.missions) {
       expect(w.agents.some((a) => a.id === m.agent), m.id).toBe(true);
-      for (const id of m.evidence) expect(w.evidenceById[id], `${m.id}:${id}`).toBeDefined();
+      for (const id of m.evidence) expect(w.evidence[id], `${m.id}:${id}`).toBeDefined();
     }
     const providers = new Set(w.sources.map((s) => s.provider));
-    for (const n of w.nodes) if (n.provider) expect(providers.has(n.provider), n.id).toBe(true);
-    for (const s of w.sourceEvents) expect(providers.has(s.provider), s.id).toBe(true);
+    for (const n of w.graph.nodes) if (n.provider) expect(providers.has(n.provider), n.id).toBe(true);
+    for (const s of w.sourceTimeline) expect(providers.has(s.provider), s.id).toBe(true);
+  });
+
+  it('every mission is worked by an agent of the one roster (World.agents)', () => {
+    const roster = new Set(w.agents.map((a) => a.id));
+    for (const m of w.missions) expect(roster.has(m.agent), `${m.id}: ${m.agent}`).toBe(true);
+    expect([...new Set(w.missions.map((m) => m.agent))].sort()).toEqual(['AG-collector', 'AG-scout']);
+  });
+
+  it('a paused or not-enabled agent owns no active mission, and an agent with an active mission is shown as working', () => {
+    for (const a of w.agents) {
+      const active = w.missions.filter((m) => m.agent === a.id && m.status !== 'idle');
+      if (a.state === 'paused' || a.state === 'not_enabled') expect(active.map((m) => m.id), a.id).toEqual([]);
+      if (active.length > 0) expect(a.state, a.id).toBe('watching');
+    }
+    // Not vacuous: the roster has a paused and a not-enabled agent, and both working agents have active missions.
+    expect(w.agents.map((a) => a.state).sort()).toEqual(['not_enabled', 'paused', 'watching', 'watching']);
   });
 
   it('has unique ids', () => {
-    for (const list of [w.nodes.map((n) => n.id), w.edges.map((e) => e.id), w.replay.map((r) => r.id), w.missions.map((m) => m.id), w.sourceEvents.map((s) => s.id)]) {
+    for (const list of [w.graph.nodes.map((n) => n.id), w.graph.edges.map((e) => e.id), w.replay.map((r) => r.id), w.missions.map((m) => m.id), w.sourceTimeline.map((s) => s.id)]) {
       expect(new Set(list).size).toBe(list.length);
     }
   });
@@ -41,24 +59,24 @@ describe('one shared synthetic world', () => {
   it('keeps replay events in time order and every event inside the investigation window', () => {
     const clocks = w.replay.map((r) => r.clock);
     expect([...clocks].sort()).toEqual(clocks);
-    expect(w.sourceEvents.map((s) => s.at)).toEqual([...w.sourceEvents.map((s) => s.at)].sort());
-    for (const s of w.sourceEvents) expect(Date.parse(s.at)).toBeLessThanOrEqual(Date.parse(NOW));
+    expect(w.sourceTimeline.map((s) => s.at)).toEqual([...w.sourceTimeline.map((s) => s.at)].sort());
+    for (const s of w.sourceTimeline) expect(Date.parse(s.at)).toBeLessThanOrEqual(Date.parse(NOW));
   });
 });
 
 describe('Unknown is never Healthy', () => {
   it('shows healthy only where current Observed evidence backs it', () => {
-    for (const n of w.nodes) {
+    for (const n of w.graph.nodes) {
       const healthy = resolveHealth(n.state) === 'healthy';
       const backed = n.state.basis.some((r) => resolveLabel(r) === 'observed' && effectiveFreshness(r) === 'current');
       expect(healthy, n.id).toBe(backed && n.state.health === 'healthy');
     }
-    expect(w.nodes.filter((n) => nodeStatus(n).health === 'healthy').map((n) => n.id)).toEqual(['github']);
+    expect(w.graph.nodes.filter((n) => nodeStatus(n).health === 'healthy').map((n) => n.id)).toEqual(['github']);
   });
 
   it('turns claimed-healthy nodes with no or stale evidence into unknown', () => {
     for (const id of ['khepri', 'jira', 'sentry', 'inventory']) {
-      const n = w.nodes.find((x) => x.id === id)!;
+      const n = w.graph.nodes.find((x) => x.id === id)!;
       expect(n.state.health, `${id} claims healthy`).toBe('healthy');
       expect(nodeStatus(n).health, id).toBe('unknown');
       expect(nodeChip(n, w.sources).kind, id).not.toBe('healthy');
@@ -66,7 +84,7 @@ describe('Unknown is never Healthy', () => {
   });
 
   it('never claims degraded without a read observation', () => {
-    const seshat = w.nodes.find((n) => n.id === 'seshat-bi')!;
+    const seshat = w.graph.nodes.find((n) => n.id === 'seshat-bi')!;
     expect(seshat.state.health).toBe('degraded');
     expect(nodeStatus(seshat).health).toBe('unknown');
   });
@@ -98,19 +116,19 @@ describe('sources keep three independent readings', () => {
     for (const p of ['datadog', 'confluence']) expect(rows.find((r) => r.provider === p)).toMatchObject({ connectivity: 'not_configured', freshness: 'unknown', readAt: null, issue: false });
   });
 
-  it('derives the last good read from the fixed now, not from the constant stamp V1 uses', () => {
+  it('derives the last good read from the fixed now, not from the constant stamp host uses', () => {
     expect(rows.find((r) => r.provider === 'github')!.readAt).toBe('2026-11-16T14:03:00.000Z');
     expect(rows.find((r) => r.provider === 'port')!.readAt).toBe('2026-11-15T13:09:00.000Z');
     expect(rows.find((r) => r.provider === 'port')!.used).toBeGreaterThan(1);
   });
 
   it('finds exactly the risks the screens report', () => {
-    expect(w.nodes.filter((n) => isRiskNode(n, w)).map((n) => n.id).sort()).toEqual(['port', 'sentry', 'stock-sync']);
+    expect(w.graph.nodes.filter((n) => isRiskNode(n, w)).map((n) => n.id).sort()).toEqual(['port', 'sentry', 'stock-sync']);
   });
 });
 
 describe('persona-safe evidence', () => {
-  const e5 = w.evidenceById['E-5']!;
+  const e5 = w.evidence['E-5']!;
   it('hides technical-only evidence from Owner and Nontechnical', () => {
     for (const p of ['owner', 'nontechnical'] as const) {
       expect(evidenceView(e5, p)).toMatchObject({ restricted: true, label: 'unknown', provider: null });
@@ -121,13 +139,13 @@ describe('persona-safe evidence', () => {
   it('is defence in depth only: screens pass Owner and Nontechnical an authorized world that holds no Technical-only record (BACK-30)', () => {
     for (const p of ['owner', 'nontechnical'] as const) {
       const scoped = authorizedWorld(w, p);
-      expect(Object.values(scoped.evidenceById).some((r) => r.visibility === 'technical')).toBe(false);
-      expect(scoped.evidenceById['E-5']).toBeUndefined();
+      expect(Object.values(scoped.evidence).some((r) => r.visibility === 'technical')).toBe(false);
+      expect(scoped.evidence['E-5']).toBeUndefined();
     }
   });
 
   it('reveals targets and external ids to Technical only', () => {
-    const e1 = w.evidenceById['E-1']!;
+    const e1 = w.evidence['E-1']!;
     expect(evidenceView(e1, 'technical').externalId).toBe('#DEMO-4471');
     expect(evidenceView(e1, 'owner').externalId).toBeUndefined();
     expect(evidenceView(e1, 'nontechnical').observedAt).toBeUndefined();
@@ -135,6 +153,6 @@ describe('persona-safe evidence', () => {
   });
 
   it('keeps a correlated item without a written rule as a hypothesis (contract rule)', () => {
-    expect(resolveLabel({ ...w.evidenceById['E-3']!, rule: '' })).toBe('hypothesis');
+    expect(resolveLabel({ ...w.evidence['E-3']!, rule: '' })).toBe('hypothesis');
   });
 });

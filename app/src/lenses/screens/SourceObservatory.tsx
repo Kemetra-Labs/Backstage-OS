@@ -5,12 +5,12 @@ import { EvidenceItem } from '../components/evidence';
 import { Icon, type IconName } from '../components/Icon';
 import { Age, Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip } from '../components/ui';
 import { useLens } from '../useLens';
-import { WORLD } from '../fixtures/world';
+import { caseEvidence } from '../../view/world';
+import { WORLD } from '../../fixture/world';
 import type { K } from '../../i18n';
-import { authorizedWorld } from '../logic/authorize';
-import { evidenceOf } from '../logic/evidence';
+import { authorizedWorld } from '../../view/authorize';
 import { hhmm, sourceCounts, sourceStatus, type SourceStatus, type Tone } from '../logic/status';
-import type { SourceAxis, SourceEvent, SourceKind, SourceMeta } from '../types';
+import type { SourceAxis, SourceEvent, SourceKind, SourceMeta } from '../../contract/world';
 
 const ICON: Readonly<Record<Provider, IconName>> = { github: 'code', jira: 'board', sentry: 'radar', datadog: 'pulse', confluence: 'book', port: 'db' };
 type KindFilter = 'all' | SourceKind;
@@ -89,9 +89,8 @@ function Pin({ icon, name, n, of, unit, sub }: { readonly icon: IconName; readon
 const AXIS_KEY: Readonly<Record<AxisFilter, K>> = { all: 'obs.tl.f.all', connectivity: 'obs.tl.f.conn', freshness: 'obs.tl.f.fresh', health: 'obs.tl.f.health', incident: 'obs.tl.f.inc' };
 const AXES: readonly AxisFilter[] = ['all', 'connectivity', 'freshness', 'health', 'incident'];
 
-/** `embedded`: shown inside a host screen that already has the page's h1, so the title is an h2 and the pilot chip is left out. */
-export function SourceObservatory({ embedded = false }: { readonly embedded?: boolean } = {}) {
-  const H = embedded ? 'h2' : 'h1';
+/** Rendered inside a host screen that owns the page's h1, so its title is an h2. */
+export function SourceObservatory() {
   const { route, go, t, copy } = useLens();
   const w = authorizedWorld(WORLD, route.persona);
   const [kind, setKind] = useState<KindFilter>('all');
@@ -106,7 +105,7 @@ export function SourceObservatory({ embedded = false }: { readonly embedded?: bo
   const stale = statuses.filter((x) => x.s.freshness === 'stale').length;
   const unavailable = statuses.filter((x) => x.s.connectivity === 'unavailable').length;
   const notSet = statuses.filter((x) => x.s.connectivity === 'not_configured').length;
-  const events = [...w.sourceEvents].sort((a, b) => a.at.localeCompare(b.at));
+  const events = [...w.sourceTimeline].sort((a, b) => a.at.localeCompare(b.at));
   const shown = events.filter((e) => axis === 'all' || e.axis === axis);
   const countOf = (a: AxisFilter) => (a === 'all' ? events.length : events.filter((e) => e.axis === a).length);
   const select = (p: Provider) => go({ src: p });
@@ -117,7 +116,7 @@ export function SourceObservatory({ embedded = false }: { readonly embedded?: bo
         <header className="kv2-head">
           <div className="kv2-head-title">
             <p className="kv2-eyebrow"><T k="obs.eyebrow" /></p>
-            <H><T k="nav.obs" />{!embedded && <span className="kv2-chip kv2-chip-outline"><T k="map.concept" /></span>}</H>
+            <h2><T k="nav.obs" /></h2>
             <p className="kv2-lede"><T k="obs.lede" /></p>
           </div>
           <div className="kv2-kpis">
@@ -259,7 +258,7 @@ function SourceInspector({ m, s, tab }: { readonly m: SourceMeta; readonly s: So
   );
 
   if (tab === 'evidence') {
-    const refs = evidenceOf(w, Object.keys(w.evidenceById)).filter((e) => e.observation?.source.provider === m.provider);
+    const refs = caseEvidence(w).filter((e) => e.observation?.source.provider === m.provider);
     return (
       <>
         {head}

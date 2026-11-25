@@ -12,7 +12,7 @@ import { COPY } from '../src/i18n/strings';
 import { SHELL } from '../src/i18n/shell';
 import { HOME_COPY } from '../src/i18n/screens/home';
 import { EVIDENCE as EVIDENCE_COPY } from '../src/i18n/screens/evidence';
-import { WORLD as LENS_WORLD } from '../src/lenses/fixtures/world';
+import { WORLD as LENS_WORLD } from '../src/fixture/world';
 import { TABLE } from '../src/i18n/index';
 
 const LANGS: readonly Lang[] = ['en', 'ar'];
@@ -22,7 +22,7 @@ const plain = (s: string): string => s.replace(/[{}]/g, '');
 /** Every Technical-only record in the three fixtures that render (canonical domain, V1 world, lens world), once each. */
 export const WITHHELD: readonly EvidenceReference[] = [
   ...new Map(
-    [...Object.values(DOMAIN.evidence), ...Object.values(V1_WORLD.evidence), ...Object.values(LENS_WORLD.evidenceById)]
+    [...Object.values(DOMAIN.evidence), ...Object.values(V1_WORLD.evidence), ...Object.values(LENS_WORLD.evidence)]
       .filter((e) => e.visibility === 'technical')
       .map((e) => [e.id, e] as const),
   ).values(),

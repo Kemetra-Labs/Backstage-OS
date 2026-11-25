@@ -5,16 +5,12 @@ export const COMMON = {
   skip: ['Skip to content', 'انتقل إلى المحتوى'],
   'brand.tag': ['Unified Mission Control for Product & Operations', 'مركز قيادة موحّد للمنتج والعمليات'],
   demo: ['Demo data, not live', 'بيانات تجريبية، ليست مباشرة'],
-  'lab.badge': ['{V2} lab', 'مختبر {V2}'],
   'nav.screens': ['Screens', 'الشاشات'],
   'nav.map': ['Mission Map', 'خريطة المهام'],
   'nav.obs': ['Source Observatory', 'مرصد المصادر'],
   'nav.replay': ['Mission Replay', 'إعادة المهمة'],
   'nav.deck': ['Agent Flight Deck', 'لوحة قيادة الوكلاء'],
   'nav.menu': ['Menu', 'القائمة'],
-  'nav.compare': ['Compare with V1', 'قارن مع {V1}'],
-  'nav.v1app': ['V1 Investigation Room', 'غرفة التحقيق {V1}'],
-  'nav.v1proto': ['V1 static prototype', 'النموذج الثابت {V1}'],
   'ws.name': ['Operations', 'العمليات'],
   'ws.sub': ['Multi-project view', 'عرض متعدد المشاريع'],
   'scope.title': ['Scope', 'النطاق'],
@@ -66,6 +62,6 @@ export const COMMON = {
 
 /** Copy keys that appear as button or link text anywhere in the shell or the screens. */
 export const COMMON_CONTROL_KEYS = [
-  'nav.map', 'nav.obs', 'nav.replay', 'nav.deck', 'nav.menu', 'nav.v1app', 'nav.v1proto', 'scope.all', 'view.map', 'view.list',
+  'nav.map', 'nav.obs', 'nav.replay', 'nav.deck', 'nav.menu', 'scope.all', 'view.map', 'view.list',
   'view.cards', 'view.table', 'close', 'tab.project', 'tab.evidence', 'tab.sources', 'tab.details', 'tab.provenance', 'search.label',
 ] as const;

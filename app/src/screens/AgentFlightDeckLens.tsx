@@ -1,7 +1,7 @@
-// BACK-90: the V2 Agent Flight Deck inside the existing Agents screen: read-only oversight of simulated agents and their missions.
+// BACK-90: the lens Agent Flight Deck inside the existing Agents screen: read-only oversight of simulated agents and their missions.
 // Same pattern as the other lenses: the host's persona, language and route drive it (src/lenses/useLens.ts), every change is a host
 // navigation, no provider, lazy. It runs, approves, stops and retries nothing: the agents are fixture rows and every control only
-// moves a view. A mission's event count is shown as not defined (see AgentFlightDeck `embedded`). Synthetic demo data; persona is a
+// moves a view. A mission's event count is shown as not defined (see AgentFlightDeck). Synthetic demo data; persona is a
 // display switch, not authorization.
 import { useApp } from '../app/AppContext';
 import { AgentFlightDeck } from '../lenses/screens/AgentFlightDeck';
@@ -13,7 +13,7 @@ export default function AgentFlightDeckLens() {
   const copy = hostCopy('AGENTS_VIEW_COPY', lang);
   return (
     <section className="kv2-scope" aria-label={copy.region} data-testid="agent-deck-lens">
-      <AgentFlightDeck embedded />
+      <AgentFlightDeck />
     </section>
   );
 }

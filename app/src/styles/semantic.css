@@ -1,6 +1,6 @@
-/* BACK-86 (S4): semantic role aliases. One name per role, two value sets: the host (V1) tokens by default, the B+C map's own tokens
+/* BACK-86 (S4): semantic role aliases. One name per role, two value sets: the host (host) tokens by default, the B+C map's own tokens
    inside .kv2-scope. Nothing here has a value of its own, every role points at a token that already exists, so neither identity
-   changes: V1 keeps its gold/green/coral truth and health colours, B+C keeps its cyan/teal ones. A shared component styled with
+   changes: host keeps its gold/green/coral truth and health colours, B+C keeps its cyan/teal ones. A shared component styled with
    these roles looks right in whichever surface it sits in. Dark only, like both sources (no light theme exists to alias). */
 :root {
   /* surfaces and text */

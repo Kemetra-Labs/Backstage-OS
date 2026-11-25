@@ -1,6 +1,6 @@
 // BACK-87: the B+C Mission Map inside the host shell. One AppShell, one persona and language, one router: the map's components read
 // the host's AppContext through `useLens()` (src/lenses/useLens.ts, via src/bridge/lensState.ts), and every change they ask for is
-// a host navigation. This is not the V2 shell and there is no provider. Loaded lazily (see MissionMap.tsx) so its stylesheets and code
+// a host navigation. This is not the lens shell and there is no provider. Loaded lazily (see MissionMap.tsx) so its stylesheets and code
 // reach the page only on this route. Synthetic demo data only; persona is a display switch, not authorization.
 import { useEffect, useMemo } from 'react';
 import { useApp } from '../app/AppContext';

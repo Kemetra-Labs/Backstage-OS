@@ -14,7 +14,7 @@ const nonTest = (dir: string): string[] =>
   readdirSync(join(SRC, dir)).filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts')).map((f) => `${dir}/${f}`);
 
 describe('domain is the one source for the INV-DEMO-7 overlap', () => {
-  // The only consumer module the projections may name is V2's type file, as a type-only import: it supplies the target shapes.
+  // The only consumer module the projections may name is the lens type file, as a type-only import: it supplies the target shapes.
   it('src/domain imports only from contract and type shapes (it depends on no consumer value)', () => {
     for (const f of nonTest('domain')) {
       const imports = [...read(f).matchAll(/import (type )?[^;]*? from '([^']+)'/g)].filter((m) => m[2]!.startsWith('.'));
@@ -27,11 +27,11 @@ describe('domain is the one source for the INV-DEMO-7 overlap', () => {
   });
 
   it('no consumer fixture holds a second copy of E-1..E-9', () => {
-    const consumers = [...nonTest('fixture'), 'lenses/fixtures/world.ts'];
+    const consumers = nonTest('fixture');
     for (const f of consumers) expect(read(f), f).not.toMatch(/id:\s*'E-[1-9]'/);
   });
 
-  // V1 world.ts (Khepri and Seshat-BI sources) and V2 world.ts (Confluence) define sources outside the overlap, so only
+  // fixture/world.ts defines sources outside the overlap (Khepri and Seshat-BI, and Confluence for the mission), so only
   // inv-demo-7.ts is checked: it used to define the five overlap sources.
   it('inv-demo-7 no longer defines the five synthetic sources', () => {
     expect(read('fixture/inv-demo-7.ts')).not.toMatch(/ttlSeconds/);
@@ -41,7 +41,7 @@ describe('domain is the one source for the INV-DEMO-7 overlap', () => {
 describe('changing the canonical record changes both consumers', () => {
   afterEach(() => { vi.doUnmock('./fixture'); vi.resetModules(); });
 
-  it('inventory facts and the stock-sync to inventory truth follow DOMAIN into V1 and V2', async () => {
+  it('inventory facts and the stock-sync to inventory truth follow DOMAIN into host and lens', async () => {
     vi.resetModules();
     vi.doMock('./fixture', async (orig) => {
       const m = await orig<typeof import('./fixture')>();
@@ -56,20 +56,20 @@ describe('changing the canonical record changes both consumers', () => {
       };
       return { ...m, DOMAIN: changed };
     });
-    const v1 = await import('../fixture/world');
-    const v1Nodes = await import('../fixture/inv-demo-7');
-    const v2 = await import('../lenses/fixtures/world');
+    const world = await import('../fixture/world');
+    const investigation = await import('../fixture/inv-demo-7');
+    const graph = await import('../fixture/world');
 
-    const inv1 = v1.WORLD.projects.find((p) => p.id === 'RT')!.components.find((c) => c.id === 'inventory')!;
-    expect(inv1.state.health).toBe('degraded');
-    expect(inv1.state.basis.map((b) => b.id)).toEqual(['E-1']);
-    expect(v1Nodes.NODES.find((n) => n.id === 'inventory')!.state.health).toBe('degraded');
+    const component = world.WORLD.projects.find((p) => p.id === 'RT')!.components.find((c) => c.id === 'inventory')!;
+    expect(component.state.health).toBe('degraded');
+    expect(component.state.basis.map((b) => b.id)).toEqual(['E-1']);
+    expect(investigation.NODES.find((n) => n.id === 'inventory')!.state.health).toBe('degraded');
 
-    const inv2 = v2.WORLD.nodes.find((n) => n.id === 'inventory')!;
-    expect(inv2.state.health).toBe('degraded');
-    expect(inv2.state.basis.map((b) => b.id)).toEqual(['E-1']);
-    expect(inv2.evidence).toEqual(['E-1']);
-    const d3 = v2.WORLD.edges.find((e) => e.id === 'd3')!;
+    const node = graph.WORLD.graph.nodes.find((n) => n.id === 'inventory')!;
+    expect(node.state.health).toBe('degraded');
+    expect(node.state.basis.map((b) => b.id)).toEqual(['E-1']);
+    expect(node.evidence).toEqual(['E-1']);
+    const d3 = graph.WORLD.graph.edges.find((e) => e.id === 'd3')!;
     expect(d3.truth).toBe('observed');
     expect(d3.evidence).toEqual(['E-1']);
   });

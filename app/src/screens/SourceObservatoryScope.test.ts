@@ -6,10 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import { leaksIn as leaks } from '../../e2e/leaks';
 import type { Persona } from '../contract/types';
-import { WORLD } from '../lenses/fixtures/world';
-import { authorizedWorld } from '../lenses/logic/authorize';
+import { WORLD } from '../fixture/world';
+import { authorizedWorld } from '../view/authorize';
 import { sourceCounts, sourceStatus } from '../lenses/logic/status';
-import type { World } from '../lenses/types';
+import type { World } from '../contract/world';
 import { expectWorldReadOnlyThroughAuthorizedWorld } from './scopeGuard';
 
 const LAY: readonly Persona[] = ['owner', 'nontechnical'];
@@ -17,7 +17,7 @@ const LAY: readonly Persona[] = ['owner', 'nontechnical'];
 /** What the Observatory renders from: its sources and their evidence basis, the derived statuses and counts, and the timeline events. */
 const observatoryData = (w: World): string => {
   const statuses = w.sources.map((m) => sourceStatus(m, w.now));
-  return JSON.stringify({ sources: w.sources, statuses, counts: sourceCounts(statuses), events: w.sourceEvents });
+  return JSON.stringify({ sources: w.sources, statuses, counts: sourceCounts(statuses), events: w.sourceTimeline });
 };
 
 describe('Source Observatory evidence scoping', () => {
@@ -38,7 +38,7 @@ describe('Source Observatory evidence scoping', () => {
     for (const p of LAY) {
       const w = authorizedWorld(WORLD, p);
       expect(w.sources.map((s) => s.provider), p).toEqual(technical.sources.map((s) => s.provider));
-      expect(w.sourceEvents.map((e) => e.id), p).toEqual(technical.sourceEvents.map((e) => e.id));
+      expect(w.sourceTimeline.map((e) => e.id), p).toEqual(technical.sourceTimeline.map((e) => e.id));
       expect(sourceCounts(w.sources.map((m) => sourceStatus(m, w.now))), p).toEqual(sourceCounts(technical.sources.map((m) => sourceStatus(m, technical.now))));
     }
   });

@@ -1,7 +1,7 @@
-// Display status for V2. Every verdict comes from the V1 contract rules; nothing here decides health on its own.
+// Display status for lens. Every verdict comes from the host contract rules; nothing here decides health on its own.
 import { effectiveFreshness, freshnessOf, resolveHealth, resolveLabel, worstFreshness } from '../../contract/rules';
 import type { Connectivity, EvidenceReference, Freshness, Health, SourceAuthority, TruthLabel } from '../../contract/types';
-import type { SourceMeta, World, WorldNode } from '../types';
+import type { SourceMeta, World, GraphNode } from '../../contract/world';
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'unk';
 
@@ -19,7 +19,7 @@ export function minutesSince(iso: string, now: string): number {
   return Math.round((Date.parse(now) - Date.parse(iso)) / MIN_MS);
 }
 
-export function nodeStatus(n: WorldNode): NodeStatus {
+export function nodeStatus(n: GraphNode): NodeStatus {
   const read = n.state.basis.filter((r) => r.observation !== null);
   const freshness = worstFreshness(read.map(effectiveFreshness));
   const health = resolveHealth(n.state);
@@ -35,7 +35,7 @@ export interface SourceStatus {
   readonly health: Health;
   readonly ageMinutes: number | null;
   readonly ttlMinutes: number;
-  /** ISO time of the last good read, derived from the fixed now and the age (V1's lastSuccessAt is one constant stamp). */
+  /** ISO time of the last good read, derived from the fixed now and the age (the host's lastSuccessAt is one constant stamp). */
   readonly readAt: string | null;
   /** Age as a share of the freshness target, 0 when never read. Over 1 means past the target. */
   readonly used: number;
@@ -84,7 +84,7 @@ export function sourceCounts(list: readonly SourceStatus[]): SourceCounts {
   };
 }
 
-export function isRiskNode(n: WorldNode, w: World): boolean {
+export function isRiskNode(n: GraphNode, w: World): boolean {
   if (nodeStatus(n).checkFailing) return true;
   if (!n.provider) return false;
   const m = w.sources.find((s) => s.provider === n.provider);

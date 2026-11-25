@@ -2,7 +2,8 @@
 // existing rules (status.ts, evidence.ts, contract/rules.ts). Nothing is invented, and there is no combined score.
 import { effectiveFreshness, resolveLabel } from '../../contract/rules';
 import type { Lang, Persona } from '../../contract/types';
-import type { World, WorldEdge } from '../types';
+import type { World, GraphEdge } from '../../contract/world';
+import { caseEvidence } from '../../view/world';
 import type { MapFilter } from './graph';
 import { isRiskNode, minutesSince, sourceCounts, sourceStatus, type Fraction, type SourceStatus, type Tone } from './status';
 import type { Point } from './orbit';
@@ -35,17 +36,17 @@ export interface BcFigures {
 export function bcFigures(w: World): BcFigures {
   const statuses = w.sources.map((s) => sourceStatus(s, w.now));
   const sc = sourceCounts(statuses);
-  const dep = w.edges.filter((e) => e.cls === 'dep');
+  const dep = w.graph.edges.filter((e) => e.cls === 'dep');
   const reads = new Set(
-    Object.values(w.evidenceById)
+    caseEvidence(w)
       .filter((e) => e.observation && resolveLabel(e) === 'observed' && minutesSince(e.observation.observedAt, w.now) <= 24 * 60)
       .map((e) => e.observation!.id),
   );
   return {
-    products: w.nodes.filter((n) => n.kind === 'product').length,
-    projects: w.nodes.filter((n) => n.kind === 'project').length,
-    services: w.nodes.filter((n) => n.kind === 'service').length,
-    risks: w.nodes.filter((n) => isRiskNode(n, w)).length,
+    products: w.graph.nodes.filter((n) => n.kind === 'product').length,
+    projects: w.graph.nodes.filter((n) => n.kind === 'project').length,
+    services: w.graph.nodes.filter((n) => n.kind === 'service').length,
+    risks: w.graph.nodes.filter((n) => isRiskNode(n, w)).length,
     sourceIssues: sc.issues,
     reachable: sc.reachable,
     current: sc.current,
@@ -60,25 +61,25 @@ export function bcFigures(w: World): BcFigures {
       hypothesis: dep.filter((e) => e.truth === 'hypothesis').length,
       unknown: dep.filter((e) => e.truth === 'unknown').length,
     },
-    structureLinks: w.edges.filter((e) => e.cls === 'group').length,
+    structureLinks: w.graph.edges.filter((e) => e.cls === 'group').length,
     observedReads24h: reads.size,
   };
 }
 
 /** A classified link whose every supporting read is not current is still drawn, but flagged stale. */
-export function edgeStale(e: WorldEdge, w: World): boolean {
+export function edgeStale(e: GraphEdge, w: World): boolean {
   return e.truth !== 'unknown' && e.evidence.length > 0 && e.evidence.every((id) => {
-    const r = w.evidenceById[id];
+    const r = w.evidence[id];
     return r ? effectiveFreshness(r) !== 'current' : true;
   });
 }
 
 /** Whether a link's basis rests on evidence this persona may not read. Only its existence is shown. */
-export function edgeRestricted(e: WorldEdge, persona: Persona, w: World): boolean {
-  return persona !== 'technical' && e.evidence.some((id) => w.evidenceById[id]?.visibility === 'technical');
+export function edgeRestricted(e: GraphEdge, persona: Persona, w: World): boolean {
+  return persona !== 'technical' && e.evidence.some((id) => w.evidence[id]?.visibility === 'technical');
 }
 
-export const isIncident = (e: WorldEdge, id: string): boolean => e.a === id || e.b === id;
+export const isIncident = (e: GraphEdge, id: string): boolean => e.a === id || e.b === id;
 
 /** Quadratic curve between two points, with the midpoint (for the link marker). */
 export function curve(a: Point, b: Point, bend: number): { readonly d: string; readonly mx: number; readonly my: number } {

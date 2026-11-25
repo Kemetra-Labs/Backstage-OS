@@ -3,7 +3,6 @@ import type { Table } from '../translate';
 
 export const MAP = {
   'map.eyebrow': ['Mission control', 'مركز القيادة'],
-  'map.concept': ['{V2} concept', 'تصور {V2}'],
   'map.lede': [
     'A cross-project map of products, projects and services, and how they relate. Every link says how we know it.',
     'خريطة عابرة للمشاريع للمنتجات والمشاريع والخدمات وكيف ترتبط. كل رابط يذكر كيف عرفناه.',

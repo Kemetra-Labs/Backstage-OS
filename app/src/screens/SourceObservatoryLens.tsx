@@ -1,4 +1,4 @@
-// BACK-88: the V2 Source Observatory inside the existing Sources screen. Same pattern as the Mission Map lens: one persona,
+// BACK-88: the lens Source Observatory inside the existing Sources screen. Same pattern as the Mission Map lens: one persona,
 // language and route (the host's), which the Observatory reads through useLens() (src/lenses/useLens.ts), every change a host
 // navigation, no provider. Lazy, so its code and sheets load only for the Observatory view. Synthetic demo data only; persona
 // is a display switch, not authorization.
@@ -12,7 +12,7 @@ export default function SourceObservatoryLens() {
   const copy = hostCopy('SOURCES_VIEW_COPY', lang);
   return (
     <section className="kv2-scope" aria-label={copy.region} data-testid="source-observatory-lens">
-      <SourceObservatory embedded />
+      <SourceObservatory />
     </section>
   );
 }

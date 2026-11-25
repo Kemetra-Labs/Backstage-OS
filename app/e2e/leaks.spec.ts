@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 import { DOMAIN } from '../src/domain/fixture';
 import { COPY } from '../src/i18n/strings';
 import { formatAge } from '../src/i18n/format';
-import { WORLD as LENS_WORLD } from '../src/lenses/fixtures/world';
+import { WORLD as LENS_WORLD } from '../src/fixture/world';
 import { BANNED, openRoute } from './helpers';
 import { findLeaks, leaks, PUBLIC_IDS, RESTRICTED_IDS, RESTRICTED_TOKENS, tokensFor, WITHHELD, type LeakOptions } from './leaks';
 
@@ -22,7 +22,7 @@ const BANNED_BEFORE = ['integration-tests', '#DEMO-4471', 'PR #DEMO-88', 'Assert
 const DOMAIN_WITHHELD = Object.values(DOMAIN.evidence).filter((e) => e.visibility === 'technical');
 const LENS_RESTRICTED_BEFORE = [...DOMAIN_WITHHELD.map((e) => e.id), ...DOMAIN_WITHHELD.flatMap((e) => (e.observation ? [e.observation.id] : []))];
 const e5Titles = (lang: 'en' | 'ar'): string[] => [...new Set((['owner', 'technical', 'nontechnical'] as const).map((p) => COPY[lang].evidenceItem['E-5']![p].replace(/[{}]/g, '')))];
-const E5_AGE = LENS_WORLD.evidenceById['E-5']!.observation!.source.ageMinutes;
+const E5_AGE = LENS_WORLD.evidence['E-5']!.observation!.source.ageMinutes;
 
 interface Before { readonly spec: string; readonly groups: ReadonlyArray<{ readonly tokens: readonly string[]; readonly match: Matcher }>; readonly opts: LeakOptions }
 const BEFORE: readonly Before[] = [

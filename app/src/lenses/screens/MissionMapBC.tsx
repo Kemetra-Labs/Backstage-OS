@@ -1,5 +1,5 @@
 // Mission Map, Hybrid B+C pilot (BACK-27). Concept B's immersive orbit map with concept C's accessible ledger as the List
-// view. It reads the same synthetic WORLD as every V2 screen and adds no data. The host mounts it at #/map (MissionMapLens.tsx).
+// view. It reads the same synthetic WORLD as every lens screen and adds no data. The host mounts it at #/map (MissionMapLens.tsx).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas } from '../bc/Canvas';
 import { Inspector } from '../bc/Inspector';
@@ -9,9 +9,9 @@ import { Ledger, LinksTable, Matrix } from '../bc/Tables';
 import { Icon } from '../components/Icon';
 import { Cosmos, Kpi, Panel, Seg, T } from '../components/ui';
 import { useLens } from '../useLens';
-import { nodePoints } from '../fixtures/orbit-layout';
-import { WORLD } from '../fixtures/world';
-import { authorizedWorld } from '../logic/authorize';
+import { nodePoints } from '../logic/orbit-layout';
+import { WORLD } from '../../fixture/world';
+import { authorizedWorld } from '../../view/authorize';
 import type { K } from '../../i18n';
 import { bcFigures } from '../logic/bc';
 import { filterSet, MAP_FILTERS, scopeSet, type MapFilter } from '../logic/graph';
@@ -33,10 +33,10 @@ export function MissionMapBC() {
   const nodeRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const points = useMemo(() => nodePoints(w), [w]);
   const fig = useMemo(() => bcFigures(w), [w]);
-  // With no node chosen: the scoped system when a scope other than the default is set (as in V2), else the approved render's stock-sync.
+  // With no node chosen: the scoped system when a scope other than the default is set (as in lens), else the approved render's stock-sync.
   const fallback = fallbackNode(route.scope);
-  const sel = w.nodes.find((n) => n.id === (route.node ?? fallback)) ?? w.nodes[0]!;
-  // Scope and filter dim in the map and hide in the list, as in V2. Nothing is removed from the world.
+  const sel = w.graph.nodes.find((n) => n.id === (route.node ?? fallback)) ?? w.graph.nodes[0]!;
+  // Scope and filter dim in the map and hide in the list, as in lens. Nothing is removed from the world.
   const active = useMemo(() => {
     const a = scopeSet(route.scope, w);
     const f = filterSet(ui.filter, w);
@@ -67,7 +67,7 @@ export function MissionMapBC() {
               <span><T k="map.scope.label" /></span>
               <select value={route.scope} onChange={(e) => go({ scope: e.target.value, node: null })} aria-label={t('map.scope.label')}>
                 <option value="all">{t('scope.all')}</option>
-                {SCOPES.map((id) => <option key={id} value={id} dir="ltr">{w.nodes.find((n) => n.id === id)!.title}</option>)}
+                {SCOPES.map((id) => <option key={id} value={id} dir="ltr">{w.graph.nodes.find((n) => n.id === id)!.title}</option>)}
               </select>
               <Icon name="chevron" size={14} />
             </label>

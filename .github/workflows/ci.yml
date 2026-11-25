@@ -32,7 +32,7 @@ jobs:
     outputs:
       root: ${{ steps.classify.outputs.root }}
       app: ${{ steps.classify.outputs.app }}
-      app_v1: ${{ steps.classify.outputs.app_v1 }}
+      app_e2e: ${{ steps.classify.outputs.app_e2e }}
       server: ${{ steps.classify.outputs.server }}
       g1: ${{ steps.classify.outputs.g1 }}
       mode: ${{ steps.classify.outputs.mode }}
@@ -132,12 +132,12 @@ jobs:
   # 987 tests, webkit 1410 s for 978), so mixed shards came out at 5, 11 and 15 minutes of tests. Chromium runs in one job
   # and WebKit in three, each about 8 minutes of tests. Each project's shards cover all its tests, so the union is the
   # whole suite. The gate sees one result for the matrix: success only if every job in it succeeded.
-  # This is the app's only browser suite: the V2 lab suite (app/e2e-v2, job app-e2e-v2) retired with the lab entry in
-  # BACK-92 R4, and its checks were moved into app/e2e first.
-  app-e2e-v1:
-    name: App V1 e2e (${{ matrix.project }}) ${{ matrix.shard }}/${{ matrix.shards }}
+  # This is the app's only browser suite (job id and name shortened in BACK-102): the standalone lens suite (app/e2e-v2, job
+  # app-e2e-v2) retired with its entry in BACK-92 R4, and its checks were moved into app/e2e first.
+  app-e2e:
+    name: App e2e (${{ matrix.project }}) ${{ matrix.shard }}/${{ matrix.shards }}
     needs: classify
-    if: needs.classify.outputs.app_v1 == 'true'
+    if: needs.classify.outputs.app_e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -172,7 +172,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: app-e2e-v1-test-results-${{ matrix.project }}-shard-${{ matrix.shard }}
+          name: app-e2e-test-results-${{ matrix.project }}-shard-${{ matrix.shard }}
           path: app/test-results/
           retention-days: 7
 
@@ -224,7 +224,7 @@ jobs:
   # The required check on main. Its name is the historic one so branch protection needs no change (BACK-93).
   gate:
     name: Playwright (chromium + webkit)
-    needs: [classify, root, app-check, app-e2e-v1, server, g1]
+    needs: [classify, root, app-check, app-e2e, server, g1]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

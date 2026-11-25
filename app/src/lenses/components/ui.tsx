@@ -1,4 +1,4 @@
-// Shared V2 primitives. Standard controls (buttons, tabs, tables) wearing the V2 tokens; no invented widgets.
+// Shared lens primitives. Standard controls (buttons, tabs, tables) wearing the lens tokens; no invented widgets.
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import type { DisplayLabel, Provider } from '../../contract/types';
 import { formatAge, segments } from '../../i18n';

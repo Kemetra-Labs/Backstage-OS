@@ -47,15 +47,21 @@ test('agents: every state is visible in words, remediation is not enabled', asyn
   await load(page);
   const state = (id: string) => page.locator(`[data-agent="${id}"] [data-agent-state]`);
   await expect(state('AG-scout')).toHaveText('Watching (simulated)');
-  await expect(state('AG-collector')).toHaveText('Idle');
+  // BACK-102: evidence-collector works missions on the Flight Deck (correlation, hypothesis, proposal), so it is watching, not idle.
+  await expect(state('AG-collector')).toHaveText('Watching (simulated)');
   await expect(state('AG-guard')).toHaveText('Paused by a human');
   await expect(state('AG-fixer')).toHaveText('Not enabled');
   await expect(page.locator('[data-agent="AG-fixer"] [data-last-activity]')).toHaveText('never');
   await expect(page.locator('[data-agent="AG-fixer"] [data-capability="not_available"]')).toHaveCount(1);
   await expect(page.locator('[data-agent="AG-scout"] [data-capability="simulated"]').first()).toContainText('simulated');
-  // Four different shapes: no two states share a border style.
-  const styles = await page.locator('[data-agent-state]').evaluateAll((els) => els.map((e) => getComputedStyle(e).borderTopStyle));
+  // Four different shapes: no two states share a border style. The roster has no idle agent since BACK-102, so each of the four
+  // states is applied in place to one badge to exercise the stylesheet rule an idle agent would hit.
+  const styles = await page.locator('[data-agent-state]').first().evaluate((el) => ['watching', 'idle', 'paused', 'not_enabled'].map((s) => {
+    el.setAttribute('data-agent-state', s);
+    return getComputedStyle(el).borderTopStyle;
+  }));
   expect(new Set(styles).size).toBe(4);
+  await page.reload();
   // Nothing in the roster uses a healthy green.
   const colours = await page.locator('[data-agent-state]').evaluateAll((els) => els.map((e) => getComputedStyle(e).color));
   expect(colours).not.toContain('rgb(36, 201, 139)');
