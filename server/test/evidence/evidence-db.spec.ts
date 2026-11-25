@@ -116,12 +116,14 @@ describe('source grants', () => {
 
   it('keeps sources, investigations and citations inside one project', async () => {
     const otherProject = await repo.createProject(ws, owner, { key: 'other', name: 'Other' });
+    // A granted source keeps the other investigation visible, so the citation check itself is what refuses.
+    await repo.connectSource(ws, owner, { projectId: otherProject, provider: 'github', externalRef: 'kemetra-labs/other-project' });
     const otherInvestigation = await repo.createInvestigation(ws, owner, { projectId: otherProject, title: 'Elsewhere' });
     await expect(repo.ingest(ws, [obs({ investigationId: otherInvestigation })])).rejects.toBeTruthy();
     const [here] = await repo.ingest(ws, [obs()]);
     await expect(
       repo.recordDecision(ws, owner, { investigationId: otherInvestigation, decision: 'x', rationale: 'y', evidenceIds: [here!] }, null),
-    ).rejects.toThrow(/not visible/);
+    ).rejects.toThrow('cited evidence not visible');
   });
 
   it('never lets a user attach themselves to an existing source they were not granted', async () => {

@@ -6,6 +6,7 @@
 import type pg from 'pg';
 import { runWithWorkspaceContext } from '../db/workspace-context';
 import { UUID } from '../evidence/evidence.types';
+import { PROJECT_VISIBLE } from '../evidence/visibility';
 import { summarizeProject, summarizeSource, type BatchRow, type ProjectSummary } from './portfolio.model';
 
 /** At most this many projects, ordered by key. Documented in server/README.md. */
@@ -62,7 +63,7 @@ export class PortfolioRepository {
         `WITH visible AS (
            SELECT p.id, p.key, p.name FROM projects p
             WHERE ($2::uuid IS NULL OR p.id = $2)
-              AND EXISTS (SELECT 1 FROM sources s WHERE s.project_id = p.id AND ${GRANTED('s')})
+              AND ${PROJECT_VISIBLE('p.id')}
             ORDER BY p.key LIMIT ${PROJECT_LIMIT})
          SELECT v.id AS project_id, v.key AS project_key, v.name AS project_name,
                 s.id AS source_id, s.provider, s.external_ref

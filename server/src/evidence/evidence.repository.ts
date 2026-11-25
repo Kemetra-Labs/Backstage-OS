@@ -255,7 +255,17 @@ export class EvidenceRepository {
     if (!UUID.test(input.investigationId) || input.evidenceIds.some((id) => !UUID.test(id))) throw new NotVisibleError();
     const cited = [...new Set(input.evidenceIds.map((id) => id.toLowerCase()))];
     return this.inWorkspace(workspaceId, async (c) => {
-      const inv = await c.query<{ project_id: string }>('SELECT project_id FROM investigations WHERE id = $1', [input.investigationId]);
+      // Same visibility as GET /investigations/:id (PROJECT_VISIBLE, written as a join so the grant rows
+      // can be share-locked): an investigation the decider cannot see does not exist for them, and a
+      // concurrent revocation waits for this decision or wins outright, as on the citation path below.
+      const inv = await c.query<{ project_id: string }>(
+        `SELECT i.project_id FROM investigations i
+           JOIN sources vs ON vs.project_id = i.project_id
+           JOIN source_grants vg ON vg.source_id = vs.id AND vg.user_id = $1 AND vg.revoked_at IS NULL
+          WHERE i.id = $2
+          FOR SHARE OF vg`,
+        [actor, input.investigationId],
+      );
       const projectId = inv.rows[0]?.project_id;
       if (!projectId) throw new NotVisibleError('investigation not visible');
       if (cited.length > 0) {

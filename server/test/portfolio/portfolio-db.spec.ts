@@ -1,28 +1,19 @@
 // Portfolio reads on the real evidence store, and the HTTP routes (BACK-49 slice 2). Disposable
 // Docker Postgres only; read batches come from the real GitHub mapper over canned responses.
 import { randomUUID } from 'node:crypto';
-import type { INestApplication } from '@nestjs/common';
-import pg from 'pg';
 import request from 'supertest';
-import { WorkspaceResolver } from '../../src/auth/workspace-resolver';
 import { observeRepository } from '../../src/connectors/github/github.observer';
 import { GitHubTransportFailure } from '../../src/connectors/github/github.transport';
-import { createApp } from '../../src/create-app';
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
-import { EvidenceRepository } from '../../src/evidence/evidence.repository';
+import type { EvidenceRepository } from '../../src/evidence/evidence.repository';
 import { PortfolioRepository, PROJECT_LIMIT } from '../../src/portfolio/portfolio.repository';
-import { FakeIdentityVerifier, OWNER, TOKENS } from '../auth/_helpers';
 import { happyScript, OWNER_REPO, ScriptedTransport, type Script } from '../connectors/github/github.fixture';
-import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
+import { expectNotFound, expectSessionRequired, startOwnerApp, type OwnerApp } from '../db/owner-app';
 
-const ENV = { KAWALYS_DESCOPE_PROJECT_ID: 'PkawalysTest0001', KAWALYS_OWNER_SUBJECT: OWNER.subject };
-const savedEnv: Record<string, string | undefined> = {};
-
-let db: KawalysDb | undefined;
+let t: OwnerApp | undefined;
+let db: OwnerApp['db'];
 let evidence: EvidenceRepository;
 let portfolio: PortfolioRepository;
-let app: INestApplication;
-let pools: pg.Pool[] = [];
 let cookie = '';
 let ws = '';
 let owner = '';
@@ -33,35 +24,15 @@ const read = async (script: Script, at: string, src = sourceId, ref = OWNER_REPO
   evidence.ingest(ws, await observeRepository(new ScriptedTransport(script), { sourceId: src, externalRef: ref }, new Date(at)));
 
 beforeAll(async () => {
-  for (const [k, v] of Object.entries(ENV)) {
-    savedEnv[k] = process.env[k];
-    process.env[k] = v;
-  }
-  db = await startKawalysDb();
-  const appPool = new pg.Pool({ connectionString: db.appUrl, max: 4 });
-  const authPool = new pg.Pool({ connectionString: db.authUrl, max: 4 });
-  pools = [appPool, authPool];
-  app = await createApp([], { verifier: new FakeIdentityVerifier() }, { database: { appPool, authPool } });
-  const res = await request(app.getHttpServer()).post('/auth/session').set('Authorization', `Bearer ${TOKENS.owner}`);
-  expect(res.status).toBe(200);
-  cookie = ([] as string[]).concat(res.headers['set-cookie'] ?? [])[0]!.split(';')[0]!;
-  const me = (await new WorkspaceResolver(db.app, db.auth).forUser(res.body.user.id as string))!;
-  ws = me.workspaceId;
-  owner = me.userId;
-  evidence = new EvidenceRepository(db.app);
+  t = await startOwnerApp();
+  ({ db, evidence, cookie, ws, owner } = t);
   portfolio = new PortfolioRepository(db.app);
   projectId = await evidence.createProject(ws, owner, { key: 'backstage-os', name: 'Backstage OS' });
   sourceId = await evidence.connectSource(ws, owner, { projectId, provider: 'github', externalRef: OWNER_REPO });
 }, 180_000);
 
 afterAll(async () => {
-  await app?.close().catch(() => undefined);
-  await Promise.all(pools.map((p) => p.end().catch(() => undefined)));
-  await stopKawalysDb(db);
-  for (const [k, v] of Object.entries(savedEnv)) {
-    if (v === undefined) delete process.env[k];
-    else process.env[k] = v;
-  }
+  await t?.stop();
 }, 60_000);
 
 const mine = () => portfolio.list(ws, owner, { withItems: true });
@@ -185,16 +156,10 @@ describe('non-disclosure', () => {
 });
 
 describe('GET /portfolio', () => {
-  const server = () => app.getHttpServer();
-  const expectNotFound = (res: request.Response) => {
-    expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('not_found');
-  };
+  const server = () => t!.app.getHttpServer();
 
   it('needs a session; the persona header grants nothing', async () => {
-    expectNotFound(await request(server()).get('/portfolio'));
-    expectNotFound(await request(server()).get('/portfolio').set('x-kawalys-demo-persona', 'technical'));
-    expectNotFound(await request(server()).get(`/portfolio/${projectId}`));
+    await expectSessionRequired(t!.app, ['/portfolio', `/portfolio/${projectId}`]);
   });
 
   it('lists projects with counts and no items', async () => {

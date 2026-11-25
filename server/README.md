@@ -37,6 +37,7 @@ NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental
 | `GET /demo/evidence/:id` | Session required. Synthetic evidence. Fixture ids `E-1` (visible to all) and `E-5` (technical persona only). Persona comes from `x-kawalys-demo-persona`: `technical`, `owner` or `nontechnical` (default). |
 | `GET /evidence`, `GET /evidence/:id`, `POST /investigations/:id/decisions` | Exist **only when both database URLs are set** (see Evidence API below). Session plus a workspace capability required. Without the database they answer 404. |
 | `GET /portfolio`, `GET /portfolio/:projectId` | Same conditions as the evidence routes, read-only, `evidence.read`. See Portfolio API below. |
+| `GET /investigations`, `GET /investigations/:id` | Same conditions as the evidence routes, read-only, `evidence.read`. See Investigation API below. |
 
 Every route is protected unless it is marked `@Public()` (the guard is global), so a new controller is denied by default.
 
@@ -197,7 +198,7 @@ Local code and tests only (owner approved gate A on 2026-11-23). Nothing is prov
 | --- | --- |
 | `GET /evidence` | Needs a session and `evidence.read`. Optional filters `sourceId`, `investigationId`, `projectId`. An unknown, malformed or repeated filter value gives an empty list. Returns `{ items }`, newest first, capped at 500 rows. |
 | `GET /evidence/:id` | Needs a session and `evidence.read`. 404 when the record is absent or not visible to the caller. |
-| `POST /investigations/:id/decisions` | Needs a session and `decision.create`. Body `{ decision, rationale, evidenceIds }` (text without NUL or unpaired surrogates; at most 50 ids). Every cited id must be source evidence of the investigation's project, visible to the caller. The decision and its audit row commit in one transaction. Returns 201 `{ id }`. |
+| `POST /investigations/:id/decisions` | Needs a session and `decision.create`. Body `{ decision, rationale, evidenceIds }` (text without NUL or unpaired surrogates; at most 50 ids). The investigation must be visible to the caller (an active grant on a source of its project, the rule `GET /investigations/:id` uses), else 404 and nothing is written (tightened in the BACK-50 server slice). Every cited id must be source evidence of the investigation's project, visible to the caller. The decision and its audit row commit in one transaction. Returns 201 `{ id }`. |
 
 Failures follow the same fixed-envelope policy as authentication (404 for denied or invisible, 400 for an invalid body, 500 for a database failure).
 
@@ -207,7 +208,8 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 
 **Known limits:**
 
-- Projects, sources and investigations have no HTTP routes yet (repository only, for BACK-52 and the UI slice).
+- Projects and sources have no write routes, and investigations have read routes only (see Investigation API below).
+- A decision that cites nothing is returned by `GET /evidence` (unfiltered or with any filter) and `GET /evidence/:id` to any member with `evidence.read`, even when its investigation is not visible to them. The record carries its `projectId`, `investigationId` and decision text. This is the BACK-55 rule above, kept on purpose. Tightening it is an owner decision for the multi-user stage, when there will be members without grants. `GET /investigations/:id` answers 404 for such an investigation, and `POST /investigations/:id/decisions` refuses it.
 - Correlation and Hypothesis evidence each come from one source; multi-source derivation needs a later design.
 - The list is capped at 500 rows and has no pagination or truncation flag yet.
 - Database-role hardening not done yet: `kawalys_app` could insert a `HumanDecision` row directly without an audit row, or a grant for any user id; the application never does, and a later slice can enforce it in the database.
@@ -245,6 +247,25 @@ A failed repository read stops the run. A failed pull-request or issue list is i
 BACK-52's original acceptance criterion says 401/403 should become Unknown. The 23 Nov owner decision asks for truthful Unknown/unavailable/denied outcomes, so 401, 403 and 404 are `denied`. Neither is ever `ok`.
 
 Tests: `test/connectors/github/` (canned responses, mutation-checked), plus a Docker database test that stores every state through `ingest()`.
+
+## Investigation API (BACK-50 server slice)
+
+Read-only routes for investigations. No new capability, schema or dependency.
+
+| Route | Behaviour |
+| --- | --- |
+| `GET /investigations` | Session and `evidence.read`. `{ items }`: visible investigations (`id`, `projectId`, `title`, `status`, `createdAt`), newest first, at most 100. Optional `projectId`. An unknown, malformed or repeated filter gives `{ items: [] }`. |
+| `GET /investigations/:id` | Session and `evidence.read`. The investigation plus `evidence`: its records as `GET /evidence?investigationId=` returns them, with `type` and `state` unchanged. Those two fields are the badges; no health is computed. 404 when the id is unknown, malformed or not visible. |
+
+**Visibility** is one shared rule, `src/evidence/visibility.ts` (`PROJECT_VISIBLE`). An investigation is visible exactly when its project is: the caller holds an active grant on one of the project's sources. The portfolio and the decision write path use the same rule; the write path share-locks the grant rows, so a concurrent revocation waits or wins outright. Another workspace is excluded by RLS, and the persona header is never read. One pre-existing exception sits outside these routes: an uncited decision is still returned by `GET /evidence` (see Known limits in the Evidence API section).
+
+**What the room shows.** It shows investigation-scoped evidence only. Connector observations belong to no investigation (`investigation_id` is null), so they appear under `GET /portfolio/:projectId`; they are never linked to an investigation automatically.
+
+**Not in this slice (owner decision needed).** A user-written Correlation or Hypothesis note, and BACK-54's "API rejects save without explicit type", are blocked:
+- The schema requires every non-decision row to come from exactly one source (`(type = 'HumanDecision') = (source_id IS NULL)`).
+- No capability covers writing a note.
+
+The options are: a note cites exactly one source's evidence and inherits that source; a migration allowing user-authored inference without a source; or deferring notes. Each needs a new capability.
 
 ## Portfolio API (BACK-49 slice 2)
 
@@ -306,6 +327,8 @@ A project's `state` is the worst of its sources, in the order `ok` < `stale` < `
 [THIRD_PARTY.md](THIRD_PARTY.md) for paths, pinned SHAs, strategy and licence.
 
 ## Rollback
+
+To remove only the Investigation API (BACK-50 server slice): delete `server/src/investigations/` and `server/test/investigations/`, remove its two imports and the `InvestigationModule.register` line from `server/src/create-app.ts`, and revert its README edits. The shared rule `server/src/evidence/visibility.ts` is also used by the portfolio and by `recordDecision`; to remove it, restore their previous predicates.
 
 To remove only the Portfolio API (BACK-49 slice 2): delete `server/src/portfolio/` and `server/test/portfolio/`, remove its two imports and the `PortfolioModule.register` line from `server/src/create-app.ts`, and revert its README edits.
 
