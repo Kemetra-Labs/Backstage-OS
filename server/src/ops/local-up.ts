@@ -5,7 +5,8 @@
 // host and NODE_ENV=production. Passwords are random per machine (local-credentials.ts, gitignored file, 0600);
 // none is hard-coded.
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { isAbsolute, join } from 'node:path';
 import pg from 'pg';
 import { loadAuthConfig } from '../auth/auth.config';
 import { loadOrCreateLocalCredentials } from './local-credentials';
@@ -14,6 +15,20 @@ import { formatSummary, LOCAL_SYNTHETIC_OWNER, localRuntimeUrls, prepareLocalDat
 /** Matches docker-compose.local.yml. Loopback only. */
 const LOCAL_ADMIN = { user: 'kawalys_local_admin', database: 'kawalys' } as const;
 const SERVER_DIR = join(__dirname, '..', '..');
+/** Fixed install locations only, never a PATH lookup; KAWALYS_DOCKER_BIN may name another absolute path. */
+const DOCKER_CANDIDATES = ['/usr/bin/docker', '/usr/local/bin/docker', '/opt/homebrew/bin/docker', 'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe'];
+
+function dockerBinary(env: NodeJS.ProcessEnv): string {
+  const override = (env['KAWALYS_DOCKER_BIN'] ?? '').trim();
+  if (override) {
+    if (!isAbsolute(override) || !existsSync(override)) throw new Error('KAWALYS_DOCKER_BIN must be an absolute path to an existing docker binary');
+    return override;
+  }
+  const found = DOCKER_CANDIDATES.find((p) => existsSync(p));
+  if (!found) throw new Error(`docker not found in ${DOCKER_CANDIDATES.join(', ')}; set KAWALYS_DOCKER_BIN to its absolute path`);
+  return found;
+}
+
 export const LOCAL_CREDENTIALS_FILE = join(SERVER_DIR, '.local-stack', 'credentials.json');
 
 async function main(): Promise<void> {
@@ -22,7 +37,7 @@ async function main(): Promise<void> {
   if (process.env['NODE_ENV'] === 'production') throw new Error('refusing to run with NODE_ENV=production');
   const creds = loadOrCreateLocalCredentials(LOCAL_CREDENTIALS_FILE);
   // No shell: the password reaches compose only through this child's environment.
-  execFileSync('docker', ['compose', '-f', 'docker-compose.local.yml', 'up', '-d', '--wait'], {
+  execFileSync(dockerBinary(process.env), ['compose', '-f', 'docker-compose.local.yml', 'up', '-d', '--wait'], {
     cwd: SERVER_DIR,
     stdio: 'inherit',
     env: { ...process.env, KAWALYS_LOCAL_PG_PASSWORD: creds.admin },
