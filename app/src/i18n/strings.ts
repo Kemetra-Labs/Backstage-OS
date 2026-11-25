@@ -42,6 +42,8 @@ export interface Copy {
   readonly againstText: string;
   readonly confirmText: string;
   readonly evidenceTitle: string;
+  /** Explicit empty state for an evidence list (BACK-62): never a blank panel. */
+  readonly noEvidence: { readonly title: string; readonly body: string };
   readonly openEvidence: (id: string) => string;
   readonly notRead: Readonly<Record<'unavailable' | 'not_configured' | 'restricted', string>>;
   readonly restricted: string;
@@ -148,6 +150,10 @@ const en: Copy = {
   againstText: '{RT-DEMO-112} says the test was flaky before this change.',
   confirmText: 'Re-run {integration-tests} with the fixture reverted.',
   evidenceTitle: 'Evidence',
+  noEvidence: {
+    title: 'No evidence yet',
+    body: 'No source has returned evidence for this case. That is not the same as nothing being wrong.',
+  },
   openEvidence: (id) => `Open evidence {${id}}`,
   notRead: { unavailable: 'Not read: source unavailable', not_configured: 'Not read: source not set up', restricted: 'Restricted to Technical' },
   restricted: 'Restricted to Technical',
@@ -301,6 +307,10 @@ const ar: Copy = {
   againstText: 'يذكر {RT-DEMO-112} أن الاختبار كان متذبذبًا قبل هذا التغيير.',
   confirmText: 'إعادة {integration-tests} بعد التراجع عن {fixture}.',
   evidenceTitle: 'الأدلة',
+  noEvidence: {
+    title: 'لا توجد أدلة بعد',
+    body: 'لم يُرجع أي مصدر أدلة لهذه الحالة. وهذا لا يعني أن كل شيء سليم.',
+  },
   openEvidence: (id) => `عرض الدليل {${id}}`,
   notRead: { unavailable: 'غير مقروء: المصدر غير متاح', not_configured: 'غير مقروء: المصدر غير مُعد', restricted: 'مقصور على الفريق التقني' },
   restricted: 'مقصور على الفريق التقني',
