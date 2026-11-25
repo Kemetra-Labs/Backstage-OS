@@ -1,7 +1,7 @@
 // Investigation reads (BACK-50 server slice). Runs in the workspace context (forced RLS). An
 // investigation is visible exactly when its project is (PROJECT_VISIBLE: an active grant on one of
-// the project's sources), so these routes never reveal a project the reader cannot see (GET /evidence
-// has one pre-existing exception for uncited decisions; see Known limits in server/README.md).
+// the project's sources), so these routes never reveal a project the reader cannot see. Decision
+// reads in GET /evidence apply the same rule.
 // Kawalys-owned BUILD on the BACK-55 store; no schema change.
 import type pg from 'pg';
 import { runWithWorkspaceContext } from '../db/workspace-context';
