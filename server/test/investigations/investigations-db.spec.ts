@@ -1,26 +1,17 @@
 // Investigation reads and the tightened decision write path, on the real store and over HTTP
 // (BACK-50 server slice). Disposable Docker Postgres only.
 import { randomUUID } from 'node:crypto';
-import type { INestApplication } from '@nestjs/common';
-import pg from 'pg';
 import request from 'supertest';
-import { WorkspaceResolver } from '../../src/auth/workspace-resolver';
-import { createApp } from '../../src/create-app';
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
-import { EvidenceRepository } from '../../src/evidence/evidence.repository';
+import type { EvidenceRepository } from '../../src/evidence/evidence.repository';
 import { NotVisibleError } from '../../src/evidence/evidence.types';
 import { INVESTIGATION_LIMIT, InvestigationRepository } from '../../src/investigations/investigation.repository';
-import { FakeIdentityVerifier, OWNER, TOKENS } from '../auth/_helpers';
-import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
+import { expectNotFound, expectSessionRequired, startOwnerApp, type OwnerApp } from '../db/owner-app';
 
-const ENV = { KAWALYS_DESCOPE_PROJECT_ID: 'PkawalysTest0001', KAWALYS_OWNER_SUBJECT: OWNER.subject };
-const savedEnv: Record<string, string | undefined> = {};
-
-let db: KawalysDb | undefined;
+let t: OwnerApp | undefined;
+let db: OwnerApp['db'];
 let evidence: EvidenceRepository;
 let investigations: InvestigationRepository;
-let app: INestApplication;
-let pools: pg.Pool[] = [];
 let cookie = '';
 let ws = '';
 let owner = '';
@@ -30,22 +21,8 @@ let investigationId = '';
 let observationId = '';
 
 beforeAll(async () => {
-  for (const [k, v] of Object.entries(ENV)) {
-    savedEnv[k] = process.env[k];
-    process.env[k] = v;
-  }
-  db = await startKawalysDb();
-  const appPool = new pg.Pool({ connectionString: db.appUrl, max: 4 });
-  const authPool = new pg.Pool({ connectionString: db.authUrl, max: 4 });
-  pools = [appPool, authPool];
-  app = await createApp([], { verifier: new FakeIdentityVerifier() }, { database: { appPool, authPool } });
-  const res = await request(app.getHttpServer()).post('/auth/session').set('Authorization', `Bearer ${TOKENS.owner}`);
-  expect(res.status).toBe(200);
-  cookie = ([] as string[]).concat(res.headers['set-cookie'] ?? [])[0]!.split(';')[0]!;
-  const me = (await new WorkspaceResolver(db.app, db.auth).forUser(res.body.user.id as string))!;
-  ws = me.workspaceId;
-  owner = me.userId;
-  evidence = new EvidenceRepository(db.app);
+  t = await startOwnerApp();
+  ({ db, evidence, cookie, ws, owner } = t);
   investigations = new InvestigationRepository(db.app);
   projectId = await evidence.createProject(ws, owner, { key: 'backstage-os', name: 'Backstage OS' });
   sourceId = await evidence.connectSource(ws, owner, { projectId, provider: 'github', externalRef: 'kemetra-labs/backstage-os' });
@@ -56,13 +33,7 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
-  await app?.close().catch(() => undefined);
-  await Promise.all(pools.map((p) => p.end().catch(() => undefined)));
-  await stopKawalysDb(db);
-  for (const [k, v] of Object.entries(savedEnv)) {
-    if (v === undefined) delete process.env[k];
-    else process.env[k] = v;
-  }
+  await t?.stop();
 }, 60_000);
 
 const evidenceRows = (inv: string) =>
@@ -146,24 +117,20 @@ describe('the list cap', () => {
 });
 
 describe('HTTP', () => {
-  const server = () => app.getHttpServer();
-  const expectNotFound = (res: request.Response) => {
-    expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('not_found');
-  };
+  const server = () => t!.app.getHttpServer();
 
   it('needs a session; the persona header grants nothing', async () => {
-    expectNotFound(await request(server()).get('/investigations'));
-    expectNotFound(await request(server()).get('/investigations').set('x-kawalys-demo-persona', 'technical'));
-    expectNotFound(await request(server()).get(`/investigations/${investigationId}`));
+    await expectSessionRequired(t!.app, ['/investigations', `/investigations/${investigationId}`]);
   });
 
   it('lists visible investigations over HTTP, filtered by project; another project gives none of them', async () => {
-    const res = await request(server()).get('/investigations').query({ projectId }).set('Cookie', cookie);
+    // A fresh project: the cap test above filled the first project past the 100-item page.
+    const fresh = await evidence.createProject(ws, owner, { key: 'fresh', name: 'Fresh' });
+    await evidence.connectSource(ws, owner, { projectId: fresh, provider: 'github', externalRef: 'kemetra-labs/fresh' });
+    const freshInvestigation = await evidence.createInvestigation(ws, owner, { projectId: fresh, title: 'Fresh' });
+    const res = await request(server()).get('/investigations').query({ projectId: fresh }).set('Cookie', cookie);
     expect(res.status).toBe(200);
-    const items = res.body.items as { id: string; projectId: string }[];
-    expect(items.map((i) => i.id)).toContain(investigationId);
-    expect(items.every((i) => i.projectId === projectId)).toBe(true);
+    expect((res.body.items as { id: string }[]).map((i) => i.id)).toEqual([freshInvestigation]);
     const { project } = await hiddenInvestigation('hidden-e');
     expect((await request(server()).get('/investigations').query({ projectId: project }).set('Cookie', cookie)).body).toEqual({ items: [] });
   });
