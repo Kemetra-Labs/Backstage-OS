@@ -1,5 +1,5 @@
 // Mission Replay logic. Playback is a view-state clock: it moves a cursor over fixed synthetic events and nothing else.
-import { STAGES, type ReplayEvent, type ReplayStage } from '../types';
+import { STAGES, type ReplayEvent, type ReplayStage } from '../../contract/world';
 
 /** Replay milliseconds per event at 1x. Events are evenly spaced in replay time; real clock times are labels. */
 export const STEP_MS = 1500;

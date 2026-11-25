@@ -1,7 +1,7 @@
 // The shared synthetic world (BACK-10..13): one typed model every screen reads, so all screens tell the same story.
 // Display contract, not an API. Health is a claim plus basis: screens render resolveHealth(), never the claim.
 import type {
-  DisplayState, EntityRef, Environment, EvidenceReference, Persona, SourceAuthority, TruthLabel,
+  DisplayState, EntityRef, Environment, EvidenceReference, Persona, Provider, SourceAuthority, TruthLabel,
 } from './types';
 
 /** Bilingual text. {braces} mark left-to-right tokens, as in i18n/strings.ts. */
@@ -148,14 +148,140 @@ export interface ActivityEvent {
   readonly investigationId?: string;
 }
 
+// ---- The mission graph and its timelines (Mission Map, Source Observatory, Mission Replay, Agent Flight Deck) ----------
+
+export type NodeKind = 'product' | 'project' | 'service';
+/** Relationship classification. 'unknown' means no evidence for the link either way; it is drawn dashed. */
+export type EdgeTruth = TruthLabel | 'unknown';
+export type EdgeClass = 'group' | 'dep';
+
+export type IdentityStatus = 'verified' | 'unresolved' | 'ambiguous';
+
+/**
+ * How a graph node relates to a portfolio project. Only 'verified' is an identity: the two are one entity, shown on both the Project
+ * screen and the map. 'unresolved' and 'ambiguous' record a candidate that is NOT the same entity, and why. Never inferred from a name.
+ */
+export interface ProjectLink {
+  readonly project: ProjectId;
+  readonly status: IdentityStatus;
+  /** Why the link has this status. Written for a reviewer, never rendered; tests pin it to the fixture. */
+  readonly basis: string;
+}
+
+/** A node of the mission graph. Not a WorldComponent: it carries canvas layout and stands for a product, project or service. */
+export interface GraphNode {
+  readonly id: string;
+  readonly kind: NodeKind;
+  /** Proper name, never translated, always rendered as a left-to-right isolate. */
+  readonly title: string;
+  readonly x: number;
+  readonly y: number;
+  readonly provider?: Provider;
+  /** The portfolio project this node is, or is only a candidate for (see ProjectLink). */
+  readonly projectLink?: ProjectLink;
+  readonly state: DisplayState;
+  readonly check?: 'failing';
+  /** Evidence ids this node is backed by (ids of World.evidence). */
+  readonly evidence: readonly string[];
+  /** Fixture declaration: the description key to use instead of `map.nl.<id>` when none of this node's evidence may be shown. */
+  readonly descWithoutEvidence?: string;
+  /** Set by authorizedWorld only: the description key that replaces `map.nl.<id>` because its evidence was withheld. */
+  readonly descKey?: string;
+}
+
+/** A link of the mission graph. Not a WorldEdge: it joins graph nodes and carries a truth label and a basis copy key. */
+export interface GraphEdge {
+  readonly id: string;
+  readonly a: string;
+  readonly b: string;
+  readonly cls: EdgeClass;
+  readonly truth: EdgeTruth;
+  /** Why we believe it; required wording for correlated (a rule) and hypothesis (a reason). */
+  readonly basisKey: string;
+  readonly evidence: readonly string[];
+}
+
+export type SourceKind = 'integration' | 'data';
+export interface SourceMeta {
+  readonly provider: Provider;
+  readonly kind: SourceKind;
+  readonly target: string;
+  readonly source: SourceAuthority;
+  /** What the target's own health claim rests on. Rendered through resolveHealth, never directly. */
+  readonly health: DisplayState;
+}
+
+export type SourceAxis = 'connectivity' | 'freshness' | 'health' | 'incident';
+export interface SourceEvent {
+  readonly id: string;
+  readonly at: string;
+  readonly provider: Provider;
+  readonly axis: SourceAxis;
+  readonly tone: 'ok' | 'warn' | 'bad';
+  readonly key: string;
+}
+
+export type ReplayStage = 'observed' | 'ingested' | 'correlated' | 'hypothesis' | 'proposed';
+export const STAGES: readonly ReplayStage[] = ['observed', 'ingested', 'correlated', 'hypothesis', 'proposed'];
+
+export interface ReplayEvent {
+  readonly id: string;
+  /** Process clock, HH:MM on 2026-11-16 (UTC). Replay time is separate and evenly spaced. */
+  readonly clock: string;
+  readonly stage: ReplayStage;
+  readonly label: TruthLabel | 'unknown';
+  readonly evidence: string | null;
+  readonly kind: 'event' | 'gap';
+  readonly key: string;
+}
+
+export type AgentStatus = 'observing' | 'analyzing' | 'drafting' | 'waiting_review' | 'idle';
+export type MissionKind = 'sensing' | 'analysis' | 'proposal';
+export type HumanState = 'monitoring' | 'reviewing' | 'needs_review';
+
+export interface Mission {
+  readonly id: string;
+  /** The id of the agent working the mission: an entry of World.agents. */
+  readonly agent: string;
+  readonly kind: MissionKind;
+  readonly status: AgentStatus;
+  readonly human: HumanState;
+  readonly startedMinutesAgo: number;
+  /** 'unknown' only after authorizedWorld removed the whole basis of the claim. */
+  readonly label: TruthLabel | 'unknown';
+  readonly evidence: readonly string[];
+  readonly key: string;
+}
+
+export interface MissionGraph {
+  readonly nodes: readonly GraphNode[];
+  readonly edges: readonly GraphEdge[];
+}
+
+/** The one synthetic world. Every screen reads it, through authorizedWorld for the persona. */
 export interface World {
   readonly projects: readonly WorldProject[];
   readonly investigations: readonly InvestigationSummary[];
   readonly decisions: readonly Decision[];
   readonly agents: readonly AgentDemo[];
   readonly activity: readonly ActivityEvent[];
-  /** Every evidence item by id, including INV-DEMO-7's E-1..E-7. */
+  /** Every evidence item by id, each defined once: E-1..E-9 of INV-DEMO-7 and the records outside it. */
   readonly evidence: Readonly<Record<string, EvidenceReference>>;
   /** Titles for evidence outside INV-DEMO-7 (INV-DEMO-7 titles live in i18n/strings.ts evidenceItem). */
   readonly evidenceText: Readonly<Record<string, ByPersonaL10n>>;
+  /**
+   * Ids of reads of a source itself (E-8, E-9). Only source health rests on them: the evidence catalogue (demo search, Evidence
+   * Explorer) does not list them; the mission's case evidence does.
+   */
+  readonly sourceProbes: readonly string[];
+  /** Fixed "now" of the mission sections, so every screen, test and screenshot is deterministic. */
+  readonly now: string;
+  /** The investigation the mission sections follow (INV-DEMO-7). */
+  readonly investigationId: string;
+  readonly graph: MissionGraph;
+  /** Every source the mission reads, with what its own health claim rests on. */
+  readonly sources: readonly SourceMeta[];
+  readonly sourceTimeline: readonly SourceEvent[];
+  readonly replay: readonly ReplayEvent[];
+  readonly missions: readonly Mission[];
 }

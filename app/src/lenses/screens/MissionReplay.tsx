@@ -7,12 +7,12 @@ import { Icon, type IconName } from '../components/Icon';
 import { Cosmos, Kpi, Lt, Panel, Provider_, Seg, T, TabBar, ToneChip, TruthChip, Tx } from '../components/ui';
 import { SourceRows } from '../components/SourceRows';
 import { useLens } from '../useLens';
-import { WORLD } from '../fixtures/world';
+import { WORLD } from '../../fixture/world';
 import { plain, type K } from '../../i18n';
-import { authorizedWorld } from '../logic/authorize';
+import { authorizedWorld } from '../../view/authorize';
 import { SPEEDS, STEP_MS, advance, gapsAt, indexAt, milestonesAt, msOfIndex, stageAt, totalMs, type Speed } from '../logic/replay';
 import { sourceStatus } from '../logic/status';
-import { STAGES, type ReplayEvent, type ReplayStage } from '../types';
+import { STAGES, type ReplayEvent, type ReplayStage } from '../../contract/world';
 
 const STAGE_ICON: Readonly<Record<ReplayStage, IconName>> = { observed: 'eye', ingested: 'layers', correlated: 'network', hypothesis: 'bulb', proposed: 'doc' };
 const STAGE_KEY: Readonly<Record<ReplayStage, K>> = {
@@ -33,7 +33,7 @@ export function MissionReplay({ embedded = false }: { readonly embedded?: boolea
   const persona = route.persona;
   // The investigation's evidence, as far as this persona may read it. The count, the list and the gap total all come from this one
   // list, so a withheld record is never counted or listed (BACK-66).
-  const readable = useMemo(() => INV_DEMO_7.evidence.filter((e) => w.evidenceById[e.id] !== undefined), [w]);
+  const readable = useMemo(() => INV_DEMO_7.evidence.filter((e) => w.evidence[e.id] !== undefined), [w]);
 
   const startIdx = Math.max(0, events.findIndex((e) => e.id === route.evt));
   const [ms, setMs] = useState(() => msOfIndex(route.evt ? startIdx : 5));
@@ -239,7 +239,7 @@ export function MissionReplay({ embedded = false }: { readonly embedded?: boolea
               <div role="tabpanel" id="rphold-panel" aria-labelledby={`rphold-tab-${hold}`} className="kv2-hold">
                 {hold === 'cor' && (idx < corIdx ? <p className="kv2-empty"><T k="rp.cor.none" /></p> : (
                   <div className="kv2-cor">
-                    <EvidenceItem evidence={w.evidenceById['E-3']!} />
+                    <EvidenceItem evidence={w.evidence['E-3']!} />
                     {persona === 'technical' && <p className="kv2-rule"><b><T k="rp.cor.rule" /></b><T k="edge.commitKey" /></p>}
                   </div>
                 ))}
@@ -265,8 +265,8 @@ export function MissionReplay({ embedded = false }: { readonly embedded?: boolea
                 ))}
                 {hold === 'gap' && (gaps.length === 0 && idx < ingestedIdx ? <p className="kv2-empty"><T k="rp.gap.none" /></p> : (
                   <ul className="kv2-ev-list">
-                    {gaps.length > 0 && <li><EvidenceItem evidence={w.evidenceById['E-6']!} /></li>}
-                    {idx >= ingestedIdx && <li><EvidenceItem evidence={w.evidenceById['E-7']!} /></li>}
+                    {gaps.length > 0 && <li><EvidenceItem evidence={w.evidence['E-6']!} /></li>}
+                    {idx >= ingestedIdx && <li><EvidenceItem evidence={w.evidence['E-7']!} /></li>}
                   </ul>
                 ))}
               </div>

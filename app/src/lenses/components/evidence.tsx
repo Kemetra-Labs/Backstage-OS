@@ -8,8 +8,8 @@ import { Age, Lt, Provider_, ToneChip, TruthChip, Tx } from './ui';
 export function useEvTitle(): (id: string) => string {
   const { copy, route, t } = useLens();
   return (id) => {
-    const v1 = copy.evidenceItem[id]?.[route.persona];
-    if (v1) return v1;
+    const hostTitle = copy.evidenceItem[id]?.[route.persona];
+    if (hostTitle) return hostTitle;
     return id === 'E-8' || id === 'E-9' ? t(id === 'E-8' ? 'ev.E-8' : 'ev.E-9') : id;
   };
 }

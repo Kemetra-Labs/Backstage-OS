@@ -34,7 +34,7 @@
   --kv2-violet: #b9aaf0;
   --kv2-unk: #9fb0bf;
 
-  /* Truth labels (same meaning as V1: observed green, correlated blue, hypothesis amber, proposed violet) */
+  /* Truth labels (same meaning as host: observed green, correlated blue, hypothesis amber, proposed violet) */
   --kv2-obs: var(--kv2-green);
   --kv2-cor: var(--kv2-blue);
   --kv2-hyp: var(--kv2-amber);

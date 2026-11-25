@@ -5,7 +5,7 @@ import { useLens } from '../useLens';
 import type { K } from '../../i18n';
 import { bcFigures, formatAt, type Axis } from '../logic/bc';
 import { sourceStatus } from '../logic/status';
-import type { World } from '../types';
+import type { World } from '../../contract/world';
 import { Pips } from './atoms';
 
 /** A swatch drawn in CSS (a line pattern and a marker shape), so the legend adds no SVG nodes to the screen. */
@@ -76,7 +76,7 @@ export function Timeline({ w }: { readonly w: World }) {
     <section className="kv2-bc-tl" aria-labelledby="bc-tl-h" data-testid="bc-timeline">
       <h2 id="bc-tl-h"><Icon name="clock" size={15} /><T k="obs.tl" /><small><T k="bc.tl.sub" /></small></h2>
       <ol>
-        {w.sourceEvents.map((e) => (
+        {w.sourceTimeline.map((e) => (
           <li key={e.id} data-tone={e.tone}>
             <i aria-hidden="true" />
             <time className="kv2-ltr" dateTime={e.at}>{formatAt(e.at, w.now, route.lang)}</time>

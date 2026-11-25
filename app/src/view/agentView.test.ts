@@ -24,7 +24,7 @@ describe('agentRoster', () => {
   });
 
   it('counts states', () => {
-    expect(stateCounts(rows)).toEqual({ watching: 1, idle: 1, paused: 1, not_enabled: 1 });
+    expect(stateCounts(rows)).toEqual({ watching: 2, idle: 0, paused: 1, not_enabled: 1 });
   });
 });
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { WORLD } from '../fixtures/world';
-import { authorizedWorld } from './authorize';
+import { WORLD } from '../../fixture/world';
+import { authorizedWorld } from '../../view/authorize';
 import { buildHash, DEFAULT_ROUTE, parseRoute } from '../navigation/route';
-import { deckCounts, filterMissions } from './deck';
+import { agentRoles, deckCounts, filterMissions } from './deck';
 import { CANVAS, HOME_VIEW, ZOOM_MAX, ZOOM_MIN, clampZoom, filterSet, focusView, kindCounts, linkCounts, neighbours, nextByDirection, scopeSet, zoomAt } from './graph';
 import { SPEEDS, STEP_MS, advance, clampMs, gapsAt, indexAt, milestonesAt, msOfIndex, stageAt, totalMs } from './replay';
 
@@ -41,14 +41,14 @@ describe('graph', () => {
   it('scopes to two links and dims, never removes, everything else', () => {
     const s = scopeSet('retail-tower', w);
     for (const id of ['stock-sync', 'pos', 'inventory', 'khepri', 'seshat-bi', 'port', 'github', 'jira', 'sentry']) expect(s.has(id), id).toBe(true);
-    expect(scopeSet('all', w).size).toBe(w.nodes.length);
-    expect(scopeSet('does-not-exist', w).size).toBe(w.nodes.length);
+    expect(scopeSet('all', w).size).toBe(w.graph.nodes.length);
+    expect(scopeSet('does-not-exist', w).size).toBe(w.graph.nodes.length);
     expect(scopeSet('khepri', w).has('github')).toBe(false);
   });
 
   it('keeps a node that lost its only link (BACK-30: Sentry for an unauthorized persona) in every scope, and still reads it as a risk', () => {
     const owner = authorizedWorld(w, 'owner');
-    expect(neighbours('sentry', owner.edges)).toEqual([]);
+    expect(neighbours('sentry', owner.graph.edges)).toEqual([]);
     for (const scope of ['retail-tower', 'khepri', 'seshat-bi', 'all']) expect(scopeSet(scope, owner).has('sentry'), scope).toBe(true);
     expect(filterSet('risks', owner).has('sentry')).toBe(true);
     expect(scopeSet('khepri', w).has('sentry')).toBe(false);
@@ -57,14 +57,14 @@ describe('graph', () => {
   it('filters risks to the failing check and the two problem services, never to unknown-health nodes', () => {
     expect([...filterSet('risks', w)].sort()).toEqual(['port', 'sentry', 'stock-sync']);
     expect(filterSet('products', w).size).toBe(2);
-    expect(filterSet('all', w).size).toBe(w.nodes.length);
+    expect(filterSet('all', w).size).toBe(w.graph.nodes.length);
   });
 
   it('counts kinds and link classifications from the fixture', () => {
     expect(kindCounts(w)).toEqual({ product: 2, project: 3, service: 5 });
     expect(linkCounts('retail-tower', w)).toEqual({ observed: 0, correlated: 0, hypothesis: 0, unknown: 3 });
     expect(linkCounts('stock-sync', w)).toEqual({ observed: 1, correlated: 1, hypothesis: 1, unknown: 1 });
-    expect(neighbours('github', w.edges)).toEqual(['stock-sync']);
+    expect(neighbours('github', w.graph.edges)).toEqual(['stock-sync']);
   });
 
   it('zooms about a point so that point stays put, and clamps', () => {
@@ -77,18 +77,18 @@ describe('graph', () => {
   });
 
   it('centres a node on focus', () => {
-    const n = w.nodes.find((x) => x.id === 'jira')!;
+    const n = w.graph.nodes.find((x) => x.id === 'jira')!;
     const v = focusView(n, 1.5);
     expect(n.x * v.k + v.tx).toBeCloseTo(CANVAS.w / 2, 6);
     expect(n.y * v.k + v.ty).toBeCloseTo(CANVAS.h / 2, 6);
   });
 
   it('moves between nodes by arrow direction', () => {
-    expect(nextByDirection('retail-tower', 'up', w.nodes)).toBe('stock-sync');
-    expect(nextByDirection('retail-tower', 'right', w.nodes)).toBe('inventory');
-    expect(nextByDirection('retail-tower', 'left', w.nodes)).toBe('pos');
-    expect(nextByDirection('stock-sync', 'up', w.nodes)).toBeNull();
-    expect(nextByDirection('nope', 'up', w.nodes)).toBeNull();
+    expect(nextByDirection('retail-tower', 'up', w.graph.nodes)).toBe('stock-sync');
+    expect(nextByDirection('retail-tower', 'right', w.graph.nodes)).toBe('inventory');
+    expect(nextByDirection('retail-tower', 'left', w.graph.nodes)).toBe('pos');
+    expect(nextByDirection('stock-sync', 'up', w.graph.nodes)).toBeNull();
+    expect(nextByDirection('nope', 'up', w.graph.nodes)).toBeNull();
   });
 });
 
@@ -143,13 +143,21 @@ describe('replay', () => {
 describe('deck', () => {
   it('derives counts from the missions, with no invented activity totals', () => {
     const c = deckCounts(WORLD);
-    expect(c).toMatchObject({ agents: 5, active: 5, needsReview: 1, reviewing: 2, monitoring: 2 });
+    expect(c).toMatchObject({ agents: 4, active: 5, needsReview: 1, reviewing: 2, monitoring: 2 });
     expect(Object.values(c.byStatus).reduce((a, b) => a + b, 0)).toBe(WORLD.missions.length);
   });
 
   it('filters by agent and status', () => {
-    expect(filterMissions(WORLD.missions, { agent: 'AG-3', status: 'all' })).toHaveLength(1);
+    expect(filterMissions(WORLD.missions, { agent: 'AG-collector', status: 'all' }).map((m) => m.id)).toEqual(['MSN-DEMO-3', 'MSN-DEMO-4', 'MSN-DEMO-5']);
+    expect(filterMissions(WORLD.missions, { agent: 'AG-guard', status: 'all' })).toEqual([]);
     expect(filterMissions(WORLD.missions, { agent: 'all', status: 'waiting_review' }).map((m) => m.id)).toEqual(['MSN-DEMO-5']);
-    expect(filterMissions(WORLD.missions, { agent: 'AG-1', status: 'idle' })).toHaveLength(0);
+    expect(filterMissions(WORLD.missions, { agent: 'AG-scout', status: 'idle' })).toHaveLength(0);
+  });
+
+  it('derives an agent role from its missions, in queue order, and none for an agent without missions', () => {
+    expect(agentRoles(WORLD, 'AG-scout')).toEqual(['sensing']);
+    expect(agentRoles(WORLD, 'AG-collector')).toEqual(['analysis', 'proposal']);
+    expect(agentRoles(WORLD, 'AG-guard')).toEqual([]);
+    expect(agentRoles(WORLD, 'AG-fixer')).toEqual([]);
   });
 });

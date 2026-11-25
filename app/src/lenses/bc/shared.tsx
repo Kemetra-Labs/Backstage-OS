@@ -4,7 +4,7 @@ import type { IconName } from '../components/Icon';
 import { useLens } from '../useLens';
 import type { K } from '../../i18n';
 import type { NodeChipKind } from '../logic/evidence';
-import type { WorldNode } from '../types';
+import type { GraphNode } from '../../contract/world';
 
 export const NODE_ICON: Readonly<Record<string, IconName>> = {
   'retail-tower': 'layers', khepri: 'cube', 'stock-sync': 'bolt', pos: 'grid', inventory: 'db', github: 'code', jira: 'board',
@@ -17,7 +17,7 @@ export const PROV_INITIAL: Readonly<Record<Provider, string>> = { github: 'G', j
 
 export const ND = (id: string): K => `map.nd.${id}` as K;
 /** The overview description of a node. An authorized world may swap it for a generic one (see authorizedWorld). */
-export const NL = (node: Pick<WorldNode, 'id' | 'descKey'>): K => (node.descKey ?? `map.nl.${node.id}`) as K;
+export const NL = (node: Pick<GraphNode, 'id' | 'descKey'>): K => (node.descKey ?? `map.nl.${node.id}`) as K;
 
 /** The one status word a node chip shows, in sentence case. Unknown never reads as healthy. */
 export function useChipText(): (k: NodeChipKind) => string {

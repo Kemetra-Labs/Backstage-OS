@@ -4,19 +4,19 @@ import type { CSSProperties, KeyboardEvent, MutableRefObject } from 'react';
 import { Icon } from '../components/Icon';
 import { Lt, Tx } from '../components/ui';
 import { useLens } from '../useLens';
-import { DEFAULT_BEND, HUB_ID, LINK_BEND } from '../fixtures/orbit-layout';
+import { DEFAULT_BEND, HUB_ID, LINK_BEND } from '../logic/orbit-layout';
 import { type K } from '../../i18n';
 import { curve, edgeStale, isIncident } from '../logic/bc';
 import { nodeChip } from '../logic/evidence';
 import { nextByDirection, type Dir } from '../logic/graph';
 import { BC_CANVAS, ORBIT_RADII, ORBITS, orbitOf, type Point } from '../logic/orbit';
 import { sourceStatus, type SourceStatus } from '../logic/status';
-import type { World, WorldEdge, WorldNode } from '../types';
+import type { World, GraphEdge, GraphNode } from '../../contract/world';
 import { Ring, StatusChip } from './atoms';
 import { ND, NODE_ICON, useChipText } from './shared';
 
 /** Orb size is by kind only (never by data): hub 124, product and project 58, service 52. */
-const ORB: Readonly<Record<WorldNode['kind'], number>> = { product: 58, project: 58, service: 52 };
+const ORB: Readonly<Record<GraphNode['kind'], number>> = { product: 58, project: 58, service: 52 };
 const HUB_ORB = 124;
 // First-load orbit timing (ms): orbits draw first, then the nodes settle inward orbit by orbit. Never more than 10 at once.
 const DRAW_DELAY: Readonly<Record<string, number>> = { inner: 0, middle: 50, outer: 100 };
@@ -33,9 +33,9 @@ interface CanvasProps {
   readonly intro: boolean;
 }
 
-const bendOf = (e: WorldEdge): number => (e.cls === 'group' ? 0 : LINK_BEND[e.id] ?? DEFAULT_BEND);
+const bendOf = (e: GraphEdge): number => (e.cls === 'group' ? 0 : LINK_BEND[e.id] ?? DEFAULT_BEND);
 
-function Edge({ e, a, b, dim, hl, stale }: { readonly e: WorldEdge; readonly a: Point; readonly b: Point; readonly dim: boolean; readonly hl: boolean; readonly stale: boolean }) {
+function Edge({ e, a, b, dim, hl, stale }: { readonly e: GraphEdge; readonly a: Point; readonly b: Point; readonly dim: boolean; readonly hl: boolean; readonly stale: boolean }) {
   const c = curve(a, b, bendOf(e));
   return (
     <g className="kv2-bc-edge" data-id={e.id} data-cls={e.cls} data-truth={e.truth} data-stale={stale || undefined} data-dim={dim || undefined} data-hl={hl || undefined}>
@@ -47,7 +47,7 @@ function Edge({ e, a, b, dim, hl, stale }: { readonly e: WorldEdge; readonly a: 
 
 /** The truth marker at a link's midpoint. It is HTML, not SVG: the SVG stretches with the canvas (preserveAspectRatio none), which
  * would squash a circle or diamond on a phone. Position uses the same canvas fractions and --pad inset as the node buttons. */
-function Marker({ e, a, b, dim, hl, stale }: { readonly e: WorldEdge; readonly a: Point; readonly b: Point; readonly dim: boolean; readonly hl: boolean; readonly stale: boolean }) {
+function Marker({ e, a, b, dim, hl, stale }: { readonly e: GraphEdge; readonly a: Point; readonly b: Point; readonly dim: boolean; readonly hl: boolean; readonly stale: boolean }) {
   if (e.cls === 'group' || e.truth === 'unknown') return null;
   const c = curve(a, b, bendOf(e));
   const style = { '--fx': (c.mx / BC_CANVAS.w).toFixed(4), '--fy': (c.my / BC_CANVAS.h).toFixed(4) } as CSSProperties;
@@ -67,7 +67,7 @@ function Marker({ e, a, b, dim, hl, stale }: { readonly e: WorldEdge; readonly a
 }
 
 interface NodeProps {
-  readonly n: WorldNode;
+  readonly n: GraphNode;
   readonly w: World;
   readonly p: Point;
   readonly selected: boolean;
@@ -135,7 +135,7 @@ function Node({ n, w, p, selected, dim, onSelect, refFn, intro }: NodeProps) {
 
 export function Canvas({ w, points, sel, active, onSelect, nodeRefs, intro }: CanvasProps) {
   const { t } = useLens();
-  const edges = w.edges;
+  const edges = w.graph.edges;
   const edgeStates = edges.map((e) => {
     const own = isIncident(e, sel);
     return { e, hl: own, stale: edgeStale(e, w), dim: !active.has(e.a) || !active.has(e.b) || !own };
@@ -146,7 +146,7 @@ export function Canvas({ w, points, sel, active, onSelect, nodeRefs, intro }: Ca
     const cur = (document.activeElement as HTMLElement | null)?.dataset.node;
     if (!dir || !cur) return;
     e.preventDefault();
-    const placed = w.nodes.map((n) => ({ ...n, x: points[n.id]!.x, y: points[n.id]!.y }));
+    const placed = w.graph.nodes.map((n) => ({ ...n, x: points[n.id]!.x, y: points[n.id]!.y }));
     const next = nextByDirection(cur, dir, placed);
     if (next) nodeRefs.current[next]?.focus();
   };
@@ -167,7 +167,7 @@ export function Canvas({ w, points, sel, active, onSelect, nodeRefs, intro }: Ca
         ))}
       </svg>
       {edgeStates.map(({ e, ...st }) => <Marker key={e.id} e={e} a={points[e.a]!} b={points[e.b]!} {...st} />)}
-      {w.nodes.map((n) => (
+      {w.graph.nodes.map((n) => (
         <Node
           key={n.id}
           n={n}

@@ -1,5 +1,5 @@
-/* BACK-86 (S4): the B+C map's self-hosted faces under their own family names. The lab declares "Manrope" and "Cairo"; declaring
-   "Cairo" in the host would silently change the Arabic text of every V1 screen, whose stack lists Cairo. Here the same two files
+/* BACK-86 (S4): the B+C map's self-hosted faces under their own family names. The standalone lens app declares "Manrope" and "Cairo"; declaring
+   "Cairo" in the host would silently change the Arabic text of every host screen, whose stack lists Cairo. Here the same two files
    (provenance and licences: ../assets/fonts/SOURCE.md) get names only .kv2-scope uses. No new font file, no redistribution. */
 @font-face {
   font-family: "Kawalys BC Manrope"; font-style: normal; font-weight: 200 800; font-display: swap;

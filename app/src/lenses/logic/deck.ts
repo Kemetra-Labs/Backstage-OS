@@ -1,5 +1,5 @@
 // Agent Flight Deck logic. All agents are simulated; these are counts and filters over fixed fixture rows.
-import type { AgentStatus, Mission, World } from '../types';
+import type { AgentStatus, Mission, MissionKind, World } from '../../contract/world';
 
 export interface DeckCounts {
   readonly agents: number;
@@ -32,3 +32,9 @@ export const filterMissions = (list: readonly Mission[], f: MissionFilter): read
   list.filter((m) => (f.agent === 'all' || m.agent === f.agent) && (f.status === 'all' || m.status === f.status));
 
 export const STATUS_ORDER: readonly AgentStatus[] = ['observing', 'analyzing', 'drafting', 'waiting_review', 'idle'];
+
+const KIND_ORDER: readonly MissionKind[] = ['sensing', 'analysis', 'proposal'];
+
+/** The kinds of mission an agent works, in queue order: its role on the deck. Derived from the missions; an agent with none has no role. */
+export const agentRoles = (w: Pick<World, 'missions'>, agentId: string): readonly MissionKind[] =>
+  KIND_ORDER.filter((k) => w.missions.some((m) => m.agent === agentId && m.kind === k));

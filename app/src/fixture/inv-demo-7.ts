@@ -1,10 +1,10 @@
 // Synthetic case INV-DEMO-7 (Blueprint v4 §4). Every value is invented. Keys use RT-DEMO-, links use *.example.invalid.
 // The sources, the evidence E-1..E-7 and the three map nodes are canonical facts owned by src/domain (BACK-83): re-exported and
-// projected here, not defined here. What stays below is V1's own presentation of the case: its facts list, hypothesis and raw output.
+// projected here, not defined here. What stays below is the host's own presentation of the case: its facts list, hypothesis and raw output.
 import type { EntityRef, Hypothesis, InvestigationData, MapNode } from '../contract/types';
 import { DOMAIN } from '../domain/fixture';
 import { EVIDENCE, SOURCES } from '../domain/records';
-import { toV1Nodes } from '../domain/toV1';
+import { investigationNodes } from '../domain/project';
 
 export { EVIDENCE, SOURCES };
 
@@ -17,7 +17,7 @@ export const HYPOTHESIS: Hypothesis = {
   contradicting: [EVIDENCE.issueLinked],
 };
 
-export const NODES: readonly MapNode[] = toV1Nodes(DOMAIN);
+export const NODES: readonly MapNode[] = investigationNodes(DOMAIN);
 
 export const RAW_OUTPUT = "AssertionError: expected '2026-11-16T14:00Z' got '2026-11-16T16:00Z'";
 

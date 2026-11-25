@@ -1,6 +1,6 @@
 // The canonical synthetic records for INV-DEMO-7: the five sources and evidence E-1..E-9. Every value is invented. Keys use
-// RT-DEMO-, links use *.example.invalid. These moved here from the V1 fixture (E-1..E-7) and the V2 world (E-8, E-9) in BACK-83,
-// byte for byte, so each is defined once and both consumers read it through the projections in toV1.ts and toV2.ts.
+// RT-DEMO-, links use *.example.invalid. These moved here from the two former fixtures (E-1..E-7 and E-8, E-9) in BACK-83, byte for
+// byte, so each is defined once; the world and the investigation read them directly or through the projections in project.ts.
 import type {
   EntityRef, EvidenceReference, Observation, Provider, SourceAuthority,
 } from '../contract/types';
@@ -35,7 +35,7 @@ const observation = (id: string, target: EntityRef, src: SourceAuthority, observ
   id, target, source: src, observedAt, ingestedAt: '2026-11-16T14:03:00Z', environment: 'ci', ...(url ? { sourceUrl: url } : {}),
 });
 
-/** E-1..E-7: the evidence the V1 investigation, evidence and project screens read. */
+/** E-1..E-7: the evidence the host investigation, evidence and project screens read. */
 export const EVIDENCE = {
   checkFailed: {
     id: 'E-1', classification: 'observed', freshness: 'current', visibility: 'all',
@@ -66,7 +66,7 @@ export const EVIDENCE = {
   },
 } as const satisfies Record<string, EvidenceReference>;
 
-/** E-8, E-9: read by the V2 Source Observatory and Mission Map. V1 screens do not list them. */
+/** E-8, E-9: reads of a source itself (World.sourceProbes), read by the Source Observatory and Mission Map. The catalogue does not list them. */
 export const EXTRA_EVIDENCE = {
   // A current Observed read of GitHub itself. It is why GitHub may show Healthy and nothing else may.
   githubProbe: {

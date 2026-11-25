@@ -1,23 +1,23 @@
-// Static guarantees about V2's source: isolated from V1, no network, tokens only (Hallmark floor 1, 2, 4), no action controls.
+// Static guarantees about the lens source: isolated from host, no network, tokens only (Hallmark floor 1, 2, 4), no action controls.
 import { describe, expect, it } from 'vitest';
 
 // Vitest blanks CSS modules (even with ?raw), so stylesheets are read from disk. The app tsconfig has no node types.
 // @ts-ignore node builtin, available at test time
 const { readFileSync, existsSync, statSync } = await import('node:fs');
 const read = (rel: string): string => readFileSync(new URL(rel, import.meta.url), 'utf8') as string;
-// The embeddable set the host imports (src/screens/lensStyles.ts). The lab's own reset.css and fonts.css retired with the lab entry
+// The embeddable set the host imports (src/screens/lensStyles.ts). The standalone lens app's own reset.css and fonts.css retired with the standalone lens entry
 // (BACK-92 R4); scope.css and embed-fonts.css are their host counterparts.
 const NAMES = ['embed-fonts', 'tokens', 'scope', 'base', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;
 const css: Record<string, string> = Object.fromEntries(NAMES.map((n) => [`./styles/${n}.css`, read(`./styles/${n}.css`)]));
 const src = import.meta.glob(['./**/*.ts', './**/*.tsx', '!./**/*.test.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
-const v1css: Record<string, string> = Object.fromEntries(['tokens', 'app'].map((n) => [n, read(`../styles/${n}.css`)]));
-const v1main = import.meta.glob('../main.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const hostCss: Record<string, string> = Object.fromEntries(['tokens', 'app'].map((n) => [n, read(`../styles/${n}.css`)]));
+const hostMain = import.meta.glob('../main.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 const tokens = css['./styles/tokens.css']!;
 const defined = new Set(Object.values(css).flatMap((t) => [...t.matchAll(/(--kv2-[a-z0-9-]+)\s*:/g)].map((m) => m[1]!)));
 const bodyCss = Object.entries(css).filter(([f]) => !f.endsWith('tokens.css'));
 
-describe('V2 stylesheets', () => {
+describe('lens stylesheets', () => {
   it('start with the Hallmark stamp', () => {
     expect(tokens.trimStart().startsWith('/* Hallmark')).toBe(true);
   });
@@ -39,7 +39,7 @@ describe('V2 stylesheets', () => {
   });
 
   it('clip horizontal overflow on the lens region, and honour reduced motion', () => {
-    // BACK-92 R4: the lab's global reset (reset.css) retired with the lab entry. The host embeds the lenses under .kv2-scope, so the
+    // BACK-92 R4: the standalone lens app's global reset (reset.css) retired with the standalone lens entry. The host embeds the lenses under .kv2-scope, so the
     // guarantee is on scope.css: the region clips its own overflow and stops every animation under reduced motion.
     const scope = css['./styles/scope.css']!;
     expect(scope).toMatch(/:where\(\.kv2-scope\)\s*\{[^}]*overflow-x:\s*clip/);
@@ -56,14 +56,14 @@ describe('V2 stylesheets', () => {
     }
   });
 
-  it('does not import or share any V1 stylesheet, and the V1 entry does not import the lenses', () => {
+  it('does not import or share any host stylesheet, and the host entry does not import the lenses', () => {
     for (const [f, text] of Object.entries(src)) expect(text, f).not.toMatch(/import\s+['"](\.\.\/)+styles\//);
-    expect(Object.keys(v1css).length).toBeGreaterThan(0);
-    expect(Object.values(v1main)[0]!).not.toMatch(/lenses\//);
+    expect(Object.keys(hostCss).length).toBeGreaterThan(0);
+    expect(Object.values(hostMain)[0]!).not.toMatch(/lenses\//);
   });
 });
 
-describe('V2 self-hosted assets (BACK-18)', () => {
+describe('lens self-hosted assets (BACK-18)', () => {
   const exists = (rel: string): boolean => existsSync(new URL(rel, import.meta.url)) as boolean;
   const urls = (text: string): string[] => [...text.matchAll(/url\(\s*["']?([^"')]+)/g)].map((m) => m[1]!);
 
@@ -94,7 +94,7 @@ describe('V2 self-hosted assets (BACK-18)', () => {
   });
 });
 
-describe('V2 sources', () => {
+describe('lens sources', () => {
   const files = Object.entries(src);
   it('make no network request, open no socket and store nothing', () => {
     expect(files.length).toBeGreaterThan(20);

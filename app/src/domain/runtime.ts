@@ -1,10 +1,10 @@
-// BACK-84: the runtime authority for which canonical records a persona may read. Both consumers (V1 view/authorize.ts and V2
+// BACK-84: the runtime authority for which canonical records a persona may read. Both consumers (host view/authorize.ts and lens
 // lenses/logic/authorize.ts) ask this module about the INV-DEMO-7 overlap instead of applying their own visibility rule to it.
 // Persona is a display switch, not authorization: this scopes synthetic demo data only, and no server-side identity, tenant or
 // X02/X04 enforcement exists or is claimed.
 //
 // One decision per record. An id the canonical fixture owns is 'visible' or 'withheld' according to scopeFixture and nothing else;
-// an id it does not own is 'foreign', and the caller's own rule still decides it (V1 isWithheld, V2 keepRef). So no overlap record
+// an id it does not own is 'foreign', and the caller's own rule still decides it (host isWithheld, lens keepRef). So no overlap record
 // is filtered twice, and disabling scopeFixture changes what both consumers show.
 import type { Persona } from '../contract/types';
 import { DOMAIN } from './fixture';

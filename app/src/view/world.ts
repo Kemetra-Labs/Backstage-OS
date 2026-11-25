@@ -53,7 +53,29 @@ export const projectById = (w: World, id: string): WorldProject | undefined => w
 export const investigationById = (w: World, id: string): InvestigationSummary | undefined =>
   w.investigations.find((i) => i.id === id);
 export const decisionById = (w: World, id: string): Decision | undefined => w.decisions.find((d) => d.id === id);
-export const evidenceById = (w: World, id: string): EvidenceReference | undefined => w.evidence[id];
+/** A catalogued evidence item: a read of a source itself (World.sourceProbes) is not in the catalogue, so it is undefined here. */
+export const evidenceById = (w: World, id: string): EvidenceReference | undefined =>
+  w.sourceProbes.includes(id) ? undefined : w.evidence[id];
+
+/** The evidence catalogue the demo search and the Evidence Explorer list: every record except the source probes, in world order. */
+export const catalogueEvidence = (w: World): readonly EvidenceReference[] =>
+  Object.values(w.evidence).filter((e) => !w.sourceProbes.includes(e.id));
+
+const caseMemo = new WeakMap<World, readonly EvidenceReference[]>();
+
+/**
+ * The mission's case evidence, as the records this world holds: the evidence of the investigation the mission follows, then the
+ * source probes. A record the world does not hold (withheld from the persona) is absent, so this never names one.
+ */
+export function caseEvidence(w: World): readonly EvidenceReference[] {
+  let list = caseMemo.get(w);
+  if (!list) {
+    const ids = [...(investigationById(w, w.investigationId)?.evidence.map((e) => e.id) ?? []), ...w.sourceProbes];
+    list = [...new Set(ids)].flatMap((id) => { const e = w.evidence[id]; return e ? [e] : []; });
+    caseMemo.set(w, list);
+  }
+  return list;
+}
 export const componentById = (p: WorldProject, id: string): WorldComponent | undefined => p.components.find((c) => c.id === id);
 
 /** The project and investigation that cite an evidence item, for "return to context" links. */

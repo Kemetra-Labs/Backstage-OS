@@ -7,16 +7,14 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Persona } from '../contract/types';
-import { WORLD as V1_WORLD } from '../fixture/world';
+import { WORLD } from '../fixture/world';
 import { INV_DEMO_7 } from '../fixture/inv-demo-7';
-import { authorizedInvestigation, authorizedWorld as v1Authorized } from '../view/authorize';
-import { WORLD as V2_WORLD } from '../lenses/fixtures/world';
-import { authorizedWorld as v2Authorized } from '../lenses/logic/authorize';
+import { authorizedInvestigation, authorizedWorld } from '../view/authorize';
 import { DOMAIN } from './fixture';
 import { canonicalComponent, canonicalFor, dependencyVerdict, evidenceVerdict } from './runtime';
 import { scopeFixture } from './scope';
-import { toV1ComponentFacts } from './toV1';
-import { toV2EdgeFacts, toV2NodeFacts } from './toV2';
+import { componentFacts } from './project';
+import { graphEdgeFacts, graphNodeFacts } from './project';
 
 const LAY: readonly Persona[] = ['owner', 'nontechnical'];
 const ALL: readonly Persona[] = ['owner', 'technical', 'nontechnical'];
@@ -57,39 +55,39 @@ describe('runtime verdicts come from scopeFixture', () => {
 });
 
 describe('the worlds the screens receive carry the scoped canonical facts', () => {
-  it.each(LAY)('%s: V1 RT overlap components and the investigation nodes equal the scoped projection', (p) => {
+  it.each(LAY)('%s: host RT overlap components and the investigation nodes equal the scoped projection', (p) => {
     const scoped = canonicalFor(p);
-    const rt = v1Authorized(V1_WORLD, p).projects.find((x) => x.id === 'RT')!;
+    const rt = authorizedWorld(WORLD, p).projects.find((x) => x.id === 'RT')!;
     const inv = authorizedInvestigation(INV_DEMO_7, p);
     for (const c of DOMAIN.components) {
-      expect(rt.components.find((x) => x.id === c.id)!.state, `V1 world ${c.id}`).toEqual(toV1ComponentFacts(scoped, c.id).state);
-      expect(inv.nodes.find((x) => x.id === c.id)!.state, `V1 investigation ${c.id}`).toEqual(toV1ComponentFacts(scoped, c.id).state);
+      expect(rt.components.find((x) => x.id === c.id)!.state, `host world ${c.id}`).toEqual(componentFacts(scoped, c.id).state);
+      expect(inv.nodes.find((x) => x.id === c.id)!.state, `host investigation ${c.id}`).toEqual(componentFacts(scoped, c.id).state);
     }
   });
 
-  it.each(LAY)('%s: V2 overlap nodes and dependencies equal the scoped projection', (p) => {
+  it.each(LAY)('%s: lens overlap nodes and dependencies equal the scoped projection', (p) => {
     const scoped = canonicalFor(p);
-    const w = v2Authorized(V2_WORLD, p);
+    const w = authorizedWorld(WORLD, p);
     for (const c of DOMAIN.components) {
-      const n = w.nodes.find((x) => x.id === c.id)!;
-      const f = toV2NodeFacts(scoped, c.id);
-      expect({ state: n.state, evidence: n.evidence, check: n.check }, `V2 node ${c.id}`).toEqual({ state: f.state, evidence: f.evidence, check: f.check });
+      const n = w.graph.nodes.find((x) => x.id === c.id)!;
+      const f = graphNodeFacts(scoped, c.id);
+      expect({ state: n.state, evidence: n.evidence, check: n.check }, `lens node ${c.id}`).toEqual({ state: f.state, evidence: f.evidence, check: f.check });
     }
     for (const d of DOMAIN.dependencies) {
-      const e = w.edges.find((x) => x.cls === 'dep' && x.a === d.from && x.b === d.to)!;
-      expect({ truth: e.truth, evidence: e.evidence }, `V2 edge ${d.from}-${d.to}`).toEqual(toV2EdgeFacts(scoped, d.from, d.to));
+      const e = w.graph.edges.find((x) => x.cls === 'dep' && x.a === d.from && x.b === d.to)!;
+      expect({ truth: e.truth, evidence: e.evidence }, `lens edge ${d.from}-${d.to}`).toEqual(graphEdgeFacts(scoped, d.from, d.to));
     }
   });
 
   it('technical receives the unscoped worlds, and an owner to technical to owner switch leaves no E-5 behind', () => {
-    expect(v1Authorized(V1_WORLD, 'technical')).toBe(V1_WORLD);
-    expect(v2Authorized(V2_WORLD, 'technical')).toBe(V2_WORLD);
+    expect(authorizedWorld(WORLD, 'technical')).toBe(WORLD);
+    expect(authorizedWorld(WORLD, 'technical')).toBe(WORLD);
     for (const p of ['owner', 'technical', 'owner', 'nontechnical', 'technical', 'nontechnical'] as const) {
       const has = (json: string) => /"E-5"|"O-5"/.test(json);
       const lay = p !== 'technical';
-      expect(has(JSON.stringify(v1Authorized(V1_WORLD, p))), `V1 ${p}`).toBe(!lay);
-      expect(has(JSON.stringify(authorizedInvestigation(INV_DEMO_7, p))), `V1 investigation ${p}`).toBe(!lay);
-      expect(has(JSON.stringify(v2Authorized(V2_WORLD, p))), `V2 ${p}`).toBe(!lay);
+      expect(has(JSON.stringify(authorizedWorld(WORLD, p))), `host ${p}`).toBe(!lay);
+      expect(has(JSON.stringify(authorizedInvestigation(INV_DEMO_7, p))), `host investigation ${p}`).toBe(!lay);
+      expect(has(JSON.stringify(authorizedWorld(WORLD, p))), `lens ${p}`).toBe(!lay);
     }
   });
 });
@@ -98,11 +96,11 @@ describe('scopeFixture is the only authority for overlap records (mutation proof
   afterEach(() => { vi.doUnmock('./scope'); vi.doUnmock('./fixture'); vi.resetModules(); });
 
   const consumers = async () => ({
-    v1: await import('../view/authorize'), v1w: await import('../fixture/world'), v1i: await import('../fixture/inv-demo-7'),
-    v2: await import('../lenses/logic/authorize'), v2w: await import('../lenses/fixtures/world'),
+    host: await import('../view/authorize'), world: await import('../fixture/world'), investigation: await import('../fixture/inv-demo-7'),
+    lens: await import('../view/authorize'), lensWorld: await import('../fixture/world'),
   });
 
-  // `withhold(id)`: mark one canonical record Technical-only in the canonical fixture only. The V1 and V2 objects for it still say
+  // `withhold(id)`: mark one canonical record Technical-only in the canonical fixture only. The host and lens objects for it still say
   // visible to everyone, so only the canonical decision can remove it.
   const withhold = (id: string) => {
     vi.doMock('./fixture', async (orig) => {
@@ -117,24 +115,24 @@ describe('scopeFixture is the only authority for overlap records (mutation proof
     withhold('E-3');
     const c = await consumers();
     for (const p of LAY) {
-      expect(c.v1w.WORLD.evidence['E-3']!.visibility, 'the consumer record itself is not Technical-only').not.toBe('technical');
-      const v1 = JSON.stringify(c.v1.authorizedWorld(c.v1w.WORLD, p));
-      const v1i = JSON.stringify(c.v1.authorizedInvestigation(c.v1i.INV_DEMO_7, p));
-      const v2 = JSON.stringify(c.v2.authorizedWorld(c.v2w.WORLD, p));
-      expect(v1, `V1 ${p}`).not.toContain('"E-3"');
-      expect(v1i, `V1 investigation ${p}`).not.toContain('"E-3"');
-      expect(v2, `V2 ${p}`).not.toContain('"E-3"');
+      expect(c.world.WORLD.evidence['E-3']!.visibility, 'the consumer record itself is not Technical-only').not.toBe('technical');
+      const host = JSON.stringify(c.host.authorizedWorld(c.world.WORLD, p));
+      const investigation = JSON.stringify(c.host.authorizedInvestigation(c.investigation.INV_DEMO_7, p));
+      const lens = JSON.stringify(c.lens.authorizedWorld(c.lensWorld.WORLD, p));
+      expect(host, `host ${p}`).not.toContain('"E-3"');
+      expect(investigation, `host investigation ${p}`).not.toContain('"E-3"');
+      expect(lens, `lens ${p}`).not.toContain('"E-3"');
     }
-    expect(JSON.stringify(c.v1.authorizedWorld(c.v1w.WORLD, 'technical'))).toContain('"E-3"');
-    expect(JSON.stringify(c.v2.authorizedWorld(c.v2w.WORLD, 'technical'))).toContain('"E-3"');
+    expect(JSON.stringify(c.host.authorizedWorld(c.world.WORLD, 'technical'))).toContain('"E-3"');
+    expect(JSON.stringify(c.lens.authorizedWorld(c.lensWorld.WORLD, 'technical'))).toContain('"E-3"');
   });
 
-  it('V1 fails closed when the canonical fixture withholds the record the investigation raw output cites', async () => {
+  it('host fails closed when the canonical fixture withholds the record the investigation raw output cites', async () => {
     vi.resetModules();
     withhold('E-1');
     const c = await consumers();
-    for (const p of LAY) expect(() => c.v1.authorizedInvestigation(c.v1i.INV_DEMO_7, p), p).toThrow(/rawOutput/);
-    expect(() => c.v1.authorizedInvestigation(c.v1i.INV_DEMO_7, 'technical')).not.toThrow();
+    for (const p of LAY) expect(() => c.host.authorizedInvestigation(c.investigation.INV_DEMO_7, p), p).toThrow(/rawOutput/);
+    expect(() => c.host.authorizedInvestigation(c.investigation.INV_DEMO_7, 'technical')).not.toThrow();
   });
 
   it('with scopeFixture disabled the overlap is no longer withheld, while records outside it still are (no second filter on the overlap)', async () => {
@@ -142,14 +140,14 @@ describe('scopeFixture is the only authority for overlap records (mutation proof
     vi.doMock('./scope', () => ({ scopeFixture: (f: unknown) => f }));
     const c = await consumers();
     for (const p of LAY) {
-      const w1 = c.v1.authorizedWorld(c.v1w.WORLD, p);
-      const w2 = c.v2.authorizedWorld(c.v2w.WORLD, p);
+      const w1 = c.host.authorizedWorld(c.world.WORLD, p);
+      const w2 = c.lens.authorizedWorld(c.lensWorld.WORLD, p);
       // The canary: E-5 is an overlap record, so only scopeFixture keeps it from lay personas.
-      expect(w1.evidence['E-5'], `V1 ${p}`).toBeDefined();
-      expect(w2.evidenceById['E-5'], `V2 ${p}`).toBeDefined();
+      expect(w1.evidence['E-5'], `host ${p}`).toBeDefined();
+      expect(w2.evidence['E-5'], `lens ${p}`).toBeDefined();
       // E-12 is not an overlap record: each consumer's own rule still withholds it.
-      expect(w1.evidence['E-12'], `V1 ${p} E-12`).toBeUndefined();
-      expect(w2.evidenceById['E-23'], `V2 ${p} E-23`).toBeUndefined();
+      expect(w1.evidence['E-12'], `host ${p} E-12`).toBeUndefined();
+      expect(w2.evidence['E-23'], `lens ${p} E-23`).toBeUndefined();
     }
   });
 });
@@ -165,7 +163,7 @@ describe('no module outside src/domain scopes the canonical fixture on its own',
     const files = walk(SRC);
     const users = files.filter((f) => /scopeFixture\s*\(|import[^;]*scopeFixture/.test(readFileSync(f, 'utf8'))).map(rel).filter((f) => !f.startsWith('domain/')).sort();
     expect(users).toEqual([]);
-    for (const f of ['view/authorize.ts', 'lenses/logic/authorize.ts']) {
+    for (const f of ['view/authorize.ts']) {
       expect(readFileSync(join(SRC, f), 'utf8'), f).toMatch(/domain\/runtime'/);
     }
   });

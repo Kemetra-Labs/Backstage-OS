@@ -1,4 +1,4 @@
-// Canonical synthetic domain model for the INV-DEMO-7 overlap (BACK-71). V1 and V2 are projections of this one fixture.
+// Canonical synthetic domain model for the INV-DEMO-7 overlap (BACK-71). The world and the investigation are projections of this one fixture.
 // Demo data only: nothing here is live telemetry.
 import type {
   Connectivity, EvidenceReference, Freshness, Health, NodeId, SourceAuthority, TruthLabel,

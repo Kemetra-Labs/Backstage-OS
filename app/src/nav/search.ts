@@ -2,6 +2,7 @@
 import type { Lang, Persona } from '../contract/types';
 import type { World } from '../contract/world';
 import { plain as strip } from '../i18n/format';
+import { catalogueEvidence } from '../view/world';
 import { hrefFor } from './routes';
 
 export type SearchKind = 'project' | 'component' | 'investigation' | 'evidence' | 'decision' | 'workItem';
@@ -38,7 +39,7 @@ export function buildIndex(w: World): readonly SearchItem[] {
       text: { en: strip(i.title.owner.en), ar: strip(i.title.owner.ar) },
       href: hrefFor({ name: 'investigation', id: i.id }), technicalOnly: false });
   }
-  for (const e of Object.values(w.evidence)) {
+  for (const e of catalogueEvidence(w)) {
     const from = w.investigations.find((i) => i.evidence.some((x) => x.id === e.id))?.id;
     items.push({ kind: 'evidence', id: e.id, label: e.id, text: { en: '', ar: '' },
       href: hrefFor(from ? { name: 'evidence', id: e.id, from } : { name: 'evidence', id: e.id }),

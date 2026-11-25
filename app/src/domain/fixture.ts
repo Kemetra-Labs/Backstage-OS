@@ -1,6 +1,6 @@
 // The single canonical synthetic fixture for INV-DEMO-7. Every value is invented. It owns the overlap facts (sources, evidence
-// E-1..E-9, the components pos, stock-sync and inventory, and the dependencies between them). The V1 fixture and the V2 world
-// read them through toV1.ts and toV2.ts (BACK-83); nothing else in the app defines these facts.
+// E-1..E-9, the components pos, stock-sync and inventory, and the dependencies between them). The one world (fixture/world.ts)
+// and the investigation read them through the projections in project.ts (BACK-83); nothing else in the app defines these facts.
 import { EVIDENCE, EXTRA_EVIDENCE, SOURCES } from './records';
 import type { DomainFixture } from './types';
 
@@ -22,8 +22,8 @@ export const DOMAIN: DomainFixture = {
   ],
   dependencies: [
     { from: 'pos', to: 'stock-sync', truth: 'unknown', evidence: [] },
-    // Ruling (BACK-71): V2's reading. V1's world still says authored on E-7, which was never read (notReadReason 'unavailable').
-    // That V1 edge is NOT projected from here: changing it would change the V1 map, an owner decision (BACK-83 report).
+    // Ruling (BACK-71): the lens reading. the host's world still says authored on E-7, which was never read (notReadReason 'unavailable').
+    // That host edge is NOT projected from here: changing it would change the host map, an owner decision (BACK-83 report).
     { from: 'stock-sync', to: 'inventory', truth: 'hypothesis', evidence: [] },
   ],
 };

@@ -4,19 +4,18 @@ import { useApp } from '../app/AppContext';
 import { replayTimeRows, type OrderStatus } from '../bridge/replayTime';
 import { Lt, Tx } from '../lenses/components/ui';
 import { useLens } from '../lenses/useLens';
-import { WORLD } from '../lenses/fixtures/world';
-import { authorizedWorld } from '../lenses/logic/authorize';
 import type { K } from '../i18n';
 import { hostCopy } from '../i18n/host';
 
 const hhmm = (iso: string): string => `${iso.slice(5, 10)} ${iso.slice(11, 16)}`;
 
 export function ReplayTimeBasis() {
-  const { lang } = useApp();
-  const { route, t } = useLens();
+  // The host's world, already authorized for the persona (App.tsx): the replay's persona is the host's persona.
+  const { lang, world } = useApp();
+  const { t } = useLens();
   const copy = hostCopy('REPLAY_VIEW_COPY', lang).basis;
-  const rows = replayTimeRows(authorizedWorld(WORLD, route.persona));
-  const events = new Map(authorizedWorld(WORLD, route.persona).replay.map((e) => [e.id, e.key]));
+  const rows = replayTimeRows(world);
+  const events = new Map(world.replay.map((e) => [e.id, e.key]));
   const label: Readonly<Record<OrderStatus, string>> = { consistent: copy.consistent, uncertain: copy.uncertain, unknown: copy.unknown };
   return (
     <section className="kv2-panel kv2-rtb" aria-labelledby="rtb-h" data-testid="replay-time-basis">

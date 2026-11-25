@@ -1,4 +1,4 @@
-/* Mission Map, Hybrid B+C pilot (BACK-27). Scoped to .kv2-bc so nothing here can touch the other V2 screens; delete this file,
+/* Mission Map, Hybrid B+C pilot (BACK-27). Scoped to .kv2-bc so nothing here can touch the other lens screens; delete this file,
    screens/MissionMapBC.tsx, bc/ and the Outlet switch in App.tsx to remove the pilot. Tokens only, text 11 px or larger.
    The canvas keeps left-to-right geometry in Arabic; text inside the cards and every panel follows the language. */
 

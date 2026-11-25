@@ -5,17 +5,17 @@
 import { describe, expect, it } from 'vitest';
 import { leaksIn as leaks } from '../../e2e/leaks';
 import type { Persona } from '../contract/types';
-import { WORLD } from '../lenses/fixtures/world';
-import { authorizedWorld } from '../lenses/logic/authorize';
+import { WORLD } from '../fixture/world';
+import { authorizedWorld } from '../view/authorize';
 import { deckCounts, filterMissions, STATUS_ORDER } from '../lenses/logic/deck';
 import { evidenceOf } from '../lenses/logic/evidence';
-import type { Mission, World } from '../lenses/types';
+import type { Mission, World } from '../contract/world';
 import { expectWorldReadOnlyThroughAuthorizedWorld } from './scopeGuard';
 
 const LAY: readonly Persona[] = ['owner', 'nontechnical'];
 const ALL: readonly Persona[] = ['technical', 'owner', 'nontechnical'];
 
-const base: Omit<Mission, 'id' | 'evidence' | 'label'> = { agent: 'AG-2', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, key: 'ms.fresh' };
+const base: Omit<Mission, 'id' | 'evidence' | 'label'> = { agent: 'AG-scout', kind: 'sensing', status: 'observing', human: 'monitoring', startedMinutesAgo: 3, key: 'ms.fresh' };
 const onlyRestricted: Mission = { ...base, id: 'MSN-X1', label: 'observed', evidence: ['E-5'] };
 const missingEvidence: Mission = { ...base, id: 'MSN-X2', label: 'observed', evidence: ['E-404'] };
 const alreadyUnknown: Mission = { ...base, id: 'MSN-X3', label: 'unknown', evidence: [] };
@@ -38,7 +38,7 @@ describe('Flight Deck: zero inputs', () => {
 
   it('filtering an empty list, or matching nothing, gives an empty list', () => {
     expect(filterMissions([], { agent: 'all', status: 'all' })).toEqual([]);
-    expect(filterMissions(WORLD.missions, { agent: 'AG-1', status: 'idle' })).toEqual([]);
+    expect(filterMissions(WORLD.missions, { agent: 'AG-scout', status: 'idle' })).toEqual([]);
   });
 
   it('every persona still gets an (empty) world without throwing', () => {

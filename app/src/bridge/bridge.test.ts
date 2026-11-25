@@ -7,9 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { Lang, Persona } from '../contract/types';
 import { DOMAIN } from '../domain/fixture';
-import { WORLD as V1 } from '../fixture/world';
-import { WORLD as V2 } from '../lenses/fixtures/world';
-import { authorizedWorld } from '../lenses/logic/authorize';
+import { WORLD } from '../fixture/world';
+import { authorizedWorld } from '../view/authorize';
 import { hrefFor, parseHash, type Route } from '../nav/routes';
 import { COMPONENT_PROJECT, IDENTITIES, isSharedComponent, mapIdOfProject, projectOfMapId } from './identity';
 import { permittedNode, toHostRoute, toHostRouteIn, toMapContext, toMapContextIn, type HostView } from './mapContext';
@@ -22,43 +21,57 @@ const restricted = (json: string): boolean => /"E-5"|"O-5"/.test(json);
 
 describe('identity crosswalk is pinned to the fixtures', () => {
   it('names every host project exactly once, and no project that does not exist', () => {
-    expect(IDENTITIES.map((e) => e.host).sort()).toEqual(V1.projects.map((p) => p.id).sort());
+    expect(IDENTITIES.map((e) => e.host).sort()).toEqual(WORLD.projects.map((p) => p.id).sort());
   });
 
-  it('every map id is a node of the V2 fixture, of the kind the crosswalk records', () => {
-    for (const e of IDENTITIES) expect(V2.nodes.find((n) => n.id === e.map)?.kind, e.map).toBe(e.mapKind);
+  it('every map id is a node of the mission graph, of the kind the crosswalk records', () => {
+    for (const e of IDENTITIES) expect(WORLD.graph.nodes.find((n) => n.id === e.map)?.kind, e.map).toBe(e.mapKind);
   });
 
   it('RT is verified structurally: the host, the canonical model and the map agree on the same components', () => {
-    const rt = V1.projects.find((p) => p.id === 'RT')!;
+    const rt = WORLD.projects.find((p) => p.id === 'RT')!;
     const canonical = DOMAIN.components.map((c) => c.id);
-    for (const id of canonical) expect(rt.components.map((c) => c.id), `V1 RT has ${id}`).toContain(id);
-    const grouped = V2.edges.filter((e) => e.cls === 'group' && e.a === 'retail-tower').map((e) => e.b).sort();
+    for (const id of canonical) expect(rt.components.map((c) => c.id), `host RT has ${id}`).toContain(id);
+    const grouped = WORLD.graph.edges.filter((e) => e.cls === 'group' && e.a === 'retail-tower').map((e) => e.b).sort();
     expect(grouped).toEqual([...canonical].sort());
     expect(rt.name).toBe('Retail Tower OS');
-    expect(V2.nodes.find((n) => n.id === 'retail-tower')!.title).toBe('Retail Tower OS');
+    expect(WORLD.graph.nodes.find((n) => n.id === 'retail-tower')!.title).toBe('Retail Tower OS');
   });
 
   it('KH is not verified: a similar name only, with no shared component and no shared evidence', () => {
-    const kh = V1.projects.find((p) => p.id === 'KH')!;
-    const khepri = V2.nodes.find((n) => n.id === 'khepri')!;
+    const kh = WORLD.projects.find((p) => p.id === 'KH')!;
+    const khepri = WORLD.graph.nodes.find((n) => n.id === 'khepri')!;
     expect(kh.name).toBe(khepri.title);
-    const mapIds = new Set(V2.nodes.map((n) => n.id));
+    const mapIds = new Set(WORLD.graph.nodes.map((n) => n.id));
     expect(kh.components.filter((c) => mapIds.has(c.id))).toEqual([]);
-    expect(V2.edges.filter((e) => e.cls === 'group' && e.a === 'khepri')).toEqual([]);
+    expect(WORLD.graph.edges.filter((e) => e.cls === 'group' && e.a === 'khepri')).toEqual([]);
     expect(khepri.evidence).toEqual([]);
     expect(IDENTITIES.find((e) => e.host === 'KH')!.status).toBe('unresolved');
   });
 
   it('SB is ambiguous: a project on the host side, a service on the map side', () => {
-    expect(V1.projects.some((p) => p.id === 'SB')).toBe(true);
-    expect(V2.nodes.find((n) => n.id === 'seshat-bi')!.kind).toBe('service');
+    expect(WORLD.projects.some((p) => p.id === 'SB')).toBe(true);
+    expect(WORLD.graph.nodes.find((n) => n.id === 'seshat-bi')!.kind).toBe('service');
     expect(IDENTITIES.find((e) => e.host === 'SB')!.status).toBe('ambiguous');
   });
 
   it('exactly one identity is verified, and every entry explains itself', () => {
     expect(IDENTITIES.filter((e) => e.status === 'verified').map((e) => e.host)).toEqual(['RT']);
     for (const e of IDENTITIES) expect(e.basis.length, e.host).toBeGreaterThan(20);
+  });
+
+  it('is read from the graph nodes\' projectLink, not kept as a second table (BACK-102)', () => {
+    const linked = WORLD.graph.nodes.filter((n) => n.projectLink).map((n) => ({ host: n.projectLink!.project, map: n.id, status: n.projectLink!.status }));
+    expect(IDENTITIES.map((e) => ({ host: e.host, map: e.map, status: e.status }))).toEqual(linked);
+    expect(linked).toEqual([
+      { host: 'RT', map: 'retail-tower', status: 'verified' },
+      { host: 'KH', map: 'khepri', status: 'unresolved' },
+      { host: 'SB', map: 'seshat-bi', status: 'ambiguous' },
+    ]);
+    // A link is structural: authorizedWorld never changes it for any persona.
+    for (const p of ['owner', 'technical', 'nontechnical'] as const) {
+      expect(authorizedWorld(WORLD, p).graph.nodes.filter((n) => n.projectLink).map((n) => n.projectLink)).toEqual(linked.map((l) => WORLD.graph.nodes.find((n) => n.id === l.map)!.projectLink));
+    }
   });
 });
 
@@ -122,7 +135,7 @@ describe('the host route becomes a map context, and nothing else', () => {
     expect(toMapContext(view('owner', 'en', '#/project/KH'))).toMatchObject({ scope: 'all', node: null, origin: 'unresolved' });
     expect(toMapContext(view('owner', 'en', '#/project/SB'))).toMatchObject({ scope: 'all', node: null, origin: 'ambiguous' });
     expect(toMapContext(view('owner', 'en', '#/project/ZZ'))).toMatchObject({ scope: 'all', node: null, origin: 'foreign' });
-    const kh = V1.projects.find((p) => p.id === 'KH')!.components[0]!.id;
+    const kh = WORLD.projects.find((p) => p.id === 'KH')!.components[0]!.id;
     expect(toMapContext(view('owner', 'en', `#/project/KH/${kh}`)).node).toBeNull();
   });
 
@@ -133,8 +146,8 @@ describe('the host route becomes a map context, and nothing else', () => {
   });
 
   it('a selection the persona\'s authorized world does not hold is cleared', () => {
-    const w = authorizedWorld(V2, 'owner');
-    const trimmed = { ...w, nodes: w.nodes.filter((n) => n.id !== 'inventory') };
+    const w = authorizedWorld(WORLD, 'owner');
+    const trimmed = { ...w, graph: { ...w.graph, nodes: w.graph.nodes.filter((n) => n.id !== 'inventory') } };
     expect(permittedNode(w, 'inventory')).toBe('inventory');
     expect(permittedNode(trimmed, 'inventory')).toBeNull();
     expect(toMapContextIn(view('owner', 'en', '#/project/RT/inventory'), trimmed).node).toBeNull();
@@ -164,8 +177,8 @@ describe('no restricted record can reach the context', () => {
   });
 
   it('the world a selection is checked against holds no restricted record for a lay persona, and the technical one does', () => {
-    for (const p of LAY) expect(restricted(JSON.stringify(authorizedWorld(V2, p))), p).toBe(false);
-    expect(restricted(JSON.stringify(authorizedWorld(V2, 'technical')))).toBe(true);
+    for (const p of LAY) expect(restricted(JSON.stringify(authorizedWorld(WORLD, p))), p).toBe(false);
+    expect(restricted(JSON.stringify(authorizedWorld(WORLD, 'technical')))).toBe(true);
   });
 });
 
@@ -201,8 +214,8 @@ describe('a map selection becomes a host route, reversibly', () => {
   });
 
   it('has no route for a node the persona\'s authorized world does not hold', () => {
-    const w = authorizedWorld(V2, 'owner');
-    const trimmed = { ...w, nodes: w.nodes.filter((n) => n.id !== 'stock-sync') };
+    const w = authorizedWorld(WORLD, 'owner');
+    const trimmed = { ...w, graph: { ...w.graph, nodes: w.graph.nodes.filter((n) => n.id !== 'stock-sync') } };
     expect(toHostRouteIn({ scope: 'retail-tower', node: 'stock-sync' }, trimmed)).toBeNull();
     expect(toHostRouteIn({ scope: 'retail-tower', node: 'pos' }, trimmed)).not.toBeNull();
   });
@@ -240,7 +253,7 @@ describe('the bridge adds no second authority', () => {
     for (const [f, text] of sources) {
       const src = code(text);
       expect(src, f).not.toMatch(/from 'react'|from "react"/);
-      // The lens hook (BACK-92 R7) and the retired lab shell, entry and search; the pure route defaults are fine to read.
+      // The lens hook (BACK-92 R7) and the retired standalone lens shell, entry and search; the pure route defaults are fine to read.
       expect(src, f).not.toMatch(/lenses\/(useLens|context|navigation\/(Shell|hits)|main|App)/);
       expect(src, f).not.toMatch(/\b(useState|useReducer|useContext|createContext|V2Provider|V2Context|useV2|useLens|useApp|localStorage|sessionStorage)\b/);
       expect(src, f).not.toMatch(/^\s*(let|var)\s/m);

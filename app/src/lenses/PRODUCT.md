@@ -2,7 +2,7 @@
 
 <!-- impeccable:product-schema 1 -->
 
-> Scope: this record covers the V2 visual lab only (`app/src/lenses`). It is derived from the owner's written brief and the repo's `CLAUDE.md`, not from an interview round: the brief already answers users, purpose and constraints. Everything below is the brief's own statement, nothing inferred except where marked (inferred).
+> Scope: this record covers the lenses only (`app/src/lenses`). It is derived from the owner's written brief and the repo's `CLAUDE.md`, not from an interview round: the brief already answers users, purpose and constraints. Everything below is the brief's own statement, nothing inferred except where marked (inferred).
 
 ## Platform
 
@@ -10,7 +10,7 @@ web
 
 ## Stack
 
-Existing: Vite 5, React 18, TypeScript strict, Vitest, Playwright. No UI library, no router, no third-party requests. V2 adds no dependencies.
+Existing: Vite 5, React 18, TypeScript strict, Vitest, Playwright. No UI library, no router, no third-party requests. The lenses add no dependencies.
 
 ## Users
 
@@ -18,7 +18,7 @@ Internal Kawalys / Kemetra staff (customers never sign in to Mission Control): t
 
 ## Product Purpose
 
-Kawalys is a unified mission control for product and operations. V2 is a visual experiment: four screens (Mission Map, Source Observatory, Mission Replay, Agent Flight Deck) built from owner reference images so the owner can compare it side by side with V1 and decide which direction to adopt.
+Kawalys is a unified mission control for product and operations. The lenses began as a visual experiment: four screens (Mission Map, Source Observatory, Mission Replay, Agent Flight Deck) built from owner reference images so the owner can compare it side by side with host and decide which direction to adopt.
 
 ## Positioning
 
@@ -30,10 +30,10 @@ Review prototype. Demo data only: no backend, auth, AI calls, or real GitHub / J
 
 ## Capabilities and Constraints
 
-- Truth semantics come from `src/contract/rules.ts` (resolveLabel, resolveHealth, freshnessOf, countDisplay). V2 must call them, never re-decide.
+- Truth semantics come from `src/contract/rules.ts` (resolveLabel, resolveHealth, freshnessOf, countDisplay). The lenses must call them, never re-decide.
 - Control vocabulary: no approve / reject / defer / go / release / retry / run style controls (`isForbiddenControlLabel`, EN and AR).
 - No functional approval, execution, deployment or source-write controls. Agents are simulated.
-- One shared synthetic data world: INV-DEMO-7, RT-DEMO-112, #DEMO-4471, PR #DEMO-88, sources github / jira / sentry / datadog / port (+ confluence added by V2).
+- One shared synthetic data world: INV-DEMO-7, RT-DEMO-112, #DEMO-4471, PR #DEMO-88, sources github / jira / sentry / datadog / port (+ confluence, read by the Source Observatory).
 - Latin digits in both languages; LTR identifiers isolated in `<bdi dir="ltr">`.
 - Responsive at 320, 375, 768, 1440 px; keyboard operable; reduced motion respected.
 

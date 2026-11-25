@@ -1,5 +1,5 @@
 // BACK-66 / BACK-92 R4: the host's one search box (src/shell/DemoSearch.tsx) offers only what the persona may read. These cases moved
-// here from the retired lab shell search (lenses/navigation/hits.ts and its block in logic/authorize.test.ts): the host search
+// here from the retired standalone lens shell search (lenses/navigation/hits.ts and its block in logic/authorize.test.ts): the host search
 // is built from the persona-projected world, so a withheld record is never offered, labelled, counted or linked. Persona is a display
 // switch on synthetic data, not authorization.
 import { describe, expect, it } from 'vitest';
@@ -19,14 +19,14 @@ const WITHHELD = [...new Set([
 ])];
 
 // The shipped fixture may not hold a record that only search would reveal, so the rule is also checked on a constructed world with an
-// extra Technical-only record outside the canonical overlap, as the lab test did with its constructed replay row and mission.
+// extra Technical-only record outside the canonical overlap, as the standalone lens test did with its constructed replay row and mission.
 const e12 = WORLD.evidence['E-12'] as EvidenceReference;
 const CONSTRUCTED: World = { ...WORLD, evidence: { ...WORLD.evidence, 'E-X': { ...e12, id: 'E-X' } } };
 
 const carries = (i: SearchItem, id: string): boolean =>
   i.id === id || i.label === id || i.href.includes(`/evidence/${id}`) || i.text.en.includes(id) || i.text.ar.includes(id);
 
-describe('host search, scoped by persona (moved from the lab shell search, BACK-92 R4)', () => {
+describe('host search, scoped by persona (moved from the standalone lens shell search, BACK-92 R4)', () => {
   it('the fixtures hold the Technical-only records these cases depend on (guards against passing vacuously)', () => {
     expect(WITHHELD).toEqual(expect.arrayContaining(['E-5', 'E-12']));
     expect(buildIndex(CONSTRUCTED).some((i) => i.id === 'E-X')).toBe(true);
@@ -57,7 +57,7 @@ describe('host search, scoped by persona (moved from the lab shell search, BACK-
   });
 
   // C-16: the Flight Deck never shows mission ids to Nontechnical. The host search does not index missions at all, so no persona can
-  // find a mission id through it (the lab shell search did, with ids for Owner and Technical, titles only for Nontechnical).
+  // find a mission id through it (the standalone lens shell search did, with ids for Owner and Technical, titles only for Nontechnical).
   it('offers no mission id to any persona: missions are not in the host index', () => {
     for (const p of PERSONAS) {
       const index = buildIndex(authorizedWorld(WORLD, p));

@@ -367,8 +367,13 @@ test('Flight Deck: filters narrow the activity table and the count line follows'
   await status.selectOption('all');
   await deck(page).getByRole('button', { name: /^Sensing/ }).click();
   await expect(rows).toHaveCount(2);
-  await deck(page).locator('label.kv2-select', { hasText: 'Agent' }).locator('select').selectOption('AG-1');
-  await expect(rows).toHaveCount(1);
+  // BACK-102: both sensing missions are worked by triage-scout; evidence-collector works none of them.
+  const agent = deck(page).locator('label.kv2-select', { hasText: 'Agent' }).locator('select');
+  await agent.selectOption('AG-scout');
+  await expect(rows).toHaveCount(2);
+  await agent.selectOption('AG-collector');
+  await expect(rows).toHaveCount(0);
+  await expect(deck(page).getByText('No mission matches these filters.')).toBeVisible();
 });
 
 test('Flight Deck: selecting a mission shows its detail, its evidence and whether it proposes anything', async ({ page }) => {

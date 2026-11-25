@@ -11,7 +11,7 @@ import { TABLE, pairOf, translate, type K } from '../translate';
 // Parity, braces, $placeholders, Latin digits and Latin-in-isolates are the shared rules in ../copy-rules.test.ts.
 const PERSONAS = ['owner', 'technical', 'nontechnical'] as const;
 
-describe('V2 copy', () => {
+describe('lens copy', () => {
   it('never puts a forbidden action verb on a control label, in either language or any persona', () => {
     const keys = [...COMMON_CONTROL_KEYS, ...MAP_CONTROL_KEYS, ...OBS_CONTROL_KEYS, ...REPLAY_CONTROL_KEYS, ...DECK_CONTROL_KEYS] as readonly K[];
     expect(keys.length).toBeGreaterThan(60);
@@ -26,7 +26,7 @@ describe('V2 copy', () => {
     }
   });
 
-  it('also keeps the reused V1 labels clean (persona names, copy-proposal control)', () => {
+  it('also keeps the reused host labels clean (persona names, copy-proposal control)', () => {
     for (const lang of ['en', 'ar'] as const) {
       const c = COPY[lang];
       for (const label of [c.copyProposal, ...Object.values(c.persona), c.language]) expect(isForbiddenControlLabel(label), `${lang}: ${label}`).toBe(false);

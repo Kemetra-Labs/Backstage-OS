@@ -1,4 +1,4 @@
-// Evidence inspector of the B+C pilot: Overview, Evidence, Sources. Persona rules are the same as V2's inspector:
+// Evidence inspector of the B+C pilot: Overview, Evidence, Sources. Persona rules are the same as the lens inspector:
 // restricted evidence reveals only that it exists (EvidenceItem and evidenceView do that, never this file).
 import { EvidenceItem } from '../components/evidence';
 import { Icon } from '../components/Icon';
@@ -8,21 +8,21 @@ import type { K } from '../../i18n';
 import { evidenceOf, evidenceView, nodeChip } from '../logic/evidence';
 import { linkCounts, neighbours } from '../logic/graph';
 import { sourceStatus } from '../logic/status';
-import type { World, WorldNode } from '../types';
+import type { World, GraphNode } from '../../contract/world';
 import type { BcTab } from '../logic/bc';
 import { AgeBar, StatusChip } from './atoms';
 import { ND, NL, NODE_ICON, PROV_ICON, useChipText, useStatusWords } from './shared';
 
 interface Props {
   readonly w: World;
-  readonly node: WorldNode;
+  readonly node: GraphNode;
   readonly tab: BcTab;
   readonly setTab: (t: BcTab) => void;
   readonly isScope: boolean;
   readonly onOpen: LensState['open'];
 }
 
-function Head({ node, w, isScope }: { readonly node: WorldNode; readonly w: World; readonly isScope: boolean }) {
+function Head({ node, w, isScope }: { readonly node: GraphNode; readonly w: World; readonly isScope: boolean }) {
   const chipText = useChipText();
   const chip = nodeChip(node, w.sources);
   return (
@@ -42,7 +42,7 @@ export function Inspector({ w, node, tab, setTab, isScope, onOpen }: Props) {
   const { route, t } = useLens();
   const words = useStatusWords();
   const refs = evidenceOf(w, node.evidence);
-  const nb = neighbours(node.id, w.edges).map((id) => w.nodes.find((n) => n.id === id)!);
+  const nb = neighbours(node.id, w.graph.edges).map((id) => w.graph.nodes.find((n) => n.id === id)!);
   const lc = linkCounts(node.id, w);
   const total = lc.observed + lc.correlated + lc.hypothesis + lc.unknown;
   // A provider is listed only if this persona may read the evidence that names it: restricted records contribute none.

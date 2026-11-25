@@ -9,7 +9,7 @@ import { authorizedInvestigation, authorizedWorld } from './authorize';
 
 const technicalIds = Object.values(WORLD.evidence).filter((e) => e.visibility === 'technical').map((e) => e.id);
 
-describe.each<Persona>(['owner', 'nontechnical'])('V1 projection for %s', (p) => {
+describe.each<Persona>(['owner', 'nontechnical'])('host projection for %s', (p) => {
   it('no technical evidence id survives anywhere', () => {
     expect(technicalIds.length).toBeGreaterThan(0);
     const w = JSON.stringify(authorizedWorld(WORLD, p));
@@ -76,7 +76,7 @@ describe.each<Persona>(['owner', 'nontechnical'])('V1 projection for %s', (p) =>
   });
 });
 
-describe('V1 projection identity and purity', () => {
+describe('host projection identity and purity', () => {
   it('technical gets the same world object', () => {
     expect(authorizedWorld(WORLD, 'technical')).toBe(WORLD);
     expect(authorizedInvestigation(INV_DEMO_7, 'technical')).toBe(INV_DEMO_7);
@@ -93,7 +93,7 @@ describe('V1 projection identity and purity', () => {
   });
 });
 
-describe('V1 projection edge cases', () => {
+describe('host projection edge cases', () => {
   it('positive control: the unprojected world contains the technical ids', () => {
     const j = JSON.stringify(WORLD);
     for (const id of ['E-5', 'E-12', 'E-23']) expect(j).toContain(`"${id}"`);

@@ -1,9 +1,9 @@
 // SPEC section 2 "figure to derivation" table, asserted against WORLD so the derivation cannot drift, plus the pilot's
 // orbit geometry and its honesty rules (unknown is never healthy, stale links are flagged, restricted evidence is hidden).
 import { describe, expect, it } from 'vitest';
-import { HUB_ID, ORBIT_ANGLE, nodePoint, nodePoints } from '../fixtures/orbit-layout';
-import { WORLD } from '../fixtures/world';
-import { authorizedWorld } from './authorize';
+import { HUB_ID, ORBIT_ANGLE, nodePoint, nodePoints } from './orbit-layout';
+import { WORLD } from '../../fixture/world';
+import { authorizedWorld } from '../../view/authorize';
 import { ageGeometry, bcFigures, curve, edgeRestricted, edgeStale, formatAt, parseSeed, pipTone, ringShare } from './bc';
 import { nodeChip } from './evidence';
 import { nextByDirection } from './graph';
@@ -12,7 +12,7 @@ import { minutesSince, sourceStatus } from './status';
 
 const w = WORLD;
 const src = (p: string) => sourceStatus(w.sources.find((s) => s.provider === p)!, w.now);
-const chipOf = (id: string) => nodeChip(w.nodes.find((n) => n.id === id)!, w.sources).kind;
+const chipOf = (id: string) => nodeChip(w.graph.nodes.find((n) => n.id === id)!, w.sources).kind;
 
 describe('B+C derivation table (SPEC section 2)', () => {
   const f = bcFigures(w);
@@ -23,7 +23,7 @@ describe('B+C derivation table (SPEC section 2)', () => {
 
   it('counts active risks: a failing check, or a provider source with an issue (3)', () => {
     expect(f.risks).toBe(3);
-    expect(w.nodes.filter((n) => n.check === 'failing').map((n) => n.id)).toEqual(['stock-sync']);
+    expect(w.graph.nodes.filter((n) => n.check === 'failing').map((n) => n.id)).toEqual(['stock-sync']);
   });
 
   it('counts service issues as unavailable or stale sources, never "not set up" (2)', () => {
@@ -75,24 +75,24 @@ describe('B+C derivation table (SPEC section 2)', () => {
   it('counts dependency links by truth: 2 observed, 1 correlated, 1 hypothesis, 4 unknown, plus 3 structure', () => {
     expect(f.links).toEqual({ observed: 2, correlated: 1, hypothesis: 1, unknown: 4 });
     expect(f.structureLinks).toBe(3);
-    expect(w.edges).toHaveLength(11);
+    expect(w.graph.edges).toHaveLength(11);
   });
 
   it('flags only d4 as a stale link: classified, has evidence, and every read is not current', () => {
-    expect(w.edges.filter((e) => edgeStale(e, w)).map((e) => e.id)).toEqual(['d4']);
+    expect(w.graph.edges.filter((e) => edgeStale(e, w)).map((e) => e.id)).toEqual(['d4']);
   });
 
   it('resolves the node chip by the contract: one healthy node, claims without evidence stay unknown', () => {
     expect(chipOf('stock-sync')).toBe('check');
     expect(chipOf('github')).toBe('healthy');
-    expect(w.nodes.filter((n) => chipOf(n.id) === 'healthy').map((n) => n.id)).toEqual(['github']);
+    expect(w.graph.nodes.filter((n) => chipOf(n.id) === 'healthy').map((n) => n.id)).toEqual(['github']);
     for (const id of ['khepri', 'jira', 'seshat-bi', 'pos', 'retail-tower']) expect(chipOf(id)).toBe('unknown');
     for (const id of ['sentry', 'inventory']) expect(chipOf(id)).toBe('stale');
     expect(chipOf('port')).toBe('unavailable');
   });
 
   it('prints evidence age from the fixed now: E-1 is 7 min old', () => {
-    expect(minutesSince(w.evidenceById['E-1']!.observation!.observedAt, w.now)).toBe(7);
+    expect(minutesSince(w.evidence['E-1']!.observation!.observedAt, w.now)).toBe(7);
   });
 
   it('counts distinct observed reads in 24 h (5), derived but not displayed', () => {
@@ -109,27 +109,27 @@ describe('pip tones: only a confirmed state is filled', () => {
 });
 
 describe('restricted evidence (BACK-27: no silent restricted-record disclosure)', () => {
-  const d4 = w.edges.find((e) => e.id === 'd4')!;
+  const d4 = w.graph.edges.find((e) => e.id === 'd4')!;
   it('hides the basis of a link built on Technical-only evidence from Owner and Nontechnical', () => {
     expect(edgeRestricted(d4, 'owner', w)).toBe(true);
     expect(edgeRestricted(d4, 'nontechnical', w)).toBe(true);
     expect(edgeRestricted(d4, 'technical', w)).toBe(false);
   });
   it('restricts nothing else', () => {
-    expect(w.edges.filter((e) => e.id !== 'd4').some((e) => edgeRestricted(e, 'owner', w))).toBe(false);
+    expect(w.graph.edges.filter((e) => e.id !== 'd4').some((e) => edgeRestricted(e, 'owner', w))).toBe(false);
   });
   it('is defence in depth only: the world screens pass Owner and Nontechnical has no such link left to restrict (BACK-30)', () => {
     for (const p of ['owner', 'nontechnical'] as const) {
       const scoped = authorizedWorld(w, p);
-      expect(scoped.edges.some((e) => edgeRestricted(e, p, scoped))).toBe(false);
-      expect(scoped.edges.find((e) => e.id === 'd4')).toBeUndefined();
+      expect(scoped.graph.edges.some((e) => edgeRestricted(e, p, scoped))).toBe(false);
+      expect(scoped.graph.edges.find((e) => e.id === 'd4')).toBeUndefined();
     }
   });
 });
 
 describe('orbit geometry', () => {
   it('maps kind to orbit: products inner, projects middle, services outer', () => {
-    expect(w.nodes.map((n) => [n.id, orbitOf(n)]).filter(([id]) => id === 'khepri' || id === 'pos' || id === 'github')).toEqual([['khepri', 'inner'], ['pos', 'middle'], ['github', 'outer']]);
+    expect(w.graph.nodes.map((n) => [n.id, orbitOf(n)]).filter(([id]) => id === 'khepri' || id === 'pos' || id === 'github')).toEqual([['khepri', 'inner'], ['pos', 'middle'], ['github', 'outer']]);
   });
 
   it('puts a point on its ellipse: 0 degrees is the right-hand vertex, 90 degrees the top', () => {
@@ -144,7 +144,7 @@ describe('orbit geometry', () => {
   });
 
   it('gives every node a placement (an angle, or the hub at the centre) inside the canvas and on its own orbit', () => {
-    for (const n of w.nodes) {
+    for (const n of w.graph.nodes) {
       const p = nodePoint(n);
       expect(p.x).toBeGreaterThan(0);
       expect(p.x).toBeLessThan(BC_CANVAS.w);
@@ -158,12 +158,12 @@ describe('orbit geometry', () => {
   });
 
   it('keeps every pair of nodes apart so no two orbs collide', () => {
-    const pts = w.nodes.map((n) => nodePoint(n));
+    const pts = w.graph.nodes.map((n) => nodePoint(n));
     for (let i = 0; i < pts.length; i += 1) for (let j = i + 1; j < pts.length; j += 1) expect(Math.hypot(pts[i]!.x - pts[j]!.x, pts[i]!.y - pts[j]!.y)).toBeGreaterThan(90);
   });
 
   it('leaves the arrow keys a way to every node: each node can reach another in some direction', () => {
-    const placed = w.nodes.map((n) => ({ ...n, ...nodePoint(n) }));
+    const placed = w.graph.nodes.map((n) => ({ ...n, ...nodePoint(n) }));
     for (const n of placed) {
       const reach = (['left', 'right', 'up', 'down'] as const).map((d) => nextByDirection(n.id, d, placed)).filter(Boolean);
       expect(reach.length, n.id).toBeGreaterThan(0);
