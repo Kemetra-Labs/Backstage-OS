@@ -16,6 +16,7 @@ npm install && npx playwright install chromium webkit
 npx playwright test                            # chromium + webkit (Firefox opt-in: PW_FIREFOX=1)
 ```
 - `npm run check` in `server/` needs Docker (the DB tests start a disposable local Postgres; there is no skip).
+- Claude Code cloud sessions (BACK-101): the container has Docker but no running daemon; start it with `dockerd > /tmp/dockerd.log 2>&1 &`, wait until `docker info` succeeds, then `npm run check` in `server/` works (start it again after the container is recycled). Its Chromium build does not match the pinned Playwright, so use `npx playwright test -c playwright.cloud.config.js` (root) and `npx vite build && npx playwright test -c playwright.cloud.config.ts` (in `app/`); both point chromium at `/opt/pw-browsers/chromium` (`PW_CHROMIUM_PATH` overrides). WebKit only runs in CI.
 - Tests live in `tests/`: `smoke.spec.js` (all screens, viewports 320–1440, personas × EN/AR, source states, search) and `findings.spec.js` (regression for F1–F6). They run against the real HTTP origin, not `set_content`. Google Fonts is aborted so runs are offline.
 - Run with `workers: 1`; parallel workers against `python -m http.server` produced false load timeouts on Windows.
 - `?s={"persona":"tech","lang":"ar","src":"down","tab":{"inv":"evidence"}}` seeds state; `#route` selects a screen. Globals `S`, `go()`, `renderApp()` are available in `page.evaluate`.

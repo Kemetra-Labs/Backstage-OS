@@ -1,0 +1,64 @@
+{
+  "id": "00000000-0000-4000-8000-000000000004",
+  "projectId": "00000000-0000-4000-8000-000000000002",
+  "title": "Checkout build failures on main (synthetic)",
+  "status": "open",
+  "createdAt": "2026-11-25T12:00:00.000Z",
+  "evidence": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "type": "Correlation",
+      "state": "ok",
+      "projectId": "00000000-0000-4000-8000-000000000002",
+      "sourceId": "00000000-0000-4000-8000-000000000003",
+      "investigationId": "00000000-0000-4000-8000-000000000004",
+      "sourceRef": "github:example-org/demo-storefront#pull/42",
+      "observedAt": "2026-11-25T11:20:00.000Z",
+      "receivedAt": "2026-11-25T12:00:00.000Z",
+      "payload": {
+        "note": "checkout-e2e started failing on the first run after pull request #42 merged",
+        "synthetic": true,
+        "pullRequest": 42
+      },
+      "citations": []
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "type": "HumanDecision",
+      "state": "ok",
+      "projectId": "00000000-0000-4000-8000-000000000002",
+      "sourceId": null,
+      "investigationId": "00000000-0000-4000-8000-000000000004",
+      "sourceRef": "kawalys:decision",
+      "observedAt": "2026-11-25T12:00:00.000Z",
+      "receivedAt": "2026-11-25T12:00:00.000Z",
+      "payload": {
+        "decision": "Revert pull request #42 on main and re-run checkout-e2e",
+        "rationale": "Synthetic example: the correlation and the failed run point to #42; a revert is cheap to undo."
+      },
+      "citations": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000007"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "type": "Observation",
+      "state": "error",
+      "projectId": "00000000-0000-4000-8000-000000000002",
+      "sourceId": "00000000-0000-4000-8000-000000000003",
+      "investigationId": "00000000-0000-4000-8000-000000000004",
+      "sourceRef": "github:example-org/demo-storefront#actions/runs/1002",
+      "observedAt": "2026-11-25T11:15:00.000Z",
+      "receivedAt": "2026-11-25T12:00:00.000Z",
+      "payload": {
+        "kind": "workflow_run",
+        "branch": "main",
+        "workflow": "checkout-e2e",
+        "synthetic": true,
+        "conclusion": "failure"
+      },
+      "citations": []
+    }
+  ]
+}

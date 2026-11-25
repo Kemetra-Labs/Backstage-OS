@@ -22,7 +22,7 @@ All of them run in CI (`.github/workflows/ci.yml`), selected by `.github/scripts
 | --- | --- |
 | Test command exists and passes on a clean checkout | `npx playwright test` (root), `npm run check` in `app/` and in `server/`. All three pass on a clean checkout. `server/` needs a Docker daemon (a cloud container can start one with `dockerd`). |
 | ≥ 1 integration test, connector → stored Observation | `server/test/connectors/github/github-ingest-db.spec.ts`: GitHub observer (canned transport) → `EvidenceRepository` → real Postgres with RLS → read back. Jira/Confluence (BACK-53) stop at the mapper: `sources.provider` only allows `github` (migration 0003). |
-| Frontend checks the API response shape | Response-shape parity: `server/test/portfolio/portfolio-parity.spec.ts` builds `GET /portfolio` bodies through the real read model and requires them to equal `app/src/fixture/portfolio-*.json`. The app side (`app/src/api/*.test.ts`) requires those fixtures to parse with nothing malformed or dropped. `api.guard.test.ts` keeps request code out of `app/`. |
+| Frontend checks the API response shape | Response-shape parity (BACK-98 extends it to `GET /evidence`, `GET /investigations/:id` and `GET /decisions`: `server/test/evidence/evidence-parity.spec.ts` against `app/src/api/parity.test.ts`): `server/test/portfolio/portfolio-parity.spec.ts` builds `GET /portfolio` bodies through the real read model and requires them to equal `app/src/fixture/portfolio-*.json`. The app side (`app/src/api/*.test.ts`) requires those fixtures to parse with nothing malformed or dropped. `api.guard.test.ts` keeps request code out of `app/`. |
 | CI (or a local script) runs the tests | Impact-aware CI (BACK-93), every PR. |
 
 ## Test layers and what each must prove
@@ -49,9 +49,11 @@ All of them run in CI (`.github/workflows/ci.yml`), selected by `.github/scripts
 
 ## Gaps (tracked as follow-ups, not fixed here)
 
+Closed since: response parity for the evidence, investigation and decision bodies (BACK-98) and cloud-session test runs (BACK-101, see CLAUDE.md).
+
+
 | Gap | Why it matters | Proposed home |
 | --- | --- | --- |
-| No HTTP-level contract test between server responses and app fixtures for `GET /evidence`, `GET /investigations/:id`, `GET /decisions` | Only `/portfolio` has parity today; the evidence adapter could drift from the server | new ticket (parity for evidence/investigation/decision bodies) |
 | Jira/Confluence observations cannot be stored | `sources.provider` CHECK allows `github` only | BACK-53 follow-up (schema slice, needs approval) |
-| App Playwright pins 1.65.1; cloud containers ship another Chromium build | e2e needs an `executablePath` override outside CI | documented here; CI is unaffected |
+| Editing only `app/src/fixture/*-response.json` does not select the server job in CI (`classify-changes.sh` maps `app/*` to the app suites only), so the server half of a parity check is not re-run | A fixture could be edited to satisfy the app test alone | CI change, needs approval (classifier + its test) |
 | No load/perf baseline for the latest-read query | Portfolio scans each source's history (README, Deferred) | after an index decision |
