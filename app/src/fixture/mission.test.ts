@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveHealth, resolveLabel, effectiveFreshness } from '../contract/rules';
 import { INV_DEMO_7 } from './inv-demo-7';
-import { authorizedWorld } from '../lenses/logic/authorize';
+import { authorizedWorld } from '../view/authorize';
 import { evidenceView, nodeChip } from '../lenses/logic/evidence';
 import { isRiskNode, nodeStatus, sourceCounts, sourceStatus } from '../lenses/logic/status';
 import { WORLD } from './world';

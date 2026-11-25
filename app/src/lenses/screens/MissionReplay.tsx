@@ -9,7 +9,7 @@ import { SourceRows } from '../components/SourceRows';
 import { useLens } from '../useLens';
 import { WORLD } from '../../fixture/world';
 import { plain, type K } from '../../i18n';
-import { authorizedWorld } from '../logic/authorize';
+import { authorizedWorld } from '../../view/authorize';
 import { SPEEDS, STEP_MS, advance, gapsAt, indexAt, milestonesAt, msOfIndex, stageAt, totalMs, type Speed } from '../logic/replay';
 import { sourceStatus } from '../logic/status';
 import { STAGES, type ReplayEvent, type ReplayStage } from '../../contract/world';

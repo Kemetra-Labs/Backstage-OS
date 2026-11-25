@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WORLD } from '../../fixture/world';
-import { authorizedWorld } from './authorize';
+import { authorizedWorld } from '../../view/authorize';
 import { buildHash, DEFAULT_ROUTE, parseRoute } from '../navigation/route';
 import { deckCounts, filterMissions } from './deck';
 import { CANVAS, HOME_VIEW, ZOOM_MAX, ZOOM_MIN, clampZoom, filterSet, focusView, kindCounts, linkCounts, neighbours, nextByDirection, scopeSet, zoomAt } from './graph';

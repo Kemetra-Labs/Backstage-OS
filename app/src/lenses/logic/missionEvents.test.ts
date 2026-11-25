@@ -33,7 +33,7 @@ describe('mission events are not defined (owner decision, BACK-90) and the field
   });
 
   it('the scoping never recomputes or reads a mission events figure from the evidence it withholds', () => {
-    expect(code('./authorize.ts')).not.toMatch(/\bevents\b/);
+    expect(code('../../view/authorize.ts')).not.toMatch(/\bevents\b/);
   });
 
   it('the deck logic derives its counts from missions and statuses, never from an events figure', () => {

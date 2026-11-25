@@ -5,7 +5,7 @@ import type { Lang, Persona } from '../contract/types';
 import { DOMAIN } from '../domain/fixture';
 import { WORLD as V2 } from '../fixture/world';
 import { translate } from '../i18n';
-import { authorizedWorld } from '../lenses/logic/authorize';
+import { authorizedWorld } from '../view/authorize';
 import { DEFAULT_ROUTE } from '../lenses/navigation/route';
 import { COPY } from '../i18n/strings';
 import { hrefFor, MAP_SCOPES, parseHash, type Route } from '../nav/routes';

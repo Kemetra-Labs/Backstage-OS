@@ -7,7 +7,7 @@ import { Age, Cosmos, Kpi, Lt, Panel, T, ToneChip, TruthChip, Tx } from '../comp
 import { useLens } from '../useLens';
 import { WORLD } from '../../fixture/world';
 import type { K } from '../../i18n';
-import { authorizedWorld } from '../logic/authorize';
+import { authorizedWorld } from '../../view/authorize';
 import { STATUS_ORDER, deckCounts, filterMissions } from '../logic/deck';
 import { evidenceOf } from '../logic/evidence';
 import { hhmm, sourceCounts, sourceStatus, type Tone } from '../logic/status';

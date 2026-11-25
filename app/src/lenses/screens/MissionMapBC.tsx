@@ -11,7 +11,7 @@ import { Cosmos, Kpi, Panel, Seg, T } from '../components/ui';
 import { useLens } from '../useLens';
 import { nodePoints } from '../logic/orbit-layout';
 import { WORLD } from '../../fixture/world';
-import { authorizedWorld } from '../logic/authorize';
+import { authorizedWorld } from '../../view/authorize';
 import type { K } from '../../i18n';
 import { bcFigures } from '../logic/bc';
 import { filterSet, MAP_FILTERS, scopeSet, type MapFilter } from '../logic/graph';

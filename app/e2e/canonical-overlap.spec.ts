@@ -9,7 +9,7 @@ import type { ComponentId } from '../src/domain/types';
 import { toV1Nodes } from '../src/domain/toV1';
 import { toV2NodeFacts } from '../src/domain/toV2';
 import { WORLD } from '../src/fixture/world';
-import { authorizedWorld } from '../src/lenses/logic/authorize';
+import { authorizedWorld } from '../src/view/authorize';
 import { nodeChip } from '../src/lenses/logic/evidence';
 import type { GraphNode } from '../src/contract/world';
 import { COPY } from '../src/i18n/strings';

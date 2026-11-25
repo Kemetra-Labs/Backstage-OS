@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { HUB_ID, ORBIT_ANGLE, nodePoint, nodePoints } from './orbit-layout';
 import { WORLD } from '../../fixture/world';
-import { authorizedWorld } from './authorize';
+import { authorizedWorld } from '../../view/authorize';
 import { ageGeometry, bcFigures, curve, edgeRestricted, edgeStale, formatAt, parseSeed, pipTone, ringShare } from './bc';
 import { nodeChip } from './evidence';
 import { nextByDirection } from './graph';

@@ -11,8 +11,7 @@ import { INV_DEMO_7 } from '../fixture/inv-demo-7';
 import { buildIndex } from '../nav/search';
 import type { World } from '../contract/world';
 import { WORLD } from '../fixture/world';
-import { authorizedWorld as lensAuthorized } from '../lenses/logic/authorize';
-import { authorizedInvestigation, authorizedWorld as hostAuthorized } from '../view/authorize';
+import { authorizedInvestigation, authorizedWorld } from '../view/authorize';
 import { summaryFor } from '../view/investigationView';
 import { viewFor } from '../view/viewFor';
 import { caseEvidence, catalogueEvidence } from '../view/world';
@@ -38,16 +37,16 @@ const byId = (list: readonly { readonly id: string }[]): Record<string, unknown>
 
 /** The portfolio sections of the world as the persona receives it, and the demo search index built from it. */
 function hostOf(p: P): unknown {
-  const w: World = hostAuthorized(WORLD, p);
+  const w: World = authorizedWorld(WORLD, p);
   return {
     projects: w.projects, investigations: w.investigations, decisions: w.decisions, agents: w.agents, activity: w.activity,
     evidence: byId(catalogueEvidence(w)), evidenceText: w.evidenceText,
   };
 }
-const searchOf = (p: P): unknown => buildIndex(hostAuthorized(WORLD, p));
+const searchOf = (p: P): unknown => buildIndex(authorizedWorld(WORLD, p));
 /** The mission sections of the world as the persona receives it. */
 function lensOf(p: P): unknown {
-  const w: World = lensAuthorized(WORLD, p);
+  const w: World = authorizedWorld(WORLD, p);
   return {
     now: w.now, investigationId: w.investigationId, nodes: w.graph.nodes, edges: w.graph.edges, sources: w.sources,
     sourceEvents: w.sourceTimeline, replay: w.replay, agents: w.missionAgents, missions: w.missions, evidenceById: byId(caseEvidence(w)),
@@ -55,7 +54,7 @@ function lensOf(p: P): unknown {
 }
 function investigationOf(p: P): unknown {
   const inv = authorizedInvestigation(INV_DEMO_7, p);
-  const w = hostAuthorized(WORLD, p);
+  const w = authorizedWorld(WORLD, p);
   return { data: inv, view: viewFor(p, inv), summaries: ['INV-DEMO-7', 'INV-DEMO-9'].map((id) => summaryFor(w, id, p) ?? null) };
 }
 

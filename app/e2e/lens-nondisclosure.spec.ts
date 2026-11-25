@@ -6,7 +6,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { WORLD } from '../src/fixture/world';
 import { caseEvidence } from '../src/view/world';
-import { authorizedWorld } from '../src/lenses/logic/authorize';
+import { authorizedWorld } from '../src/view/authorize';
 import { TABLE } from '../src/i18n/index';
 import { INV_DEMO_7 } from '../src/fixture/inv-demo-7';
 import { COPY } from '../src/i18n/strings';

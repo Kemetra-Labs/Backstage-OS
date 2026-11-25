@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Persona } from '../contract/types';
 import { WORLD } from '../fixture/world';
-import { authorizedWorld } from '../lenses/logic/authorize';
+import { authorizedWorld } from '../view/authorize';
 import { replayTimeRows } from './replayTime';
 
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];

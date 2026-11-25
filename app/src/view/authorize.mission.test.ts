@@ -1,13 +1,13 @@
 // BACK-30 (M05-D05-B): a viewer not authorized for a Technical-only record must not be able to tell it exists.
 // Persona is a display switch, not authorization: this scopes the demo world only and claims no server-side enforcement.
 import { describe, expect, it } from 'vitest';
-import { WORLD } from '../../fixture/world';
-import { TABLE } from '../../i18n';
-import type { Mission, ReplayEvent, World } from '../../contract/world';
-import { caseEvidence } from '../../view/world';
+import { WORLD } from '../fixture/world';
+import { TABLE } from '../i18n';
+import type { Mission, ReplayEvent, World } from '../contract/world';
+import { caseEvidence } from './world';
 import { authorizedWorld } from './authorize';
-import { nodeStatus } from './status';
-import { gapsAt, indexAt, milestonesAt, msOfIndex, stageAt, totalMs } from './replay';
+import { nodeStatus } from '../lenses/logic/status';
+import { gapsAt, indexAt, milestonesAt, msOfIndex, stageAt, totalMs } from '../lenses/logic/replay';
 
 const UNAUTHORIZED = ['owner', 'nontechnical'] as const;
 // The mission's case evidence (E-1..E-9). Technical-only records outside it are covered by src/view/authorize.test.ts.

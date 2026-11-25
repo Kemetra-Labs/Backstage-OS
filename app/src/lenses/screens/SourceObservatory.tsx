@@ -8,7 +8,7 @@ import { useLens } from '../useLens';
 import { caseEvidence } from '../../view/world';
 import { WORLD } from '../../fixture/world';
 import type { K } from '../../i18n';
-import { authorizedWorld } from '../logic/authorize';
+import { authorizedWorld } from '../../view/authorize';
 import { hhmm, sourceCounts, sourceStatus, type SourceStatus, type Tone } from '../logic/status';
 import type { SourceAxis, SourceEvent, SourceKind, SourceMeta } from '../../contract/world';
 

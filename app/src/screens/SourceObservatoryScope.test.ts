@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { leaksIn as leaks } from '../../e2e/leaks';
 import type { Persona } from '../contract/types';
 import { WORLD } from '../fixture/world';
-import { authorizedWorld } from '../lenses/logic/authorize';
+import { authorizedWorld } from '../view/authorize';
 import { sourceCounts, sourceStatus } from '../lenses/logic/status';
 import type { World } from '../contract/world';
 import { expectWorldReadOnlyThroughAuthorizedWorld } from './scopeGuard';

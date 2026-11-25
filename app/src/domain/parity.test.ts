@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Persona } from '../contract/types';
 import { WORLD as V1_WORLD } from '../fixture/world';
 import { EVIDENCE, INV_DEMO_7, SOURCES } from '../fixture/inv-demo-7';
-import { authorizedWorld } from '../lenses/logic/authorize';
+import { authorizedWorld } from '../view/authorize';
 import { nodeStatus } from '../lenses/logic/status';
 import { WORLD } from '../fixture/world';
 import type { GraphNode } from '../contract/world';

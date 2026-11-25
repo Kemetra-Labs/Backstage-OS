@@ -9,7 +9,7 @@ import type { Lang, Persona } from '../contract/types';
 import { DOMAIN } from '../domain/fixture';
 import { WORLD as V1 } from '../fixture/world';
 import { WORLD as V2 } from '../fixture/world';
-import { authorizedWorld } from '../lenses/logic/authorize';
+import { authorizedWorld } from '../view/authorize';
 import { hrefFor, parseHash, type Route } from '../nav/routes';
 import { COMPONENT_PROJECT, IDENTITIES, isSharedComponent, mapIdOfProject, projectOfMapId } from './identity';
 import { permittedNode, toHostRoute, toHostRouteIn, toMapContext, toMapContextIn, type HostView } from './mapContext';

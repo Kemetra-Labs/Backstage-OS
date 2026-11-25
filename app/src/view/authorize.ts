@@ -1,23 +1,25 @@
-// BACK-73: V1 restricted-evidence non-disclosure. Technical-only evidence, and every claim resting only on it, is removed from
-// the world and investigation an unauthorized persona receives. Persona is a display switch, not authorization: this scopes
-// the synthetic demo data and no server-side identity, tenant or access enforcement exists or is claimed. Mirrors the V2
-// precedent in lenses/logic/authorize.ts.
+// BACK-30, BACK-73 (ratified M05-D05-B): restricted-evidence non-disclosure. Technical-only evidence, and every claim resting only
+// on it, is removed from the world and investigation an unauthorized persona receives: one decision per world, applied to every
+// section (portfolio, mission graph, sources, replay, missions), with one memo. Persona is a display switch, not authorization:
+// this scopes the synthetic demo data and no server-side identity, tenant or access enforcement exists or is claimed.
 import type {
   ConfidenceBasis, DisplayState, EvidenceReference, FactRef, Hypothesis, InvestigationData, MapNode, Persona,
 } from '../contract/types';
+import { freshnessOf } from '../contract/rules';
 import type {
-  ActivityEvent, ByPersonaL10n, Attention, Decision, DecisionOption, DeliveryItem, InvestigationSummary, World, WorldComponent, WorldEdge,
-  WorldProject,
+  ActivityEvent, ByPersonaL10n, Attention, Decision, DecisionOption, DeliveryItem, GraphEdge, GraphNode, InvestigationSummary, Mission,
+  ReplayEvent, SourceMeta, World, WorldComponent, WorldEdge, WorldProject,
 } from '../contract/world';
-import { canonicalComponent, canonicalFor, evidenceVerdict } from '../domain/runtime';
+import { canonicalComponent, canonicalFor, dependencyVerdict, evidenceVerdict } from '../domain/runtime';
 import { toV1ComponentFacts } from '../domain/toV1';
-import { scopeMissionSections } from '../lenses/logic/authorize';
+import { toV2NodeFacts } from '../domain/toV2';
 
 /** True when this persona may not read the evidence item. The rule for evidence the canonical fixture does not own. */
 export const isWithheld = (e: EvidenceReference, persona: Persona): boolean =>
   persona !== 'technical' && e.visibility === 'technical';
 
 type Keep = (e: EvidenceReference) => boolean;
+type Visible = (id: string) => boolean;
 
 // BACK-84: the INV-DEMO-7 overlap (evidence E-1..E-9, components pos / stock-sync / inventory of project RT) is decided once, by
 // scopeFixture through domain/runtime. Every other record keeps this module's own rule. A structure outside the overlap that cites
@@ -103,6 +105,89 @@ function scopeDecision(d: Decision, keep: Keep, persona: Persona): Decision {
 
 const scopeActivity = (list: readonly ActivityEvent[], visibleId: (id: string) => boolean): ActivityEvent[] =>
   list.filter((a) => a.evidenceId === undefined || visibleId(a.evidenceId));
+
+// ---- Mission sections: graph, sources, replay, missions ----------------------------------------------------------------------
+// The overlap nodes (pos, stock-sync, inventory) and the dependencies between them are decided by the scoped canonical fixture.
+// A structure outside the overlap that cites an overlap record (the sentry node, edge d4, a mission, a replay row, a source's
+// health basis) is pruned through the same decision.
+
+function scopeGraphState(state: DisplayState, sources: readonly SourceMeta[], provider: GraphNode['provider'], keep: Keep): DisplayState {
+  const basis = state.basis.filter(keep);
+  if (basis.length === state.basis.length) return state;
+  if (basis.length > 0) return { ...state, basis };
+  // The whole basis was restricted. A claim that rested only on it is unknown, never healthy. Freshness falls back to what
+  // the (authorized) source authority says; a node with no source of its own has nothing to say. Connectivity is a source fact.
+  const src = provider ? sources.find((s) => s.provider === provider)?.source : undefined;
+  return { ...state, basis, health: 'unknown', freshness: src ? freshnessOf(src) : 'unknown' };
+}
+
+function scopeGraphNode(n: GraphNode, visible: Visible, sources: readonly SourceMeta[], keep: Keep, persona: Persona): GraphNode {
+  const { descWithoutEvidence, ...rest } = n;
+  // An overlap node takes its state and evidence ids from the scoped canonical fixture; any other node is scoped here.
+  const canon = canonicalComponent(persona, n.id);
+  const facts = canon ? toV2NodeFacts(canonicalFor(persona), canon.id) : undefined;
+  const evidence = facts ? facts.evidence : n.evidence.filter(visible);
+  const state = facts ? facts.state : scopeGraphState(n.state, sources, n.provider, keep);
+  // A description written from a record this persona may not read would describe that record. When the node's whole
+  // evidence is withheld (judged against the node's own unscoped evidence) it falls back to the generic "no evidence has been
+  // read" wording its fixture declares.
+  const withheldAll = n.evidence.length > 0 && evidence.length === 0;
+  return { ...rest, state, evidence, ...(withheldAll && descWithoutEvidence ? { descKey: descWithoutEvidence } : {}) };
+}
+
+function scopeGraphEdge(e: GraphEdge, visible: Visible): GraphEdge {
+  return { ...e, evidence: e.evidence.filter(visible) };
+}
+
+function scopeSource(s: SourceMeta, keep: Keep): SourceMeta {
+  const health = scopeGraphState(s.health, [s], s.provider, keep);
+  return health === s.health ? s : { ...s, health };
+}
+
+// A replay row that rests on a withheld record is removed, not blanked: keeping the row with its evidence nulled would still show
+// an event at that time, with its label and stage, and so tell the viewer something happened there (BACK-66, M05-D05-B). Rows that
+// never had evidence, or rest on a record the viewer may read, are untouched. Replay time is evenly spaced over the remaining
+// rows, so removing one leaves no gap.
+const keepReplay = (r: ReplayEvent, visible: Visible): boolean => r.evidence === null || visible(r.evidence);
+
+// A mission keeps the evidence it still has. A mission whose whole basis was withheld keeps no claim: unknown label, no evidence.
+// A mission has no `events` figure (removed in BACK-96; the Deck says it is not defined, owner decision BACK-90), so there is no number
+// to derive here, least of all by subtracting withheld references, which would differ by persona and so hint that a record is hidden.
+function scopeMission(m: Mission, visible: Visible): Mission {
+  const evidence = m.evidence.filter(visible);
+  const withheld = m.evidence.length - evidence.length;
+  if (withheld === 0) return m;
+  if (evidence.length === 0) return { ...m, evidence, label: 'unknown' };
+  return { ...m, evidence };
+}
+
+// An overlap dependency is kept, or removed, by the scoped canonical fixture and carries its truth and evidence ids. Any other link
+// is removed when its only evidence was restricted; links that never had evidence stay.
+function scopeGraphEdges(list: readonly GraphEdge[], visible: Visible, persona: Persona): GraphEdge[] {
+  return list.flatMap((e) => {
+    const d = e.cls === 'dep' ? dependencyVerdict(persona, e.a, e.b) : ({ kind: 'foreign' } as const);
+    if (d.kind === 'withheld') return [];
+    if (d.kind === 'visible') return [{ ...e, truth: d.dependency.truth, evidence: d.dependency.evidence }];
+    return e.evidence.length === 0 || e.evidence.some(visible) ? [scopeGraphEdge(e, visible)] : [];
+  });
+}
+
+/** The mission sections of the world as this persona may see them, under the world's one evidence decision. */
+function scopeMissionSections(
+  w: World, persona: Persona, keep: Keep, visible: Visible,
+): Pick<World, 'graph' | 'sources' | 'replay' | 'missions' | 'sourceProbes'> {
+  const sources = w.sources.map((s) => scopeSource(s, keep));
+  return {
+    graph: {
+      nodes: w.graph.nodes.map((n) => scopeGraphNode(n, visible, sources, keep, persona)),
+      edges: scopeGraphEdges(w.graph.edges, visible, persona),
+    },
+    sources,
+    replay: w.replay.filter((r) => keepReplay(r, visible)),
+    missions: w.missions.map((m) => scopeMission(m, visible)),
+    sourceProbes: w.sourceProbes.filter(visible),
+  };
+}
 
 function buildWorld(w: World, persona: Persona): World {
   const keep = keepFor(persona);
