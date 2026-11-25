@@ -2,11 +2,11 @@ import { useApp } from '../../app/AppContext';
 import { Panel } from '../../components/Panel';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
-import { INVESTIGATION } from '../../i18n/screens/investigation';
 import { hrefFor } from '../../nav/routes';
 import { evidenceTitleFor } from '../../view/evidence';
 import { evidenceStatusText } from '../../view/investigationView';
 import type { EvidenceView } from '../../view/viewFor';
+import { hostCopy } from '../../i18n/host';
 
 interface Props {
   readonly items: readonly EvidenceView[];
@@ -16,7 +16,7 @@ interface Props {
 /** Evidence for a summary case. Each item opens in the Evidence Explorer; there is no drawer here. */
 export function EvidenceLinks({ items, investigationId }: Props) {
   const { persona, lang, copy, world } = useApp();
-  const c = INVESTIGATION[lang];
+  const c = hostCopy('INVESTIGATION', lang);
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
   return (
     <Panel id="sum-evidence-title" title={c.summary.evidenceTitle} testId="summary-evidence">

@@ -4,15 +4,15 @@ import { L } from '../../components/L';
 import { Panel } from '../../components/Panel';
 import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
-import { PORTFOLIO_COPY } from '../../i18n/screens/portfolio';
 import { hrefFor } from '../../nav/routes';
 import type { ProductEntry as Entry } from '../../view/portfolioView';
 import { bucketWords } from '../home/SourceHealth';
+import { hostCopy } from '../../i18n/host';
 
 /** One product: summary, the three-part triad, source states in words, counts (or "not read") and a link in. */
 export function ProductEntry({ entry }: { readonly entry: Entry }) {
   const { lang, persona } = useApp();
-  const c = PORTFOLIO_COPY[lang];
+  const c = hostCopy('PORTFOLIO_COPY', lang);
   const f = c.fields;
   const notRead = f.notRead;
   const count = (n: number | null): string => (n === null ? notRead : String(n));

@@ -3,14 +3,13 @@ import { useApp } from '../app/AppContext';
 import { LensBoundary } from '../components/LensBoundary';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Text } from '../components/Text';
-import { AGENTS_COPY } from '../i18n/screens/agents';
-import { AGENTS_VIEW_COPY } from '../i18n/screens/map';
 import { hrefFor } from '../nav/routes';
 import { agentRoster } from '../view/agentView';
 import '../styles/screens/agents.css';
 import { ActivityHistory } from './agents/ActivityHistory';
 import { AgentRoster } from './agents/AgentRoster';
 import { OversightPanel } from './agents/OversightPanel';
+import { hostCopy } from '../i18n/host';
 
 // BACK-90: the Flight Deck is another view of this screen, loaded only when asked for (its code and sheets are a lazy chunk).
 const AgentFlightDeckLens = lazy(() => import('./AgentFlightDeckLens'));
@@ -22,8 +21,8 @@ const AgentFlightDeckLens = lazy(() => import('./AgentFlightDeckLens'));
  */
 export function Agents() {
   const { shell, lang, persona, world, route } = useApp();
-  const copy = AGENTS_COPY[lang];
-  const views = AGENTS_VIEW_COPY[lang];
+  const copy = hostCopy('AGENTS_COPY', lang);
+  const views = hostCopy('AGENTS_VIEW_COPY', lang);
   const deck = route.name === 'agents' && route.view === 'deck';
   return (
     <>

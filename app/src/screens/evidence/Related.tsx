@@ -4,11 +4,11 @@ import { Panel } from '../../components/Panel';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import type { InvestigationSummary } from '../../contract/world';
-import { EVIDENCE } from '../../i18n/screens/evidence';
 import { hrefFor } from '../../nav/routes';
 import type { ExplorerView } from '../../view/explorerView';
 import { evidenceTitleFor } from '../../view/evidence';
 import { evidenceStatusText } from '../../view/investigationView';
+import { hostCopy } from '../../i18n/host';
 
 const link = (href: string, label: string) => (
   <a className="btn btn-quiet btn-link" href={href}><Text s={label} /></a>
@@ -20,7 +20,7 @@ const link = (href: string, label: string) => (
  */
 export function Supporting({ ex }: { readonly ex: ExplorerView }) {
   const { lang, persona } = useApp();
-  const c = EVIDENCE[lang].supporting;
+  const c = hostCopy('EVIDENCE', lang).supporting;
   const { citedBy, decisions, project, component } = ex;
   const empty = citedBy.length === 0 && decisions.length === 0 && !project;
   return (
@@ -69,7 +69,7 @@ export function Supporting({ ex }: { readonly ex: ExplorerView }) {
 /** The other evidence in the same case, as neutral inspect links. Restricted and unread items stay listed. */
 export function Siblings({ ex, investigation }: { readonly ex: ExplorerView; readonly investigation: InvestigationSummary }) {
   const { lang, persona, copy, world } = useApp();
-  const c = EVIDENCE[lang].siblings;
+  const c = hostCopy('EVIDENCE', lang).siblings;
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
   return (
     <Panel id="ex-siblings-title" title={<Text s={c.title(investigation.id)} />} testId="sibling-evidence">

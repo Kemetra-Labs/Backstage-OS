@@ -7,14 +7,14 @@ import { useLens } from '../lenses/useLens';
 import { WORLD } from '../lenses/fixtures/world';
 import { authorizedWorld } from '../lenses/logic/authorize';
 import type { K } from '../i18n';
-import { REPLAY_VIEW_COPY } from '../i18n/screens/map';
+import { hostCopy } from '../i18n/host';
 
 const hhmm = (iso: string): string => `${iso.slice(5, 10)} ${iso.slice(11, 16)}`;
 
 export function ReplayTimeBasis() {
   const { lang } = useApp();
   const { route, t } = useLens();
-  const copy = REPLAY_VIEW_COPY[lang].basis;
+  const copy = hostCopy('REPLAY_VIEW_COPY', lang).basis;
   const rows = replayTimeRows(authorizedWorld(WORLD, route.persona));
   const events = new Map(authorizedWorld(WORLD, route.persona).replay.map((e) => [e.id, e.key]));
   const label: Readonly<Record<OrderStatus, string>> = { consistent: copy.consistent, uncertain: copy.uncertain, unknown: copy.unknown };

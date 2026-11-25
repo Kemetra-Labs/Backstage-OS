@@ -2,14 +2,14 @@ import { useApp } from '../../app/AppContext';
 import { LP } from '../../components/L';
 import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
-import { HOME_COPY } from '../../i18n/screens/home';
 import { formatAge } from '../../i18n/format';
 import { hrefFor } from '../../nav/routes';
 import type { HomeDecision, HomeInvestigation } from '../../view/homeView';
+import { hostCopy } from '../../i18n/host';
 
 export function InvestigationPreviews({ items }: { readonly items: readonly HomeInvestigation[] }) {
   const { lang } = useApp();
-  const h = HOME_COPY[lang];
+  const h = hostCopy('HOME_COPY', lang);
   if (items.length === 0) return <StateBlock kind="empty" />;
   return (
     <ul className="rows">
@@ -32,7 +32,7 @@ export function InvestigationPreviews({ items }: { readonly items: readonly Home
 
 export function ProposalPreviews({ items }: { readonly items: readonly HomeDecision[] }) {
   const { lang, shell } = useApp();
-  const h = HOME_COPY[lang];
+  const h = hostCopy('HOME_COPY', lang);
   if (items.length === 0) return <StateBlock kind="empty" />;
   return (
     <ul className="rows">

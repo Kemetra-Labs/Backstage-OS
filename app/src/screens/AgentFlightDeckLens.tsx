@@ -5,12 +5,12 @@
 // display switch, not authorization.
 import { useApp } from '../app/AppContext';
 import { AgentFlightDeck } from '../lenses/screens/AgentFlightDeck';
-import { AGENTS_VIEW_COPY } from '../i18n/screens/map';
 import './lensStyles';
+import { hostCopy } from '../i18n/host';
 
 export default function AgentFlightDeckLens() {
   const { lang } = useApp();
-  const copy = AGENTS_VIEW_COPY[lang];
+  const copy = hostCopy('AGENTS_VIEW_COPY', lang);
   return (
     <section className="kv2-scope" aria-label={copy.region} data-testid="agent-deck-lens">
       <AgentFlightDeck embedded />

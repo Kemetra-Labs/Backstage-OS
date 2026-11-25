@@ -2,15 +2,15 @@ import { useApp } from '../../app/AppContext';
 import { LP } from '../../components/L';
 import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
-import { HOME_COPY } from '../../i18n/screens/home';
 import { hrefFor } from '../../nav/routes';
 import type { HomeAttention } from '../../view/homeView';
 import { EvidenceChips } from './EvidenceChips';
+import { hostCopy } from '../../i18n/host';
 
 /** Attention across products, highest severity first. The first item is the lead and gets the strongest treatment. */
 export function AttentionList({ items }: { readonly items: readonly HomeAttention[] }) {
   const { lang, persona, shell } = useApp();
-  const h = HOME_COPY[lang];
+  const h = hostCopy('HOME_COPY', lang);
   if (items.length === 0) return <StateBlock kind="empty" body={h.attention.none} />;
   return (
     <ul className="home-att-list">

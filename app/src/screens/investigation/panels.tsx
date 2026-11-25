@@ -5,14 +5,14 @@ import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import type { Decision, L10n, WorldComponent, WorldProject } from '../../contract/world';
-import { INVESTIGATION } from '../../i18n/screens/investigation';
 import { hrefFor } from '../../nav/routes';
 import { decisionLabel } from '../../view/investigationView';
+import { hostCopy } from '../../i18n/host';
 
 /** Sources that could not be read. Missing is shown as a list in words, never as a quiet gap. */
 export function MissingPanel({ missing }: { readonly missing: readonly L10n[] }) {
   const { lang } = useApp();
-  const c = INVESTIGATION[lang].missing;
+  const c = hostCopy('INVESTIGATION', lang).missing;
   return (
     <Panel id="inv-missing-title" title={c.title} testId="missing-evidence">
       <p className="note"><Text s={c.note} /></p>
@@ -32,7 +32,7 @@ export function MissingPanel({ missing }: { readonly missing: readonly L10n[] })
 /** The proposal as a neutral link. Nothing here decides, approves or runs anything. */
 export function DecisionPanel({ decision }: { readonly decision: Decision | undefined }) {
   const { lang, persona, copy } = useApp();
-  const c = INVESTIGATION[lang].decision;
+  const c = hostCopy('INVESTIGATION', lang).decision;
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
   return (
     <Panel id="inv-decision-title" title={c.title} testId="proposed-decision">
@@ -61,7 +61,7 @@ interface ContextProps {
 /** Links to the product and component this case belongs to. Nontechnical gets the product only, as in the room header. */
 export function ContextPanel({ project, component }: ContextProps) {
   const { lang, persona } = useApp();
-  const c = INVESTIGATION[lang].context;
+  const c = hostCopy('INVESTIGATION', lang).context;
   if (!project) return null;
   return (
     <Panel id="inv-context-title" title={c.title} testId="case-context">

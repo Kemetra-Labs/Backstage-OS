@@ -7,13 +7,13 @@ import { useApp } from '../app/AppContext';
 import { toHostRoute, toMapContext } from '../bridge/mapContext';
 import { mapRoute } from '../bridge/lensState';
 import { fallbackNode, MissionMapBC } from '../lenses/screens/MissionMapBC';
-import { MAP_LENS_COPY } from '../i18n/screens/map';
 import { hrefFor } from '../nav/routes';
 import './lensStyles';
+import { hostCopy } from '../i18n/host';
 
 export default function MissionMapLens() {
   const { persona, lang, route } = useApp();
-  const copy = MAP_LENS_COPY[lang];
+  const copy = hostCopy('MAP_LENS_COPY', lang);
   const ctx = useMemo(() => toMapContext({ persona, lang, route }), [persona, lang, route]);
   // The link describes what the map is showing: the selected node, or the node the map falls back to when none is selected.
   const project = useMemo(() => toHostRoute({ scope: ctx.scope, node: ctx.node ?? fallbackNode(ctx.scope) }, persona), [ctx, persona]);

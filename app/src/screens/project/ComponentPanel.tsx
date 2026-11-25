@@ -6,15 +6,15 @@ import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import type { WorldComponent, WorldProject } from '../../contract/world';
-import { PROJECT_COPY } from '../../i18n/screens/project';
 import { formatAge } from '../../i18n/format';
 import { hrefFor } from '../../nav/routes';
 import { attentionFor, linkedEvidence, type LinkedEvidence } from '../../view/projectView';
 import { triadOf } from '../../view/world';
+import { hostCopy } from '../../i18n/host';
 
 function EvidenceRow({ item, caseId }: { readonly item: LinkedEvidence; readonly caseId: string | undefined }) {
   const { copy, lang, persona } = useApp();
-  const t = PROJECT_COPY[lang].selected;
+  const t = hostCopy('PROJECT_COPY', lang).selected;
   const v = item.view;
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
   const age = v.freshness === 'stale' && v.ageMinutes !== null ? ` · ${formatAge(v.ageMinutes, lang)}` : '';
@@ -50,8 +50,8 @@ interface Props {
 /** The component picked in the URL: its triad, facts, linked evidence and related attention. */
 export function ComponentPanel({ project, component }: Props) {
   const { copy, lang, persona, shell, world } = useApp();
-  const t = PROJECT_COPY[lang].selected;
-  const layerWords = PROJECT_COPY[lang].layer[persona === 'nontechnical' ? 'plain' : 'standard'];
+  const t = hostCopy('PROJECT_COPY', lang).selected;
+  const layerWords = hostCopy('PROJECT_COPY', lang).layer[persona === 'nontechnical' ? 'plain' : 'standard'];
 
   if (!component) {
     return (

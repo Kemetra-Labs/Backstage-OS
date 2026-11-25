@@ -2,9 +2,9 @@
 // wrapped so that any failure (chunk blocked, render error) falls back to the in-house DepGraph with the same data.
 import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from 'react';
 import { useApp } from '../../app/AppContext';
-import { PROJECT_COPY } from '../../i18n/screens/project';
 import { DepGraph, type GraphEdge, type GraphNode } from '../DepGraph';
 import { Text } from '../Text';
+import { hostCopy } from '../../i18n/host';
 
 const DepFlowCanvas = lazy(() => import('./DepFlowCanvas'));
 
@@ -31,7 +31,7 @@ class FlowBoundary extends Component<BoundaryProps, { failed: boolean }> {
 
 export function DepFlow({ nodes, edges, selectedId, onSelect, onClear, label }: Props) {
   const { lang } = useApp();
-  const copy = PROJECT_COPY[lang].flow;
+  const copy = hostCopy('PROJECT_COPY', lang).flow;
   const fallback = (
     <>
       <p className="note" role="status" data-testid="flow-fallback"><Text s={copy.fallback} /></p>
