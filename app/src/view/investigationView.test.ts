@@ -4,10 +4,18 @@ import { COPY } from '../i18n/strings';
 import {
   conflictOf, crumbTrail, decisionLabel, evidenceStatusText, evidenceTimeline, observedMinutesAgo, summaryFor,
 } from './investigationView';
+import { authorizedWorld } from './authorize';
 import { evidenceViewFor } from './evidence';
 
 const inv = (id: string) => {
   const i = WORLD.investigations.find((x) => x.id === id);
+  if (!i) throw new Error(id);
+  return i;
+};
+// Owner and Nontechnical read the world App.tsx gives them: scoped by authorizedWorld (BACK-73).
+const OWNER_W = authorizedWorld(WORLD, 'owner');
+const scopedInv = (id: string, p: 'owner' | 'technical' | 'nontechnical') => {
+  const i = authorizedWorld(WORLD, p).investigations.find((x) => x.id === id);
   if (!i) throw new Error(id);
   return i;
 };
@@ -47,25 +55,25 @@ describe('evidenceTimeline', () => {
     expect(timed[0]?.id).toBe('E-1');
     expect(timed.map((r) => r.id)).toContain('E-5');
   });
-  it('lists unread and restricted items apart, never with a time (raw, unprojected input: defence in depth)', () => {
-    const owner = evidenceTimeline(refs, 'owner');
-    expect(owner.untimed.map((r) => r.id).sort()).toEqual(['E-5', 'E-6', 'E-7']);
+  it('lists unread items apart, never with a time; withheld E-5 is in neither list (BACK-92 R7)', () => {
+    const owner = evidenceTimeline(scopedInv('INV-DEMO-7', 'owner').evidence, 'owner');
+    expect(owner.untimed.map((r) => r.id).sort()).toEqual(['E-6', 'E-7']);
     expect(owner.timed.map((r) => r.id)).not.toContain('E-5');
     for (const r of owner.untimed) expect(r.minutesAgo).toBeNull();
-    expect(owner.untimed.find((r) => r.id === 'E-5')?.view.restricted).toBe(true);
+    expect(() => evidenceTimeline(refs, 'owner')).toThrow(/unscoped evidence/);
   });
   it('every item lands in exactly one list', () => {
     for (const p of ['owner', 'technical', 'nontechnical'] as const) {
-      const s = evidenceTimeline(refs, p);
-      expect(s.timed.length + s.untimed.length).toBe(refs.length);
+      const scoped = scopedInv('INV-DEMO-7', p).evidence;
+      const s = evidenceTimeline(scoped, p);
+      expect(s.timed.length + s.untimed.length).toBe(scoped.length);
     }
   });
 });
 
 describe('evidenceStatusText', () => {
-  it('says restricted, not read, or provider and freshness in words (raw, unprojected input: defence in depth)', () => {
+  it('says not read, or provider and freshness in words', () => {
     const c = COPY.en;
-    expect(evidenceStatusText(evidenceViewFor('owner', ev('E-5')), c, 'en')).toBe('Restricted to Technical');
     expect(evidenceStatusText(evidenceViewFor('owner', ev('E-6')), c, 'en')).toBe('Not read: source not set up');
     expect(evidenceStatusText(evidenceViewFor('owner', ev('E-7')), c, 'en')).toBe('Not read: source unavailable');
     expect(evidenceStatusText(evidenceViewFor('owner', ev('E-1')), c, 'en')).toBe('{GitHub} · current');
@@ -98,19 +106,20 @@ describe('conflictOf and summaryFor', () => {
     expect(conflictOf({ ...WORLD, projects: [] }, inv('INV-DEMO-9'), 'owner')).toBeUndefined();
   });
   it('summaryFor builds the persona-shaped list and the linked decision and project', () => {
-    const s = summaryFor(WORLD, 'INV-DEMO-9', 'owner');
+    const s = summaryFor(OWNER_W, 'INV-DEMO-9', 'owner');
     expect(s?.project?.id).toBe('KH');
     expect(s?.decision?.id).toBe('DEC-DEMO-5');
     expect(s?.component?.id).toBe('khepri-api');
-    expect(s?.evidence.map((e) => e.id)).toEqual(['E-21', 'E-22', 'E-23', 'E-24']);
-    expect(s?.evidence.find((e) => e.id === 'E-23')?.restricted).toBe(true);
+    // E-23 is Technical-only: the scoped world never holds it, so there is no row for it, not even a placeholder.
+    expect(s?.evidence.map((e) => e.id)).toEqual(['E-21', 'E-22', 'E-24']);
+    expect(summaryFor(WORLD, 'INV-DEMO-9', 'technical')?.evidence.map((e) => e.id)).toEqual(['E-21', 'E-22', 'E-23', 'E-24']);
     expect(s?.evidence.find((e) => e.id === 'E-24')?.notReadReason).toBe('unavailable');
     expect(s?.conflict).toBeDefined();
   });
   it('summaryFor is undefined for an unknown case and tolerates missing links', () => {
-    expect(summaryFor(WORLD, 'INV-NOPE', 'owner')).toBeUndefined();
-    const { decisionId: _d, ...noDecision } = inv('INV-DEMO-9');
-    const lone = { ...WORLD, investigations: [{ ...noDecision, projectId: 'SB' as const }] };
+    expect(summaryFor(OWNER_W, 'INV-NOPE', 'owner')).toBeUndefined();
+    const { decisionId: _d, ...noDecision } = scopedInv('INV-DEMO-9', 'owner');
+    const lone = { ...OWNER_W, investigations: [{ ...noDecision, projectId: 'SB' as const }] };
     const s = summaryFor(lone, 'INV-DEMO-9', 'owner');
     expect(s?.decision).toBeUndefined();
     expect(s?.component).toBeUndefined();

@@ -8,11 +8,10 @@ import { formatAge } from '../../i18n/format';
 import { hrefFor } from '../../nav/routes';
 import type { AttentionEntry, EvidenceRow } from '../../view/portfolioView';
 
-/** Where an evidence item came from: provider and age, or why it was not read. Restricted items say restricted. */
+/** Where an evidence item came from: provider and age, or why it was not read. */
 function Provenance({ row }: { readonly row: EvidenceRow }) {
   const { copy, lang } = useApp();
   const v = row.view;
-  if (v.restricted) return <span data-provenance="restricted">{copy.restricted}</span>;
   if (v.notReadReason) return <span data-provenance="not-read">{copy.notRead[v.notReadReason]}</span>;
   const c = PORTFOLIO_COPY[lang];
   return (
@@ -34,11 +33,9 @@ function EvidenceItem({ row, from }: { readonly row: EvidenceRow; readonly from:
         <span><Text s={row.title} /></span>
         <span className="note"><Provenance row={row} /></span>
       </span>
-      {!v.restricted && (
-        <a className="btn btn-quiet btn-link" href={hrefFor({ name: 'evidence', id: v.id, ...(from ? { from } : {}) })}>
-          <Text s={c.inspect(v.id)} />
-        </a>
-      )}
+      <a className="btn btn-quiet btn-link" href={hrefFor({ name: 'evidence', id: v.id, ...(from ? { from } : {}) })}>
+        <Text s={c.inspect(v.id)} />
+      </a>
     </li>
   );
 }

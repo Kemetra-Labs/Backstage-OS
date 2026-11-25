@@ -59,7 +59,7 @@ export function EvidenceDrawer({ item, persona, labelStyle, copy, lang, onClose,
   }, [onClose]);
 
   const row = (k: string, v: ReactNode) => (<><dt>{k}</dt><dd>{v}</dd></>);
-  const readable = !item.restricted && !item.notReadReason;
+  const readable = !item.notReadReason;
 
   return createPortal(
     // The backdrop is not clickable: a click handler on a non-interactive element is unreachable by keyboard

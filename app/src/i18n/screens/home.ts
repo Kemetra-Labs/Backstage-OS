@@ -15,7 +15,6 @@ export interface HomeCopy {
     readonly title: string;
     readonly started: (age: string) => string;
     readonly evidenceCount: (n: number) => string;
-    readonly restrictedCount: (n: number) => string;
   };
   readonly proposals: {
     readonly title: string;
@@ -68,7 +67,6 @@ const en: HomeCopy = {
     title: 'Open investigations',
     started: (age) => `Started ${age}`,
     evidenceCount: (n) => `${n} evidence items`,
-    restrictedCount: (n) => `${n} restricted to Technical`,
   },
   proposals: {
     title: 'Proposals waiting for a person',
@@ -121,7 +119,6 @@ const ar: HomeCopy = {
     title: 'تحقيقات مفتوحة',
     started: (age) => `بدأ ${age}`,
     evidenceCount: (n) => `${n} عناصر أدلة`,
-    restrictedCount: (n) => `${n} مقيّدة للفريق التقني`,
   },
   proposals: {
     title: 'مقترحات بانتظار شخص',

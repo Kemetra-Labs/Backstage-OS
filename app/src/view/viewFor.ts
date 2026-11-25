@@ -26,7 +26,6 @@ export interface EvidenceView {
   readonly freshness: Freshness;
   readonly ageMinutes: number | null;
   readonly inert: boolean;
-  readonly restricted?: true;
   readonly provider?: Provider;
   readonly notReadReason?: EvidenceReference['notReadReason'];
   // Owner and Technical

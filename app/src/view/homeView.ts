@@ -32,7 +32,6 @@ export interface HomeInvestigation {
   readonly title: ByPersonaL10n;
   readonly startedMinutesAgo: number;
   readonly evidenceCount: number;
-  readonly restrictedCount: number;
 }
 
 export interface HomeDecision {
@@ -108,7 +107,6 @@ export function homeView(w: World, persona: Persona): HomeView {
       title: i.title,
       startedMinutesAgo: i.startedMinutesAgo,
       evidenceCount: i.evidence.length,
-      restrictedCount: i.evidence.filter((e) => evidenceViewFor(persona, e).restricted === true).length,
     })),
     decisions: proposed.map((d) => ({
       id: d.id,
@@ -124,8 +122,8 @@ export function homeView(w: World, persona: Persona): HomeView {
       .map((e) => {
         const ev = e.evidenceId ? w.evidence[e.evidenceId] : undefined;
         const v = ev ? evidenceViewFor(persona, ev) : undefined;
-        // Evidence behind an event decides its label (contract rules); restricted or absent evidence keeps the event's own.
-        const truth: DisplayLabel = v && !v.restricted ? v.label : e.truth;
+        // Evidence behind an event decides its label (contract rules); absent evidence keeps the event's own.
+        const truth: DisplayLabel = v ? v.label : e.truth;
         return {
           id: e.id,
           minutesAgo: e.minutesAgo,

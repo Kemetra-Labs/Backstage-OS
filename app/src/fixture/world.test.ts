@@ -4,7 +4,7 @@ import type { EvidenceReference } from '../contract/types';
 import { SHELL } from '../i18n/shell';
 import { buildIndex, search } from '../nav/search';
 import {
-  componentById, contextOfEvidence, decisionById, evidenceById, investigationById, isRestrictedFor, projectById,
+  componentById, contextOfEvidence, decisionById, evidenceById, investigationById, projectById,
   sourceSummary, triadOf, tr, trp,
 } from '../view/world';
 import { WORLD } from './world';
@@ -157,9 +157,7 @@ describe('world view helpers', () => {
     expect(d && trp(d.title, 'nontechnical', 'ar')).toMatch(/[؀-ۿ]/);
     expect(contextOfEvidence(WORLD, 'E-22').project?.id).toBe('KH');
     expect(contextOfEvidence(WORLD, 'E-41')).toEqual({});
-    const e12 = evidenceById(WORLD, 'E-12') as EvidenceReference;
-    expect(isRestrictedFor(e12, 'owner')).toBe(true);
-    expect(isRestrictedFor(e12, 'technical')).toBe(false);
+    expect((evidenceById(WORLD, 'E-12') as EvidenceReference).visibility).toBe('technical');
   });
 });
 

@@ -1,21 +1,29 @@
 // One persona allowlist for evidence on every screen (Blueprint v4 §5, D-5). Owner and Nontechnical never receive raw
-// output, job names, run ids, PR ids or links; Technical-only items arrive as "restricted" with no detail at all.
+// output, job names, run ids, PR ids or links. Technical-only items never reach them at all: App.tsx scopes the world through
+// authorizedWorld (BACK-73), and these projections fail closed if an unscoped Technical-only record is ever passed (BACK-92 R7).
 import { effectiveFreshness, isInertLink, resolveLabel } from '../contract/rules';
 import type { EvidenceReference, Lang, Persona } from '../contract/types';
 import type { DeliveryItem, World } from '../contract/world';
 import { COPY } from '../i18n/strings';
 import type { EvidenceView } from './viewFor';
 
+/**
+ * Fails closed when a Technical-only record reaches a lay persona's projection. The record was withheld by authorizedWorld /
+ * authorizedInvestigation before any screen reads it, so this never runs in the app; there is no placeholder to render instead,
+ * because a placeholder would itself disclose that the record exists (M05-D05-B).
+ */
+function assertAuthorized(ref: EvidenceReference, persona: Persona): void {
+  if (ref.visibility === 'technical' && persona !== 'technical') {
+    throw new Error(`unscoped evidence: a Technical-only record reached the ${persona} view; scope the world with authorizedWorld first`);
+  }
+}
+
 /** The view of one evidence item a persona may receive. rawOutput is attached for Technical only. */
 export function evidenceViewFor(persona: Persona, ref: EvidenceReference, rawOutput?: string): EvidenceView {
+  assertAuthorized(ref, persona);
   const o = ref.observation;
   const src = o?.source;
   const inert = isInertLink(o?.sourceUrl, src?.synthetic ?? true);
-
-  // Restricted evidence: only that it exists, with no title, source, target, age or label.
-  if (ref.visibility === 'technical' && persona !== 'technical') {
-    return { id: ref.id, label: 'unknown', freshness: 'unknown', ageMinutes: null, inert: true, restricted: true };
-  }
 
   const base: EvidenceView = {
     id: ref.id,
@@ -42,14 +50,14 @@ export function evidenceViewFor(persona: Persona, ref: EvidenceReference, rawOut
 }
 
 /**
- * Persona title for any evidence id, as copy with {braces}: INV-DEMO-7 items from strings.ts, the rest from the world.
- * Restricted items get the restriction text, never their title. Unknown ids fall back to the id itself.
+ * Persona title for an evidence id of this world, as copy with {braces}: INV-DEMO-7 items from strings.ts, the rest from the world.
+ * An id the world does not hold (unknown, or withheld from this persona) gets the id itself, never a title from the static copy.
  */
 export function evidenceTitleFor(w: World, id: string, persona: Persona, lang: Lang): string {
   const ref = w.evidence[id];
-  const copy = COPY[lang];
-  if (ref && ref.visibility === 'technical' && persona !== 'technical') return copy.restricted;
-  return copy.evidenceItem[id]?.[persona] ?? w.evidenceText[id]?.[persona][lang] ?? `{${id}}`;
+  if (!ref) return `{${id}}`;
+  assertAuthorized(ref, persona);
+  return COPY[lang].evidenceItem[id]?.[persona] ?? w.evidenceText[id]?.[persona][lang] ?? `{${id}}`;
 }
 
 const DELIVERY_KIND: Readonly<Record<Lang, Readonly<Record<DeliveryItem['kind'], string>>>> = {

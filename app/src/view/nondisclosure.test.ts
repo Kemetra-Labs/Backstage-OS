@@ -15,11 +15,10 @@ const LAY = ['owner', 'nontechnical'] as const;
 const WITHHELD = ['E-5', 'E-12', 'E-23'] as const;
 
 describe('persona-projected views (Owner, Nontechnical)', () => {
-  it('home: no restricted count, and evidence counts exclude E-5 and E-23', () => {
+  it('home: evidence counts exclude E-5 and E-23', () => {
     const raw = homeView(WORLD, 'technical').investigations;
     for (const p of LAY) {
       const v = homeView(authorizedWorld(WORLD, p), p).investigations;
-      for (const i of v) expect(i.restrictedCount, `${p}/${i.id}`).toBe(0);
       expect(v.find((i) => i.id === 'INV-DEMO-7')?.evidenceCount).toBe(raw.find((i) => i.id === 'INV-DEMO-7')!.evidenceCount - 1);
       expect(v.find((i) => i.id === 'INV-DEMO-9')?.evidenceCount).toBe(raw.find((i) => i.id === 'INV-DEMO-9')!.evidenceCount - 1);
     }
@@ -33,15 +32,12 @@ describe('persona-projected views (Owner, Nontechnical)', () => {
     expect(portfolioView(WORLD, 'technical', 'en').products.find((x) => x.id === 'RT')?.attentionCount).toBe(2);
   });
 
-  it('portfolio: no attention row carries a restricted or withheld evidence row', () => {
+  it('portfolio: no attention row carries a withheld evidence row', () => {
     for (const p of LAY) {
       const v = portfolioView(authorizedWorld(WORLD, p), p, 'en');
       for (const a of v.attention) {
         expect(a.id).not.toBe('ATT-RT-2');
-        for (const r of a.evidence) {
-          expect(r.view.restricted, `${p}/${a.id}/${r.view.id}`).toBeUndefined();
-          expect(WITHHELD).not.toContain(r.view.id);
-        }
+        for (const r of a.evidence) expect(WITHHELD, `${p}/${a.id}`).not.toContain(r.view.id);
       }
     }
   });
@@ -53,7 +49,6 @@ describe('persona-projected views (Owner, Nontechnical)', () => {
       for (const id of ['inventory', 'payments']) {
         const rows = linkedEvidence(w, rt, componentById(rt, id)!, p, 'en');
         expect(rows.map((r) => r.id), `${p}/${id}`).toEqual([]);
-        expect(rows.some((r) => r.view.restricted)).toBe(false);
       }
     }
     const raw = projectById(WORLD, 'RT')!;

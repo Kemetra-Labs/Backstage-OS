@@ -50,18 +50,24 @@ const recordFields = (e: EvidenceReference): Token[] => [
   ...(e.observation?.sourceUrl ? [{ value: e.observation.sourceUrl, kind: 'record' as const, from: `${e.id} source link` }] : []),
 ];
 
+/**
+ * Placeholder text whose copy key BACK-92 R7 removed with V1's unreachable restricted path (HOME_COPY.investigations.restrictedCount,
+ * "<n> restricted to Technical"). It is kept here as a literal, as it rendered without the count, so a reintroduced placeholder still fails.
+ */
+const REMOVED_PLACEHOLDERS: Readonly<Record<Lang, string>> = { en: 'restricted to Technical', ar: 'مقيّدة للفريق التقني' };
+
 /** The copy that stands in for a withheld record. A placeholder is itself a disclosure, so none of it may reach a lay persona. */
 const placeholders = (): Token[] =>
   LANGS.flatMap((lang) => {
     const i = lang === 'ar' ? 1 : 0;
-    const restrictedCount = HOME_COPY[lang].investigations.restrictedCount(1).replace(/^1\s*/, '');
+    const restrictedCount = REMOVED_PLACEHOLDERS[lang];
     return [
       { value: COPY[lang].restricted, kind: 'placeholder' as const, from: `COPY.${lang}.restricted` },
       { value: COPY[lang].notRead.restricted, kind: 'placeholder' as const, from: `COPY.${lang}.notRead.restricted` },
       { value: SHELL[lang].states.restricted.title, kind: 'placeholder' as const, from: `SHELL.${lang}.states.restricted.title` },
       { value: SHELL[lang].states.restricted.body, kind: 'placeholder' as const, from: `SHELL.${lang}.states.restricted.body` },
       { value: EVIDENCE_COPY[lang].restrictedBody, kind: 'placeholder' as const, from: `EVIDENCE.${lang}.restrictedBody` },
-      { value: restrictedCount, kind: 'placeholder' as const, from: `HOME_COPY.${lang}.investigations.restrictedCount` },
+      { value: restrictedCount, kind: 'placeholder' as const, from: `HOME_COPY.${lang}.investigations.restrictedCount (removed, BACK-92 R7)` },
       { value: plain(TABLE['edge.restricted'][i]), kind: 'placeholder' as const, from: `TABLE['edge.restricted'] ${lang}` },
     ];
   });

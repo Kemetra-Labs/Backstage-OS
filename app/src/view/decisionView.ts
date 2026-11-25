@@ -109,7 +109,6 @@ export interface EvidenceRow {
   readonly ageMinutes: number | null;
   readonly provider?: Provider;
   readonly notReadReason?: EvidenceReference['notReadReason'];
-  readonly restricted: boolean;
 }
 
 export interface OptionView {
@@ -149,7 +148,6 @@ function evidenceRow(w: World, ref: EvidenceReference, persona: Persona, lang: L
     label: v.label,
     freshness: v.freshness,
     ageMinutes: v.ageMinutes,
-    restricted: v.restricted === true,
     ...(v.provider ? { provider: v.provider } : {}),
     ...(v.notReadReason ? { notReadReason: v.notReadReason } : {}),
   };

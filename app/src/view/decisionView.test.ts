@@ -122,9 +122,9 @@ describe('decisionDetailView', () => {
     expect(v?.investigationId).toBeUndefined();
   });
 
-  it('restricted evidence is listed as restricted for lay personas and in full for Technical (raw, unprojected input: defence in depth)', () => {
+  it('observed evidence of DEC-DEMO-5 is all readable by lay personas, so they see the same rows as Technical', () => {
     const lay = decisionDetailView(WORLD, 'DEC-DEMO-5', 'owner', 'en');
-    expect(lay?.observed.every((r) => !r.restricted)).toBe(true);
+    expect(lay?.observed.every((r) => WORLD.evidence[r.id]?.visibility !== 'technical')).toBe(true);
     const row = (p: Persona) => decisionDetailView(WORLD, 'DEC-DEMO-5', p, 'en')?.observed.length;
     expect(row('owner')).toBe(row('technical'));
   });

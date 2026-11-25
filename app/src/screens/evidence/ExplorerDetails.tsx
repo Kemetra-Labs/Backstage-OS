@@ -15,7 +15,7 @@ const row = (k: string, v: ReactNode, key: string) => (
 );
 
 /**
- * The fields of one evidence item. Restricted and not-read items get a state block with the reason instead of a
+ * The fields of one evidence item. Not-read items (including a source that reported 'restricted') get a state block with the reason instead of a
  * field list, so a missing value is never a blank and never a zero. Every field comes from the persona view.
  */
 export function ExplorerDetails({ ex }: { readonly ex: ExplorerView }) {
@@ -23,13 +23,6 @@ export function ExplorerDetails({ ex }: { readonly ex: ExplorerView }) {
   const c = EVIDENCE[lang];
   const v = ex.view;
 
-  if (v.restricted) {
-    return (
-      <Panel id="ex-details-title" title={c.details} testId="evidence-details">
-        <StateBlock kind="restricted" body={c.restrictedBody} />
-      </Panel>
-    );
-  }
   if (v.notReadReason && v.notReadReason !== 'restricted') {
     return (
       <Panel id="ex-details-title" title={c.details} testId="evidence-details">

@@ -8,7 +8,7 @@ interface Props {
   readonly showIds: boolean;
 }
 
-/** One truth chip per evidence item, labelled by the contract. Restricted items say so and are still counted. */
+/** One truth chip per evidence item, labelled by the contract. */
 export function EvidenceChips({ items, showIds }: Props) {
   const { copy, persona } = useApp();
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
@@ -17,8 +17,7 @@ export function EvidenceChips({ items, showIds }: Props) {
       {items.map((v) => (
         <li key={v.id} className="ev-chip" data-evidence-chip={v.id}>
           <TruthChip label={v.label} style={style} copy={copy} />
-          {v.restricted && <span className="note">{copy.restricted}</span>}
-          {showIds && !v.restricted && <bdi dir="ltr" className="ev-id">{v.id}</bdi>}
+          {showIds && <bdi dir="ltr" className="ev-id">{v.id}</bdi>}
         </li>
       ))}
     </ul>
