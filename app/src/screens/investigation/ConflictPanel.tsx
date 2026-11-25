@@ -3,11 +3,11 @@ import { HealthTriad } from '../../components/HealthTriad';
 import { Panel } from '../../components/Panel';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
-import { INVESTIGATION } from '../../i18n/screens/investigation';
 import { hrefFor } from '../../nav/routes';
 import { evidenceTitleFor } from '../../view/evidence';
 import { evidenceStatusText, type ConflictView } from '../../view/investigationView';
 import type { EvidenceView } from '../../view/viewFor';
+import { hostCopy } from '../../i18n/host';
 
 interface Props {
   readonly conflict: ConflictView;
@@ -18,7 +18,7 @@ interface Props {
 function Signal({ title, items, investigationId }: { readonly title: string; readonly items: readonly EvidenceView[]; readonly investigationId?: string }) {
   const { persona, lang, copy, world } = useApp();
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
-  const c = INVESTIGATION[lang];
+  const c = hostCopy('INVESTIGATION', lang);
   return (
     <div className="signal">
       <h3 className="signal-title">{title}</h3>
@@ -44,7 +44,7 @@ function Signal({ title, items, investigationId }: { readonly title: string; rea
  */
 export function ConflictPanel({ conflict, componentName }: Props) {
   const { lang } = useApp();
-  const c = INVESTIGATION[lang].summary.conflict;
+  const c = hostCopy('INVESTIGATION', lang).summary.conflict;
   const inv = conflict.component?.investigationId;
   return (
     <Panel id="sum-conflict-title" title={c.title} tone="raised" testId="conflicting-signals">

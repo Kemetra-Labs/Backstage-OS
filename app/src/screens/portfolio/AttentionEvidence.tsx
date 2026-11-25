@@ -3,17 +3,17 @@ import { LP } from '../../components/L';
 import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
-import { PORTFOLIO_COPY } from '../../i18n/screens/portfolio';
 import { formatAge } from '../../i18n/format';
 import { hrefFor } from '../../nav/routes';
 import type { AttentionEntry, EvidenceRow } from '../../view/portfolioView';
+import { hostCopy } from '../../i18n/host';
 
 /** Where an evidence item came from: provider and age, or why it was not read. */
 function Provenance({ row }: { readonly row: EvidenceRow }) {
   const { copy, lang } = useApp();
   const v = row.view;
   if (v.notReadReason) return <span data-provenance="not-read">{copy.notRead[v.notReadReason]}</span>;
-  const c = PORTFOLIO_COPY[lang];
+  const c = hostCopy('PORTFOLIO_COPY', lang);
   return (
     <span data-provenance="read">
       {v.provider ? <bdi dir="ltr">{copy.provider[v.provider]}</bdi> : c.provenance.noProvider}
@@ -24,7 +24,7 @@ function Provenance({ row }: { readonly row: EvidenceRow }) {
 
 function EvidenceItem({ row, from }: { readonly row: EvidenceRow; readonly from: string | undefined }) {
   const { copy, persona, lang } = useApp();
-  const c = PORTFOLIO_COPY[lang];
+  const c = hostCopy('PORTFOLIO_COPY', lang);
   const v = row.view;
   return (
     <li className="pf-ev" data-evidence-row={v.id}>
@@ -42,7 +42,7 @@ function EvidenceItem({ row, from }: { readonly row: EvidenceRow; readonly from:
 
 export function AttentionEvidence({ items, empty }: { readonly items: readonly AttentionEntry[]; readonly empty: 'none' | 'notSetUp' | null }) {
   const { lang, persona, shell } = useApp();
-  const c = PORTFOLIO_COPY[lang];
+  const c = hostCopy('PORTFOLIO_COPY', lang);
   if (items.length === 0) {
     return empty === 'notSetUp'
       ? <StateBlock kind="not_configured" body={c.attentionList.notSetUp} />

@@ -6,13 +6,13 @@ import { Panel } from '../components/Panel';
 import { StateBlock } from '../components/StateBlock';
 import { Text } from '../components/Text';
 import { TruthChip } from '../components/TruthChip';
-import { EVIDENCE } from '../i18n/screens/evidence';
 import { hrefFor } from '../nav/routes';
 import { explorerFor } from '../view/explorerView';
 import { evidenceTitleFor } from '../view/evidence';
 import { crumbTrail } from '../view/investigationView';
 import { ExplorerDetails } from './evidence/ExplorerDetails';
 import { Siblings, Supporting } from './evidence/Related';
+import { hostCopy } from '../i18n/host';
 
 interface HeaderProps {
   readonly id: string;
@@ -29,7 +29,7 @@ function ExplorerHeader({ id, crumbs, children }: HeaderProps) {
   return (
     <div className="screen-head">
       <Breadcrumbs items={crumbs} />
-      <h1><Text s={EVIDENCE[lang].h1(id)} /></h1>
+      <h1><Text s={hostCopy('EVIDENCE', lang).h1(id)} /></h1>
       {children}
     </div>
   );
@@ -38,7 +38,7 @@ function ExplorerHeader({ id, crumbs, children }: HeaderProps) {
 /** Evidence Explorer: one evidence item, what is known about it, what cites it and its neighbours in the case. */
 export function Evidence({ id, from }: { readonly id: string; readonly from?: string }) {
   const { persona, lang, copy, shell, world, investigation: demo } = useApp();
-  const c = EVIDENCE[lang];
+  const c = hostCopy('EVIDENCE', lang);
   const ex = explorerFor(world, id, persona, from, demo.rawOutput);
   const portfolio = copy.crumbs[0] ?? '';
 

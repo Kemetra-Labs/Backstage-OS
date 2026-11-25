@@ -4,13 +4,13 @@ import { lazy, Suspense } from 'react';
 import { useApp } from '../app/AppContext';
 import { LensBoundary } from '../components/LensBoundary';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { MAP_LENS_COPY } from '../i18n/screens/map';
+import { hostCopy } from '../i18n/host';
 
 const MissionMapLens = lazy(() => import('./MissionMapLens'));
 
 export function MissionMap() {
   const { lang, shell } = useApp();
-  const copy = MAP_LENS_COPY[lang];
+  const copy = hostCopy('MAP_LENS_COPY', lang);
   const header = <ScreenHeader title={shell.nav.map} />;
   return (
     <LensBoundary label="Mission Map" fallback={<>{header}<p className="note" role="status" data-testid="map-failed">{copy.failed}</p></>}>

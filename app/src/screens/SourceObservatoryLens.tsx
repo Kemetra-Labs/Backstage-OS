@@ -4,12 +4,12 @@
 // is a display switch, not authorization.
 import { useApp } from '../app/AppContext';
 import { SourceObservatory } from '../lenses/screens/SourceObservatory';
-import { SOURCES_VIEW_COPY } from '../i18n/screens/map';
 import './lensStyles';
+import { hostCopy } from '../i18n/host';
 
 export default function SourceObservatoryLens() {
   const { lang } = useApp();
-  const copy = SOURCES_VIEW_COPY[lang];
+  const copy = hostCopy('SOURCES_VIEW_COPY', lang);
   return (
     <section className="kv2-scope" aria-label={copy.region} data-testid="source-observatory-lens">
       <SourceObservatory embedded />

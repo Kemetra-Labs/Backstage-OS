@@ -3,9 +3,9 @@ import { useApp } from '../../app/AppContext';
 import { Panel } from '../../components/Panel';
 import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
-import { EVIDENCE } from '../../i18n/screens/evidence';
 import { formatAge } from '../../i18n/format';
 import type { ExplorerView } from '../../view/explorerView';
+import { hostCopy } from '../../i18n/host';
 
 const row = (k: string, v: ReactNode, key: string) => (
   <Fragment key={key}>
@@ -20,7 +20,7 @@ const row = (k: string, v: ReactNode, key: string) => (
  */
 export function ExplorerDetails({ ex }: { readonly ex: ExplorerView }) {
   const { lang, copy } = useApp();
-  const c = EVIDENCE[lang];
+  const c = hostCopy('EVIDENCE', lang);
   const v = ex.view;
 
   if (v.notReadReason && v.notReadReason !== 'restricted') {

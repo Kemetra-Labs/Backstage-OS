@@ -11,10 +11,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Handle, Position, ReactFlow, type AriaLabelConfig, type Edge, type Node, type NodeProps } from '@xyflow/react';
 import { useApp } from '../../app/AppContext';
 import { plain } from '../../i18n/format';
-import { PROJECT_COPY } from '../../i18n/screens/project';
 import { toFlowModel } from '../../view/flowModel';
 import type { GraphEdge, GraphNode } from '../DepGraph';
 import { Text } from '../Text';
+import { hostCopy } from '../../i18n/host';
 
 interface Props {
   readonly nodes: readonly GraphNode[];
@@ -72,7 +72,7 @@ function useWidth(ref: { readonly current: HTMLElement | null }): number {
 
 export default function DepFlowCanvas({ nodes, edges, selectedId = null, onSelect, onClear, label }: Props) {
   const { lang, shell } = useApp();
-  const pc = PROJECT_COPY[lang];
+  const pc = hostCopy('PROJECT_COPY', lang);
   const scroller = useRef<HTMLDivElement>(null);
   const width = useWidth(scroller);
   const model = useMemo(() => toFlowModel(nodes, edges, width), [nodes, edges, width]);

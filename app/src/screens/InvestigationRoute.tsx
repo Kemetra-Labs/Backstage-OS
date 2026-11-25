@@ -3,11 +3,11 @@ import '../styles/screens/investigation.css';
 import { useApp } from '../app/AppContext';
 import { LensBoundary } from '../components/LensBoundary';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { REPLAY_VIEW_COPY } from '../i18n/screens/map';
 import { hrefFor } from '../nav/routes';
 import { investigationById } from '../view/world';
 import { InvestigationRoom } from './InvestigationRoom';
 import { CaseNotFound, SummaryRoom } from './investigation/SummaryRoom';
+import { hostCopy } from '../i18n/host';
 
 // BACK-89: the replay is another view of the case, loaded only when asked for (its code and sheets are a lazy chunk).
 const ReplayLens = lazy(() => import('./ReplayLens'));
@@ -21,7 +21,7 @@ export function InvestigationRoute({ id }: { readonly id: string }) {
   const inv = investigationById(world, id);
   if (!inv) return <CaseNotFound id={id} />;
   if (!(inv.fullRoom && id === investigation.id)) return <SummaryRoom id={id} />;
-  const views = REPLAY_VIEW_COPY[lang];
+  const views = hostCopy('REPLAY_VIEW_COPY', lang);
   const replay = route.name === 'investigation' && route.view === 'replay';
   const switcher = (
     <nav className="view-switch" aria-label={views.label}>

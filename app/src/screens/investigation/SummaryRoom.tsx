@@ -6,17 +6,17 @@ import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import { formatAge } from '../../i18n/format';
-import { INVESTIGATION } from '../../i18n/screens/investigation';
 import { hrefFor } from '../../nav/routes';
 import { crumbTrail, summaryFor } from '../../view/investigationView';
 import { ConflictPanel } from './ConflictPanel';
 import { EvidenceLinks } from './EvidenceLinks';
 import { ContextPanel, DecisionPanel, MissingPanel } from './panels';
+import { hostCopy } from '../../i18n/host';
 
 /** Unknown case id: an error state with ways back, never a blank page. */
 export function CaseNotFound({ id }: { readonly id: string }) {
   const { lang, copy, shell } = useApp();
-  const c = INVESTIGATION[lang];
+  const c = hostCopy('INVESTIGATION', lang);
   return (
     <>
       <ScreenHeader
@@ -41,7 +41,7 @@ export function SummaryRoom({ id }: { readonly id: string }) {
   const { persona, lang, copy, world } = useApp();
   const s = summaryFor(world, id, persona);
   if (!s) return <CaseNotFound id={id} />;
-  const c = INVESTIGATION[lang];
+  const c = hostCopy('INVESTIGATION', lang);
   const { investigation: inv, project, component, decision, conflict } = s;
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
   const crumbs = project

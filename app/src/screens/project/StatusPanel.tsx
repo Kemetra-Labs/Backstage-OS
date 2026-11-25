@@ -3,9 +3,9 @@ import { HealthTriad } from '../../components/HealthTriad';
 import { Panel } from '../../components/Panel';
 import { StateBlock } from '../../components/StateBlock';
 import { formatAge } from '../../i18n/format';
-import { PROJECT_COPY } from '../../i18n/screens/project';
 import type { SourceRow } from '../../view/projectView';
 import type { Triad } from '../../view/world';
+import { hostCopy } from '../../i18n/host';
 
 interface Props {
   readonly triad: Triad;
@@ -15,7 +15,7 @@ interface Props {
 /** Product health triad and every source: provider, connectivity, freshness and age, in words. */
 export function StatusPanel({ triad, sources }: Props) {
   const { copy, lang } = useApp();
-  const t = PROJECT_COPY[lang].status;
+  const t = hostCopy('PROJECT_COPY', lang).status;
   return (
     <Panel id="proj-status" title={t.title} tone="raised" testId="status-panel">
       <HealthTriad triad={triad} />

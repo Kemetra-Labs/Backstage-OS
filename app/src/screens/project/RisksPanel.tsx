@@ -1,10 +1,10 @@
 import { Text } from '../../components/Text';
 import { useApp } from '../../app/AppContext';
 import { Panel } from '../../components/Panel';
-import { PROJECT_COPY } from '../../i18n/screens/project';
 import { formatAge } from '../../i18n/format';
 import { hrefFor } from '../../nav/routes';
 import type { Risks } from '../../view/projectView';
+import { hostCopy } from '../../i18n/host';
 
 interface Props {
   readonly projectId: string;
@@ -15,7 +15,7 @@ interface Props {
 /** Unknowns, unconfirmed links and sources not current. Nothing here is ever drawn green. */
 export function RisksPanel({ projectId, risks, hasComponents }: Props) {
   const { copy, lang, shell } = useApp();
-  const t = PROJECT_COPY[lang].risks;
+  const t = hostCopy('PROJECT_COPY', lang).risks;
   return (
     <Panel id="proj-risks" title={t.title} testId="risks-panel">
       <p className="note"><Text s={t.intro} /></p>

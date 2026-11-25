@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { useApp } from '../app/AppContext';
 import { Panel } from '../components/Panel';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { HOME_COPY } from '../i18n/screens/home';
 import { hrefFor } from '../nav/routes';
 import { homeView, type HomeSignals } from '../view/homeView';
 import '../styles/screens/home.css';
@@ -11,10 +10,11 @@ import { Activity } from './home/Activity';
 import { AttentionList } from './home/AttentionList';
 import { InvestigationPreviews, ProposalPreviews } from './home/SideLists';
 import { SourceHealth } from './home/SourceHealth';
+import { hostCopy } from '../i18n/host';
 
 function Signals({ s }: { readonly s: HomeSignals }) {
   const { lang } = useApp();
-  const h = HOME_COPY[lang];
+  const h = hostCopy('HOME_COPY', lang);
   const items = [
     { key: 'products', value: s.products, tone: '', note: null },
     { key: 'attention', value: s.productsNeedingAttention, tone: s.productsNeedingAttention > 0 ? 'hot' : '', note: h.ofTotal(s.products) },
@@ -40,7 +40,7 @@ function Signals({ s }: { readonly s: HomeSignals }) {
 /** Command Home (BACK-1): one executive read of the whole mission control. Every number comes from world. */
 export function Home() {
   const { shell, lang, persona, world } = useApp();
-  const h = HOME_COPY[lang];
+  const h = hostCopy('HOME_COPY', lang);
   const v = useMemo(() => homeView(world, persona), [world, persona]);
   return (
     <>

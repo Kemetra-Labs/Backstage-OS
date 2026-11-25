@@ -10,11 +10,11 @@ import { Ledger } from '../components/Ledger';
 import { StageMap } from '../components/StageMap';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Text } from '../components/Text';
-import { INVESTIGATION } from '../i18n/screens/investigation';
 import { hrefFor } from '../nav/routes';
 import { crumbTrail } from '../view/investigationView';
 import { investigationById } from '../view/world';
 import { RoomExtras } from './investigation/RoomExtras';
+import { hostCopy } from '../i18n/host';
 
 interface Props {
   readonly persona: Persona;
@@ -61,7 +61,7 @@ export function InvestigationRoom({ persona, lang, copy }: Props) {
 
   const { meta } = view;
   const summary = investigationById(world, meta.id);
-  const explorerText = INVESTIGATION[lang].openExplorer;
+  const explorerText = hostCopy('INVESTIGATION', lang).openExplorer;
   // Portfolio and the product are links; the case itself is the current page.
   const crumbHrefs = [
     hrefFor({ name: 'portfolio' }),

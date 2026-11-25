@@ -4,10 +4,10 @@ import { Text } from '../../components/Text';
 import { Timeline, type TimelineItem } from '../../components/Timeline';
 import { TruthChip } from '../../components/TruthChip';
 import type { EvidenceReference } from '../../contract/types';
-import { INVESTIGATION } from '../../i18n/screens/investigation';
 import { hrefFor } from '../../nav/routes';
 import { evidenceTitleFor } from '../../view/evidence';
 import { evidenceStatusText, evidenceTimeline, type TimelineRow } from '../../view/investigationView';
+import { hostCopy } from '../../i18n/host';
 
 interface Props {
   readonly investigationId: string;
@@ -21,7 +21,7 @@ interface Props {
  */
 export function TimelinePanel({ investigationId, evidence }: Props) {
   const { persona, lang, copy, world } = useApp();
-  const c = INVESTIGATION[lang];
+  const c = hostCopy('INVESTIGATION', lang);
   const { timed, untimed } = evidenceTimeline(evidence, persona);
   const style = persona === 'nontechnical' ? 'plain' : 'standard';
   const link = (id: string) => (

@@ -6,7 +6,7 @@ import { StateBlock } from '../../components/StateBlock';
 import { DepFlow } from '../../components/flow/DepFlow';
 import { Text } from '../../components/Text';
 import type { WorldProject } from '../../contract/world';
-import { PROJECT_COPY } from '../../i18n/screens/project';
+import { hostCopy } from '../../i18n/host';
 import { hrefFor } from '../../nav/routes';
 import { rendererFrom } from '../../view/rendererFlag';
 import {
@@ -34,7 +34,7 @@ interface Option<T extends string> {
 
 export function MapPanel({ project, selectedId, filters, onFilters, mode, onMode, narrow }: Props) {
   const { copy, lang, persona, shell } = useApp();
-  const pc = PROJECT_COPY[lang];
+  const pc = hostCopy('PROJECT_COPY', lang);
   const t = pc.map;
   const layerWords = pc.layer[persona === 'nontechnical' ? 'plain' : 'standard'];
   const model = mapFor(project, filters);

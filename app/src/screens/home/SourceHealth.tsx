@@ -1,8 +1,8 @@
 import { useApp } from '../../app/AppContext';
 import { HealthTriad } from '../../components/HealthTriad';
-import { HOME_COPY } from '../../i18n/screens/home';
 import type { HomeSourceHealth } from '../../view/homeView';
 import type { SourceBuckets } from '../../view/portfolioView';
+import { hostCopy } from '../../i18n/host';
 
 export interface BucketWords {
   readonly current: (n: number) => string;
@@ -26,7 +26,7 @@ export function bucketWords(b: SourceBuckets, w: BucketWords): readonly string[]
 /** Per product: target triad plus how many of its sources are current, stale, unavailable or not set up. */
 export function SourceHealth({ items }: { readonly items: readonly HomeSourceHealth[] }) {
   const { lang } = useApp();
-  const h = HOME_COPY[lang].sourceHealth;
+  const h = hostCopy('HOME_COPY', lang).sourceHealth;
   return (
     <ul className="rows" aria-label={h.caption}>
       {items.map((s) => (

@@ -3,7 +3,6 @@ import { useApp } from '../app/AppContext';
 import { L } from '../components/L';
 import { ScreenHeader } from '../components/ScreenHeader';
 import type { WorldComponent, WorldProject } from '../contract/world';
-import { PROJECT_COPY } from '../i18n/screens/project';
 import { hrefFor } from '../nav/routes';
 import { DEFAULT_FILTERS, deliveryRows, risksFor, sourceRows, type Filters } from '../view/projectView';
 import { componentById, projectById, triadOf } from '../view/world';
@@ -15,6 +14,7 @@ import { ProjectNotFound } from './project/ProjectNotFound';
 import { RisksPanel } from './project/RisksPanel';
 import { StatusPanel } from './project/StatusPanel';
 import { useNarrow } from './project/useNarrow';
+import { hostCopy } from '../i18n/host';
 
 interface Props {
   readonly projectId: string;
@@ -39,7 +39,7 @@ function ProjectBody({ project, component }: { readonly project: WorldProject; r
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [mode, setMode] = useState<ViewMode>('map');
   const narrow = useNarrow();
-  const t = PROJECT_COPY[lang];
+  const t = hostCopy('PROJECT_COPY', lang);
   const projectHref = hrefFor({ name: 'project', projectId: project.id });
   const crumbs = [
     { label: shell.nav.portfolio, href: hrefFor({ name: 'portfolio' }) },

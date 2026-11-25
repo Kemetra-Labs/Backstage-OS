@@ -4,7 +4,7 @@
 // hook calls `toLensState` with the host's `useApp()` state, and every change a lens asks for (select a node, change scope, open
 // another screen) becomes a host navigation. Synthetic demo data only; persona is a display switch, not authorization.
 import { DOMAIN } from '../domain/fixture';
-import { COPY, translate, type Copy, type K, type Vars } from '../i18n';
+import { hostCopy, translate, type Copy, type K, type Vars } from '../i18n';
 import { DEFAULT_ROUTE, type Route as V2Route } from '../lenses/navigation/route';
 import type { ScreenId } from '../lenses/types';
 import type { Provider } from '../contract/types';
@@ -76,7 +76,7 @@ export function toLensState(view: HostView, nav: HostNav, world?: MapWorld): Len
   };
   return {
     route,
-    copy: COPY[view.lang],
+    copy: hostCopy('COPY', view.lang),
     t: (key, vars) => translate(key, view.lang, view.persona, vars),
     // The lab replaced the history entry for a selection; in the host a selection is a navigation, so Back returns to the previous one.
     // On the Sources screen a change is the selected source; anywhere else it is the map's scope or node.

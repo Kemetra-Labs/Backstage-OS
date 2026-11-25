@@ -4,13 +4,13 @@
 // not authorization.
 import { useApp } from '../app/AppContext';
 import { MissionReplay } from '../lenses/screens/MissionReplay';
-import { REPLAY_VIEW_COPY } from '../i18n/screens/map';
 import { ReplayTimeBasis } from './ReplayTimeBasis';
 import './lensStyles';
+import { hostCopy } from '../i18n/host';
 
 export default function ReplayLens() {
   const { lang } = useApp();
-  const copy = REPLAY_VIEW_COPY[lang];
+  const copy = hostCopy('REPLAY_VIEW_COPY', lang);
   return (
     <section className="kv2-scope" aria-label={copy.region} data-testid="replay-lens">
       <MissionReplay embedded />

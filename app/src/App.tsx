@@ -4,8 +4,6 @@ import type { Lang, Persona } from './contract/types';
 import { INV_DEMO_7 } from './fixture/inv-demo-7';
 import { WORLD } from './fixture/world';
 import { authorizedInvestigation, authorizedWorld } from './view/authorize';
-import { COPY } from './i18n/strings';
-import { SHELL } from './i18n/shell';
 import type { Route } from './nav/routes';
 import { useRoute } from './nav/useRoute';
 import { AppShell } from './shell/AppShell';
@@ -20,6 +18,7 @@ import { NotFound } from './screens/NotFound';
 import { Portfolio } from './screens/Portfolio';
 import { Project } from './screens/Project';
 import { Sources } from './screens/Sources';
+import { hostCopy } from './i18n/host';
 
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];
 
@@ -53,8 +52,8 @@ function screenFor(route: Route) {
 export function App() {
   const [{ persona, lang }, setState] = useState(initial);
   const route = useRoute();
-  const copy = COPY[lang];
-  const shell = SHELL[lang];
+  const copy = hostCopy('COPY', lang);
+  const shell = hostCopy('SHELL', lang);
 
   const world = useMemo(() => authorizedWorld(WORLD, persona), [persona]);
   const investigation = useMemo(() => authorizedInvestigation(INV_DEMO_7, persona), [persona]);
