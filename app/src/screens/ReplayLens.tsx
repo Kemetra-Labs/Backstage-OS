@@ -13,7 +13,7 @@ export default function ReplayLens() {
   const copy = hostCopy('REPLAY_VIEW_COPY', lang);
   return (
     <section className="kv2-scope" aria-label={copy.region} data-testid="replay-lens">
-      <MissionReplay embedded />
+      <MissionReplay />
       <ReplayTimeBasis />
     </section>
   );

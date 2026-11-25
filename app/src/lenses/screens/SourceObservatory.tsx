@@ -89,9 +89,8 @@ function Pin({ icon, name, n, of, unit, sub }: { readonly icon: IconName; readon
 const AXIS_KEY: Readonly<Record<AxisFilter, K>> = { all: 'obs.tl.f.all', connectivity: 'obs.tl.f.conn', freshness: 'obs.tl.f.fresh', health: 'obs.tl.f.health', incident: 'obs.tl.f.inc' };
 const AXES: readonly AxisFilter[] = ['all', 'connectivity', 'freshness', 'health', 'incident'];
 
-/** `embedded`: shown inside a host screen that already has the page's h1, so the title is an h2 and the pilot chip is left out. */
-export function SourceObservatory({ embedded = false }: { readonly embedded?: boolean } = {}) {
-  const H = embedded ? 'h2' : 'h1';
+/** Rendered inside a host screen that owns the page's h1, so its title is an h2. */
+export function SourceObservatory() {
   const { route, go, t, copy } = useLens();
   const w = authorizedWorld(WORLD, route.persona);
   const [kind, setKind] = useState<KindFilter>('all');
@@ -117,7 +116,7 @@ export function SourceObservatory({ embedded = false }: { readonly embedded?: bo
         <header className="kv2-head">
           <div className="kv2-head-title">
             <p className="kv2-eyebrow"><T k="obs.eyebrow" /></p>
-            <H><T k="nav.obs" />{!embedded && <span className="kv2-chip kv2-chip-outline"><T k="map.concept" /></span>}</H>
+            <h2><T k="nav.obs" /></h2>
             <p className="kv2-lede"><T k="obs.lede" /></p>
           </div>
           <div className="kv2-kpis">

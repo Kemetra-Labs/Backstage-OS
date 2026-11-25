@@ -34,13 +34,12 @@ const SATS: readonly { readonly id: string; readonly key: K; readonly icon: Icon
 ];
 
 /**
- * `embedded`: shown inside a host screen that already has the page's h1, so the title is an h2 and the pilot chip is left out.
- * A mission's `events` figure is shown as not defined, embedded or standalone: the fixture does not say what it counts (owner
+ * Rendered inside a host screen that owns the page's h1, so its title is an h2.
+ * A mission's `events` figure is shown as not defined: the fixture does not say what it counts (owner
  * decision, BACK-90), and a figure scoped by subtracting withheld references would differ by persona and so be a cue. The field itself
  * was removed from the type and the fixture in BACK-96, so there is nothing to read.
  */
-export function AgentFlightDeck({ embedded = false }: { readonly embedded?: boolean } = {}) {
-  const H = embedded ? 'h2' : 'h1';
+export function AgentFlightDeck() {
   const { route, go, open, t, copy } = useLens();
   const w = authorizedWorld(WORLD, route.persona);
   const persona = route.persona;
@@ -80,7 +79,7 @@ export function AgentFlightDeck({ embedded = false }: { readonly embedded?: bool
         <header className="kv2-head">
           <div className="kv2-head-title">
             <p className="kv2-eyebrow"><T k="deck.eyebrow" /></p>
-            <H><T k="nav.deck" />{!embedded && <span className="kv2-chip kv2-chip-outline"><T k="map.concept" /></span>}</H>
+            <h2><T k="nav.deck" /></h2>
             <p className="kv2-lede"><T k="deck.lede" /></p>
           </div>
           <div className="kv2-kpis">

@@ -12,7 +12,7 @@ export default function SourceObservatoryLens() {
   const copy = hostCopy('SOURCES_VIEW_COPY', lang);
   return (
     <section className="kv2-scope" aria-label={copy.region} data-testid="source-observatory-lens">
-      <SourceObservatory embedded />
+      <SourceObservatory />
     </section>
   );
 }
