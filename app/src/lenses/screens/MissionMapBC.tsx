@@ -1,5 +1,5 @@
 // Mission Map, Hybrid B+C pilot (BACK-27). Concept B's immersive orbit map with concept C's accessible ledger as the List
-// view. It reads the same synthetic WORLD as every V2 screen and adds no data. The host mounts it at #/map (MissionMapLens.tsx).
+// view. It reads the same synthetic WORLD as every lens screen and adds no data. The host mounts it at #/map (MissionMapLens.tsx).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas } from '../bc/Canvas';
 import { Inspector } from '../bc/Inspector';
@@ -33,10 +33,10 @@ export function MissionMapBC() {
   const nodeRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const points = useMemo(() => nodePoints(w), [w]);
   const fig = useMemo(() => bcFigures(w), [w]);
-  // With no node chosen: the scoped system when a scope other than the default is set (as in V2), else the approved render's stock-sync.
+  // With no node chosen: the scoped system when a scope other than the default is set (as in lens), else the approved render's stock-sync.
   const fallback = fallbackNode(route.scope);
   const sel = w.graph.nodes.find((n) => n.id === (route.node ?? fallback)) ?? w.graph.nodes[0]!;
-  // Scope and filter dim in the map and hide in the list, as in V2. Nothing is removed from the world.
+  // Scope and filter dim in the map and hide in the list, as in lens. Nothing is removed from the world.
   const active = useMemo(() => {
     const a = scopeSet(route.scope, w);
     const f = filterSet(ui.filter, w);

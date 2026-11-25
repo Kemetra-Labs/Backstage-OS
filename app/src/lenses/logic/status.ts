@@ -1,4 +1,4 @@
-// Display status for V2. Every verdict comes from the V1 contract rules; nothing here decides health on its own.
+// Display status for lens. Every verdict comes from the host contract rules; nothing here decides health on its own.
 import { effectiveFreshness, freshnessOf, resolveHealth, resolveLabel, worstFreshness } from '../../contract/rules';
 import type { Connectivity, EvidenceReference, Freshness, Health, SourceAuthority, TruthLabel } from '../../contract/types';
 import type { SourceMeta, World, GraphNode } from '../../contract/world';
@@ -35,7 +35,7 @@ export interface SourceStatus {
   readonly health: Health;
   readonly ageMinutes: number | null;
   readonly ttlMinutes: number;
-  /** ISO time of the last good read, derived from the fixed now and the age (V1's lastSuccessAt is one constant stamp). */
+  /** ISO time of the last good read, derived from the fixed now and the age (the host's lastSuccessAt is one constant stamp). */
   readonly readAt: string | null;
   /** Age as a share of the freshness target, 0 when never read. Over 1 means past the target. */
   readonly used: number;

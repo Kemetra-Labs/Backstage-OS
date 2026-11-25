@@ -16,7 +16,7 @@ export type Route =
 
 export type RouteName = Route['name'];
 
-/** BACK-87: the scopes of the Mission Map lens (V2 map scope ids). `#/map/<scope>/<node>`; an unknown scope is notFound, never a guess. */
+/** BACK-87: the scopes of the Mission Map lens (lens map scope ids). `#/map/<scope>/<node>`; an unknown scope is notFound, never a guess. */
 export const MAP_SCOPES = ['all', 'retail-tower', 'khepri', 'seshat-bi'] as const;
 export type MapScope = (typeof MAP_SCOPES)[number];
 const PROVIDERS: readonly Provider[] = ['github', 'jira', 'confluence', 'sentry', 'datadog', 'port'];

@@ -1,6 +1,6 @@
-# Kawalys V2 design system (lab)
+# Kawalys lens design system
 
-Recorded from the shipped CSS and components, not from intentions. Scope: `app/src/lenses` only. V1 keeps its own gold-on-navy system in `app/src/styles` and `css/app.css`; the two are never merged.
+Recorded from the shipped CSS and components, not from intentions. Scope: `app/src/lenses` only. The host keeps its own gold-on-navy system in `app/src/styles` and `css/app.css`; the two are never merged.
 Mode (impeccable): **Operate**. Dense dark operations screens built from four owner reference images (`docs/design-lab/v2/reference/`).
 
 ## Direction
@@ -23,7 +23,7 @@ Navigation, controls, tables and tabs are standard components; the world lends p
 - **Cyan** `--kv2-cyan #2de2ec` = structure, selection, focus. **Amber** `--kv2-amber #f5a524` = attention (failing check, stale, evidence gap, hypothesis). Green, blue and violet appear only as truth labels (observed, correlated, proposed); red only for unavailable.
 - Truth label chips carry an icon as well as colour: observed check, correlated link, hypothesis bulb, proposed doc, unknown question mark.
 - Alphas are `color-mix` over tokens (`--kv2-line`, `--kv2-line-hi`, `--kv2-*-soft`); no literal colours outside `tokens.css` (unit-tested).
-- Type: self-hosted **Manrope** (variable 200 to 800, Latin) for English and **Cairo** (variable, Arabic subset) for Arabic, declared in `styles/embed-fonts.css` (the lab's `fonts.css` retired in BACK-92 R4) from `assets/fonts/` (OFL 1.1, provenance in `assets/fonts/SOURCE.md`). Latin inside Arabic pages falls through to Manrope. Local stack (Segoe UI, system-ui) is only the swap fallback. Scale 11 / 12 / 13.5 / 15 / 18 / 23 / 36 px. Tabular numerals. No third-party font request.
+- Type: self-hosted **Manrope** (variable 200 to 800, Latin) for English and **Cairo** (variable, Arabic subset) for Arabic, declared in `styles/embed-fonts.css` (the standalone lens app's `fonts.css` retired in BACK-92 R4) from `assets/fonts/` (OFL 1.1, provenance in `assets/fonts/SOURCE.md`). Latin inside Arabic pages falls through to Manrope. Local stack (Segoe UI, system-ui) is only the swap fallback. Scale 11 / 12 / 13.5 / 15 / 18 / 23 / 36 px. Tabular numerals. No third-party font request.
 - Luminosity (BACK-18): `--kv2-cyan-bloom`, `--kv2-cyan-haze` and `--kv2-bloom-sel` add a second, tighter glow layer to the selected node, the selected hub, observed links (two drop-shadows), the current and reached replay stages, the fleet core and ring. Unknown and unavailable nodes at rest keep a blur-free ring (e2e asserts it). No decorative amber.
 - Horizon: a static pre-rendered webp (`assets/horizon.webp`, drawn by `docs/design-lab/v2/tools/horizon.py` from the token colours) laid by `.kv2-horizon::before` over the original CSS gradient, which stays as the fallback. No animation. In Source Observatory the planet sits in a band under the three pins, never behind their text.
 - Radius 6 / 10 / 14. Motion tokens `--kv2-dur-micro 120ms`, `--kv2-dur-short 220ms`, exponential ease-out; only state transitions, no decoration on load.
@@ -34,12 +34,12 @@ Navigation, controls, tables and tabs are standard components; the world lends p
 - Reference size is 1448 x 1086; screens are fluid, not pixel-locked.
 - Logical properties throughout. The Mission Map canvas and the Flight Deck orbit keep left-to-right geometry in Arabic (placed with physical `left`); text inside nodes follows the language.
 
-## Truth presentation rules (from the V1 contract, not restyled)
+## Truth presentation rules (from the host contract, not restyled)
 
 1. Unknown is never Healthy (`resolveHealth`). Claimed-healthy nodes with no or stale evidence read "Health unknown" or "Stale".
 2. Connectivity, freshness and health are shown as three readings; there is no composite trust or health figure anywhere.
 3. Counts come from `countDisplay`-style derivation ("3 of 6"); no invented percentages (e2e asserts no `%` on any screen).
-4. Confidence is words only; V2 fixtures carry no calibrated basis.
+4. Confidence is words only; the mission sections of the world carry no calibrated basis.
 5. Proposals are text labelled "Proposed, nothing executes". The only action control is "Copy proposal text".
 
 ## Deliberate departures from the reference images

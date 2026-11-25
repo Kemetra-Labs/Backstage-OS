@@ -1,7 +1,7 @@
-// BACK-92 R7: V1 has no restricted-evidence placeholder path. Owner and Nontechnical never receive a Technical-only record (BACK-73
+// BACK-92 R7: host has no restricted-evidence placeholder path. Owner and Nontechnical never receive a Technical-only record (BACK-73
 // scopes the world once, in App.tsx), so the old "Restricted to Technical" rows, chips, counts and locked links could never render
 // and were removed: a placeholder would itself disclose that the record exists (M05-D05-B). These guards fail if that path, or an
-// unscoped read of the V1 fixtures, comes back. Persona is a display switch on synthetic demo data, not authorization.
+// unscoped read of the host fixtures, comes back. Persona is a display switch on synthetic demo data, not authorization.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -36,7 +36,7 @@ function disclosures(root: unknown): string[] {
   return found;
 }
 
-describe('V1 render input for lay personas never holds a Technical-only record (BACK-92 R7)', () => {
+describe('host render input for lay personas never holds a Technical-only record (BACK-92 R7)', () => {
   it('the fixtures do hold Technical-only records, so this guard is not vacuous', () => {
     expect(WITHHELD.map((e) => e.id).sort()).toEqual(['E-12', 'E-23', 'E-5']);
     expect(disclosures(WORLD).length).toBeGreaterThan(0);
@@ -66,7 +66,7 @@ function hostSources(): Array<{ readonly file: string; readonly text: string }> 
   return out;
 }
 
-describe('V1 host source has no restricted-placeholder path and no unscoped fixture read (BACK-92 R7)', () => {
+describe('host host source has no restricted-placeholder path and no unscoped fixture read (BACK-92 R7)', () => {
   const files = hostSources();
 
   it('reads the host sources (not vacuous)', () => {
@@ -85,7 +85,7 @@ describe('V1 host source has no restricted-placeholder path and no unscoped fixt
     expect(files.filter((f) => re.test(f.text)).map((f) => f.file)).toEqual([]);
   });
 
-  it('only App.tsx reads the V1 world and investigation fixtures, and scopes them before any screen sees them', () => {
+  it('only App.tsx reads the host world and investigation fixtures, and scopes them before any screen sees them', () => {
     const readers = files.filter((f) => /from '[./]*fixture\/(world|inv-demo-7)'/.test(f.text)).map((f) => f.file).sort();
     expect(readers).toEqual(['App.tsx', 'bridge/identity.ts', 'bridge/mapContext.ts', 'shell/TopBar.tsx']);
     // The identity links are structural: identity.ts reads the graph nodes' projectLink and nothing that carries evidence.

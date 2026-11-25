@@ -3,7 +3,7 @@
 //
 // There is no state here: no React, no provider, no storage, no setter. The host (`AppContext`, one persona, one language, one
 // route) stays the only authority, so a lens that consumes this can never hold a second copy that drifts. A selection is only
-// ever a node of the persona's authorized world (V2 `authorizedWorld`, which is the canonical scoping of BACK-84): an id that is
+// ever a node of the persona's authorized world (lens `authorizedWorld`, which is the canonical scoping of BACK-84): an id that is
 // not in that world, restricted or foreign, becomes "no selection" and never appears in the output. Persona is a display switch,
 // not authorization; no server-side identity is claimed. Synthetic data only.
 import type { Lang, Persona } from '../contract/types';
@@ -35,14 +35,14 @@ export interface MapContext {
   readonly origin: MapOrigin;
 }
 
-/** A map selection. The same shape as the V2 route fields it replaces. */
+/** A map selection. The same shape as the lens route fields it replaces. */
 export interface MapSelection {
   readonly scope: string;
   readonly node: string | null;
 }
 
 const ALL = 'all';
-/** The map's scope when the route names none: the approved render opens on Retail Tower (a test pins it to the V2 default). */
+/** The map's scope when the route names none: the approved render opens on Retail Tower (a test pins it to the lens default). */
 export const MAP_DEFAULT_SCOPE: MapScope = 'retail-tower';
 
 /** An id is selectable only when the authorized world holds that node. */

@@ -11,8 +11,8 @@ import type {
   ReplayEvent, SourceMeta, World, WorldComponent, WorldEdge, WorldProject,
 } from '../contract/world';
 import { canonicalComponent, canonicalFor, dependencyVerdict, evidenceVerdict } from '../domain/runtime';
-import { toV1ComponentFacts } from '../domain/toV1';
-import { toV2NodeFacts } from '../domain/toV2';
+import { componentFacts } from '../domain/project';
+import { graphNodeFacts } from '../domain/project';
 
 /** True when this persona may not read the evidence item. The rule for evidence the canonical fixture does not own. */
 export const isWithheld = (e: EvidenceReference, persona: Persona): boolean =>
@@ -51,7 +51,7 @@ const scopeComponent = (c: WorldComponent, keep: Keep): WorldComponent => ({ ...
 // An overlap component takes its state from the scoped canonical fixture; any other component is scoped by this module.
 function scopeProjectComponent(c: WorldComponent, keep: Keep, persona: Persona, projectId: string): WorldComponent {
   const canon = projectId === OVERLAP_PROJECT ? canonicalComponent(persona, c.id) : undefined;
-  return canon ? { ...c, state: toV1ComponentFacts(canonicalFor(persona), canon.id).state } : scopeComponent(c, keep);
+  return canon ? { ...c, state: componentFacts(canonicalFor(persona), canon.id).state } : scopeComponent(c, keep);
 }
 
 // Persona text variants can name a withheld record (a job name, a deploy id). An unauthorized persona gets its own variant under
@@ -125,7 +125,7 @@ function scopeGraphNode(n: GraphNode, visible: Visible, sources: readonly Source
   const { descWithoutEvidence, ...rest } = n;
   // An overlap node takes its state and evidence ids from the scoped canonical fixture; any other node is scoped here.
   const canon = canonicalComponent(persona, n.id);
-  const facts = canon ? toV2NodeFacts(canonicalFor(persona), canon.id) : undefined;
+  const facts = canon ? graphNodeFacts(canonicalFor(persona), canon.id) : undefined;
   const evidence = facts ? facts.evidence : n.evidence.filter(visible);
   const state = facts ? facts.state : scopeGraphState(n.state, sources, n.provider, keep);
   // A description written from a record this persona may not read would describe that record. When the node's whole
@@ -235,7 +235,7 @@ function scopeHypothesis(h: Hypothesis, keep: Keep): Hypothesis {
 
 function scopeNode(n: MapNode, keep: Keep, persona: Persona): MapNode {
   const canon = canonicalComponent(persona, n.id);
-  return { ...n, state: canon ? toV1ComponentFacts(canonicalFor(persona), canon.id).state : scopeState(n.state, keep) };
+  return { ...n, state: canon ? componentFacts(canonicalFor(persona), canon.id).state : scopeState(n.state, keep) };
 }
 
 function buildInvestigation(inv: InvestigationData, persona: Persona): InvestigationData {

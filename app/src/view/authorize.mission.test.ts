@@ -164,7 +164,7 @@ describe('authorizedWorld, replay rows and missions (BACK-66)', () => {
   }
 });
 
-// The lab shell's search (navigation/hits.ts) retired with the lab entry (BACK-92 R4). The host's one search box is src/nav/search.ts;
+// The standalone lens app shell's search (navigation/hits.ts) retired with the standalone lens entry (BACK-92 R4). The host's one search box is src/nav/search.ts;
 // its persona scoping, including the cases that used to live here, is tested in src/nav/search.test.ts.
 
 // BACK-66 audit (2026-11-25): the ticket feared that scopeReplay nulls a row's evidence and keeps the row. It does not: keepReplay

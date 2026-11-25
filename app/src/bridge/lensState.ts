@@ -5,7 +5,7 @@
 // another screen) becomes a host navigation. Synthetic demo data only; persona is a display switch, not authorization.
 import { DOMAIN } from '../domain/fixture';
 import { hostCopy, translate, type Copy, type K, type Vars } from '../i18n';
-import { DEFAULT_ROUTE, type Route as V2Route } from '../lenses/navigation/route';
+import { DEFAULT_ROUTE, type Route as LensRoute } from '../lenses/navigation/route';
 import type { ScreenId } from '../lenses/navigation/route';
 import type { Provider } from '../contract/types';
 import { MAP_SCOPES, type MapScope, type Route } from '../nav/routes';
@@ -14,13 +14,13 @@ import type { World as MapWorld } from '../contract/world';
 
 /** What a lens reads: the route, language and persona, and a translator bound to them. */
 export interface LensState {
-  readonly route: V2Route;
+  readonly route: LensRoute;
   readonly copy: Copy;
   /** Translated string for the current language and persona. {braces} still present; render with <Tx>. */
   readonly t: (key: K, vars?: Vars) => string;
   /** Patch the route. `replace` avoids adding a history entry (used for state that is not a navigation). */
-  readonly go: (patch: Partial<V2Route>, replace?: boolean) => void;
-  readonly open: (screen: ScreenId, patch?: Partial<V2Route>) => void;
+  readonly go: (patch: Partial<LensRoute>, replace?: boolean) => void;
+  readonly open: (screen: ScreenId, patch?: Partial<LensRoute>) => void;
 }
 
 /** How the adapter asks the host to go somewhere. The host decides what that means (a hash change). */
@@ -47,7 +47,7 @@ export const deckRoute = (msn?: string | null): Route => (msn ? { name: 'agents'
 /** The Replay view of an investigation, at an event when one is named. */
 export const replayRoute = (id: string, evt?: string | null): Route => (evt ? { name: 'investigation', id, view: 'replay', evt } : { name: 'investigation', id, view: 'replay' });
 
-/** Where each of the lab's other screens lives in the host. The Observatory, Replay and Flight Deck are folded into these in later slices. */
+/** Where each of the standalone lens app's other screens lives in the host. The Observatory, Replay and Flight Deck are folded into these in later slices. */
 type Patch = { readonly scope?: string; readonly node?: string | null; readonly src?: Provider | null; readonly evt?: string | null; readonly msn?: string | null };
 
 /** The Sources screen's Observatory view, with the source when one is named. */
@@ -68,7 +68,7 @@ export function toLensState(view: HostView, nav: HostNav, world?: MapWorld): Len
   const onSources = view.route.name === 'sources';
   const replay = view.route.name === 'investigation' && view.route.view === 'replay' ? view.route : null;
   const deck = view.route.name === 'agents' && view.route.view === 'deck' ? view.route : null;
-  const route: V2Route = {
+  const route: LensRoute = {
     ...DEFAULT_ROUTE, screen: onSources ? 'source-observatory' : replay ? 'mission-replay' : deck ? 'agent-flight-deck' : 'mission-map', persona: ctx.persona, lang: ctx.lang, scope: ctx.scope, node: ctx.node,
     src: view.route.name === 'sources' && view.route.src ? view.route.src : DEFAULT_ROUTE.src,
     evt: replay?.evt ?? null,
@@ -78,7 +78,7 @@ export function toLensState(view: HostView, nav: HostNav, world?: MapWorld): Len
     route,
     copy: hostCopy('COPY', view.lang),
     t: (key, vars) => translate(key, view.lang, view.persona, vars),
-    // The lab replaced the history entry for a selection; in the host a selection is a navigation, so Back returns to the previous one.
+    // The standalone lens app replaced the history entry for a selection; in the host a selection is a navigation, so Back returns to the previous one.
     // On the Sources screen a change is the selected source; anywhere else it is the map's scope or node.
     go: (patch) => {
       if (replay && 'evt' in patch) (nav.replace ?? nav.navigate)(replayRoute(replay.id, patch.evt));

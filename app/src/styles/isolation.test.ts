@@ -1,5 +1,5 @@
-// BACK-86 (S4): the B+C map's stylesheets can sit in the host app without restyling a V1 screen, and the semantic role layer keeps
-// both identities. Static guarantees over the CSS text; the browser-side proof (computed styles of the V1 screens with the B+C
+// BACK-86 (S4): the B+C map's stylesheets can sit in the host app without restyling a host screen, and the semantic role layer keeps
+// both identities. Static guarantees over the CSS text; the browser-side proof (computed styles of the host screens with the B+C
 // sheets injected) is e2e/css-isolation.spec.ts. Synthetic demo UI only.
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -7,9 +7,9 @@ import { describe, expect, it } from 'vitest';
 
 const here = (rel: string): string => fileURLToPath(new URL(rel, import.meta.url));
 const read = (rel: string): string => readFileSync(here(rel), 'utf8');
-const V2 = '../lenses/styles/';
+const lens = '../lenses/styles/';
 
-/** Every stylesheet the host imports to embed the lenses (src/screens/lensStyles.ts). The lab's reset.css and fonts.css retired with it (BACK-92 R4). */
+/** Every stylesheet the host imports to embed the lenses (src/screens/lensStyles.ts). The standalone lens app's reset.css and fonts.css retired with it (BACK-92 R4). */
 export const EMBED = ['tokens', 'base', 'scope', 'embed-fonts', 'map', 'bc', 'observatory', 'replay', 'deck'] as const;
 
 interface Parsed { readonly rules: { readonly sel: string; readonly body: string }[]; readonly fontFaces: string[]; readonly keyframes: string[] }
@@ -56,7 +56,7 @@ const decls = (body: string): string[] => body.split(';').map((d) => d.trim()).f
 const customOnly = (body: string): boolean => decls(body).every((d) => /^(--[\w-]+|color-scheme)\s*:/.test(d));
 const norm = (s: string): string => s.replace(/\s+/g, ' ').replace(/\s*:\s*/g, ':').trim();
 
-const css = Object.fromEntries(EMBED.map((n) => [n, read(`${V2}${n}.css`)])) as Record<(typeof EMBED)[number], string>;
+const css = Object.fromEntries(EMBED.map((n) => [n, read(`${lens}${n}.css`)])) as Record<(typeof EMBED)[number], string>;
 const semantic = read('./semantic.css');
 
 describe('the embeddable B+C stylesheets are scoped to .kv2-', () => {
@@ -66,11 +66,11 @@ describe('the embeddable B+C stylesheets are scoped to .kv2-', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('names every keyframe with the kv2- prefix, so none can replace a V1 animation', () => {
+  it('names every keyframe with the kv2- prefix, so none can replace a host animation', () => {
     for (const name of EMBED) for (const k of parse(css[name]).keyframes) expect(k.startsWith('kv2-'), `${name}: ${k}`).toBe(true);
   });
 
-  it('declares fonts only under names the host does not use, and no lab font sheet is part of the set', () => {
+  it('declares fonts only under names the host does not use, and no standalone lens font sheet is part of the set', () => {
     expect(EMBED as readonly string[]).not.toContain('fonts');
     const faces = parse(css['embed-fonts']).fontFaces;
     expect(faces.length).toBe(2);
@@ -80,18 +80,18 @@ describe('the embeddable B+C stylesheets are scoped to .kv2-', () => {
     }
     const files = [...css['embed-fonts'].matchAll(/url\(\s*["']?([^"')]+)/g)].map((m) => m[1]!);
     expect(files.length).toBe(2);
-    for (const rel of files) expect(existsSync(here(`${V2}${rel}`)), rel).toBe(true);
+    for (const rel of files) expect(existsSync(here(`${lens}${rel}`)), rel).toBe(true);
     expect(css['embed-fonts']).not.toMatch(/local\(|https?:\/\/|@import/);
   });
 
-  it('keeps the host\'s own font stack untouched: V1 tokens name Cairo, and nothing here declares that face', () => {
+  it('keeps the host\'s own font stack untouched: host tokens name Cairo, and nothing here declares that face', () => {
     expect(read('./tokens.css')).toMatch(/--f-ar:\s*"Cairo"/);
-    expect(read(`${V2}embed-fonts.css`)).not.toMatch(/font-family:\s*"Cairo"/);
+    expect(read(`${lens}embed-fonts.css`)).not.toMatch(/font-family:\s*"Cairo"/);
   });
 });
 
-// BACK-92 R4: the lab's global reset (reset.css) and its entry retired. Its declarations are pinned here, verbatim, so scope.css keeps
-// re-stating every one of them under .kv2-scope (the map renders as it did in the lab), and no embedded sheet brings a global rule back.
+// BACK-92 R4: the standalone lens app's global reset (reset.css) and its entry retired. Its declarations are pinned here, verbatim, so scope.css keeps
+// re-stating every one of them under .kv2-scope (the map renders as it did in the standalone lens app), and no embedded sheet brings a global rule back.
 const LAB_RESET: readonly string[] = [
   'box-sizing: border-box', 'overflow-x: clip', '-webkit-text-size-adjust: 100%', 'color: var(--kv2-ink)',
   'font: 400 var(--kv2-t-md) / 1.5 var(--kv2-f-ui)', 'font-variant-numeric: tabular-nums', 'font-family: var(--kv2-f-ar)', 'margin: 0',
@@ -100,10 +100,10 @@ const LAB_RESET: readonly string[] = [
   'animation: none !important', 'transition: none !important', 'scroll-behavior: auto !important',
 ];
 
-describe('the lab\'s global reset is retired; scope.css carries it under .kv2-scope', () => {
-  it('no lab reset or lab font sheet is left, and the host entry imports no lens file directly', () => {
-    expect(existsSync(here(`${V2}reset.css`))).toBe(false);
-    expect(existsSync(here(`${V2}fonts.css`))).toBe(false);
+describe('the standalone lens app\'s global reset is retired; scope.css carries it under .kv2-scope', () => {
+  it('no standalone lens reset or standalone lens font sheet is left, and the host entry imports no lens file directly', () => {
+    expect(existsSync(here(`${lens}reset.css`))).toBe(false);
+    expect(existsSync(here(`${lens}fonts.css`))).toBe(false);
     expect(read('../main.tsx')).not.toMatch(/reset\.css|lenses\//);
     const noComments = (t: string): string => t.replace(/\/\*[\s\S]*?\*\//g, '');
     for (const name of EMBED) expect(noComments(css[name]), name).not.toMatch(/reset\.css|fonts\.css/);
@@ -133,8 +133,8 @@ describe('the lab\'s global reset is retired; scope.css carries it under .kv2-sc
 
 describe('semantic roles', () => {
   const parsed = parse(semantic);
-  const v1Tokens = read('./tokens.css');
-  const v2Tokens = css.tokens;
+  const hostTokenCss = read('./tokens.css');
+  const lensTokenCss = css.tokens;
   const defined = (text: string): Set<string> => new Set([...text.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]!));
   const roles = (sel: string): Map<string, string> => new Map(
     parsed.rules.filter((r) => r.sel === sel).flatMap((r) => decls(r.body)).map((d) => {
@@ -159,8 +159,8 @@ describe('semantic roles', () => {
   });
 
   it('has no value of its own: each role is a var() of a token that exists in its own source', () => {
-    const hostTokens = defined(v1Tokens);
-    const mapTokens = defined(v2Tokens);
+    const hostTokens = defined(hostTokenCss);
+    const mapTokens = defined(lensTokenCss);
     for (const [k, v] of host) expect(v.match(/^var\((--[a-z0-9-]+)\)$/)?.[1] && hostTokens.has(v.match(/^var\((--[a-z0-9-]+)\)$/)![1]!), `${k}: ${v}`).toBe(true);
     for (const [k, v] of map) expect(v.match(/^var\((--kv2-[a-z0-9-]+)\)$/)?.[1] && mapTokens.has(v.match(/^var\((--kv2-[a-z0-9-]+)\)$/)![1]!), `${k}: ${v}`).toBe(true);
   });
@@ -181,7 +181,7 @@ describe('semantic roles', () => {
     for (const [k, v] of host) expect(v, k).not.toContain('kv2');
   });
 
-  it('keeps V1 and the map\'s own truth wording aligned: same four labels map to same-named tokens', () => {
+  it('keeps host and the map\'s own truth wording aligned: same four labels map to same-named tokens', () => {
     for (const [role, hostTok, mapTok] of [
       ['observed', '--obs', '--kv2-obs'], ['correlated', '--cor', '--kv2-cor'], ['hypothesis', '--hyp', '--kv2-hyp'], ['proposed', '--pro', '--kv2-pro'],
     ] as const) {
@@ -190,7 +190,7 @@ describe('semantic roles', () => {
     }
   });
 
-  it('is not imported by the host entry: the V1 entry stays free of .kv2- until a lens mounts (the lab entry retired, BACK-92 R4)', () => {
+  it('is not imported by the host entry: the host entry stays free of .kv2- until a lens mounts (the standalone lens entry retired, BACK-92 R4)', () => {
     expect(read('../main.tsx')).not.toMatch(/semantic\.css/);
   });
 });

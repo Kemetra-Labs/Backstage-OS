@@ -11,7 +11,7 @@ const NOW = WORLD.now;
 const w = WORLD;
 
 describe('one shared synthetic world', () => {
-  it('reuses V1 identities: the same investigation and every V1 evidence id', () => {
+  it('reuses host identities: the same investigation and every host evidence id', () => {
     expect(w.investigationId).toBe(INV_DEMO_7.id);
     for (const e of INV_DEMO_7.evidence) expect(w.evidence[e.id], e.id).toBe(e);
   });
@@ -116,7 +116,7 @@ describe('sources keep three independent readings', () => {
     for (const p of ['datadog', 'confluence']) expect(rows.find((r) => r.provider === p)).toMatchObject({ connectivity: 'not_configured', freshness: 'unknown', readAt: null, issue: false });
   });
 
-  it('derives the last good read from the fixed now, not from the constant stamp V1 uses', () => {
+  it('derives the last good read from the fixed now, not from the constant stamp host uses', () => {
     expect(rows.find((r) => r.provider === 'github')!.readAt).toBe('2026-11-16T14:03:00.000Z');
     expect(rows.find((r) => r.provider === 'port')!.readAt).toBe('2026-11-15T13:09:00.000Z');
     expect(rows.find((r) => r.provider === 'port')!.used).toBeGreaterThan(1);

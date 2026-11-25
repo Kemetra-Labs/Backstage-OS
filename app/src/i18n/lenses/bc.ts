@@ -1,4 +1,4 @@
-// Copy for the Hybrid Mission Map pilot (B+C). Existing V2 keys are reused wherever the wording already exists; only
+// Copy for the Hybrid Mission Map pilot (B+C). Existing lens keys are reused wherever the wording already exists; only
 // what is new lives here. Every Arabic string below is NEW and has NOT had a native-speaker review (SPEC section 9, item 5).
 // BACK-31: an AI-assisted pass (24 Nov 2026) revised seven strings; it does not replace the native review, so this stays unreviewed.
 import type { Table } from '../translate';
@@ -35,7 +35,7 @@ export const BC = {
   'bc.never': ['never read', 'لم تُقرأ قط'],
   'bc.f.current': ['Current', 'حديث'],
 
-  // Status words in sentence case (the V1 words are lower case because V2's chips were upper-cased by CSS)
+  // Status words in sentence case (the host words are lower case because the lens chips were upper-cased by CSS)
   'bc.chip.unavailable': ['Unavailable', 'غير متاح'],
   'bc.chip.notset': ['Not set up', 'غير مُعد'],
 

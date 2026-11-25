@@ -1,5 +1,5 @@
 // BACK-102 safety net: a characterization of what each persona is given, recorded before the world was unified. For owner,
-// technical and nontechnical it serialises the host world and the lens world (each as its persona-authorized output) and the
+// technical and nontechnical it serialises what the host screens and the lens screens read (each as its persona-authorized output) and the
 // investigation (authorized data, its persona view and both case summaries) to committed JSON. Keys are sorted, so the files
 // compare data, not property order. Any later change to what a persona receives fails here; regenerate with UPDATE_GOLDEN=1 only
 // for a deliberate, documented change. Synthetic demo data only.

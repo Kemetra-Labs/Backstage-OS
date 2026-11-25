@@ -8,8 +8,8 @@ import type {
   ProjectLink, ReplayEvent, SourceEvent, SourceMeta, World, WorldProject,
 } from '../contract/world';
 import { DOMAIN } from '../domain/fixture';
-import { toV1ComponentFacts } from '../domain/toV1';
-import { toV2EdgeFacts, toV2NodeFacts } from '../domain/toV2';
+import { componentFacts } from '../domain/project';
+import { graphEdgeFacts, graphNodeFacts } from '../domain/project';
 import { EXTRA_EVIDENCE } from '../domain/records';
 import { EVIDENCE, SOURCES } from './inv-demo-7';
 
@@ -98,18 +98,18 @@ const RT: WorldProject = {
   environments: ['ci', 'staging', 'production'],
   components: [
     { id: 'pos', name: 'pos-client', layer: 'client', environment: 'production', pos: { col: 0, row: 1 },
-      ...toV1ComponentFacts(DOMAIN, 'pos'),
+      ...componentFacts(DOMAIN, 'pos'),
       note: l('No runtime monitoring set up.', 'لا توجد مراقبة تشغيل مُعدّة.') },
     { id: 'api-gateway', name: 'api-gateway', layer: 'edge', environment: 'ci', pos: { col: 1, row: 1 },
       state: { connectivity: 'reachable', freshness: 'current', health: 'healthy', basis: [X.gatewaySmoke] } },
     { id: 'stock-sync', name: 'stock-sync', layer: 'service', environment: 'ci', pos: { col: 2, row: 0 },
       investigationId: DOMAIN.investigationId,
-      ...toV1ComponentFacts(DOMAIN, 'stock-sync') },
+      ...componentFacts(DOMAIN, 'stock-sync') },
     { id: 'payments', name: 'payments', layer: 'service', environment: 'staging', pos: { col: 2, row: 2 },
       state: { connectivity: 'reachable', freshness: 'stale', health: 'degraded', basis: [X.paymentsErrors] } },
     // The last stale read said healthy; the contract renders unknown.
     { id: 'inventory', name: 'inventory', layer: 'data', environment: 'staging', pos: { col: 3, row: 1 },
-      ...toV1ComponentFacts(DOMAIN, 'inventory') },
+      ...componentFacts(DOMAIN, 'inventory') },
     { id: 'reporting', name: 'reporting', layer: 'integration', environment: 'unknown', pos: { col: 4, row: 1 },
       state: { connectivity: 'not_configured', freshness: 'unknown', health: 'unknown', basis: [] } },
   ],
@@ -119,7 +119,7 @@ const RT: WorldProject = {
     { from: 'api-gateway', to: 'payments', kind: 'authored', basis: [E.catalogOwner] },
     // NOT projected from src/domain: the canonical truth for this dependency is hypothesis with no evidence (BACK-71 ruling), and
     // this edge says authored on E-7, which was never read. The conflict is recorded, not reconciled (BACK-83); changing it would
-    // change the V1 map, so it waits for an owner decision. parity.test.ts pins the divergence.
+    // change the host map, so it waits for an owner decision. parity.test.ts pins the divergence.
     { from: 'stock-sync', to: 'inventory', kind: 'authored', basis: [E.catalogOwner] },
     { from: 'payments', to: 'inventory', kind: 'hypothesis', basis: [] },
     { from: 'inventory', to: 'reporting', kind: 'provisional', basis: [] },
@@ -435,9 +435,9 @@ const SB_LINK: ProjectLink = {
 const NODES: readonly GraphNode[] = [
   { id: 'retail-tower', kind: 'product', title: 'Retail Tower OS', x: 500, y: 335, projectLink: RT_LINK, state: state('unknown', [EVIDENCE.checkFailed]), evidence: ['E-1', 'E-2'] },
   { id: 'khepri', kind: 'product', title: 'Khepri', x: 170, y: 150, projectLink: KH_LINK, state: state('healthy', []), evidence: [] },
-  { id: 'stock-sync', kind: 'project', title: 'stock-sync', x: 500, y: 120, ...toV2NodeFacts(DOMAIN, 'stock-sync') },
-  { id: 'pos', kind: 'project', title: 'POS client', x: 300, y: 300, ...toV2NodeFacts(DOMAIN, 'pos') },
-  { id: 'inventory', kind: 'project', title: 'Inventory service', x: 700, y: 305, ...toV2NodeFacts(DOMAIN, 'inventory'), descWithoutEvidence: 'map.nl.inventory.none' },
+  { id: 'stock-sync', kind: 'project', title: 'stock-sync', x: 500, y: 120, ...graphNodeFacts(DOMAIN, 'stock-sync') },
+  { id: 'pos', kind: 'project', title: 'POS client', x: 300, y: 300, ...graphNodeFacts(DOMAIN, 'pos') },
+  { id: 'inventory', kind: 'project', title: 'Inventory service', x: 700, y: 305, ...graphNodeFacts(DOMAIN, 'inventory'), descWithoutEvidence: 'map.nl.inventory.none' },
   { id: 'github', kind: 'service', title: 'GitHub', x: 830, y: 140, provider: 'github', state: svc('github'), evidence: ['E-1', 'E-2', 'E-8'] },
   { id: 'jira', kind: 'service', title: 'Jira', x: 850, y: 420, provider: 'jira', state: svc('jira'), evidence: ['E-3', 'E-4'] },
   { id: 'sentry', kind: 'service', title: 'Sentry', x: 925, y: 255, provider: 'sentry', state: svc('sentry'), evidence: ['E-5'] },
@@ -451,9 +451,9 @@ const EDGES: readonly GraphEdge[] = [
   { id: 'g3', a: 'retail-tower', b: 'inventory', cls: 'group', truth: 'unknown', basisKey: 'edge.group', evidence: [] },
   { id: 'd1', a: 'stock-sync', b: 'github', cls: 'dep', truth: 'observed', basisKey: 'edge.ciOnGithub', evidence: ['E-1'] },
   { id: 'd2', a: 'stock-sync', b: 'jira', cls: 'dep', truth: 'correlated', basisKey: 'edge.commitKey', evidence: ['E-3'] },
-  { id: 'd3', a: 'stock-sync', b: 'inventory', cls: 'dep', basisKey: 'edge.readsInventory', ...toV2EdgeFacts(DOMAIN, 'stock-sync', 'inventory') },
+  { id: 'd3', a: 'stock-sync', b: 'inventory', cls: 'dep', basisKey: 'edge.readsInventory', ...graphEdgeFacts(DOMAIN, 'stock-sync', 'inventory') },
   { id: 'd4', a: 'inventory', b: 'sentry', cls: 'dep', truth: 'observed', basisKey: 'edge.errorsInSentry', evidence: ['E-5'] },
-  { id: 'd5', a: 'pos', b: 'stock-sync', cls: 'dep', basisKey: 'edge.posUnknown', ...toV2EdgeFacts(DOMAIN, 'pos', 'stock-sync') },
+  { id: 'd5', a: 'pos', b: 'stock-sync', cls: 'dep', basisKey: 'edge.posUnknown', ...graphEdgeFacts(DOMAIN, 'pos', 'stock-sync') },
   { id: 'd6', a: 'retail-tower', b: 'khepri', cls: 'dep', truth: 'unknown', basisKey: 'edge.notEvidenced', evidence: [] },
   { id: 'd7', a: 'retail-tower', b: 'seshat-bi', cls: 'dep', truth: 'unknown', basisKey: 'edge.notEvidenced', evidence: [] },
   { id: 'd8', a: 'retail-tower', b: 'port', cls: 'dep', truth: 'unknown', basisKey: 'edge.catalogUnavailable', evidence: ['E-7'] },

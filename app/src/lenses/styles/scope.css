@@ -1,6 +1,6 @@
-/* BACK-86 (S4): the B+C map's base rules, scoped for embedding in the host. The lab's reset.css (retired with the lab entry, BACK-92 R4) styled `*`, html, body, headings,
-   lists, buttons, links and :focus-visible for the whole page; imported into the host it would have restyled every V1 screen. These are
-   the same declarations under .kv2-scope, wrapped in :where() so they keep the zero specificity the lab's element selectors have
+/* BACK-86 (S4): the B+C map's base rules, scoped for embedding in the host. The standalone lens app's reset.css (retired with the standalone lens entry, BACK-92 R4) styled `*`, html, body, headings,
+   lists, buttons, links and :focus-visible for the whole page; imported into the host it would have restyled every host screen. These are
+   the same declarations under .kv2-scope, wrapped in :where() so they keep the zero specificity the standalone lens app's element selectors have
    and every .kv2-* class still wins over them. */
 :where(.kv2-scope), :where(.kv2-scope) :where(*, *::before, *::after) { box-sizing: border-box; }
 :where(.kv2-scope) {

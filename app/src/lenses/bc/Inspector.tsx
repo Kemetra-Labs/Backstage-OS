@@ -1,4 +1,4 @@
-// Evidence inspector of the B+C pilot: Overview, Evidence, Sources. Persona rules are the same as V2's inspector:
+// Evidence inspector of the B+C pilot: Overview, Evidence, Sources. Persona rules are the same as the lens inspector:
 // restricted evidence reveals only that it exists (EvidenceItem and evidenceView do that, never this file).
 import { EvidenceItem } from '../components/evidence';
 import { Icon } from '../components/Icon';

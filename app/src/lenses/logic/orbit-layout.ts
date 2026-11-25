@@ -3,7 +3,7 @@
 import type { World, GraphNode } from '../../contract/world';
 import { BC_CANVAS, orbitOf, orbitPosition, type Point } from './orbit';
 
-/** The node drawn at the centre of every orbit. It is the same node V2's map treats as the hub. */
+/** The node drawn at the centre of every orbit. It is the same node the lens map treats as the hub. */
 export const HUB_ID = 'retail-tower';
 
 export const ORBIT_ANGLE: Readonly<Record<string, number>> = {

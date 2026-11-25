@@ -1,13 +1,12 @@
 // BACK-83: the INV-DEMO-7 overlap on the V1 Project map and on the B+C Mission Map is what the canonical model says, per persona and
 // language. (The B+C half moved here from the retired e2e-v2/canonical-overlap.spec.ts, BACK-92 R4, onto the host /map route.)
-// Expectations come from src/domain (scopeFixture then toV1Nodes), never from a second copy in this file. Persona is a display
+// Expectations come from src/domain (scopeFixture then investigationNodes), never from a second copy in this file. Persona is a display
 // switch on synthetic data, not authorization: no server-side enforcement is claimed.
 import { expect, test, type Page } from '@playwright/test';
 import { DOMAIN } from '../src/domain/fixture';
 import { scopeFixture } from '../src/domain/scope';
 import type { ComponentId } from '../src/domain/types';
-import { toV1Nodes } from '../src/domain/toV1';
-import { toV2NodeFacts } from '../src/domain/toV2';
+import { graphNodeFacts, investigationNodes } from '../src/domain/project';
 import { WORLD } from '../src/fixture/world';
 import { authorizedWorld } from '../src/view/authorize';
 import { nodeChip } from '../src/lenses/logic/evidence';
@@ -40,7 +39,7 @@ for (const lang of LANGS) {
   for (const persona of PERSONAS) {
     test(`V1 project map ${persona}/${lang}: each overlap component shows the canonical health and failing check`, async ({ page }) => {
       await openRoute(page, '/project/RT', { lang, persona });
-      const scoped = toV1Nodes(scopeFixture(DOMAIN, persona));
+      const scoped = investigationNodes(scopeFixture(DOMAIN, persona));
       expect(scoped.map((n) => n.id)).toEqual(['pos', 'stock-sync', 'inventory']);
       for (const n of scoped) {
         const health = triadOf(n.state).health;
@@ -101,7 +100,7 @@ test('V1 same-page persona switch on the withheld-only deep link: Technical, Own
 /** The map node as the canonical scoped fixture says it is: layout and copy keys from the lens world, facts from the domain. */
 const canonicalNode = (persona: (typeof PERSONAS)[number], id: ComponentId): GraphNode => {
   const base = WORLD.graph.nodes.find((n) => n.id === id)!;
-  return { ...base, ...toV2NodeFacts(scopeFixture(DOMAIN, persona), id) };
+  return { ...base, ...graphNodeFacts(scopeFixture(DOMAIN, persona), id) };
 };
 
 for (const lang of LANGS) {

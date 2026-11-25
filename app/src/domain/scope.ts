@@ -1,5 +1,5 @@
 // Persona scoping of the canonical fixture. Persona is a display switch, not authorization: this scopes the synthetic demo
-// data only, and no server-side identity, tenant or access enforcement exists or is claimed. Rules mirror V2 authorizedWorld.
+// data only, and no server-side identity, tenant or access enforcement exists or is claimed. Rules mirror lens authorizedWorld.
 import type { EvidenceReference, Persona } from '../contract/types';
 import type { DomainComponent, DomainDependency, DomainFixture } from './types';
 

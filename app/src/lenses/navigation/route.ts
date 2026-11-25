@@ -1,4 +1,4 @@
-// Hash route for the V2 lab: #/<screen>?persona=&lang=&scope=&node=&src=&evt=&msn=
+// Hash route for the lens standalone lens app: #/<screen>?persona=&lang=&scope=&node=&src=&evt=&msn=
 // Everything a reviewer can change lives in the URL, so a screenshot or a link reproduces the exact state.
 import type { Lang, Persona, Provider } from '../../contract/types';
 
