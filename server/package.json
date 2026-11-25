@@ -12,7 +12,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "check": "npm run typecheck && npm test",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "local:up": "docker compose -f docker-compose.local.yml up -d --wait && npm run build && node dist/ops/local-up.js",
+    "local:down": "docker compose -f docker-compose.local.yml down -v"
   },
   "dependencies": {
     "@nestjs/common": "12.6.0",

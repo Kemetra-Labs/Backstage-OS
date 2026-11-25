@@ -24,6 +24,40 @@ NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental
 
 `KAWALYS_BFF_PORT` sets the port (default `8787`). The server binds `127.0.0.1` only.
 
+## Local run with synthetic data (BACK-61)
+
+One command starts a disposable PostgreSQL and fills it with **synthetic** data. It needs Docker (with Compose) and no external credential. Run from `server/`:
+
+```bash
+npm ci
+npm run local:up     # start Postgres, build, provision, migrate and seed (safe to run again)
+npm run local:down   # stop it and delete its volume (all local data)
+```
+
+- `docker-compose.local.yml` starts `postgres:17-alpine`, published on `127.0.0.1:55432` only (`KAWALYS_LOCAL_PG_PORT` changes the port), with throwaway credentials (`kawalys-local-only`) and a named volume.
+- `node dist/ops/local-up.js` (`src/ops/local-up.ts`, `src/ops/local-stack.ts`) refuses a non-loopback host and `NODE_ENV=production`. It creates the three roles only when missing (`provisionRoles`, `provisionDatabase`; local role passwords `kawalys-local-only-migrator|app|auth`), applies pending migrations (`runMigrations`), then seeds through the production code: `DatabaseOwnerDirectory` binds the owner identity, `WorkspaceResolver` creates the owner workspace, and `EvidenceRepository` writes the rest. RLS, grants and audit rows apply as at runtime. Each step reuses its existing row, so a second run adds nothing.
+- Seeded: one workspace and owner user, project `demo-storefront`, GitHub source `example-org/demo-storefront`, four Observations (`ok`, `stale`, `error`, `unknown`), one investigation, one Correlation and one HumanDecision citing the correlation and the failed run. Every payload is marked `synthetic: true`; nothing comes from GitHub.
+- The owner is a synthetic identity (`LOCAL_SYNTHETIC_OWNER`) that no real token can match. If `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set when you run `local:up`, the seed binds that owner instead, so a later owner-lab sign-in sees the data. Only one owner can be bound: to switch, run `npm run local:down` and start again.
+
+What you'll see (ids differ):
+
+```
+provisioned roles kawalys_migrator, kawalys_app, kawalys_auth and schema kawalys
+applied: 0001_foundation.sql, 0002_identity.sql, 0003_evidence.sql
+seeded for the synthetic local owner (no Descope configured):
+...
+evidence      6 visible to the owner (6 created by this run):
+  HumanDecision ok      kawalys:decision  cites 2
+  Observation   ok      github:example-org/demo-storefront#actions/runs/1001
+  Observation   unknown github:example-org/demo-storefront#deployments
+  Correlation   ok      github:example-org/demo-storefront#pull/42
+  Observation   error   github:example-org/demo-storefront#actions/runs/1002
+  Observation   stale   github:example-org/demo-storefront#pulls
+audit rows    5: owner.bound, project.created, source.connected, investigation.created, decision.recorded
+```
+
+The command ends by printing the two `export KAWALYS_DATABASE_URL_*` lines for the local roles. With them set, `npm start` boots against the seeded database (`GET /process` answers 200), but **every protected route stays deny-all** (`GET /evidence` answers 404): there is no local sign-in and no auth bypass. The data becomes reachable over HTTP only after the owner configures Descope and signs in through the owner lab. Until then the seed is verified through the repository layer (the printed summary and `test/ops/local-stack.spec.ts`). The app (`app/`) and the prototype never call the server.
+
 ## Routes
 
 | Route | Behaviour |
