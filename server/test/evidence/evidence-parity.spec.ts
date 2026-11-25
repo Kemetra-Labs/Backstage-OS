@@ -67,7 +67,8 @@ function normalise(body: unknown): unknown {
   };
   const walk = (v: unknown, key?: string): unknown => {
     if (typeof v === 'string') return key && DB_TIME_KEYS.has(key) ? new Date(NOW).toISOString() : v.replace(UUID_RE, id);
-    if (Array.isArray(v)) return v.map((x) => walk(x));
+    // `citations` come back ORDER BY evidence_id, a random UUID: sort the placeholders so the file is stable.
+    if (Array.isArray(v)) return key === 'citations' ? v.map((x) => walk(x)).sort() : v.map((x) => walk(x));
     if (v && typeof v === 'object') {
       // A HumanDecision has no source reading: its observedAt is also the database's insert time.
       const dbTime = (k: string) => DB_TIME_KEYS.has(k) || ((v as { type?: unknown }).type === 'HumanDecision' && k === 'observedAt');
@@ -75,7 +76,17 @@ function normalise(body: unknown): unknown {
     }
     return v;
   };
-  return walk(JSON.parse(JSON.stringify(body)));
+  const plain = JSON.parse(JSON.stringify(body)) as unknown;
+  // Pass 1 numbers every id outside `citations` (records and their own fields, in body order), so a citation's
+  // random database order can never decide a number. Pass 2 builds the result with those numbers.
+  const number = (v: unknown, key?: string): void => {
+    if (key === 'citations') return;
+    if (typeof v === 'string') v.replace(UUID_RE, id);
+    else if (Array.isArray(v)) v.forEach((x) => number(x));
+    else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => number(x, k));
+  };
+  number(plain);
+  return walk(plain);
 }
 
 function matchesFixture(name: string, body: unknown): void {
