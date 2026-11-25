@@ -22,12 +22,12 @@ import { EvidenceRepository, type ObservationInput } from '../evidence/evidence.
 import type { EvidenceRecord } from '../evidence/evidence.types';
 import { roleConnectionString } from './db-admin-config';
 
-/** Throwaway role passwords for the disposable local container only (BACK-61). Not secrets. */
-export const LOCAL_ROLE_PASSWORDS = {
-  migrator: 'kawalys-local-only-migrator',
-  app: 'kawalys-local-only-app',
-  auth: 'kawalys-local-only-auth',
-} as const;
+/** Role passwords for the local stack; generated per machine by local-credentials.ts, never hard-coded. */
+export interface LocalRolePasswords {
+  readonly migrator: string;
+  readonly app: string;
+  readonly auth: string;
+}
 
 /**
  * Used when KAWALYS_DESCOPE_PROJECT_ID and KAWALYS_OWNER_SUBJECT are not set. Clearly synthetic:
@@ -64,6 +64,7 @@ export interface LocalPools {
 /** Roles and schema (only when missing), then pending migrations. Returns the migrations applied now. */
 export async function prepareLocalDatabase(
   adminUrl: string,
+  passwords: LocalRolePasswords,
   env: Readonly<Record<string, string | undefined>> = process.env,
   // Evaluated only when omitted (the compiled CommonJS command); tests pass the directory.
   migrationsDir: string = join(__dirname, '..', '..', 'migrations'),
@@ -75,14 +76,14 @@ export async function prepareLocalDatabase(
   try {
     const { rowCount } = await admin.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [ROLE_MIGRATOR]);
     if ((rowCount ?? 0) === 0) {
-      await provisionRoles(admin, LOCAL_ROLE_PASSWORDS);
+      await provisionRoles(admin, { migrator: passwords.migrator, app: passwords.app, auth: passwords.auth });
       await provisionDatabase(admin, database);
       provisioned = true;
     }
   } finally {
     await admin.end();
   }
-  const migrator = new pg.Pool({ connectionString: roleConnectionString(adminUrl, ROLE_MIGRATOR, LOCAL_ROLE_PASSWORDS.migrator), max: 1 });
+  const migrator = new pg.Pool({ connectionString: roleConnectionString(adminUrl, ROLE_MIGRATOR, passwords.migrator), max: 1 });
   try {
     const applied = await runMigrations(migrator, migrationsDir);
     return { provisioned, applied };
@@ -92,10 +93,10 @@ export async function prepareLocalDatabase(
 }
 
 /** The runtime connection strings for the BFF (KAWALYS_DATABASE_URL_APP / _AUTH). */
-export function localRuntimeUrls(adminUrl: string): { app: string; auth: string } {
+export function localRuntimeUrls(adminUrl: string, passwords: LocalRolePasswords): { app: string; auth: string } {
   return {
-    app: roleConnectionString(adminUrl, ROLE_APP, LOCAL_ROLE_PASSWORDS.app),
-    auth: roleConnectionString(adminUrl, ROLE_AUTH, LOCAL_ROLE_PASSWORDS.auth),
+    app: roleConnectionString(adminUrl, ROLE_APP, passwords.app),
+    auth: roleConnectionString(adminUrl, ROLE_AUTH, passwords.auth),
   };
 }
 

@@ -3,3 +3,6 @@ dist/
 .env
 .env.*
 !.env.example
+
+# BACK-61 local stack credentials (generated per machine)
+.local-stack/

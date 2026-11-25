@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { EvidenceRepository } from '../../src/evidence/evidence.repository';
+import { generateLocalCredentials } from '../../src/ops/local-credentials';
 import {
   assertLocalAdminUrl,
   LOCAL_SYNTHETIC_OWNER,
@@ -19,14 +20,15 @@ let base: PgContainer | undefined;
 let app: pg.Pool;
 let auth: pg.Pool;
 let first: SeedSummary;
+const creds = generateLocalCredentials();
 
 beforeAll(async () => {
   base = await startPgContainer();
   const adminUrl = base.container.getConnectionUri();
-  const prepared = await prepareLocalDatabase(adminUrl, {}, MIGRATIONS_DIR);
+  const prepared = await prepareLocalDatabase(adminUrl, creds, {}, MIGRATIONS_DIR);
   expect(prepared.provisioned).toBe(true);
   expect(prepared.applied.length).toBeGreaterThan(0);
-  const urls = localRuntimeUrls(adminUrl);
+  const urls = localRuntimeUrls(adminUrl, creds);
   app = new pg.Pool({ connectionString: urls.app, max: 2 });
   auth = new pg.Pool({ connectionString: urls.auth, max: 2 });
   first = await seedLocal({ app, auth });
@@ -68,7 +70,7 @@ describe('local seed (synthetic data, repository layer)', () => {
   });
 
   it('adds nothing when run again (provisioning, migrations and seed are idempotent)', async () => {
-    const again = await prepareLocalDatabase(base!.container.getConnectionUri(), {}, MIGRATIONS_DIR);
+    const again = await prepareLocalDatabase(base!.container.getConnectionUri(), creds, {}, MIGRATIONS_DIR);
     expect(again).toEqual({ provisioned: false, applied: [] });
     const second = await seedLocal({ app, auth });
     expect(second.created).toBe(0);
