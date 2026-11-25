@@ -147,3 +147,25 @@ test('portfolio: View links and case links reach the right routes', async ({ pag
   await page.locator('[data-attention="ATT-RT-1"]').getByRole('link', { name: 'Inspect evidence E-1' }).click();
   await expect(page).toHaveURL(/#\/evidence\/E-1\?from=INV-DEMO-7$/);
 });
+
+// BACK-57: the GitHub reads panel renders the synthetic GET /portfolio fixture through the adapters. It is
+// demo data, shows read states only, and nothing on the page calls a server.
+const NEVER_READ = '[data-testid="github-source-00000000-0000-4000-8000-0000000000b4"]';
+for (const lang of LANGS) {
+  test(`portfolio GitHub reads ${lang}: demo marker, read states, never healthy, no request beyond the app`, async ({ page }) => {
+    const requests: string[] = [];
+    // Any script-made request (fetch, XHR, beacon, event stream) counts, same origin included.
+    page.on('request', (r) => { if (!['document', 'script', 'stylesheet', 'image', 'font'].includes(r.resourceType())) requests.push(`${r.resourceType()} ${r.url()}`); });
+    await load(page, { lang });
+    const panel = page.getByTestId('portfolio-github');
+    await expect(panel).toBeVisible();
+    await expect(panel.getByTestId('github-demo')).toHaveText(lang === 'ar' ? 'بيانات تجريبية: قراءات مصطنعة، ليست مباشرة' : 'Demo data: synthetic reads, not live');
+    await expect(panel.locator('[data-testid^="github-source-"]')).toHaveCount(6);
+    await expect(panel.locator(`${NEVER_READ} .pf-gh-status`)).toHaveText(lang === 'ar' ? 'لم تُقرأ بعد' : 'Not read yet');
+    await expect(panel.locator(`${NEVER_READ} [data-count="pullRequests"]`)).toHaveText(lang === 'ar' ? 'غير مقروء' : 'Not read');
+    await expect(panel.locator('li[data-read="current"]')).toHaveCount(2);
+    await expect(panel.locator('li[data-read="unavailable"]')).toHaveCount(2);
+    await expect(panel.locator('[data-health], a')).toHaveCount(0);
+    expect(requests).toEqual([]);
+  });
+}

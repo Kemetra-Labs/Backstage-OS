@@ -83,7 +83,7 @@ const en: HomeCopy = {
     stale: (n) => `${n} stale`,
     unavailable: (n) => `${n} unavailable`,
     notSetUp: (n) => `${n} not set up`,
-    unknown: (n) => `${n} never read`,
+    unknown: (n) => `${n} not read yet`,
   },
   activity: {
     title: 'Recent activity',
@@ -135,7 +135,7 @@ const ar: HomeCopy = {
     stale: (n) => `${n} قديمة`,
     unavailable: (n) => `${n} غير متاحة`,
     notSetUp: (n) => `${n} غير مُعدّة`,
-    unknown: (n) => `${n} لم تُقرأ قط`,
+    unknown: (n) => `${n} لم تُقرأ بعد`,
   },
   activity: {
     title: 'النشاط الأخير',

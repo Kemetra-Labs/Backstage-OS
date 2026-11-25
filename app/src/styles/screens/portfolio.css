@@ -20,3 +20,18 @@
 .pf-ev:first-child { border-top: 0; }
 .pf-ev-text { display: grid; gap: 2px; min-width: 0; }
 @media (min-width: 760px) { .pf-ev { grid-template-columns: max-content minmax(0, 1fr) auto; } }
+
+/* GitHub reads (BACK-57): read states only, never health colours. Synthetic data carries the demo marker. */
+.pf-gh-lede { color: var(--muted); max-width: 70ch; }
+.pf-gh-incomplete { color: var(--amber); }
+.pf-gh-project { display: grid; gap: 8px; padding-top: 12px; }
+.pf-gh-project h3 { font-size: 16px; margin: 0; }
+.pf-gh-project li { display: grid; gap: 4px 16px; padding: 10px 0; border-top: 1px dashed var(--line); min-width: 0; }
+.pf-gh-project li:first-child { border-top: 0; }
+.pf-gh-ref { font-family: var(--f-mono); overflow-wrap: anywhere; }
+.pf-gh-status[data-read="current"] { color: var(--ink); }
+.pf-gh-status[data-read="stale"] { color: var(--amber); }
+.pf-gh-status[data-read="notReadYet"], .pf-gh-status[data-read="unknown"] { color: var(--unk); }
+.pf-gh-status[data-read="unavailable"] { color: var(--coral); }
+.pf-gh-age, .pf-gh-failure { color: var(--muted); }
+@media (min-width: 760px) { .pf-gh-project li { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto; align-items: center; } }

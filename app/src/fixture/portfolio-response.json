@@ -1,0 +1,166 @@
+{
+  "projects": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000a1",
+      "key": "demo-checkout",
+      "name": "Demo Checkout",
+      "state": "ok",
+      "sources": [
+        {
+          "id": "00000000-0000-4000-8000-0000000000b1",
+          "provider": "github",
+          "externalRef": "kemetra-labs/demo-checkout",
+          "state": "ok",
+          "reason": null,
+          "lastReadAt": "2026-11-25T11:50:00.000Z",
+          "lists": {
+            "pullRequests": {
+              "state": "ok",
+              "reason": null,
+              "count": 2,
+              "complete": true
+            },
+            "issues": {
+              "state": "ok",
+              "reason": null,
+              "count": 1,
+              "complete": true
+            }
+          },
+          "items": []
+        },
+        {
+          "id": "00000000-0000-4000-8000-0000000000b2",
+          "provider": "github",
+          "externalRef": "kemetra-labs/demo-checkout-api",
+          "state": "ok",
+          "reason": null,
+          "lastReadAt": "2026-11-25T11:45:00.000Z",
+          "lists": {
+            "pullRequests": {
+              "state": "ok",
+              "reason": null,
+              "count": 20,
+              "complete": false
+            },
+            "issues": {
+              "state": "ok",
+              "reason": null,
+              "count": 0,
+              "complete": false
+            }
+          },
+          "items": []
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a2",
+      "key": "demo-inventory",
+      "name": "Demo Inventory",
+      "state": "unknown",
+      "sources": [
+        {
+          "id": "00000000-0000-4000-8000-0000000000b3",
+          "provider": "github",
+          "externalRef": "kemetra-labs/demo-inventory",
+          "state": "ok",
+          "reason": null,
+          "lastReadAt": "2026-11-25T08:00:00.000Z",
+          "lists": {
+            "pullRequests": {
+              "state": "ok",
+              "reason": null,
+              "count": 1,
+              "complete": true
+            },
+            "issues": {
+              "state": "ok",
+              "reason": null,
+              "count": 0,
+              "complete": true
+            }
+          },
+          "items": []
+        },
+        {
+          "id": "00000000-0000-4000-8000-0000000000b4",
+          "provider": "github",
+          "externalRef": "kemetra-labs/demo-inventory-sync",
+          "state": "unknown",
+          "reason": "never_read",
+          "lastReadAt": null,
+          "lists": {
+            "pullRequests": {
+              "state": "unknown",
+              "reason": "never_read",
+              "count": null,
+              "complete": null
+            },
+            "issues": {
+              "state": "unknown",
+              "reason": "never_read",
+              "count": null,
+              "complete": null
+            }
+          },
+          "items": []
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a3",
+      "key": "demo-payments",
+      "name": "Demo Payments",
+      "state": "denied",
+      "sources": [
+        {
+          "id": "00000000-0000-4000-8000-0000000000b5",
+          "provider": "github",
+          "externalRef": "kemetra-labs/demo-payments",
+          "state": "unknown",
+          "reason": "timeout",
+          "lastReadAt": "2026-11-25T11:55:00.000Z",
+          "lists": {
+            "pullRequests": {
+              "state": "unknown",
+              "reason": "not_read",
+              "count": null,
+              "complete": null
+            },
+            "issues": {
+              "state": "unknown",
+              "reason": "not_read",
+              "count": null,
+              "complete": null
+            }
+          },
+          "items": []
+        },
+        {
+          "id": "00000000-0000-4000-8000-0000000000b6",
+          "provider": "github",
+          "externalRef": "kemetra-labs/demo-payments-ledger",
+          "state": "denied",
+          "reason": "not_visible",
+          "lastReadAt": "2026-11-25T11:55:00.000Z",
+          "lists": {
+            "pullRequests": {
+              "state": "unknown",
+              "reason": "not_read",
+              "count": null,
+              "complete": null
+            },
+            "issues": {
+              "state": "unknown",
+              "reason": "not_read",
+              "count": null,
+              "complete": null
+            }
+          },
+          "items": []
+        }
+      ]
+    }
+  ]
+}
