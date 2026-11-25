@@ -186,9 +186,29 @@ describe('human decisions', () => {
     // The decider loses sight of it too once the cited source is disconnected.
     await repo.disconnectSource(ws, owner, extra);
     expect(await repo.get(ws, owner, id)).toBeNull();
-    // A decision that cites nothing stays visible to members with evidence.read.
-    const open = await repo.recordDecision(ws, owner, { investigationId, decision: 'note', rationale: 'no citations', evidenceIds: [] }, null);
-    expect(await repo.get(ws, reader, open)).toMatchObject({ citations: [] });
+  });
+
+  it('shows a decision that cites nothing only to readers who can see its project', async () => {
+    const reader = randomUUID();
+    await db!.admin.query('INSERT INTO kawalys.users (id) VALUES ($1)', [reader]);
+    const uncited = await repo.recordDecision(ws, owner, { investigationId, decision: 'note', rationale: 'no citations', evidenceIds: [] }, null);
+    expect(await repo.get(ws, owner, uncited)).toMatchObject({ citations: [] });
+    // A member with no grant in the project sees neither the decision nor that the project exists.
+    expect(await repo.get(ws, reader, uncited)).toBeNull();
+    for (const filter of [{}, { investigationId }, { projectId }]) {
+      expect((await repo.list(ws, reader, filter)).map((e) => e.id)).not.toContain(uncited);
+    }
+  });
+
+  it('hides an uncited decision from its decider once their last grant in the project is revoked', async () => {
+    const lone = await repo.createProject(ws, owner, { key: 'lone-decision', name: 'Lone decision' });
+    const src = await repo.connectSource(ws, owner, { projectId: lone, provider: 'github', externalRef: 'kemetra-labs/lone-decision' });
+    const inv = await repo.createInvestigation(ws, owner, { projectId: lone, title: 'Lone' });
+    const uncited = await repo.recordDecision(ws, owner, { investigationId: inv, decision: 'x', rationale: 'y', evidenceIds: [] }, null);
+    expect(await repo.get(ws, owner, uncited)).not.toBeNull();
+    await repo.disconnectSource(ws, owner, src);
+    expect(await repo.get(ws, owner, uncited)).toBeNull();
+    expect((await repo.list(ws, owner, {})).map((e) => e.id)).not.toContain(uncited);
   });
 
   it('accepts citation ids in upper case', async () => {

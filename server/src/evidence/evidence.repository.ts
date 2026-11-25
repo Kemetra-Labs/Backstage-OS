@@ -14,6 +14,7 @@ import {
   type EvidenceState,
   type EvidenceType,
 } from './evidence.types';
+import { PROJECT_VISIBLE } from './visibility';
 
 export interface ObservationInput {
   readonly sourceId: string;
@@ -43,11 +44,14 @@ const GRANTED = (alias: string) =>
   `EXISTS (SELECT 1 FROM source_grants g WHERE g.source_id = ${alias}.source_id AND g.user_id = $1 AND g.revoked_at IS NULL)`;
 
 /**
- * Visible to user $1: source evidence needs an active grant on its source; a HumanDecision is
- * visible only if EVERY row it cites is visible, so a decision never reveals restricted evidence.
+ * Visible to user $1: source evidence needs an active grant on its source. A HumanDecision needs
+ * both its project to be visible (PROJECT_VISIBLE, the same rule as its investigation, so a decision
+ * that cites nothing never reveals a hidden project) and EVERY row it cites to be visible, so a
+ * decision never reveals restricted evidence. A decision's project_id is its investigation's.
  */
 const VISIBLE = `(CASE WHEN e.type = 'HumanDecision'
-    THEN NOT EXISTS (SELECT 1 FROM evidence_citations c JOIN evidence ce ON ce.id = c.evidence_id
+    THEN ${PROJECT_VISIBLE('e.project_id')}
+     AND NOT EXISTS (SELECT 1 FROM evidence_citations c JOIN evidence ce ON ce.id = c.evidence_id
                       WHERE c.decision_id = e.id AND NOT ${GRANTED('ce')})
     ELSE ${GRANTED('e')} END)`;
 
