@@ -212,6 +212,39 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 - Database-role hardening not done yet: `kawalys_app` could insert a `HumanDecision` row directly without an audit row, or a grant for any user id; the application never does, and a later slice can enforce it in the database.
 - There is no way yet for an administrator to revoke another user's grant (single owner).
 
+## GitHub observation mapper (BACK-52 mock slice)
+
+Code and canned-response tests only. **No transport, no network, no token, no GitHub App.** A real transport waits for the BACK-52 gates: X02/X04 and owner authorization of one exact repository and its scopes.
+
+- `src/connectors/github/github.transport.ts`: the read-only port (`get` only, so a write cannot be expressed) and `GitHubTransportFailure` (`network` or `timeout`). Nothing in `src/` implements it.
+- `src/connectors/github/github.observer.ts`: `observeRepository(transport, { sourceId, externalRef }, now)` reads the repository, then up to 20 open pull requests and 20 open issues (issues that are pull requests are skipped). It returns `ObservationInput[]` for `EvidenceRepository.ingest()`. Nothing calls it yet.
+- `observedAt` is the time of the read. The item's own update time is `payload.updatedAt`.
+- Only allow-listed fields are stored (X04). Items keep number, title, state, draft and `updatedAt`. The repository keeps `fullName`, `defaultBranch`, `archived`, `private` and `pushedAt`. No bodies, logins, emails, avatars or descriptions.
+- Text is cut to 300 whole characters. NUL is removed and an unpaired surrogate is replaced, because PostgreSQL `jsonb` rejects both and `ingest()` is all-or-nothing.
+- A URL is kept only if it is `https://github.com/<this repo>/…` with no username, password or port. It is rebuilt from its path, so no query or fragment is stored.
+- `externalRef` must be the stored lower-case `owner/repo`. Anything else makes no request and records `error` / `invalid_ref`. A repository answer whose `full_name` is another repository (a rename or redirect) records `error` / `ref_mismatch`, and nothing else is read.
+
+Every failure becomes one `source_status` Observation per endpoint, with a fixed reason code and never GitHub's message text:
+
+| Answer | `state` | `reason` |
+| --- | --- | --- |
+| 401, 403 | `denied` | `denied` |
+| 404 (absent and not permitted look the same) | `denied` | `not_visible` |
+| 429, or 403 with `x-ratelimit-remaining: 0` or `retry-after` | `unknown` | `rate_limited` |
+| 5xx | `unknown` | `unavailable` |
+| no answer | `unknown` | `network` / `timeout` |
+| other status | `error` | `unexpected_status` |
+| any other thrown error | `error` | `transport_error` |
+| 2xx with an unexpected shape (one bad item fails its endpoint) | `error` | `malformed` |
+
+A failed repository read stops the run. A failed pull-request or issue list is isolated from the other list. A status record is dated at the read like every other record, so readers must let `state` win over freshness.
+
+**For the future reader (BACK-49 slice):** evidence is append-only. An item that drops off the open list (closed), or whose source later fails, gets no new record of its own. A reader must therefore not take "the latest record per `source_ref`". It should show items only from the source's latest read, and show a source whose latest read failed as that failure.
+
+BACK-52's original acceptance criterion says 401/403 should become Unknown. The 23 Nov owner decision asks for truthful Unknown/unavailable/denied outcomes, so 401, 403 and 404 are `denied`. Neither is ever `ok`.
+
+Tests: `test/connectors/github/` (canned responses, mutation-checked), plus a Docker database test that stores every state through `ingest()`.
+
 ## Known limits
 
 - Rate limiting on `POST /auth/session` is a process-local fixed window (one shared key behind loopback); a restart resets it.
@@ -228,6 +261,8 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 [THIRD_PARTY.md](THIRD_PARTY.md) for paths, pinned SHAs, strategy and licence.
 
 ## Rollback
+
+To remove only the GitHub observation mapper (BACK-52 mock slice): delete `server/src/connectors/` and `server/test/connectors/`, and revert its edits to `server/README.md`, `server/THIRD_PARTY.md` and the `description` in `server/package.json`. Nothing else imports it.
 
 To remove only the durable layer (BACK-55): delete `server/src/auth/session/postgres-session-store.ts`, `server/src/auth/identity/database-owner-directory.ts`, `server/src/auth/workspace-resolver.ts`, `server/src/auth/workspace.guard.ts`, `server/src/evidence/`, `server/src/db/`, `server/src/audit/`, `server/src/config/database-config.ts`, `server/migrations/` and the matching tests, and restore `create-app.ts` and `main.ts` from `main`. To remove the authentication foundation: delete `server/src/auth/` and `server/test/auth/`, restore `create-app.ts`,
 `health/process.controller.ts` and `test/http/app.spec.ts` from `main`, and remove `jose` from `server/package.json` and

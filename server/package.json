@@ -6,7 +6,7 @@
     "node": ">=24"
   },
   "license": "Apache-2.0",
-  "description": "Synthetic Kawalys BFF (BACK-69 T0): no DB, auth, connectors, network or secrets",
+  "description": "Kawalys BFF: synthetic routes, owner-only auth, PostgreSQL evidence API, GitHub observation mapper with no transport (no source access, no secrets)",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
