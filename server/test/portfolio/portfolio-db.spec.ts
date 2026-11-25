@@ -123,7 +123,7 @@ describe('the latest read', () => {
     script[`/repos/${OWNER_REPO}/pulls`] = { status: 200, body: [], headers: {} };
     await read(script, '2026-11-25T14:00:00Z');
     const s = (await project()).sources[0]!;
-    expect(s.lists.pullRequests).toEqual({ state: 'ok', reason: null, count: 0 });
+    expect(s.lists.pullRequests).toEqual({ state: 'ok', reason: null, count: 0, complete: true });
     expect(s.items.some((i) => i.kind === 'pull_request')).toBe(false);
   });
 });
