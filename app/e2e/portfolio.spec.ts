@@ -169,3 +169,47 @@ for (const lang of LANGS) {
     expect(requests).toEqual([]);
   });
 }
+
+// BACK-62: a forced connector error appears as Unknown/Error in words, never as an empty or green panel. The review seed
+// ?github=<form> swaps the synthetic body for one failure form built in memory; nothing is requested.
+const FAILED_SOURCE = { error: 'GitHub did not answer.', denied: 'Access was denied.', timeout: 'The read timed out.' } as const;
+const FAILED_SOURCE_AR = { error: 'لم يردّ GitHub.', denied: 'رُفض الوصول.', timeout: 'انتهت مهلة القراءة.' } as const;
+const PANEL_STATE = {
+  malformed: { kind: 'error', en: 'GitHub reads could not be read', ar: 'تعذّرت قراءة قراءات GitHub' },
+  empty: { kind: 'empty', en: 'No GitHub reads to show', ar: 'لا توجد قراءات GitHub لعرضها' },
+} as const;
+for (const lang of LANGS) {
+  for (const form of ['error', 'denied', 'timeout'] as const) {
+    test(`portfolio GitHub reads forced ${form} ${lang}: every source unavailable with its reason, counts not read, never green`, async ({ page }) => {
+      const errors = await load(page, { lang, github: form });
+      const panel = page.getByTestId('portfolio-github');
+      await expect(panel.getByTestId('github-demo')).toBeVisible();
+      const rows = panel.locator('li[data-testid^="github-source-"]');
+      await expect(rows).toHaveCount(6);
+      await expect(panel.locator('li[data-read="unavailable"]')).toHaveCount(6);
+      await expect(panel.locator('.pf-gh-failure')).toHaveCount(6);
+      await expect(panel.locator('.pf-gh-failure').first()).toContainText((lang === 'ar' ? FAILED_SOURCE_AR : FAILED_SOURCE)[form]);
+      await expect(panel.locator('.pf-gh-status').first()).toHaveText(lang === 'ar' ? 'غير متاحة' : 'Unavailable');
+      // A failed read is never counted: every count says "not read", none says 0.
+      const counts = await panel.locator('[data-count]').allTextContents();
+      expect(counts).toHaveLength(12);
+      expect(counts.every((c) => c === (lang === 'ar' ? 'غير مقروء' : 'Not read')), counts.join('|')).toBe(true);
+      await expect(panel.locator('.pf-gh-age')).toHaveCount(0);
+      await expect(panel.locator('[data-health], a, [data-read="current"], [data-read="stale"]')).toHaveCount(0);
+      expect(errors).toEqual([]);
+    });
+  }
+  for (const form of ['malformed', 'empty'] as const) {
+    test(`portfolio GitHub reads forced ${form} ${lang}: an explicit ${PANEL_STATE[form].kind} state in words, still demo data, never blank`, async ({ page }) => {
+      const errors = await load(page, { lang, github: form });
+      const panel = page.getByTestId('portfolio-github');
+      await expect(panel.getByTestId('github-demo')).toBeVisible();
+      const block = panel.locator(`.state-block[data-state="${PANEL_STATE[form].kind}"]`);
+      await expect(block).toHaveCount(1);
+      await expect(block.locator('.state-title')).toHaveText(PANEL_STATE[form][lang]);
+      await expect(block.locator('.note')).toContainText(lang === 'ar' ? 'غير معروف' : 'unknown, not healthy');
+      await expect(panel.locator('li, [data-count], [data-health], a')).toHaveCount(0);
+      expect(errors).toEqual([]);
+    });
+  }
+}

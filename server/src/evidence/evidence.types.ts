@@ -7,6 +7,10 @@ export type EvidenceType = (typeof EVIDENCE_TYPES)[number];
 export const EVIDENCE_STATES = ['ok', 'stale', 'unknown', 'denied', 'error'] as const;
 export type EvidenceState = (typeof EVIDENCE_STATES)[number];
 
+/** Stored source providers: the CHECK on sources.provider (migrations/0003, widened in 0005 for BACK-99). */
+export const SOURCE_PROVIDERS = ['github', 'jira', 'confluence'] as const;
+export type SourceProvider = (typeof SOURCE_PROVIDERS)[number];
+
 /** Worst first is the one that needs attention most. `ok` is only ever the best of all-ok. */
 const SEVERITY: Readonly<Record<EvidenceState, number>> = { ok: 0, stale: 1, unknown: 2, error: 3, denied: 4 };
 

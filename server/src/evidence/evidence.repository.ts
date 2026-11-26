@@ -19,6 +19,7 @@ import {
   type EvidenceState,
   type EvidenceType,
   type NoteType,
+  type SourceProvider,
 } from './evidence.types';
 import { PROJECT_VISIBLE } from './visibility';
 
@@ -72,6 +73,16 @@ const COLUMNS = `e.id, e.type, e.state, e.project_id, e.source_id, e.investigati
   e.observed_at, e.received_at, e.payload,
   COALESCE((SELECT array_agg(c.evidence_id::text ORDER BY c.evidence_id) FROM evidence_citations c
              WHERE c.decision_id = e.id), '{}') AS citations`;
+
+/**
+ * The creator of decision `decisionIdExpr` (a SQL fragment chosen by the caller, never user input): the
+ * actor of its `decision.recorded` audit row. Served by index audit_events_by_target (migration 0004),
+ * whose constraint trigger also makes the row mandatory for every committed HumanDecision (BACK-100).
+ */
+export const DECISION_CREATOR = (decisionIdExpr: string): string =>
+  `(SELECT a.actor_user_id FROM audit_events a
+     WHERE a.target_type = 'evidence' AND a.target_id = ${decisionIdExpr} AND a.action = 'decision.recorded'
+     ORDER BY a.occurred_at, a.id LIMIT 1)`;
 
 interface Row {
   id: string;
@@ -163,7 +174,7 @@ export class EvidenceRepository {
    * on it before (reconnecting after their own disconnect); nobody can attach themselves to a
    * source someone else connected. An active grant makes this a no-op.
    */
-  async connectSource(workspaceId: string, actor: string, input: { projectId: string; provider: 'github'; externalRef: string }): Promise<string> {
+  async connectSource(workspaceId: string, actor: string, input: { projectId: string; provider: SourceProvider; externalRef: string }): Promise<string> {
     const externalRef = input.externalRef.trim().toLowerCase();
     return this.inWorkspace(workspaceId, async (c) => {
       const existing = await c.query<{ id: string; project_id: string }>(
@@ -288,9 +299,7 @@ export class EvidenceRepository {
                 e.received_at,
                 COALESCE((SELECT array_agg(c.evidence_id::text ORDER BY c.evidence_id) FROM evidence_citations c
                            WHERE c.decision_id = e.id), '{}') AS citations,
-                (SELECT a.actor_user_id FROM audit_events a
-                  WHERE a.target_type = 'evidence' AND a.target_id = e.id AND a.action = 'decision.recorded'
-                  ORDER BY a.occurred_at, a.id LIMIT 1) AS created_by
+                ${DECISION_CREATOR('e.id')} AS created_by
            FROM evidence e
           WHERE e.type = 'HumanDecision' AND ${VISIBLE}
             AND ($2::uuid IS NULL OR e.investigation_id = $2)

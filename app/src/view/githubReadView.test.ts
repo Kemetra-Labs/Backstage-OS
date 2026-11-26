@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { parsePortfolio } from '../api/portfolio';
 import PROJECT from '../fixture/portfolio-project-response.json';
 import RESPONSE from '../fixture/portfolio-response.json';
-import { FIXTURE_NOW, githubReadView } from './githubReadView';
+import { FIXTURE_NOW, FORCED_FORMS, forcedBody, forcedFormFrom, githubReadView, githubReadViewFor } from './githubReadView';
 
 const rows = (v = githubReadView()) => v.projects.flatMap((p) => p.sources);
 const byRef = (ref: string, v = githubReadView()) => rows(v).find((s) => s.externalRef === ref)!;
@@ -31,7 +31,7 @@ describe('the synthetic GET /portfolio fixture', () => {
 
 describe('githubReadView', () => {
   it('is always marked as demo data and is complete', () => {
-    expect(githubReadView()).toMatchObject({ demo: true, incomplete: false });
+    expect(githubReadView()).toMatchObject({ state: 'ok', demo: true, incomplete: false });
   });
 
   it('shows each read state from the fixture clock, never a health word', () => {
@@ -75,8 +75,93 @@ describe('githubReadView', () => {
   });
 
   it('a body that is not a portfolio shows nothing and says the view is incomplete, never an empty success', () => {
-    expect(githubReadView({ nope: true })).toEqual({ projects: [], demo: false, incomplete: true });
+    expect(githubReadView({ nope: true })).toEqual({ projects: [], state: 'unreadable', demo: true, incomplete: true });
     const partial = { projects: [...RESPONSE.projects, { id: 'x' }] };
     expect(githubReadView(partial).incomplete).toBe(true);
+  });
+});
+
+// BACK-62: a forced connector error appears as Unknown/Error in words, never as an empty or green panel. Every failure
+// form is built in memory from the fixture; the fixture itself is pinned by the server parity test and never edited.
+describe('forced connector errors (BACK-62)', () => {
+  const HEALTH = /healthy|ok|green/i;
+  const source = (state: string, reason: string | null) => {
+    const body = structuredClone(RESPONSE) as { projects: { sources: { state: string; reason: string | null }[] }[] };
+    body.projects[0]!.sources[0]!.state = state;
+    body.projects[0]!.sources[0]!.reason = reason;
+    return byRef('kemetra-labs/demo-checkout', githubReadView(body));
+  };
+
+  it.each([
+    ['error', 'network', 'network'],
+    ['error', null, 'malformed'],
+    ['denied', 'denied', 'denied'],
+    ['denied', 'not_visible', 'not_visible'],
+    ['unknown', 'timeout', 'timeout'],
+    ['unknown', 'rate_limited', 'rate_limited'],
+  ] as const)('a source in %s (%s) is unavailable with a failure reason, no age and no count, even though its lists say ok', (state, reason, failure) => {
+    const s = source(state, reason);
+    expect(s).toMatchObject({ status: 'unavailable', failure, ageMinutes: null });
+    expect(s.pullRequests).toMatchObject({ kind: 'notRead' });
+    expect(s.issues).toMatchObject({ kind: 'notRead' });
+    expect(s.status).not.toMatch(HEALTH);
+  });
+
+  it('an unknown state without a reason is unavailable, never "not read yet" and never current', () => {
+    expect(source('unknown', null)).toMatchObject({ status: 'unavailable', failure: 'malformed' });
+  });
+
+  it('a malformed body is an unreadable panel, still marked demo data, with no row', () => {
+    for (const body of [null, 'x', [], { projects: 'x' }, { projects: null }, { nope: true }]) {
+      expect(githubReadView(body)).toEqual({ projects: [], state: 'unreadable', demo: true, incomplete: true });
+    }
+  });
+
+  it('a body whose every project is dropped is unreadable, not empty', () => {
+    expect(githubReadView({ projects: [{ id: 'x' }, 7] })).toMatchObject({ projects: [], state: 'unreadable', demo: true, incomplete: true });
+  });
+
+  it('a partly dropped body keeps its rows and says it is incomplete', () => {
+    const v = githubReadView({ projects: [...RESPONSE.projects, { id: 'x' }] });
+    expect(v).toMatchObject({ state: 'ok', demo: true, incomplete: true });
+    expect(rows(v)).toHaveLength(6);
+  });
+
+  it('an empty project list is an explicit empty panel, still marked demo data, never a complete success', () => {
+    expect(githubReadView({ projects: [] })).toEqual({ projects: [], state: 'empty', demo: true, incomplete: false });
+  });
+
+  it('a project with no source keeps the project and lists no row (the panel says nothing was read)', () => {
+    const v = githubReadView({ projects: [{ ...RESPONSE.projects[0]!, sources: [] }] });
+    expect(v).toMatchObject({ state: 'ok', demo: true });
+    expect(v.projects[0]!.sources).toEqual([]);
+  });
+
+  it('every forced form is a failure in words: no current row, no count, the panel never ok and empty at once', () => {
+    for (const form of FORCED_FORMS) {
+      const v = githubReadView(forcedBody(form));
+      expect(v.demo, form).toBe(true);
+      expect(rows(v).filter((s) => s.status === 'current' || s.status === 'stale'), form).toEqual([]);
+      expect(rows(v).filter((s) => s.pullRequests.kind !== 'notRead' || s.issues.kind !== 'notRead'), form).toEqual([]);
+      if (v.state === 'ok') expect(rows(v).every((s) => s.status === 'unavailable' && s.failure !== null), form).toBe(true);
+    }
+    expect(githubReadView(forcedBody('malformed')).state).toBe('unreadable');
+    expect(githubReadView(forcedBody('empty')).state).toBe('empty');
+    expect(rows(githubReadView(forcedBody('error'))).map((s) => s.failure)).toEqual(Array(6).fill('network'));
+    expect(rows(githubReadView(forcedBody('denied'))).map((s) => s.failure)).toEqual(Array(6).fill('denied'));
+    expect(rows(githubReadView(forcedBody('timeout'))).map((s) => s.failure)).toEqual(Array(6).fill('timeout'));
+  });
+
+  it('forcing never edits the fixture', () => {
+    const before = JSON.stringify(RESPONSE);
+    for (const form of FORCED_FORMS) forcedBody(form);
+    expect(JSON.stringify(RESPONSE)).toBe(before);
+  });
+
+  it('the review seed names a form; anything else shows the fixture', () => {
+    expect(forcedFormFrom('?persona=owner&github=denied')).toBe('denied');
+    for (const s of ['', '?github=', '?github=ok', '?github=healthy', '?github=ERROR']) expect(forcedFormFrom(s), s).toBeNull();
+    expect(githubReadViewFor('?github=nope')).toEqual(githubReadView());
+    expect(githubReadViewFor('?github=empty').state).toBe('empty');
   });
 });

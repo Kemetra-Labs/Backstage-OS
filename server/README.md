@@ -43,7 +43,7 @@ What you'll see (ids differ):
 
 ```
 provisioned roles kawalys_migrator, kawalys_app, kawalys_auth and schema kawalys
-applied: 0001_foundation.sql, 0002_identity.sql, 0003_evidence.sql
+applied: 0001_foundation.sql, 0002_identity.sql, 0003_evidence.sql, 0004_decision_audit.sql, 0005_atlassian_sources.sql
 seeded for the synthetic local owner (no Descope configured):
 ...
 evidence      6 visible to the owner (6 created by this run):
@@ -214,7 +214,7 @@ Effective permission for source data is the role capability AND an active source
 
 Local code and tests only (owner approved gate A on 2026-11-23). Nothing is provisioned. Evidence routes exist only when both database URLs are set. They are protected by #76's global `AuthGuard` (a live session) and then by `WorkspaceGuard` (a capability). There is no Origin check: the session cookie is `SameSite=Strict` and no CORS is enabled, the same model as #76.
 
-**Tables** (`migrations/0003_evidence.sql`): `projects`, `sources`, `source_grants`, `investigations`, `evidence` and `evidence_citations`. All are workspace-scoped with forced RLS. Every reference between them is a composite foreign key that includes `workspace_id`, because foreign-key checks bypass RLS; no row can point into another workspace. Evidence also references its source and investigation through `(workspace_id, project_id, id)`, and citations stay in the decision's project, so nothing links across projects either. GitHub repository names are stored lower-case (one repository is one source).
+**Tables** (`migrations/0003_evidence.sql`): `projects`, `sources`, `source_grants`, `investigations`, `evidence` and `evidence_citations`. All are workspace-scoped with forced RLS. Every reference between them is a composite foreign key that includes `workspace_id`, because foreign-key checks bypass RLS; no row can point into another workspace. Evidence also references its source and investigation through `(workspace_id, project_id, id)`, and citations stay in the decision's project, so nothing links across projects either. GitHub repository names are stored lower-case (one repository is one source). `sources.provider` is `github`, `jira` or `confluence` (widened from `github` by `migrations/0005_atlassian_sources.sql`, BACK-99); any other value is refused by the database.
 
 **Evidence model** (`src/evidence/evidence.types.ts`):
 
@@ -245,9 +245,10 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 
 - Needs a session and `evidence.read` (404 otherwise, like every refusal). Exists only when both database URLs are set.
 - Query: `limit` from 1 to 100, default 20; any other value, or a repeated one, is 400 `validation_error`. Optional `investigationId`: an unknown, malformed or repeated value gives `{ items: [] }`, like the `GET /evidence` filter.
-- Returns `{ items: [{ id, investigationId, decision, rationale, citations, createdBy, createdAt }] }`. `createdBy` is the user id of the `decision.recorded` audit row that `POST /investigations/:id/decisions` writes in the same transaction (joined at read time; no schema change). `createdAt` is the evidence row's `received_at`, which only the database sets. `createdBy` is null only for a decision row written without its audit row, which the application never does (see the role-hardening limit below).
+- Returns `{ items: [{ id, investigationId, decision, rationale, citations, createdBy, createdAt }] }`. `createdBy` is the user id of the `decision.recorded` audit row that `POST /investigations/:id/decisions` writes in the same transaction (joined at read time through the index `audit_events_by_target`, migration 0004). `createdAt` is the evidence row's `received_at`, which only the database sets. A decision row cannot exist without that audit row (BACK-100, below), so `createdBy` is always set; it is `null` only if the audit row's actor is (never written by the application).
 - Visibility is the one `GET /evidence` uses: a decision is absent unless its project and every row it cites are visible to the reader, so a decision citing evidence of a disconnected source, an uncited decision of a hidden project, and another workspace's decisions never appear.
 - Append-only: `kawalys_app` holds no UPDATE or DELETE on `evidence`, `evidence_citations` or `audit_events`, and ALWAYS-enabled triggers refuse both even for a superuser in replica mode. A changed decision is a new decision. `test/evidence/decisions-db.spec.ts` covers this, the visibility cases and the parameter bounds.
+- **Decision audit row enforced (BACK-100, `migrations/0004_decision_audit.sql`).** A `DEFERRABLE INITIALLY DEFERRED` constraint trigger on `evidence` (`evidence_decision_audited`, enabled ALWAYS) refuses at commit, with SQLSTATE 23000, any `HumanDecision` row without a `decision.recorded` audit row of the same workspace whose `target_type` is `evidence` and `target_id` is the decision id. `recordDecision()` writes the audit row after the evidence row in the same transaction, so it passes; `SET CONSTRAINTS ALL IMMEDIATE` only runs the check earlier. The function is SECURITY INVOKER (no definer rights; `kawalys_app` already reads `audit_events`) with a pinned `search_path` and a schema-qualified table, so it sees only the current workspace context: a context switched before commit fails closed. It also holds for a superuser. The index `audit_events_by_target (workspace_id, target_type, target_id, action, occurred_at, id)` serves the creator lookup (the subquery is `DECISION_CREATOR` in `evidence.repository.ts`). Tests: `test/evidence/decision-audit-db.spec.ts` (including an `EXPLAIN` that must name the index).
 
 **Restart test.** `test/evidence/evidence-http.spec.ts` proves that evidence, decisions and sessions survive a full restart with new pools.
 
@@ -258,7 +259,7 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 - Projects and sources have no write routes, and investigations have read routes only (see Investigation API below).
 - Correlation and Hypothesis evidence each come from one source, including user notes: a note cannot link evidence of two sources (for example a GitHub pull request and a monitoring alert). Doing that safely needs a schema change and its own visibility rule; it is not built. This already applies today to two repositories of one project: a note citing both is refused with 400.
 - The list is capped at 500 rows and has no pagination or truncation flag yet.
-- Database-role hardening not done yet: `kawalys_app` could insert a `HumanDecision` row directly without an audit row, or a grant for any user id; the application never does, and a later slice can enforce it in the database.
+- Database-role hardening is partial: since BACK-100 a `HumanDecision` row cannot commit without its audit row, but `kawalys_app` could still insert a grant for any user id, or an audit row of its own choosing; the application never does.
 - There is no way yet for an administrator to revoke another user's grant (single owner).
 
 ## GitHub observation mapper (BACK-52 mock slice)
@@ -303,7 +304,7 @@ Read-only routes for investigations. No new capability, schema or dependency.
 | `GET /investigations` | Session and `evidence.read`. `{ items }`: visible investigations (`id`, `projectId`, `title`, `status`, `createdAt`), newest first, at most 100. Optional `projectId`. An unknown, malformed or repeated filter gives `{ items: [] }`. |
 | `GET /investigations/:id` | Session and `evidence.read`. The investigation plus `evidence`: its records as `GET /evidence?investigationId=` returns them, with `type` and `state` unchanged. Those two fields are the badges; no health is computed. 404 when the id is unknown, malformed or not visible. |
 
-**Visibility** is one shared rule, `src/evidence/visibility.ts` (`PROJECT_VISIBLE`). An investigation is visible exactly when its project is: the caller holds an active grant on one of the project's sources. The portfolio, the decision write path and decision reads in `GET /evidence` use the same rule; the write path share-locks the grant rows, so a concurrent revocation waits or wins outright. Another workspace is excluded by RLS, and the persona header is never read.
+**Visibility** is one shared rule, `src/evidence/visibility.ts` (`PROJECT_VISIBLE`). An investigation is visible exactly when its project is: the caller holds an active grant on one of the project's sources. The portfolio (further narrowed to GitHub sources since BACK-99), the decision write path and decision reads in `GET /evidence` use the same rule; the write path share-locks the grant rows, so a concurrent revocation waits or wins outright. Another workspace is excluded by RLS, and the persona header is never read.
 
 **What the room shows.** It shows investigation-scoped evidence only. Connector observations belong to no investigation (`investigation_id` is null), so they appear under `GET /portfolio/:projectId`; they are never linked to an investigation automatically.
 
@@ -326,6 +327,7 @@ A read-only view of what is visible to the caller, built on the evidence store. 
 
 **Visibility.**
 - A project is listed only through a source the caller holds an active grant on. Only granted sources are listed and counted.
+- **GitHub sources only (BACK-99).** The read model is GitHub-repository-shaped (a repository read, pull requests, issues). Jira and Confluence sources have no repository read and would read as `unknown` / `never_read` and drag their project to `unknown`, so the portfolio query ignores every provider but `github` (`PORTFOLIO_PROVIDER` in `portfolio.repository.ts`). A project appears only through a granted GitHub source: one whose granted sources are all Jira or Confluence is absent from `GET /portfolio` and 404 on `GET /portfolio/:id`, and takes no slot of the 100. Its evidence and investigations stay readable through their own routes (`PROJECT_VISIBLE` is provider-neutral). Test: `test/portfolio/portfolio-providers-db.spec.ts`.
 - A project with no granted source, or with none at all, does not exist for that caller.
 - Another workspace is excluded by RLS.
 - The persona header is never read.
@@ -370,9 +372,9 @@ Mock only: code and canned-response tests. **No transport, no network, no token,
 - Keys are validated before any request (at most 10, unique; Jira `^[A-Z][A-Z0-9_]{1,9}$`, Confluence `^[A-Z0-9]{1,32}$`); anything else makes no request and records `error` / `invalid_ref`.
 - An answer whose `date` header is older than the TTL (default 15 minutes) yields `stale` items, never `ok`. An unreadable `date` is `malformed`.
 - A link is built only as `https://<name>.atlassian.net/browse/<key>` or `/wiki/spaces/<key>/pages/<id>`, and only when the configured `site` is exactly an https `atlassian.net` origin. Otherwise `url` is null. Upstream `self` and `_links` values are never stored.
-- No database test: `sources.provider` only allows `github` (migrations/0003), so ingesting these needs a schema change in a later slice.
+- Stored since BACK-99: `migrations/0005_atlassian_sources.sql` allows `sources.provider` `jira` and `confluence`, and `EvidenceRepository.connectSource()` accepts them. One source per site and product (for example `external_ref` = `kemetra-synthetic.atlassian.net`, lower-case like every `external_ref`). Their sources are not in the portfolio (see Portfolio API).
 
-Tests: `test/connectors/jira/`, `test/connectors/confluence/` (mutation-checked), and `test/connectors/read-only-guard.spec.ts`, which fails if a module under `src/connectors/{jira,confluence,atlassian}` imports a network library, calls `fetch` or reads the environment, or if the port gains a method other than `get`.
+Tests: `test/connectors/jira/`, `test/connectors/confluence/` (mutation-checked; `jira-ingest-db.spec.ts` and `confluence-ingest-db.spec.ts` store the mapper output, every failure state included, through `ingest()` on Docker Postgres and read it back under RLS: `stale`, `denied`, `unknown` and `error` stay as such, another workspace and an ungranted user see nothing, and any other provider value is refused), and `test/connectors/read-only-guard.spec.ts`, which fails if a module under `src/connectors/{jira,confluence,atlassian}` imports a network library, calls `fetch` or reads the environment, or if the port gains a method other than `get`.
 
 ## Known limits
 

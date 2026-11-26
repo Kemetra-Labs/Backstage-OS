@@ -219,3 +219,52 @@ for (const lang of LANGS) {
     expect(await side(current)).not.toBe('solid');
   });
 }
+
+// BACK-57 (owner decision 2026-11-26): server-shaped records of a separate synthetic case, from the committed fixtures through
+// the src/api adapters. Demo data, read states only, no links, nothing requested. Owner and Technical see it; Nontechnical does not.
+const SRV_DEMO = { en: 'Demo data: synthetic records, not live', ar: 'بيانات تجريبية: سجلات مصطنعة، ليست مباشرة' } as const;
+const SRV_TITLE = { en: 'Server-shaped demo records', ar: 'سجلات تجريبية بصيغة الخادم' } as const;
+const SRV_LABEL = { en: ['Hypothesis', 'Unknown', 'Proposed'], ar: ['فرضية', 'مجهول', 'مقترح'] } as const;
+const SRV_READ = { en: ['Stale', 'Not read'], ar: ['قديمة', 'غير مقروءة'] } as const;
+for (const lang of LANGS) {
+  for (const persona of ['owner', 'technical'] as const) {
+    test(`server-shaped records ${lang}/${persona}: demo marker, type badges, read states, proposed decision, no health word, no link, no request`, async ({ page }) => {
+      const requests: string[] = [];
+      page.on('request', (r) => { if (!['document', 'script', 'stylesheet', 'image', 'font'].includes(r.resourceType())) requests.push(`${r.resourceType()} ${r.url()}`); });
+      const errors = await load(page, { lang, persona });
+      const panel = page.getByTestId('server-records');
+      await expect(panel).toBeVisible();
+      await expect(panel.locator('h2')).toHaveText(SRV_TITLE[lang]);
+      await expect(panel.getByTestId('server-records-demo')).toHaveText(SRV_DEMO[lang]);
+      const records = panel.getByTestId('server-record');
+      await expect(records).toHaveCount(2);
+      await expect(panel.locator('[data-testid="server-record"] [data-truth]')).toHaveText([SRV_LABEL[lang][0], SRV_LABEL[lang][1]]);
+      await expect(panel.locator('.srv-read')).toHaveText([...SRV_READ[lang]]);
+      await expect(records.nth(1)).toContainText(lang === 'ar' ? 'فشلت قراءة المصدر.' : 'The source read failed.');
+      await expect(records.nth(1).locator('.srv-age')).toHaveCount(0);
+      const decision = panel.getByTestId('server-decision');
+      await expect(decision).toHaveCount(1);
+      await expect(decision.locator('[data-truth]')).toHaveText(SRV_LABEL[lang][2]);
+      await expect(decision.locator('[data-creator="recorded"]')).toBeVisible();
+      await expect(panel.locator('[data-truth="approved"], [data-truth="observed"], [data-read="current"], [data-health], a, button')).toHaveCount(0);
+      expect(await panel.innerText()).not.toMatch(/healthy|سليم/i);
+      // Owner sees no source reference and none of the server's free text; Technical sees both, isolated left to right.
+      const refs = panel.locator('bdi.srv-ref');
+      if (persona === 'owner') {
+        await expect(refs).toHaveCount(0);
+        for (const t of ['example-org', '#42', 'checkout-e2e', 'actions/runs']) await expect(panel).not.toContainText(t);
+      } else {
+        await expect(refs).toHaveText(['github:example-org/demo-storefront#pull/42', 'github:example-org/demo-storefront#actions/runs/1002', 'Revert pull request #42 on main and re-run checkout-e2e']);
+        for (const el of await refs.all()) await expect(el).toHaveAttribute('dir', 'ltr');
+      }
+      expect(requests).toEqual([]);
+      expect(errors).toEqual([]);
+    });
+  }
+
+  test(`server-shaped records ${lang}/nontechnical: no panel`, async ({ page }) => {
+    await load(page, { lang, persona: 'nontechnical' });
+    await expect(page.getByTestId('server-records')).toHaveCount(0);
+    await expect(page.locator('main')).not.toContainText(SRV_TITLE[lang]);
+  });
+}
