@@ -1,0 +1,11 @@
+{
+  "description": "Hand-authored expected baseline, independent from reasoner. Entirely synthetic.",
+  "kind": "recommended", "selected": "T2",
+  "tasks": [
+    {"id":"T1","state":"done","refs":["DEF-T1","life:T1-r1"],"codes":["lifecycle-complete"]},
+    {"id":"T2","state":"ready","refs":["D-R21","D-R22","D-R23","DEF-T2","approval:T2-r1","check:T2-r1","life:T1-r1","life:T2-r1"],"codes":["lifecycle-pending","dependency-satisfied","approval-satisfied","check-satisfied"]},
+    {"id":"T3","state":"blocked","refs":["D-R31","DEF-T3","life:T2-r1","life:T3-r1"],"codes":["lifecycle-pending","dependency-unsatisfied"]},
+    {"id":"T4","state":"blocked","refs":["D-R41","D-R42","DEF-T4","approval:T4-r1","life:T3-r1","life:T4-r1"],"codes":["lifecycle-pending","dependency-unsatisfied","approval-unsatisfied"]},
+    {"id":"T5","state":"unknown","refs":["D-R51","DEF-T5","check:T5-r1","life:T5-r1"],"codes":["lifecycle-pending","check-unknown"]}
+  ]
+}

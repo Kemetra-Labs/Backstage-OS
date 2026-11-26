@@ -1,0 +1,334 @@
+{
+ "fixture": {
+  "fixtureVersion": "COG-FIX-01-v0.1",
+  "policyVersion": "readiness-v0.1",
+  "tasks": [
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "TASKS",
+    "id": "T1",
+    "ref": "DEF-T1",
+    "title": "Evidence collection جمع الأدلة",
+    "aliases": [
+     "collect evidence",
+     "جمع الدليل"
+    ],
+    "requirements": []
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "TASKS",
+    "id": "T2",
+    "ref": "DEF-T2",
+    "title": "Source adapter فحص الاتصال",
+    "aliases": [
+     "source-read",
+     "فحص المصدر"
+    ],
+    "requirements": [
+     {
+      "id": "R21",
+      "kind": "dependency",
+      "slot": "life:T1",
+      "expected": "complete",
+      "authorities": [
+       "TASKS"
+      ],
+      "ref": "D-R21",
+      "dependency": "T1"
+     },
+     {
+      "id": "R22",
+      "kind": "approval",
+      "slot": "approval:T2",
+      "expected": "granted",
+      "authorities": [
+       "APPROVALS"
+      ],
+      "ref": "D-R22"
+     },
+     {
+      "id": "R23",
+      "kind": "check",
+      "slot": "check:T2",
+      "expected": "pass",
+      "authorities": [
+       "CHECKS"
+      ],
+      "ref": "D-R23"
+     }
+    ]
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "TASKS",
+    "id": "T3",
+    "ref": "DEF-T3",
+    "title": "Integration test اختبار التكامل",
+    "aliases": [
+     "integration tests",
+     "اختبارات التكامل"
+    ],
+    "requirements": [
+     {
+      "id": "R31",
+      "kind": "dependency",
+      "slot": "life:T2",
+      "expected": "complete",
+      "authorities": [
+       "TASKS"
+      ],
+      "ref": "D-R31",
+      "dependency": "T2"
+     }
+    ]
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "TASKS",
+    "id": "T4",
+    "ref": "DEF-T4",
+    "title": "Deployment review مراجعة النشر",
+    "aliases": [
+     "release approval",
+     "إذن النشر",
+     "موافقة النشر"
+    ],
+    "requirements": [
+     {
+      "id": "R41",
+      "kind": "dependency",
+      "slot": "life:T3",
+      "expected": "complete",
+      "authorities": [
+       "TASKS"
+      ],
+      "ref": "D-R41",
+      "dependency": "T3"
+     },
+     {
+      "id": "R42",
+      "kind": "approval",
+      "slot": "approval:T4",
+      "expected": "granted",
+      "authorities": [
+       "APPROVALS"
+      ],
+      "ref": "D-R42"
+     }
+    ]
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "TASKS",
+    "id": "T5",
+    "ref": "DEF-T5",
+    "title": "Flaky CI فشل متقطع في الاختبارات",
+    "aliases": [
+     "unstable CI",
+     "فشل متقطع"
+    ],
+    "requirements": [
+     {
+      "id": "R51",
+      "kind": "check",
+      "slot": "check:T5",
+      "expected": "pass",
+      "authorities": [
+       "CHECKS"
+      ],
+      "ref": "D-R51"
+     }
+    ]
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "PRIVATE",
+    "id": "T6",
+    "ref": "DEF-T6",
+    "title": "Restricted work",
+    "aliases": [
+     "PRIVATE-DEMO"
+    ],
+    "requirements": []
+   }
+  ],
+  "events": [
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "TASKS",
+    "slot": "life:T1",
+    "value": "complete",
+    "state": "ok",
+    "revision": "r1",
+    "order": 1,
+    "ref": "life:T1-r1",
+    "effectiveAt": 1767258000000,
+    "recordedAt": 1767259800000,
+    "validUntil": 1767265200000
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "TASKS",
+    "slot": "life:T2",
+    "value": "pending",
+    "state": "ok",
+    "revision": "r1",
+    "order": 1,
+    "ref": "life:T2-r1",
+    "effectiveAt": 1767258000000,
+    "recordedAt": 1767259800000,
+    "validUntil": 1767265200000
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "TASKS",
+    "slot": "life:T3",
+    "value": "pending",
+    "state": "ok",
+    "revision": "r1",
+    "order": 1,
+    "ref": "life:T3-r1",
+    "effectiveAt": 1767258000000,
+    "recordedAt": 1767259800000,
+    "validUntil": 1767265200000
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "TASKS",
+    "slot": "life:T4",
+    "value": "pending",
+    "state": "ok",
+    "revision": "r1",
+    "order": 1,
+    "ref": "life:T4-r1",
+    "effectiveAt": 1767258000000,
+    "recordedAt": 1767259800000,
+    "validUntil": 1767265200000
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "TASKS",
+    "slot": "life:T5",
+    "value": "pending",
+    "state": "ok",
+    "revision": "r1",
+    "order": 1,
+    "ref": "life:T5-r1",
+    "effectiveAt": 1767258000000,
+    "recordedAt": 1767259800000,
+    "validUntil": 1767265200000
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "PRIVATE",
+    "slot": "life:T6",
+    "value": "pending",
+    "state": "ok",
+    "revision": "r1",
+    "order": 1,
+    "ref": "life:T6-r1",
+    "effectiveAt": 1767258000000,
+    "recordedAt": 1767259800000,
+    "validUntil": 1767265200000
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "APPROVALS",
+    "slot": "approval:T2",
+    "value": "granted",
+    "state": "ok",
+    "revision": "r1",
+    "order": 1,
+    "ref": "approval:T2-r1",
+    "effectiveAt": 1767258000000,
+    "recordedAt": 1767259800000,
+    "validUntil": 1767265200000
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "APPROVALS",
+    "slot": "approval:T4",
+    "value": "pending",
+    "state": "ok",
+    "revision": "r1",
+    "order": 1,
+    "ref": "approval:T4-r1",
+    "effectiveAt": 1767258000000,
+    "recordedAt": 1767259800000,
+    "validUntil": 1767265200000
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "CHECKS",
+    "slot": "check:T2",
+    "value": "pass",
+    "state": "ok",
+    "revision": "r1",
+    "order": 1,
+    "ref": "check:T2-r1",
+    "effectiveAt": 1767258000000,
+    "recordedAt": 1767259800000,
+    "validUntil": 1767265200000
+   },
+   {
+    "workspace": "W",
+    "project": "P",
+    "source": "CHECKS",
+    "slot": "check:T5",
+    "value": "unknown",
+    "state": "unknown",
+    "revision": "r1",
+    "order": 1,
+    "ref": "check:T5-r1",
+    "effectiveAt": 1767258000000,
+    "recordedAt": 1767259800000,
+    "validUntil": 1767265200000
+   }
+  ]
+ },
+ "scope": {
+  "workspace": "W",
+  "project": "P",
+  "grants": [
+   "TASKS",
+   "APPROVALS",
+   "CHECKS"
+  ],
+  "grantVersion": "g1"
+ },
+ "clock": {
+  "effectiveAt": 1767261600000,
+  "knownAt": 1767261600000,
+  "evaluationAt": 1767261600000
+ },
+ "complete": {
+  "workspace": "W",
+  "project": "P",
+  "source": "TASKS",
+  "slot": "life:T2",
+  "value": "complete",
+  "state": "ok",
+  "revision": "r2",
+  "order": 2,
+  "ref": "life:T2-r2",
+  "effectiveAt": 1767261660000,
+  "recordedAt": 1767261720000,
+  "validUntil": 1767265200000
+ }
+}
