@@ -28,7 +28,7 @@ These are the K-ID-1b gates in BACK-14 section 7. Record each answer here before
 Owner steps once gate B is approved (plan Task 0):
 
 1. Create a new Descope project named `Kawalys` (console, or Claude via the Descope MCP only after an explicit yes in chat).
-2. In that project: disable self sign-up; configure the `sign-in` flow (the lab page runs the flow id `sign-in`) with the chosen methods; add `http://127.0.0.1:8787` to approved domains.
+2. In that project: disable self sign-up; configure the `sign-in` flow (the lab page runs the flow id `sign-in`) with the chosen methods; add `127.0.0.1` to Approved Domains (Descope's docs say to enter the domain only, without protocol or port, and give `127.0.0.1` as the local example; if the console refuses it or flow start fails with `E108202`, "Flow is running from a non-approved domain" (code and text from Descope's Common Errors docs, not seen in the console), try the `http://127.0.0.1:8787` form this runbook used before; which form the console accepts is NOT VERIFIED).
    In the `sign-in` flow's magic-link settings, set the redirect URL to `http://127.0.0.1:8787/auth/lab`.
 3. Create the owner user and one test user named `lab-stranger` (used for the refusal check b).
 
@@ -62,7 +62,7 @@ What the switches do:
 - The page (`server/src/auth/lab/`) hosts `@descope/web-component@4.6.3` (pinned, with SRI) running flow `sign-in`, posts only the resulting Descope session JWT to `POST /auth/session`, then, once that exchange settles (accepted, refused, rate limited or a network error), calls the component SDK `logout()` so Descope revokes its refresh token and clears its own browser storage. It shows "Descope session cleared", or "Could not clear the Descope session; clear site data now".
 - In lab mode only, a refused token logs one line, `identity token refused: <code>`, plus ` claim=<name>` when known. It prints under Nest's `ERROR` label; that is how the line is made visible and is not a server fault. Outside the lab a refusal logs nothing. An identity-provider outage logs the fixed line `identity provider unavailable` in every mode.
 - `KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE` (integer 1-100, default 10). Past the limit `POST /auth/session` answers 429 `rate_limited` **without looking at the token**. The window is 60 s from the first attempt. Behind loopback every caller shares one address, so the limit is effectively global.
-- With `KAWALYS_DATABASE_URL_*` set (PR #77), sessions and the owner live in Postgres and the **first** owner sign-in writes the permanent `owner_binding` row. A wrong issuer or subject bound there fails closed until an operator moves the binding. So run every check below with no database variables, and add the database only after check (f) has confirmed the real issuer. The page shows the user id `kawalys-owner` in memory, a uuid with the database.
+- With `KAWALYS_DATABASE_URL_*` set (PR #77), sessions and the owner live in Postgres and the **first** owner sign-in (or `npm run local:up`, whose seed takes the same path, `server/src/ops/local-stack.ts:172-176`) writes the permanent `owner_binding` row. A wrong issuer or subject bound there fails closed until an operator moves the binding. So run every check below with no database variables, and add the database only after check (f) has confirmed the real issuer. The page shows the user id `kawalys-owner` in memory, a uuid with the database.
 
 ### Clean the browser after EVERY check
 
@@ -139,9 +139,93 @@ Look at the server console for the `identity token refused:` line first; the bro
 
    ```powershell
    Remove-Item Env:KAWALYS_DESCOPE_PROJECT_ID, Env:KAWALYS_OWNER_SUBJECT, Env:KAWALYS_AUTH_LAB -ErrorAction SilentlyContinue
-   Remove-Item Env:KAWALYS_DESCOPE_ISSUER -ErrorAction SilentlyContinue
+   Remove-Item Env:KAWALYS_DESCOPE_ISSUER, Env:KAWALYS_DATABASE_URL_APP, Env:KAWALYS_DATABASE_URL_AUTH -ErrorAction SilentlyContinue
    ```
 
 4. Re-enable any Descope user disabled for check (e).
 5. Keep the Descope project and the owner user; K-ID-2 needs them.
 6. Do not commit this file with filled-in tokens, emails or cookies. Only dates, results, fixed log lines and the two identifiers belong here.
+
+## 6. Deny-all baseline (before any configuration)
+
+Run this before section 2, with no `KAWALYS_*` variable set (start the server from `server/` with `npm run build && npm start`), so you can tell later that the variables are what changed the answers. **VERIFIED 2026-11-26** against `main` at f748762: `server/` was built and `node dist/main.js` run with neither variable set (no Descope project, no network call).
+
+```powershell
+curl.exe -i http://127.0.0.1:8787/process
+curl.exe -i http://127.0.0.1:8787/auth/me
+curl.exe -i -H "x-kawalys-demo-persona: owner" http://127.0.0.1:8787/demo/evidence/E-1
+curl.exe -i http://127.0.0.1:8787/evidence
+curl.exe -i http://127.0.0.1:8787/auth/lab
+curl.exe -i -X POST -H "Authorization: Bearer abc.def.ghi" http://127.0.0.1:8787/auth/session
+```
+
+(`abc.def.ghi` is a dummy string, not a token.)
+
+| Request | Result | Why |
+| --- | --- | --- |
+| `GET /process` | 200 `{"service":"kawalys-bff","process":"up","synthetic":true}` | Public (`server/README.md:65`) |
+| `GET /auth/me` | 404 `not_found`, `cache-control: no-store` | No session cookie (`server/src/auth/auth.guard.ts:47-48`) |
+| `GET /demo/evidence/E-1` with the persona header `owner` | 404 `not_found` | The persona header is never authentication (`auth.guard.ts:25-27`) |
+| `GET /evidence` | 404 `not_found` | Route exists only with both database URLs (`server/README.md:72`) |
+| `GET /auth/lab` | 404 `not_found` | Lab off, so the route is not registered (`server/src/auth/auth.config.ts:75-77`, `server/src/auth/lab/lab.controller.ts:11-16`) |
+| `POST /auth/session` with the dummy bearer | 404 `not_found`; the server logs one line `identity provider not configured` | `UnconfiguredVerifier` (`server/src/auth/build-auth.ts:46-50`, `server/src/auth/identity/identity-verification.port.ts:37-40`, `server/src/auth/auth.controller.ts:68`) |
+
+Every denial is the same body, `{"error":{"code":"not_found","message":"Not found.","request_id":"..."}}`, so a caller cannot tell "no session" from "wrong owner" (`server/README.md:79-91`, `:132`).
+
+**VERIFIED 2026-11-26 with placeholder ids** (`PplaceholderPROJECT`, `UplaceholderOWNER`, `KAWALYS_AUTH_LAB=1`, no Descope project): `GET /auth/lab` answers 200 with `<descope-wc ... flow-id="sign-in">` and the CSP from section 4 (`server/src/auth/lab/sign-in-page.ts:20-30`, `:87`); `GET /auth/me` without a cookie is still 404; the dummy bearer is 404 with the log line `identity token refused: ERR_JWS_INVALID` (`auth.controller.ts:72`).
+
+## 7. Owner path and other-subject path, with `npm run local:up` (BACK-61)
+
+**NOT VERIFIED**: this part needs Docker, a real Descope project and a real sign-in, none of which were available when this section was written. It follows `server/README.md:27-59`.
+
+**Order matters.** `local:up` seeds for the owner in the environment when both Descope variables are set, otherwise for a synthetic owner that no real token can match (`server/src/ops/local-up.ts:52-57`, `server/src/ops/local-stack.ts:32-40`). Only one owner can be bound (`server/src/auth/identity/database-owner-directory.ts:5-6`, `server/README.md:40`). So set `KAWALYS_DESCOPE_PROJECT_ID`, `KAWALYS_OWNER_SUBJECT` and `KAWALYS_AUTH_LAB` (section 2) **before** `local:up`. If you ran it first, the real owner is refused (fail closed) until `npm run local:down` and a fresh `local:up` (`server/README.md:185`, `:211`).
+
+**`local:up` itself writes the permanent `owner_binding` row**, using the issuer in effect at that moment: the seed calls the same `DatabaseOwnerDirectory.resolve` path as a first sign-in (`server/src/ops/local-stack.ts:172-176`, `database-owner-directory.ts:48-59`). So run it only after check (f) of section 3 has passed with the final `KAWALYS_DESCOPE_ISSUER` (if you needed one). If the issuer or subject changes afterwards, the bound triple no longer matches and sign-in fails closed with no log line: `npm run local:down`, then `local:up` again (`server/README.md:40`, `:211`).
+
+From `server/`, with the variables set:
+
+```powershell
+npm run local:up
+```
+
+It prints two `export KAWALYS_DATABASE_URL_APP=...` and `export KAWALYS_DATABASE_URL_AUTH=...` lines (`local-up.ts:63-65`). Those lines are bash. In PowerShell translate them (the passwords live in `server/.local-stack/credentials.json`, gitignored, `server/.gitignore:8`; paste them nowhere else):
+
+```powershell
+$env:KAWALYS_DATABASE_URL_APP  = '<value printed by local:up>'
+$env:KAWALYS_DATABASE_URL_AUTH = '<value printed by local:up>'
+```
+
+In Git Bash use the `export` lines as printed. Without both, `npm start` runs in in-memory mode and `/evidence` stays 404.
+
+**Check the seed line.** `local:up` must print `seeded for the configured Descope owner:` (`local-up.ts:58`). If it prints `seeded for the synthetic local owner (no Descope configured)`, one of the two Descope variables was not set (`server/src/auth/auth.config.ts:108-109`): stop, run `npm run local:down`, set both (plus `KAWALYS_DESCOPE_ISSUER` if check (f) needed it) and start again.
+
+Then `npm start`.
+
+| Step | Expected | Cite |
+| --- | --- | --- |
+| `GET /evidence` before signing in | 404 | `server/README.md:59`, `auth.guard.ts:47-48` |
+| **Owner:** sign in at `http://127.0.0.1:8787/auth/lab`, then in DevTools `fetch('/evidence').then(r => r.status)` | 200 and `{ items }` (6 seeded rows, newest first); `/auth/me` returns `{ user: { id: <uuid>, role: "owner" } }` | `server/README.md:49`, `:235`, `auth.controller.ts:80`, `:83-88` |
+| **Other subject:** clear site data, sign in as `lab-stranger`, then `fetch('/evidence')` | `POST /auth/session` is 404 (no cookie issued), so `/evidence` is 404; no server log line, because the token is valid and only the subject differs | `auth.controller.ts:75-76`, check (b) |
+| Any other holder of a different project's token | 404 plus `identity token refused: ...` | check (c) |
+
+Use the browser for these. Whether `curl` keeps the `Secure` `__Host-` cookie over plain `http://127.0.0.1` is not verified (`server/src/auth/session/session-cookie.ts:6-8`, `server/README.md:176-177`).
+
+## 8. Rollback
+
+Smallest step first. Section 5 already covers stopping the server, clearing the browser and unsetting the variables.
+
+| Goal | Do this | Cite |
+| --- | --- | --- |
+| Kill live sessions now | While signed in: `fetch('/auth/sessions',{method:'DELETE'}).then(r=>r.status)` gives 204 and revokes every session of the owner. The in-memory store also loses every session on restart. | `auth.controller.ts:99-106`, `server/README.md:135-136` |
+| Pull one person's access | Disable the user in Descope (blocks new sign-ins only; it does not end an existing Kawalys session, and Descope's Force logout ends Descope sessions, not Kawalys ones). The owner is the only user, so for a live Kawalys session use the rows above and below. | check (e), Descope docs (User Management; NOT VERIFIED in the console) |
+| Cookie unavailable (lost device) | In-memory mode: restart the server. Database mode: sessions survive a restart, so change `KAWALYS_OWNER_SUBJECT` (next row; the old session dies on its next request) or `npm run local:down`. | `server/README.md:135-136`, `auth.guard.ts:52-58` |
+| Change the owner | Edit `KAWALYS_OWNER_SUBJECT` and restart: old sessions die on their next request because the triple is rechecked every time. With the database on, the new identity cannot bind until `owner_binding` is moved, so for the local stack run `npm run local:down` (deletes the volume and all local data) and `local:up` again. | `auth.guard.ts:52-58`, `database-owner-directory.ts:5-7`, `server/README.md:40`, `:211` |
+| Drop the durable layer | Unset both `KAWALYS_DATABASE_URL_*` variables (sessions return to memory; evidence routes vanish), or `npm run local:down` | `server/README.md:181` |
+| Remove the Descope project | Console: Project Settings > General > **Delete Project**, confirm by typing the project name (Descope docs, Project Settings; NOT VERIFIED in the console). Irreversible; keep the project if K-ID-2 needs it (section 5 item 5). | docs.descope.com/management/project-settings |
+
+## 9. What this does not do
+
+- No customer sign-in: one owner, no sign-up, no team management, no second role (`server/README.md:152`, `:191`). Customers never sign in to Mission Control (`CLAUDE.md`).
+- The app and the prototype still never call the server (`server/README.md:7`, `:386`).
+- Nothing is deployed: the server binds `127.0.0.1` only (`server/src/main.ts:11-12`); hosting is BACK-64, not run (`docs/planning/BACK-51/demo-script-and-limits.md:42`). TLS for the `Secure` cookie and database TLS are still open (`server/README.md:176-177`, `:209`).
+- MFA and session lifetimes remain owner decisions (see `server/README.md:173-175`).
