@@ -224,8 +224,11 @@ async function rawRows(h: StoreHarness, s: Seeded, userId: string, sql: string):
   return { rows, ms: performance.now() - t0 };
 }
 
+/** UTF-16 code-unit order, the same order the default sort uses, stated explicitly: no locale dependence (localeCompare would add one). */
+const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
 /** Every returned row but the clock row, as sorted JSON lines: equal lines mean equal statements. */
-const canonicalRows = (rows: readonly Record<string, unknown>[]): string[] => rows.filter((r) => r.role !== 'clock').map((r) => JSON.stringify(r)).sort();
+const canonicalRows = (rows: readonly Record<string, unknown>[]): string[] => rows.filter((r) => r.role !== 'clock').map((r) => JSON.stringify(r)).sort(byCodeUnit);
 
 async function runVariant(h: StoreHarness, s: Seeded, userId: string): Promise<Record<string, unknown>> {
   const variant = singlePassSql();
