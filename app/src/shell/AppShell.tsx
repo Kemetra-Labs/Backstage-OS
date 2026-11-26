@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../app/AppContext';
 import { Text } from '../components/Text';
+import { LIVE } from '../live/reads';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
@@ -42,7 +43,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
           {children}
         </main>
       </div>
-      <footer className="foot"><p className="note"><Text s={shell.footer} /></p></footer>
+      <footer className="foot"><p className="note"><Text s={LIVE ? shell.live.footer : shell.footer} /></p></footer>
     </>
   );
 }

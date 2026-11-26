@@ -1,7 +1,7 @@
 // Portfolio response adapter (BACK-57 slice 3). Pure functions from the server's `GET /portfolio`
-// JSON to the display contract (contract/types.ts). There is deliberately NO request code here:
-// nothing in app/ calls the server (CLAUDE.md), and no screen imports src/api (api.guard.test.ts).
-// Wiring and any request are BACK-57 and need owner approval.
+// JSON to the display contract (contract/types.ts). There is deliberately NO request code here: the app calls
+// the server only in live mode, through src/live/http.ts (BACK-51 P1), and no screen imports src/api
+// (api.guard.test.ts). This adapter maps a fixture body and a live body the same way.
 //
 // The response shape is duplicated from server/src/portfolio/portfolio.model.ts (merged in #101),
 // not shared: a shared package would change the CI change classifier. Drift risk: a server field

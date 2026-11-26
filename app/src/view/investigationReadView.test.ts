@@ -179,3 +179,26 @@ describe('failure forms are said in words, never as an empty success', () => {
     expect(view('technical')).toMatchObject({ state: 'ok', incomplete: false });
   });
 });
+
+describe('live origin (BACK-51 P1)', () => {
+  it('a live body is never marked as demo data, in any state', () => {
+    expect(investigationReadView('technical', INVESTIGATION, DECISIONS, FIXTURE_NOW, 'live')!.demo).toBe(false);
+    expect(investigationReadView('owner', { nope: true }, DECISIONS, FIXTURE_NOW, 'live')).toMatchObject({ state: 'unreadable', demo: false });
+  });
+
+  it('reads the same records and decisions as the fixture: only the marker changes', () => {
+    const { demo: _a, ...live } = investigationReadView('technical', INVESTIGATION, DECISIONS, FIXTURE_NOW, 'live')!;
+    const { demo: _b, ...fixture } = view();
+    expect(live).toEqual(fixture);
+  });
+
+  it('a failed GET /decisions (null) keeps the records and says the list is incomplete', () => {
+    const v = investigationReadView('technical', INVESTIGATION, null, FIXTURE_NOW, 'live')!;
+    expect(v).toMatchObject({ state: 'ok', incomplete: true, demo: false });
+    expect(v.records.length).toBeGreaterThan(0);
+  });
+
+  it('Nontechnical still gets no panel in live mode', () => {
+    expect(investigationReadView('nontechnical', INVESTIGATION, DECISIONS, FIXTURE_NOW, 'live')).toBeNull();
+  });
+});
