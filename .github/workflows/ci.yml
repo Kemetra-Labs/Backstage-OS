@@ -138,7 +138,9 @@ jobs:
     name: App e2e (${{ matrix.project }}) ${{ matrix.shard }}/${{ matrix.shards }}
     needs: classify
     if: needs.classify.outputs.app_e2e == 'true'
-    runs-on: ubuntu-latest
+    # Depot runners only for trusted runs on main (push or manual run on main), see docs/CI-DEPOT-RUNNERS.md. Pull requests,
+    # forks and any other ref stay on GitHub-hosted runners. Rollback without a PR: set repository variable DEPOT_RUNNERS=off.
+    runs-on: ${{ github.repository == 'Kemetra-Labs/Backstage-OS' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && vars.DEPOT_RUNNERS != 'off' && 'depot-ubuntu-24.04-4' || 'ubuntu-latest' }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -155,6 +157,8 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # no step here pushes: do not leave the token in .git/config on a shared runner image
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -177,12 +181,14 @@ jobs:
           retention-days: 7
 
   # The Kawalys BFF in server/ needs Node 24. Its DB tests start a disposable PostgreSQL through Testcontainers,
-  # using the Docker engine on the GitHub-hosted runner. No browsers, no secrets.
+  # using the Docker engine on the runner (GitHub-hosted, or Depot on main). No browsers, no secrets.
   server:
     name: Server typecheck and tests (Node 24)
     needs: classify
     if: needs.classify.outputs.server == 'true'
-    runs-on: ubuntu-latest
+    # Same trusted-main routing as app-e2e (docs/CI-DEPOT-RUNNERS.md). Docker 28 was preinstalled on the Depot image in the
+    # Depot CI pilot; the Depot runner image is not the same product, so the first run on main confirms it.
+    runs-on: ${{ github.repository == 'Kemetra-Labs/Backstage-OS' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && vars.DEPOT_RUNNERS != 'off' && 'depot-ubuntu-24.04-4' || 'ubuntu-latest' }}
     timeout-minutes: 15
     outputs:
       ran: ${{ steps.done.outputs.ran }}
@@ -191,6 +197,8 @@ jobs:
         working-directory: server
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
