@@ -5,6 +5,9 @@
 // The Descope component keeps its own tokens in browser storage (persisting is hard-coded on in 4.6.3), so after
 // the exchange settles (ok, refused, rate limited or a network error) the page calls the component's SDK logout: it revokes the Descope refresh token (the stored one
 // is attached by the SDK) and clears the SDK's storage. The Kawalys session cookie is independent of it.
+// The page is reached directly (/auth/lab, where the Descope redirect lands) and through the app's same-origin proxy
+// (/api/auth/lab, BACK-51 P2), so it derives its API base from its own address (labApiBase) and calls base + '/session' and
+// base + '/me': requests go back the way the page came. Root-absolute /auth/... would miss the proxy.
 import { PROJECT_ID_RE } from "../identity/descope-verifier";
 
 const COMPONENT_VERSION = "4.6.3";
@@ -15,6 +18,20 @@ export const COMPONENT_URL = `https://unpkg.com/@descope/web-component@${COMPONE
 export const COMPONENT_INTEGRITY = "sha384-CwUnbA5u8HZBlD27/Y7nuMdoXk4K2R6Bni3szahNbudgvfMIBYhQfRtCQ+oKj1ep";
 
 const NONCE_RE = /^[A-Za-z0-9_-]{1,128}$/;
+
+/** The page's own path ends in /lab (or /lab/): the API base is what comes before it. */
+export const LAB_PATH_RE = /\/lab\/?$/;
+
+/**
+ * The API base for a lab page served at `pathname`: '/auth' at /auth/lab, '/api/auth' at /api/auth/lab. null for any other path.
+ * The shipped script holds its own copy of this rule (it is a string in the page), built from the same LAB_PATH_RE; this export
+ * is the readable statement of the rule and lets the tests pin its table. The script itself is tested by running it (lab.spec.ts).
+ */
+export function labApiBase(pathname: string): string | null {
+  if (!LAB_PATH_RE.test(pathname)) return null;
+  const base = pathname.replace(LAB_PATH_RE, "");
+  return base === "" ? null : base;
+}
 
 /** The strict policy for the page. The nonce must be the one on the inline script. */
 export function labContentSecurityPolicy(nonce: string): string {
@@ -39,16 +56,19 @@ function inlineScript(): string {
     cleared.textContent = ok ? 'Descope session cleared' : 'Could not clear the Descope session; clear site data now';
   }
   var failed = 'Sign-in did not complete';
+  var path = String(location.pathname);
+  var base = ${LAB_PATH_RE}.test(path) ? path.replace(${LAB_PATH_RE}, '') : '';
   var flow = document.querySelector('descope-wc');
   flow.addEventListener('error', function () { show(failed); });
   flow.addEventListener('success', function (event) {
     var detail = event.detail;
     if (!detail || typeof detail.sessionJwt !== 'string') { show(failed); return; }
+    if (base === '') { show(failed); return; }
     show('Signing in...');
-    fetch('/auth/session', { method: 'POST', headers: { Authorization: 'Bearer ' + detail.sessionJwt } })
+    fetch(base + '/session', { method: 'POST', headers: { Authorization: 'Bearer ' + detail.sessionJwt } })
       .then(function (res) {
         if (!res.ok) throw new Error('session');
-        return fetch('/auth/me');
+        return fetch(base + '/me');
       })
       .then(function (res) {
         if (!res.ok) throw new Error('me');

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../app/AppContext';
 import { Text } from '../components/Text';
 import { LIVE } from '../live/reads';
+import { SessionBar } from './SessionBar';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
@@ -40,6 +41,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
       <div className="layout">
         <Sidebar open={menuOpen} />
         <main id="main" tabIndex={-1} data-route={route.name}>
+          {LIVE && <SessionBar />}
           {children}
         </main>
       </div>

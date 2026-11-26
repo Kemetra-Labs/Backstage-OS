@@ -52,6 +52,23 @@ export interface ShellCopy {
     /** Shown when no case was named in the address and the newest visible one is open (owner decision 2026-11-26). */
     readonly newest: string;
     readonly states: Readonly<Record<LiveStateKey, { readonly title: string; readonly body: string }>>;
+    /**
+     * The session (BACK-51 P2): signed in only from the server's answer, never the subject id. Signed out and ended link to the
+     * local lab sign-in page (new tab, so this page and any unsent draft stay loaded) and offer to check again.
+     */
+    readonly session: {
+      readonly label: string;
+      readonly checking: { readonly title: string; readonly body: string };
+      readonly signedIn: string;
+      readonly signOut: string;
+      readonly signOutFailed: { readonly title: string; readonly body: string };
+      readonly signedOut: { readonly title: string; readonly body: string };
+      readonly ended: { readonly title: string; readonly body: string };
+      readonly unavailable: { readonly title: string; readonly body: string };
+      readonly error: { readonly title: string; readonly body: string };
+      readonly signIn: string;
+      readonly checkAgain: string;
+    };
   };
   readonly footer: string;
   /** Label for the top-bar source strip, which shows one product's sources (the S1 investigation's), not the whole workspace. */
@@ -123,6 +140,19 @@ const en: ShellCopy = {
       invalid: { title: 'The server refused the request', body: 'The request was not accepted. Nothing is shown.' },
       rate_limited: { title: 'Too many requests', body: 'The server asked us to slow down. Try again in a minute.' },
       error: { title: 'The server answered with an error', body: 'Nothing is shown. This is unknown, not healthy.' },
+    },
+    session: {
+      label: 'Session',
+      checking: { title: 'Checking your session', body: 'Asking the {Kawalys} server whether you are signed in.' },
+      signedIn: 'Signed in as the owner.',
+      signOut: 'Sign out',
+      signOutFailed: { title: 'Sign-out did not complete', body: 'The server could not be reached, so you may still be signed in. Try again.' },
+      signedOut: { title: 'Not signed in', body: 'Sign in on the local lab page, which opens in a new tab, then come back and choose Check again.' },
+      ended: { title: 'Your session ended', body: 'Sign in again on the local lab page, then choose Check again. Anything you have not sent on this page is kept.' },
+      unavailable: { title: 'Sign-in status unknown', body: 'The server could not be reached, so we cannot tell whether you are signed in.' },
+      error: { title: 'Sign-in status unknown', body: 'The server gave an answer we could not read, so you are not shown as signed in.' },
+      signIn: 'Open the lab sign-in (new tab)',
+      checkAgain: 'Check again',
     },
   },
   footer: 'Kawalys review build. Synthetic data only: nothing here is live, and no action is taken.',
@@ -198,6 +228,19 @@ const ar: ShellCopy = {
       invalid: { title: 'رفض الخادم الطلب', body: 'لم يُقبل الطلب. لا يُعرض شيء.' },
       rate_limited: { title: 'طلبات كثيرة جدًا', body: 'طلب الخادم الإبطاء. حاول بعد دقيقة.' },
       error: { title: 'أجاب الخادم بخطأ', body: 'لا يُعرض شيء. الحالة غير معروفة وليست سليمة.' },
+    },
+    session: {
+      label: 'الجلسة',
+      checking: { title: 'جارٍ التحقق من جلستك', body: 'نسأل خادم {Kawalys} إن كنت قد سجّلت الدخول.' },
+      signedIn: 'مسجّل الدخول بصفتك المالك.',
+      signOut: 'تسجيل الخروج',
+      signOutFailed: { title: 'لم يكتمل تسجيل الخروج', body: 'تعذّر الوصول إلى الخادم، لذا قد تكون ما زلت مسجّل الدخول. حاول مرة أخرى.' },
+      signedOut: { title: 'لم يتم تسجيل الدخول', body: 'سجّل الدخول من صفحة المختبر المحلية التي تُفتح في علامة تبويب جديدة، ثم عُد واختر «تحقّق مرة أخرى».' },
+      ended: { title: 'انتهت جلستك', body: 'سجّل الدخول مرة أخرى من صفحة المختبر المحلية، ثم اختر «تحقّق مرة أخرى». يُحفظ كل ما لم ترسله في هذه الصفحة.' },
+      unavailable: { title: 'حالة تسجيل الدخول غير معروفة', body: 'تعذّر الوصول إلى الخادم، لذا لا نعرف إن كنت مسجّل الدخول.' },
+      error: { title: 'حالة تسجيل الدخول غير معروفة', body: 'أعطى الخادم إجابة لم نتمكن من قراءتها، لذا لا تظهر مسجّل الدخول.' },
+      signIn: 'فتح صفحة تسجيل الدخول في المختبر (علامة تبويب جديدة)',
+      checkAgain: 'تحقّق مرة أخرى',
     },
   },
   footer: 'نسخة مراجعة من {Kawalys}. بيانات اصطناعية فقط: لا شيء هنا حي، ولا يُتخذ أي إجراء.',

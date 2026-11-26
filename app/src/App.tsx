@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppContext, type AppState } from './app/AppContext';
+import { SessionContext } from './app/SessionContext';
 import type { Lang, Persona } from './contract/types';
 import { INV_DEMO_7 } from './fixture/inv-demo-7';
 import { WORLD } from './fixture/world';
@@ -19,6 +20,8 @@ import { Portfolio } from './screens/Portfolio';
 import { Project } from './screens/Project';
 import { Sources } from './screens/Sources';
 import { hostCopy } from './i18n/host';
+import { LIVE } from './live/reads';
+import { SessionStore } from './live/session';
 
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];
 
@@ -52,6 +55,9 @@ function screenFor(route: Route) {
 export function App() {
   const [{ persona, lang }, setState] = useState(initial);
   const route = useRoute();
+  // Live mode only (BACK-51 P2): one session store for the app's life, above every screen. The default build creates none.
+  const [session] = useState(() => (LIVE ? new SessionStore() : null));
+  useEffect(() => { void session?.start(); }, [session]);
   const copy = hostCopy('COPY', lang);
   const shell = hostCopy('SHELL', lang);
 
@@ -88,7 +94,9 @@ export function App() {
 
   return (
     <AppContext.Provider value={value}>
-      <AppShell>{screenFor(route)}</AppShell>
+      <SessionContext.Provider value={session}>
+        <AppShell>{screenFor(route)}</AppShell>
+      </SessionContext.Provider>
     </AppContext.Provider>
   );
 }

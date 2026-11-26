@@ -2,7 +2,8 @@
 // (VITE_KAWALYS_LIVE=1, off by default), same origin, through src/live/http.ts. So, across all of src/:
 //   - only src/live/http.ts names a request API (fetch, XMLHttpRequest, WebSocket, EventSource, sendBeacon);
 //   - it holds no absolute URL (no scheme, no protocol-relative `//host`), and every `/api/` path literal lives in src/live;
-//   - only src/live/reads.ts imports it, so screens and view modules never reach the network directly.
+//   - only src/live/reads.ts and src/live/session.ts (BACK-51 P2) import it, so screens and view modules never reach the network
+//     directly.
 // src/api keeps its own guard (src/api/api.guard.test.ts): a pure adapter folder with no request code.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, posix, relative, sep } from 'node:path';
@@ -13,8 +14,8 @@ const LIVE_DIR = join(SRC, 'live');
 
 /** The one file allowed to name a request API. */
 const REQUEST_MODULE = 'live/http.ts';
-/** The one module (with the request module's own test and its loader test) allowed to import the request module. */
-const HTTP_IMPORTERS = ['live/reads.ts', 'live/reads.test.ts', 'live/http.test.ts'];
+/** The modules (with their tests and the request module's own test) allowed to import the request module: the reads and the session. */
+const HTTP_IMPORTERS = ['live/reads.ts', 'live/reads.test.ts', 'live/session.ts', 'live/session.test.ts', 'live/http.test.ts'];
 const REQUEST_API = /\bfetch\b|XMLHttpRequest|WebSocket|EventSource|sendBeacon/;
 const ABSOLUTE_URL = /\b(?:https?|wss?):\/\/|['"`]\/\/[^/'"`\s]/;
 const API_PATH_LITERAL = /['"`]\/api\//;
@@ -118,11 +119,12 @@ describe('src/live request guard (BACK-51 P1)', () => {
     expect(httpImportOffenders([['view/x.ts', "import h from '../lib/http';"]])).toEqual([]);
   });
 
-  it('the loader imports the request module; the view modules and screens never do', () => {
+  it('the loader and the session import the request module; the view modules and screens never do', () => {
     expect(specifiers(source(join(SRC, 'live/reads.ts'))).filter((s) => reachesHttp('live/reads.ts', s))).toEqual(['./http']);
+    expect(specifiers(source(join(SRC, 'live/session.ts'))).filter((s) => reachesHttp('live/session.ts', s))).toEqual(['./http']);
   });
 
   it('the guard finds the files it protects', () => {
-    expect(files(LIVE_DIR).filter((p) => !isTest(p)).map(rel).sort()).toEqual(['live/http.ts', 'live/reads.ts']);
+    expect(files(LIVE_DIR).filter((p) => !isTest(p)).map(rel).sort()).toEqual(['live/http.ts', 'live/reads.ts', 'live/session.ts']);
   });
 });
