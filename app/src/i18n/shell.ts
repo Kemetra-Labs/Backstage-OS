@@ -131,7 +131,7 @@ const en: ShellCopy = {
   live: {
     source: 'Live: read from the {Kawalys} server',
     newest: 'Showing the newest investigation this session can see. To open another, add {?investigation=} and its id to the address.',
-    footer: 'Kawalys review build, live mode. The GitHub reads and server records panels read the {Kawalys} server; everything else is synthetic, and no action is taken.',
+    footer: 'Kawalys review build, live mode. The GitHub reads and server records panels read the {Kawalys} server, and the Investigation Room can record a decision you write there; everything else is synthetic. Recording a decision runs nothing.',
     states: {
       loading: { title: 'Reading the {Kawalys} server', body: 'Asking the server for the latest stored reads.' },
       not_found: { title: 'Not found, or not signed in', body: 'The server did not return this. It may not exist, or this session may not see it.' },
@@ -219,7 +219,7 @@ const ar: ShellCopy = {
   live: {
     source: 'مباشر: مقروء من خادم {Kawalys}',
     newest: 'نعرض أحدث تحقيق تراه هذه الجلسة. لفتح تحقيق آخر، أضف {?investigation=} ومعرّفه إلى العنوان.',
-    footer: 'نسخة مراجعة {Kawalys}، الوضع المباشر. لوحتا قراءات {GitHub} وسجلات الخادم تقرآن من خادم {Kawalys}؛ وكل ما عداهما مصطنع، ولا يُتخذ أي إجراء.',
+    footer: 'نسخة مراجعة {Kawalys}، الوضع المباشر. لوحتا قراءات {GitHub} وسجلات الخادم تقرآن من خادم {Kawalys}، وتتيح غرفة التحقيق تسجيل قرار تكتبه فيها؛ وكل ما عداه مصطنع. تسجيل القرار لا ينفّذ شيئًا.',
     states: {
       loading: { title: 'جارٍ القراءة من خادم {Kawalys}', body: 'نطلب من الخادم آخر القراءات المحفوظة.' },
       not_found: { title: 'غير موجود، أو لم يتم تسجيل الدخول', body: 'لم يُرجع الخادم هذا. قد لا يكون موجودًا، أو قد لا تراه هذه الجلسة.' },

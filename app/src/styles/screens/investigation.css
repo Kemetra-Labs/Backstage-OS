@@ -34,3 +34,24 @@
 .srv-note { margin: 0; }
 .srv-kv { margin: 0; min-width: 0; }
 .srv-ref { font-family: var(--f-mono); overflow-wrap: anywhere; }
+
+/* record a decision (BACK-51 P3, live mode): one form, plain fields, 44 px targets */
+.rec-decision { display: grid; gap: 12px; min-width: 0; margin-block-start: 16px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg-2); }
+.rec-decision h3 { font-size: 16px; margin: 0; }
+.rec-decision form { display: grid; gap: 14px; min-width: 0; }
+.rd-field { display: grid; gap: 4px; min-width: 0; }
+.rd-field label, .rec-decision legend { font-weight: 600; }
+.rd-field textarea { width: 100%; min-height: 44px; box-sizing: border-box; padding: 10px 12px; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line-3); border-radius: var(--r-sm); resize: vertical; }
+.rd-field textarea[aria-invalid="true"] { border-color: var(--amber); }
+.rd-count { margin: 0; color: var(--muted); font-size: 13px; font-family: var(--f-mono); }
+html[lang="ar"] .rd-count { font-family: var(--f-ar); }
+.rd-evidence { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 6px; }
+.rd-rows li { padding: 4px 0; min-width: 0; }
+.rd-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 44px; min-width: 0; }
+.rd-pick input { width: 20px; height: 20px; flex: none; }
+.rd-errors { margin: 0; padding-inline-start: 18px; color: var(--amber); }
+.rd-session { margin: 0; }
+.rd-actions { margin: 0; }
+.rec-decision .btn { min-height: 44px; }
+.rd-result { min-width: 0; }
+.rd-ok { padding: 12px 14px; border: 1px solid var(--line-3); border-radius: var(--r-md); }
