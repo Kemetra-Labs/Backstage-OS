@@ -17,6 +17,8 @@ shell and every screen, all reading **one** synthetic world:
 Review seed: `?persona=owner|technical|nontechnical&lang=en|ar`, kept in the URL across navigation.
 Portfolio forced connector error (BACK-62): `?github=error|denied|timeout|malformed|empty` shows the GitHub reads panel for that
 failure form, built in memory from the synthetic fixture (nothing is requested).
+The Investigation Room's "Server-shaped demo records" panel (BACK-57) reads the committed synthetic `GET /investigations/:id`
+and `GET /decisions` fixtures through `src/api`, with no request; Owner and Technical only.
 
 **Demo data only.** No backend, auth, real API, credentials, AI calls or agents. Every link is inert.
 

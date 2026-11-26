@@ -34,12 +34,12 @@ bdi.ltr:not(.inert-link) { display: inline-block; max-width: 100%; overflow-wrap
 }
 .brand-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .brand { font-weight: 700; font-size: 17px; letter-spacing: .01em; }
-.demo {
+.demo, .demo-mark {
   font: 600 12px/1 var(--f-mono); color: var(--gold); padding: 6px 8px; border-radius: var(--r-sm);
   border: 1px solid var(--gold-line);
   background: repeating-linear-gradient(135deg, transparent 0 4px, var(--gold-soft) 4px 8px);
 }
-html[lang="ar"] .demo { font-family: var(--f-ar); }
+html[lang="ar"] .demo, html[lang="ar"] .demo-mark { font-family: var(--f-ar); }
 .controls { display: flex; flex-wrap: wrap; gap: 10px 20px; }
 .seg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .seg-label { font-size: 12px; color: var(--muted); }
