@@ -51,7 +51,7 @@ export const stopStore = (h: StoreHarness | undefined): Promise<void> => stopKaw
 
 /** `sourceRef state` pairs, sorted, for comparing what was observed with what was stored. */
 export const pairs = (items: readonly { sourceRef: string; state: string }[]): string[] =>
-  items.map((i) => `${i.sourceRef} ${i.state}`).sort();
+  items.map((i) => `${i.sourceRef} ${i.state}`).sort((a, b) => a.localeCompare(b));
 
 /** Stored rows of exactly these ids, as the owner reads them through the repository. */
 export const storedFor = async (h: StoreHarness, ids: readonly string[]) =>
