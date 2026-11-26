@@ -26,7 +26,8 @@ const VERSION = 1;
 const MAX_LENGTH = 512;
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 const AT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{6})Z$/;
-const KEYS = ['id', 's', 't', 'v'].join();
+/** Exactly these keys, no more and no fewer. */
+const KEYS: readonly string[] = ['v', 't', 'id', 's'];
 
 /** Thrown for any cursor that is malformed or was issued for another query. */
 export class InvalidCursorError extends Error {}
@@ -65,7 +66,8 @@ export function decodeDecisionCursor(cursor: string, scope: DecisionCursorScope)
   }
   if (typeof body !== 'object' || body === null || Array.isArray(body)) throw new InvalidCursorError();
   const b = body as Record<string, unknown>;
-  if (Object.keys(b).sort().join() !== KEYS || b['v'] !== VERSION) throw new InvalidCursorError();
+  const keys = Object.keys(b);
+  if (keys.length !== KEYS.length || !KEYS.every((k) => keys.includes(k)) || b['v'] !== VERSION) throw new InvalidCursorError();
   const { t, id, s } = b;
   if (typeof t !== 'string' || !validAt(t) || typeof id !== 'string' || !UUID.test(id) || s !== scopeTag(scope)) throw new InvalidCursorError();
   // Re-encoding must give back the same text: no padding, no other spelling of the same cursor.
