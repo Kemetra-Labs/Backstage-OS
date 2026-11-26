@@ -1,5 +1,5 @@
 // COG-01 research port (BACK-104) of COG-P0 src/contract.ts, archive kawalys-cog-p0-v0.1.zip (SHA-256 b67f5545...d78ae5).
-// Only change: relative imports drop the .ts extension. Synthetic research code; never imported by src/.
+// Changes from COG-P0: extensionless relative imports and explicit sort/reduce arguments (README). Synthetic research code; never imported by src/.
 // Standalone COG-P0 research contract. No production auth or transport.
 export type Scope = Readonly<{workspace:string; project:string; grants:readonly string[]; grantVersion:string}>;
 export type Clock = Readonly<{effectiveAt:number; knownAt:number; evaluationAt:number}>;
@@ -16,7 +16,7 @@ export type Pack = Readonly<{fixtureVersion:string;policyVersion:string;grantVer
 export type Reason = Readonly<{code:string;requirement?:string;refs:readonly string[]}>;
 export type TaskResult = Readonly<{id:string;state:'done'|'ready'|'blocked'|'unknown';reasons:readonly Reason[];refs:readonly string[]} >;
 export type Result = Readonly<{kind:'recommended'|'no-ready-task'|'insufficient-evidence'|'invalid-input';selected:string|null;tasks:readonly TaskResult[];fixtureVersion:string;policyVersion:string;grantVersion:string;clock:Clock}>;
-export const sortedUnique = (xs:readonly string[]):string[] => [...new Set(xs)].sort();
+export const sortedUnique = (xs:readonly string[]):string[] => [...new Set(xs)].sort(cmp);
 export const cmp = (a:string,b:string):number => a<b?-1:a>b?1:0;
 export function deepFreeze<T>(obj:T):T { if(obj!==null && typeof obj==='object' && !Object.isFrozen(obj)){Object.freeze(obj);for(const v of Object.values(obj))deepFreeze(v);}return obj; }
 export function sameJSON(a:unknown,b:unknown):boolean {

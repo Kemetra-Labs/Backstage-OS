@@ -3,8 +3,7 @@
 // under research/cognitive-core are not imported by src/ (see cognitive-core.guard.spec.ts).
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { Event, Input, Result, Scope, Task } from './cognitive-core/contract';
@@ -115,11 +114,8 @@ describe('COG-P0 core (ported)', () => {
       run({ ...fixture, tasks: [...fixture.tasks].reverse().map((t) => ({ ...t, requirements: [...t.requirements].reverse() })), events: [...fixture.events].reverse() }),
     ).toStrictEqual(base));
   test('F12b real process restart from serialized fixture yields same result', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'cog-p0-'));
-    try {
-      const path = join(dir, 'snapshot.json');
-      writeFileSync(path, JSON.stringify({ fixture, scope, clock: clock() }));
-      // A fresh Node process loads the .ts modules with native type stripping; the hook only adds the
+    // The serialized snapshot goes to each fresh process on stdin (COG-P0 wrote a temp file and passed
+    // its path), so the worker takes no path argument. A fresh Node process loads the .ts modules with native type stripping; the hook only adds the
       // `.ts` extension Jest's resolver adds for us. Plain paths and pathToFileURL, never URL.pathname
       // (COG-P0 used `.pathname`, which yields `/C:/...` and failed on Windows). The disabled warnings
       // are Node's notice that server/package.json declares no "type" and, on an earlier Node 24 minor,
@@ -130,17 +126,14 @@ describe('COG-P0 core (ported)', () => {
         '--import',
         pathToFileURL(join(DIR, 'restart-hooks.mjs')).href,
         join(DIR, 'restart-worker.ts'),
-        path,
       ];
-      const a = spawnSync(process.execPath, args, { encoding: 'utf8' });
-      const b = spawnSync(process.execPath, args, { encoding: 'utf8' });
-      expect([a.status, a.stderr]).toEqual([0, '']);
-      expect([b.status, b.stderr]).toEqual([0, '']);
-      expect(a.stdout).toBe(b.stdout);
-      expect(JSON.parse(a.stdout)).toStrictEqual(base);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    const snapshot = JSON.stringify({ fixture, scope, clock: clock() });
+    const a = spawnSync(process.execPath, args, { encoding: 'utf8', input: snapshot });
+    const b = spawnSync(process.execPath, args, { encoding: 'utf8', input: snapshot });
+    expect([a.status, a.stderr]).toEqual([0, '']);
+    expect([b.status, b.stderr]).toEqual([0, '']);
+    expect(a.stdout).toBe(b.stdout);
+    expect(JSON.parse(a.stdout)).toStrictEqual(base);
   });
   test('F13 semantic validator rejects blocked selection and forged or missing citations', () => {
     const p = project(fixture, scope, clock());

@@ -1,5 +1,5 @@
 // COG-01 research port (BACK-104) of COG-P0 src/index.ts, archive kawalys-cog-p0-v0.1.zip (SHA-256 b67f5545...d78ae5).
-// Only change: relative imports drop the .ts extension. Synthetic research code; never imported by src/.
+// Changes from COG-P0: extensionless relative imports and explicit sort/reduce arguments (README). Synthetic research code; never imported by src/.
 import type {Input,Scope,Clock,Result} from './contract';
 import {project} from './memory';import {reason} from './reasoner';import {validate} from './validator';
 export function evaluate(input:Input,scope:Scope,clock:Clock):Result{

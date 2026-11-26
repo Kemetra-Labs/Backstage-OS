@@ -1,5 +1,5 @@
 // COG-01 research port (BACK-104) of COG-P0 src/memory.ts, archive kawalys-cog-p0-v0.1.zip (SHA-256 b67f5545...d78ae5).
-// Only change: relative imports drop the .ts extension. Synthetic research code; never imported by src/.
+// Changes from COG-P0: extensionless relative imports and explicit sort/reduce arguments (README). Synthetic research code; never imported by src/.
 import type {Scope,Clock,Input,Task,Event,Fact,Pack,ResolvedTask,Value} from './contract';
 import {cmp,deepFreeze,sortedUnique} from './contract';
 const text=(x:unknown):x is string=>typeof x==='string'&&x.length>0&&x.length<=500;
@@ -27,7 +27,7 @@ function perSource(slot:string,events:readonly Event[],clock:Clock):Fact{
  if([...groups.values()].some(g=>new Set(g.map(semantic)).size>1))return missing(slot,'conflict',refs);
  let group:Event[];
  if(groups.size===1)group=[...groups.values()][0]!;
- else {const representatives=[...groups.values()].map(g=>g[0]!);if(representatives.some(e=>e.order===undefined)||new Set(representatives.map(e=>e.order)).size!==representatives.length)return missing(slot,'conflict',refs);const latest=representatives.reduce((a,b)=>a.order!>b.order!?a:b);group=groups.get(latest.revision)!;}
+ else {const representatives=[...groups.values()].map(g=>g[0]!);if(representatives.some(e=>e.order===undefined)||new Set(representatives.map(e=>e.order)).size!==representatives.length)return missing(slot,'conflict',refs);const latest=representatives.reduce((a,b)=>a.order!>b.order!?a:b,representatives[0]!);group=groups.get(latest.revision)!;}
  // Preserve earliest canonical evidence for an identical replay, even if it was assigned a new storage ref.
  const e=[...group].sort((a,b)=>a.recordedAt-b.recordedAt||cmp(a.ref,b.ref))[0]!;const support=[e.ref];
  if(e.state==='stale'||clock.evaluationAt>=e.validUntil)return missing(slot,'stale',support);
@@ -70,7 +70,7 @@ export function project(input:Input,scope:Scope,clock:Clock):Pack{
    const permitted=r.kind==='approval'?['granted','pending','fail']:r.kind==='check'?['pass','fail','pending']:['complete','pending'];
    if(fact.status==='verified'&&!permitted.includes(fact.value))throw Error('invalid-input');
    return {id:r.id,kind:r.kind,ref:r.ref,expected:r.expected,fact:{...fact,slot:r.id},...(dependency?{visibleDependency:dependency.id}:{})};
-  });return {id:t.id,ref:t.ref,title:t.title,aliases:[...t.aliases].sort(),life,requirements};
+  });return {id:t.id,ref:t.ref,title:t.title,aliases:[...t.aliases].sort(cmp),life,requirements};
  });
  return deepFreeze({fixtureVersion:input.fixtureVersion,policyVersion:input.policyVersion,grantVersion:scope.grantVersion,clock:{...clock},tasks:result});
 }
@@ -83,6 +83,6 @@ export function retrieve(pack:Pack,query:string):Readonly<{kind:'match'|'no-matc
  // Native-looking task IDs are exact only: avoid a fuzzy identity collision.
  if(/^T[0-9]+$/i.test(query.trim()))return {kind:'no-match',ids:[]};
  const q=tokens(query);if(!q.length)return {kind:'no-match',ids:[]};
- const found=pack.tasks.filter(t=>{const set=new Set(tokens([t.title,...t.aliases].join(' ')));return q.every(x=>set.has(x));}).map(t=>t.id).sort();
+ const found=pack.tasks.filter(t=>{const set=new Set(tokens([t.title,...t.aliases].join(' ')));return q.every(x=>set.has(x));}).map(t=>t.id).sort(cmp);
  return found.length===1?{kind:'match',ids:found}:{kind:found.length?'ambiguous':'no-match',ids:[]};
 }

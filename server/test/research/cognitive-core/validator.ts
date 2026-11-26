@@ -1,5 +1,5 @@
 // COG-01 research port (BACK-104) of COG-P0 src/validator.ts, archive kawalys-cog-p0-v0.1.zip (SHA-256 b67f5545...d78ae5).
-// Only change: relative imports drop the .ts extension. Synthetic research code; never imported by src/.
+// Changes from COG-P0: extensionless relative imports and explicit sort/reduce arguments (README). Synthetic research code; never imported by src/.
 // Independent semantic validator: uses Kahn ordering rather than reasoner's DFS,
 // and verifies the entire expected result directly from resolved, authorized facts.
 // It deliberately does not call reason() or classify(). Temporal projection is
@@ -25,7 +25,7 @@ export function validate(pack:Pack,candidate:unknown):candidate is Result{
    }
    tasks.push({id:t.id,state,reasons,refs:sortedUnique(reasons.flatMap(r=>r.refs))});
   }
-  const ready=tasks.filter(t=>t.state==='ready').map(t=>t.id).sort();const selected=ready[0]??null;
+  const ready=tasks.filter(t=>t.state==='ready').map(t=>t.id).sort(cmp);const selected=ready[0]??null;
   const expected={...meta,selected,kind:ready.length?'recommended':tasks.some(t=>t.state==='unknown')?'insufficient-evidence':'no-ready-task',tasks};
   return sameJSON(candidate,expected);
  }catch{return false;}
