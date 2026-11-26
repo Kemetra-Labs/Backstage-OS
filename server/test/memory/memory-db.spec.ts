@@ -52,6 +52,8 @@ function story(): MemoryRow[] {
     repo({ archived: false }, o('c1', at('11:00'))),
     pr(1, { updatedAt: at('08:00'), title: 'A' }, o('c2', at('11:00'))),
     confPage('ENG', '7', { version: 2, lastModified: at('09:10') }, o('c3', at('11:00'))),
+    // A page in another space with no covering failure: stale by TTL at 12:00.
+    confPage('OPS', '9', { version: 1, lastModified: at('08:00') }, o('c5', at('11:00'))),
     status(JIRA, 'jira:BACK', 'error', 'timeout', o('c4', at('11:00'))),
     // 11:30: ambiguous GitHub batch (repository record and a root failure in one transaction)
     repo({ archived: false }, o('d1', at('11:30'))),
@@ -130,7 +132,8 @@ describe('S2 statement equals the S1 reference (differential)', () => {
     ['with a history cap of 1', { historyCap: 1 }],
   ] as const)('%s: collapsed records and the projection match', async (_name, over) => {
     const extra: Partial<MemoryReadInput> = over === 'horizon' ? { purgeHorizons: new Map([[src[GH]!, new Date(at('10:30'))]]) } : over;
-    const q = query(extra);
+    // One explicit knownAt for both sides: a defaulted knownAt is each call's own database now().
+    const q = query({ knownAt: new Date(Date.now() + 86_400_000), ...extra });
     const sql = await memory.readCollapsed(q);
     const { req, rows } = await referenceFor(q);
     expect(canonicalCollapsed(sql.input)).toEqual(canonicalCollapsed(collapse(rows, req)));

@@ -23,7 +23,7 @@ const ORDER_ASC = 'obs, rcv, id';
 const IDENTITY = 'source_id, source_ref, kind';
 const NULLS = (n: number) => Array.from({ length: n }, () => 'NULL').join(', ');
 
-export const ITEM_KIND_LIST: readonly string[] = [...ITEM_KINDS].sort();
+export const ITEM_KIND_LIST: readonly string[] = [...ITEM_KINDS].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
 export const MEMORY_READ_SQL = `
 WITH
