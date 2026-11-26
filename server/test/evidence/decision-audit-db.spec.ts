@@ -164,7 +164,7 @@ describe('a HumanDecision needs its decision.recorded audit row at commit', () =
 describe('the application path is unaffected', () => {
   it('recordDecision() commits, and the creator comes from its audit row', async () => {
     const id = await repo.recordDecision(ws, owner, { investigationId, decision: 'Retry', rationale: 'Flaky runner', evidenceIds: [observationId] }, null);
-    const listed = await repo.recentDecisions(ws, owner, { investigationId, limit: 100 });
+    const listed = (await repo.recentDecisions(ws, owner, { investigationId, limit: 100 })).items;
     expect(listed.find((d) => d.id === id)).toMatchObject({ createdBy: owner, citations: [observationId] });
   });
 
@@ -176,7 +176,7 @@ describe('the application path is unaffected', () => {
   });
 
   it('every committed decision has a creator', async () => {
-    const listed = await repo.recentDecisions(ws, owner, { limit: 100 });
+    const listed = (await repo.recentDecisions(ws, owner, { limit: 100 })).items;
     expect(listed.length).toBeGreaterThan(1);
     expect(listed.every((d) => d.createdBy === owner)).toBe(true);
   });

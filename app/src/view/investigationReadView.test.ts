@@ -118,18 +118,18 @@ describe('decisions are never approved without their owning link', () => {
   it('a GET /decisions item alone is proposed (the record shape has no link), and a missing creator says so', () => {
     const body = { ...INVESTIGATION, evidence: INVESTIGATION.evidence.filter((r) => r.type !== 'HumanDecision') };
     const items = [{ ...DECISIONS.items[0]!, createdBy: null }];
-    expect(view('technical', body, { items }).decisions).toEqual([
+    expect(view('technical', body, { items, nextCursor: null }).decisions).toEqual([
       { id: DECISION, label: 'proposed', creator: 'notRecorded', ageMinutes: 0, text: 'Revert pull request #42 on main and re-run checkout-e2e' },
     ]);
   });
 
   it('a decision in the investigation with no GET /decisions item is proposed with its creator not recorded', () => {
-    expect(view('technical', INVESTIGATION, { items: [] }).decisions[0]).toMatchObject({ label: 'proposed', creator: 'notRecorded' });
+    expect(view('technical', INVESTIGATION, { items: [], nextCursor: null }).decisions[0]).toMatchObject({ label: 'proposed', creator: 'notRecorded' });
   });
 
   it('decisions of another investigation are not shown', () => {
     const body = { ...INVESTIGATION, evidence: INVESTIGATION.evidence.filter((r) => r.type !== 'HumanDecision') };
-    expect(view('technical', body, { items: [{ ...DECISIONS.items[0]!, investigationId: 'other' }] }).decisions).toEqual([]);
+    expect(view('technical', body, { items: [{ ...DECISIONS.items[0]!, investigationId: 'other' }], nextCursor: null }).decisions).toEqual([]);
   });
 });
 
@@ -141,7 +141,7 @@ describe('failure forms are said in words, never as an empty success', () => {
   });
 
   it('an investigation with no record and no decision is an explicit empty view, not unreadable', () => {
-    expect(view('technical', { ...INVESTIGATION, evidence: [] }, { items: [] })).toEqual({ records: [], decisions: [], state: 'empty', incomplete: false, demo: true });
+    expect(view('technical', { ...INVESTIGATION, evidence: [] }, { items: [], nextCursor: null })).toEqual({ records: [], decisions: [], state: 'empty', incomplete: false, demo: true });
   });
 
   it('records that cannot be read are left out and the view says it is incomplete', () => {
@@ -152,12 +152,31 @@ describe('failure forms are said in words, never as an empty success', () => {
   });
 
   it('only unreadable records: unreadable, not empty', () => {
-    expect(view('technical', { ...INVESTIGATION, evidence: [{ id: 'bad' }] }, { items: [] })).toMatchObject({ state: 'unreadable', incomplete: true });
+    expect(view('technical', { ...INVESTIGATION, evidence: [{ id: 'bad' }] }, { items: [], nextCursor: null })).toMatchObject({ state: 'unreadable', incomplete: true });
   });
 
   it('a malformed GET /decisions body or item makes the view incomplete, never "no decision"', () => {
     expect(view('technical', INVESTIGATION, { nope: true })).toMatchObject({ state: 'ok', incomplete: true });
-    expect(view('technical', INVESTIGATION, { items: [{ id: 'x' }] })).toMatchObject({ incomplete: true });
+    expect(view('technical', INVESTIGATION, { items: [{ id: 'x' }], nextCursor: null })).toMatchObject({ incomplete: true });
+  });
+
+  it('a GET /decisions page with a nextCursor is only the first page: the decisions show, and the view says it is incomplete', () => {
+    const v = view('technical', INVESTIGATION, { ...DECISIONS, nextCursor: 'opaque-next-page' });
+    expect(v).toMatchObject({ state: 'ok', incomplete: true });
+    expect(v.decisions).toEqual(view('technical').decisions);
+    expect(view('technical', { ...INVESTIGATION, evidence: [] }, { items: [], nextCursor: 'opaque-next-page' })).toMatchObject({ incomplete: true });
+  });
+
+  it('a GET /decisions page without nextCursor, or with a malformed one, leaves completeness unknown: incomplete', () => {
+    for (const nextCursor of [undefined, '', 0, false, {}]) {
+      expect(view('technical', INVESTIGATION, { items: DECISIONS.items, nextCursor }), String(nextCursor)).toMatchObject({ incomplete: true });
+    }
+    expect(view('technical', INVESTIGATION, { items: DECISIONS.items })).toMatchObject({ incomplete: true });
+  });
+
+  it('the committed fixture is the last page: complete', () => {
+    expect(DECISIONS.nextCursor).toBeNull();
+    expect(view('technical')).toMatchObject({ state: 'ok', incomplete: false });
   });
 });
 

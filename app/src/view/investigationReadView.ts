@@ -149,6 +149,9 @@ export function investigationReadView(
   // GET /decisions: the items of this investigation. A malformed body or item is left out and said, never shown as none.
   const items = isObject(decisions) && Array.isArray(decisions['items']) ? (decisions['items'] as unknown[]) : null;
   if (items === null) dropped += 1;
+  // The body is one page. Only `nextCursor: null` says it is the last one: a cursor means later pages were not read,
+  // and a missing or malformed one leaves that unknown. Either way the list is not shown as complete.
+  const morePages = items !== null && !(isObject(decisions) && decisions['nextCursor'] === null);
   const created = new Map<string, Rec>();
   for (const d of items ?? []) {
     const rec = decisionRecord(d);
@@ -179,7 +182,7 @@ export function investigationReadView(
     records,
     decisions: decisionRows,
     state: nothing ? (dropped > 0 ? 'unreadable' : 'empty') : 'ok',
-    incomplete: dropped > 0,
+    incomplete: dropped > 0 || morePages,
     demo: synthetic,
   };
 }

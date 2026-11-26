@@ -13,7 +13,7 @@ import {
   RefusedError,
   UUID,
   worstState,
-  type DecisionRecord,
+  type DecisionPage,
   type EvidenceFilter,
   type EvidenceRecord,
   type EvidenceState,
@@ -21,6 +21,7 @@ import {
   type NoteType,
   type SourceProvider,
 } from './evidence.types';
+import { decodeDecisionCursor, encodeDecisionCursor, InvalidCursorError, type DecisionCursorScope, type DecisionPosition } from './decision-cursor';
 import { PROJECT_VISIBLE } from './visibility';
 
 export interface ObservationInput {
@@ -104,6 +105,8 @@ interface DecisionRow {
   decision: string | null;
   rationale: string | null;
   received_at: Date;
+  /** received_at in UTC with all six fractional digits, for the cursor (a JS Date keeps only milliseconds). */
+  position_at: string;
   citations: string[];
   created_by: string | null;
 }
@@ -285,37 +288,57 @@ export class EvidenceRepository {
   }
 
   /**
-   * Recent human decisions the user can see (BACK-59), newest first, optionally of one investigation.
-   * The same VISIBLE rule as list() and get(): a decision is hidden unless its project and every row it
-   * cites are visible. The creator comes from the `decision.recorded` audit row that recordDecision()
-   * writes in the same transaction; no schema change. A malformed investigation id matches nothing.
+   * Recent human decisions the user can see (BACK-59), newest first, optionally of one investigation, one page
+   * at a time. The same VISIBLE rule as list() and get(), on every page: a decision is hidden unless its project
+   * and every row it cites are visible. The creator comes from the `decision.recorded` audit row that
+   * recordDecision() writes in the same transaction. A malformed investigation id matches nothing.
+   *
+   * Paging is keyset on (received_at, id), both descending, so decisions stored in one transaction (one
+   * received_at) still have a total order: no item repeats or is skipped across pages, and a decision that
+   * becomes hidden between two pages is simply absent from the later one. `cursor` is a nextCursor this method
+   * issued for the same workspace, reader and investigation filter; anything else is a RefusedError (400),
+   * never a silent first page. No index serves this order yet (the query sorted before paging too).
    */
-  async recentDecisions(workspaceId: string, user: string, filter: { investigationId?: string; limit: number }): Promise<DecisionRecord[]> {
-    if (filter.investigationId !== undefined && !UUID.test(filter.investigationId)) return [];
+  async recentDecisions(
+    workspaceId: string,
+    user: string,
+    filter: { investigationId?: string; limit: number; cursor?: string },
+  ): Promise<DecisionPage> {
     if (!Number.isInteger(filter.limit) || filter.limit < 1 || filter.limit > DECISION_LIMIT_MAX) throw new RangeError('invalid decision limit');
+    const scope: DecisionCursorScope = { workspaceId, userId: user, investigationId: filter.investigationId };
+    const after = filter.cursor === undefined ? null : decisionPosition(filter.cursor, scope);
+    if (filter.investigationId !== undefined && !UUID.test(filter.investigationId)) return { items: [], nextCursor: null };
     return this.inWorkspace(workspaceId, async (c) => {
+      // One row more than the page tells whether another page exists, without a count.
       const { rows } = await c.query<DecisionRow>(
         `SELECT e.id, e.investigation_id, e.payload->>'decision' AS decision, e.payload->>'rationale' AS rationale,
                 e.received_at,
+                to_char(e.received_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS position_at,
                 COALESCE((SELECT array_agg(c.evidence_id::text ORDER BY c.evidence_id) FROM evidence_citations c
                            WHERE c.decision_id = e.id), '{}') AS citations,
                 ${DECISION_CREATOR('e.id')} AS created_by
            FROM evidence e
           WHERE e.type = 'HumanDecision' AND ${VISIBLE}
             AND ($2::uuid IS NULL OR e.investigation_id = $2)
-          ORDER BY e.received_at DESC, e.id
+            AND ($4::timestamptz IS NULL OR (e.received_at, e.id) < ($4::timestamptz, $5::uuid))
+          ORDER BY e.received_at DESC, e.id DESC
           LIMIT $3`,
-        [user, filter.investigationId ?? null, filter.limit],
+        [user, filter.investigationId ?? null, filter.limit + 1, after?.at ?? null, after?.id ?? null],
       );
-      return rows.map((r) => ({
-        id: r.id,
-        investigationId: r.investigation_id,
-        decision: r.decision ?? '',
-        rationale: r.rationale ?? '',
-        citations: r.citations,
-        createdBy: r.created_by,
-        createdAt: r.received_at.toISOString(),
-      }));
+      const page = rows.slice(0, filter.limit);
+      const last = page.at(-1);
+      return {
+        items: page.map((r) => ({
+          id: r.id,
+          investigationId: r.investigation_id,
+          decision: r.decision ?? '',
+          rationale: r.rationale ?? '',
+          citations: r.citations,
+          createdBy: r.created_by,
+          createdAt: r.received_at.toISOString(),
+        })),
+        nextCursor: rows.length > filter.limit && last ? encodeDecisionCursor({ at: last.position_at, id: last.id }, scope) : null,
+      };
     });
   }
 
@@ -374,6 +397,16 @@ export class EvidenceRepository {
 }
 
 type Client = Pick<pg.PoolClient, 'query'>;
+
+/** The keyset position in a GET /decisions cursor; a malformed or foreign cursor is refused (400). */
+function decisionPosition(cursor: string, scope: DecisionCursorScope): DecisionPosition {
+  try {
+    return decodeDecisionCursor(cursor, scope);
+  } catch (err) {
+    if (err instanceof InvalidCursorError) throw new RefusedError('invalid cursor');
+    throw err;
+  }
+}
 
 /** Lower-cased, de-duplicated citation ids; any malformed id answers like an invisible one. */
 function citedIds(input: { readonly investigationId: string; readonly evidenceIds: readonly string[] }): string[] {
