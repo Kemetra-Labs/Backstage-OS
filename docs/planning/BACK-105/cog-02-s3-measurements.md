@@ -22,9 +22,28 @@ Status: **recorded numbers, not a CI gate** (design §5, S3). Synthetic data in 
 4. **The history cap is applied after the transfer.** The statement returns every run: 21,721 at daily edits and 129,715 (91 MB of JSON) when every item is edited every 4 hours. The projector then keeps the 50 newest per item (6,001 history entries for 121 items in both 180-day runs). The cap bounds the response, not the read: the projector time grew from 0.3 s to 1.9 s and the node process holds the whole result meanwhile.
 5. **Block reads.** Both 180-day scenarios ran with a second workspace of equal volume (4.25 M rows in the table, half of them the reader's). The statement read about 181,000 shared blocks (about 1.4 GB). The effect of the noise workspace was **not isolated**: there is no 180-day run without it, so the numbers do not show how much of the cost it adds, if any.
 
+### Plan nodes (pilot-7d, one `EXPLAIN (ANALYZE)`, 81,312 rows)
+
+The script now also reports the plan nodes with the most exclusive time (`plan.topNodes`).
+
+| node | exclusive ms |
+| --- | ---: |
+| `CTE Scan` of `numbered` | 869 |
+| `WindowAgg` | 385 |
+| `Sort` | 251 |
+| `Sort` | 202 |
+| `CTE Scan` of `v` | 133 |
+| `Incremental Sort` | 75 and 44 |
+
+**Read these with care.** The nodes add up to about 2.0 s against a 1.44 s execution time, so time is counted twice: the first scan of a CTE pays for building it, and that cost is also inside the CTE's own subtree. One plan, one run; per-node figures are not exact. What the plan does show:
+
+- The time is in the window pipeline over **all** the reader's rows (`items`, `marked`, `numbered`): sorts and `WindowAgg`. It is not in the index scan or the grant join.
+- `numbered` is consumed three times (`run_agg`, `run_first`, `run_last`), and each consumer sorts or aggregates the same rows again. That is visible redundancy in the statement.
+- **Untested:** that folding the three consumers into one pass would save a given amount. Whatever it saves, the cost stays linear in the rows read; only bounding the rows read per identity or a cache breaks that.
+
 ### Not measured
 
-- Plan nodes were not broken down, so which part of the statement (the content signature, the window passes or the aggregates) costs most is **not known**. Result 3 says only that it is CPU per row rather than spill.
+- Per-node time free of double counting, and a node breakdown at 180 days. Result 3 says only that the cost is CPU per row rather than spill.
 - Concurrent readers, the ingest rate while reading, a cold cache (the first read after a restart) and a production-sized instance.
 - Absolute milliseconds on other hardware. The shape (linear in rows) transfers, the constants do not.
 
@@ -51,7 +70,7 @@ D6: a cache table "only if S3 measures a projection read above **500 ms p95**. I
 The trigger is met, so the choice goes to the owner. What the numbers add:
 
 - **A cache table (D6)** removes the read cost, and needs a migration, an invalidation rule (every ingest, revoke, re-grant and policy change, which D1 listed as the reason not to start with one) and an owner decision. The fingerprint key was designed for it.
-- **Reducing the statement's work without a schema change** is not shown to be possible by these numbers. Result 3 rules out `work_mem`. Bounding the rows read per identity, or returning only the newest runs, may help the transfer (result 4) but the plan was not profiled, so no gain is claimed for the read itself. A new index would be a migration too.
+- **Reducing the statement's work without a schema change** is not shown to be possible by these numbers. Result 3 rules out `work_mem`. The plan shows `numbered` consumed three times, so a single-pass rewrite is a candidate, but its gain is untested and stays linear in rows. Bounding the rows read per identity, or returning only the newest runs, may help the transfer (result 4); a new index would be a migration too.
 - **Retention (BACK-47 item 6, open)** changes the problem size: the 180-day recommendation is the 38 s case, a 7-day window is the 1.3 s case. Neither is below 500 ms.
 - **Not an option from these numbers:** serving this read on a request path (COG-07) as it is. At the pilot scale alone it is 2.8 times over the trigger.
 
