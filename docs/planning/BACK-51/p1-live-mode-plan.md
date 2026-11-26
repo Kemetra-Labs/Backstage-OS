@@ -39,10 +39,12 @@ hidden case. The lab page (`server/src/auth/lab/sign-in-page.ts`) is not touched
 
 ## Decisions made in this plan (flag for the owner)
 
-1. **Which investigation is read in live mode.** `seedLocal` creates random ids, and the brief names only three reads
-   (`/portfolio`, `/investigations/:id`, `/decisions`). So live mode reads the investigation named by `?investigation=<uuid>`.
-   `npm run local:up` prints it. With no valid id, the panel says that no investigation is chosen and makes no request. A
-   picker built on `GET /investigations` is a later step.
+1. **Which investigation is read in live mode.** `seedLocal` creates random ids. Live mode reads the investigation named by
+   `?investigation=<uuid>` (`npm run local:up` prints it). **Owner decision, 2026-11-26 (PR #115):** with no valid id it reads
+   a fourth route, `GET /investigations` (newest first, visible projects only), opens the first item, and says in a note
+   that the newest visible case is shown. An id in the address always wins and the list is then never read. An empty list
+   reads "No investigation to show"; a malformed list, or a first item without a UUID id, is an error, never a guessed case.
+   A real picker is a later step.
 2. **Proxy errors.** When the BFF is down, Vite's proxy answers a plain 500. That would read as "the server failed" rather than
    "the server is unreachable". So the proxy's `configure` hook answers 502 on a proxy error, and `http.ts` maps 502/503/504 to `unavailable`.
 3. **The `?github=` review seeds are ignored in live mode.** A URL must not be able to make live data look like a forced failure.
@@ -55,7 +57,8 @@ hidden case. The lab page (`server/src/auth/lab/sign-in-page.ts`) is not touched
    whether the record exists.
 3. **The panel unmounts, or the persona changes, mid-request.** Expected: the request is aborted and no state is set
    afterwards. An abort never shows as `unavailable`.
-4. **`?investigation=` is malformed (not a UUID, or a path like `../x`).** Expected: no request, and "no investigation chosen".
+4. **`?investigation=` is malformed (not a UUID, or a path like `../x`).** Expected: it is ignored, never sent; the newest
+   visible investigation is opened instead (decision 1), and an empty list reads "No investigation to show".
 5. **`GET /decisions` fails while `GET /investigations/:id` succeeds.** Expected: records are shown and the list says it is
    incomplete. Decisions are never shown as "none".
 
@@ -138,7 +141,8 @@ hidden case. The lab page (`server/src/auth/lab/sign-in-page.ts`) is not touched
     `liveMode({VITE_KAWALYS_LIVE:'1'})` is true. Under vitest, `LIVE` is false.
   - `investigationIdFrom('?investigation=00000000-0000-4000-8000-000000000004')` returns the id. `'?investigation=../x'`, `''`
     and `'?investigation=abc'` return null.
-  - `readInvestigation(null)` gives `{status:'failed', failure:'notChosen'}` and makes no fetcher call.
+  - `readInvestigation(null)` reads `GET /api/investigations` and opens its first item, with `chosen: 'newest'`. An empty list
+    gives `notChosen`; a malformed list or a non-UUID id gives `error`. With an id, the list is never read (`chosen: 'address'`).
   - `readPortfolio` with a 200 gives `{status:'ok', body}`. With a 404 it gives `failure:'not_found'`.
   - `readInvestigation(id)` requests exactly `/api/investigations/<id>` and `/api/decisions?investigationId=<id>`. If the
     investigation read fails, the result fails with that failure. If only decisions fail, the result is ok with `decisions: null`.
@@ -191,7 +195,8 @@ hidden case. The lab page (`server/src/auth/lab/sign-in-page.ts`) is not touched
 | `source` | Live: read from the Kawalys server | مباشر: مقروء من خادم {Kawalys} |
 | `loading` | Reading the Kawalys server / Asking the server for the latest stored reads. | جارٍ القراءة من خادم {Kawalys} / نطلب من الخادم آخر القراءات المحفوظة. |
 | `not_found` | Not found, or not signed in / The server did not return this. It may not exist, or this session may not see it. | غير موجود، أو لم يتم تسجيل الدخول / لم يُرجع الخادم هذا. قد لا يكون موجودًا، أو قد لا تراه هذه الجلسة. |
-| `notChosen` | No investigation chosen / Open this page with ?investigation= and an investigation id (npm run local:up prints one). | لم يتم اختيار تحقيق / افتح هذه الصفحة مع {?investigation=} ومعرّف تحقيق (يطبعه {npm run local:up}). |
+| `notChosen` | No investigation to show / The server listed no investigation this session can see. To open one, add {?investigation=} and its id to the address ({npm run local:up} prints one). | لا يوجد تحقيق لعرضه / لم يُدرج الخادم أي تحقيق تراه هذه الجلسة. لفتح تحقيق، أضف {?investigation=} ومعرّفه إلى العنوان (يطبعه {npm run local:up}). |
+| `newest` (note) | Showing the newest investigation this session can see. To open another, add {?investigation=} and its id to the address. | نعرض أحدث تحقيق تراه هذه الجلسة. لفتح تحقيق آخر، أضف {?investigation=} ومعرّفه إلى العنوان. |
 | `unavailable` | The server could not be reached / Nothing was read. This is unknown, not healthy. | تعذّر الوصول إلى الخادم / لم يُقرأ شيء. الحالة غير معروفة وليست سليمة. |
 | `invalid` | The server refused the request / The request was not accepted. Nothing is shown. | رفض الخادم الطلب / لم يُقبل الطلب. لا يُعرض شيء. |
 | `rate_limited` | Too many requests / The server asked us to slow down. Try again in a minute. | طلبات كثيرة جدًا / طلب الخادم الإبطاء. حاول بعد دقيقة. |

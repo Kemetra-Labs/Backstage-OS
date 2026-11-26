@@ -49,6 +49,8 @@ export interface ShellCopy {
     readonly source: string;
     /** The footer of a live build: says which panels read the server, never that nothing is live. */
     readonly footer: string;
+    /** Shown when no case was named in the address and the newest visible one is open (owner decision 2026-11-26). */
+    readonly newest: string;
     readonly states: Readonly<Record<LiveStateKey, { readonly title: string; readonly body: string }>>;
   };
   readonly footer: string;
@@ -111,11 +113,12 @@ const en: ShellCopy = {
   notFound: { title: 'Page not found', body: 'This address is not part of the demo.', home: 'Open Command Home' },
   live: {
     source: 'Live: read from the {Kawalys} server',
+    newest: 'Showing the newest investigation this session can see. To open another, add {?investigation=} and its id to the address.',
     footer: 'Kawalys review build, live mode. The GitHub reads and server records panels read the {Kawalys} server; everything else is synthetic, and no action is taken.',
     states: {
       loading: { title: 'Reading the {Kawalys} server', body: 'Asking the server for the latest stored reads.' },
       not_found: { title: 'Not found, or not signed in', body: 'The server did not return this. It may not exist, or this session may not see it.' },
-      notChosen: { title: 'No investigation chosen', body: 'Open this page with {?investigation=} and an investigation id ({npm run local:up} prints one).' },
+      notChosen: { title: 'No investigation to show', body: 'The server listed no investigation this session can see. To open one, add {?investigation=} and its id to the address ({npm run local:up} prints one).' },
       unavailable: { title: 'The server could not be reached', body: 'Nothing was read. This is unknown, not healthy.' },
       invalid: { title: 'The server refused the request', body: 'The request was not accepted. Nothing is shown.' },
       rate_limited: { title: 'Too many requests', body: 'The server asked us to slow down. Try again in a minute.' },
@@ -185,11 +188,12 @@ const ar: ShellCopy = {
   notFound: { title: 'الصفحة غير موجودة', body: 'هذا العنوان ليس جزءًا من العرض التجريبي.', home: 'فتح مركز القيادة' },
   live: {
     source: 'مباشر: مقروء من خادم {Kawalys}',
+    newest: 'نعرض أحدث تحقيق تراه هذه الجلسة. لفتح تحقيق آخر، أضف {?investigation=} ومعرّفه إلى العنوان.',
     footer: 'نسخة مراجعة {Kawalys}، الوضع المباشر. لوحتا قراءات {GitHub} وسجلات الخادم تقرآن من خادم {Kawalys}؛ وكل ما عداهما مصطنع، ولا يُتخذ أي إجراء.',
     states: {
       loading: { title: 'جارٍ القراءة من خادم {Kawalys}', body: 'نطلب من الخادم آخر القراءات المحفوظة.' },
       not_found: { title: 'غير موجود، أو لم يتم تسجيل الدخول', body: 'لم يُرجع الخادم هذا. قد لا يكون موجودًا، أو قد لا تراه هذه الجلسة.' },
-      notChosen: { title: 'لم يتم اختيار تحقيق', body: 'افتح هذه الصفحة مع {?investigation=} ومعرّف تحقيق (يطبعه {npm run local:up}).' },
+      notChosen: { title: 'لا يوجد تحقيق لعرضه', body: 'لم يُدرج الخادم أي تحقيق تراه هذه الجلسة. لفتح تحقيق، أضف {?investigation=} ومعرّفه إلى العنوان (يطبعه {npm run local:up}).' },
       unavailable: { title: 'تعذّر الوصول إلى الخادم', body: 'لم يُقرأ شيء. الحالة غير معروفة وليست سليمة.' },
       invalid: { title: 'رفض الخادم الطلب', body: 'لم يُقبل الطلب. لا يُعرض شيء.' },
       rate_limited: { title: 'طلبات كثيرة جدًا', body: 'طلب الخادم الإبطاء. حاول بعد دقيقة.' },

@@ -33,7 +33,8 @@ synthetic evidence, then prints what was seeded. The HTTP routes stay deny-all w
 2. **The app calls the server only in live mode** (BACK-51 P1; owner decisions D1 (a) and D2 (a), 2026-11-26). By
    default, Portfolio and the Investigation Room's server-shaped records panel use committed synthetic fixtures, which
    parity tests keep equal to real server responses. With `VITE_KAWALYS_LIVE=1` they read `GET /portfolio`,
-   `GET /investigations/:id` and `GET /decisions` same origin (`/api`, proxied), through `app/src/live/http.ts` only. There
+   `GET /investigations/:id` and `GET /decisions` same origin (`/api`, proxied), through `app/src/live/http.ts` only. The
+   Investigation Room opens the case named by `?investigation=<uuid>`, or with none the newest case the session can see. There
    is no sign-in in the app yet (P2), so live reads answer "not found, or not signed in" until a session exists.
 3. **No live connector.** GitHub, Jira and Confluence exist as mappers behind read-only ports with canned answers; there
    is no transport and no token. Jira and Confluence records can be stored since BACK-99 (migration 0005), but the

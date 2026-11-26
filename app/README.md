@@ -38,7 +38,8 @@ but `src/live/reads.ts`.
   words through `StateBlock`, never as an empty list and never as healthy.
 - **Reads.** Portfolio reads `GET /portfolio`. The Investigation Room reads `GET /investigations/:id` and
   `GET /decisions?investigationId=:id` for the case named by `?investigation=<uuid>` (`npm run local:up` in `server/`
-  prints one). Both go through the same `src/api` adapters as the fixtures. Live panels show "Live: read from the Kawalys
+  prints one). With no id it reads `GET /investigations` and opens the newest case this session can see, and says so in a
+  note; an id in the address always wins. Both go through the same `src/api` adapters as the fixtures. Live panels show "Live: read from the Kawalys
   server" in place of the demo marker, and the `?github=` review seeds are ignored.
 - **Not yet.** No sign-in in the app (P2), so the server answers not found until a session exists. No decision form (P3).
 

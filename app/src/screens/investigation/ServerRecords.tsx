@@ -14,11 +14,11 @@ import { investigationIdFrom, LIVE, readInvestigation } from '../../live/reads';
  * Server-shaped evidence (BACK-57, owner decision 2026-11-26): the records and decisions of a separate case, from
  * GET /investigations/:id and GET /decisions through the src/api adapters. By default these are committed synthetic fixtures,
  * nothing is requested, and the panel is marked as demo data. In live mode (BACK-51 P1) the case is the one named by
- * `?investigation=<uuid>`, read from the server and marked as such. Read states only, never a health word; no links. Owner and
+ * `?investigation=<uuid>`, or with none the newest visible one (said in a note), read from the server and marked as such. Read states only, never a health word; no links. Owner and
  * Technical only: Nontechnical gets no panel and no request, Owner gets no source reference and none of the server's free text.
  */
 export function ServerRecords() {
-  const { persona, lang, copy } = useApp();
+  const { persona, lang, copy, shell } = useApp();
   const s = hostCopy('INVESTIGATION', lang).serverRecords;
   const shown = persona !== 'nontechnical';
   const id = LIVE ? investigationIdFrom(window.location.search) : null;
@@ -48,6 +48,7 @@ export function ServerRecords() {
       aside={LIVE ? <LiveMark testId="server-records-live" /> : v.demo ? <span className="demo-mark" data-testid="server-records-demo">{s.demo}</span> : undefined}
     >
       <p className="srv-lede"><Text s={LIVE ? s.liveLede : s.lede} /></p>
+      {live?.status === 'ok' && live.body.chosen === 'newest' && <p className="note srv-newest" data-testid="server-records-newest"><Text s={shell.live.newest} /></p>}
       {v.state === 'unreadable' && <StateBlock kind="error" title={s.unreadable.title} body={s.unreadable.body} />}
       {v.state === 'empty' && <StateBlock kind="empty" title={copy.noEvidence.title} body={copy.noEvidence.body} />}
       {v.state === 'ok' && (

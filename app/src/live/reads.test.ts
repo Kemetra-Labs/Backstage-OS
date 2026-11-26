@@ -55,15 +55,15 @@ describe('readPortfolio', () => {
 });
 
 describe('readInvestigation', () => {
-  it('no chosen investigation: no request at all', async () => {
-    const f = routes({});
-    expect(await readInvestigation(null, undefined, f)).toEqual({ status: 'failed', failure: 'notChosen' });
-    expect(f).not.toHaveBeenCalled();
+  it('an id in the address wins: the investigation list is never read', async () => {
+    const f = routes({ [`/api/investigations/${ID}`]: [200, '{"id":"i"}'], [`/api/decisions?investigationId=${ID}`]: [200, '{"items":[]}'] });
+    expect(await readInvestigation(ID, undefined, f)).toMatchObject({ status: 'ok', body: { chosen: 'address' } });
+    expect(f.mock.calls.map((c) => c[0])).not.toContain('/api/investigations');
   });
 
   it('reads the investigation and its decisions, filtered by the server', async () => {
     const f = routes({ [`/api/investigations/${ID}`]: [200, '{"id":"i"}'], [`/api/decisions?investigationId=${ID}`]: [200, '{"items":[]}'] });
-    expect(await readInvestigation(ID, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'i' }, decisions: { items: [] } } });
+    expect(await readInvestigation(ID, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'i' }, decisions: { items: [] }, chosen: 'address' } });
     expect(f).toHaveBeenCalledTimes(2);
   });
 
@@ -74,7 +74,7 @@ describe('readInvestigation', () => {
 
   it('only the decisions read failed: the records stand, decisions are null (the view says incomplete, never "none")', async () => {
     const f = routes({ [`/api/investigations/${ID}`]: [200, '{"id":"i"}'], [`/api/decisions?investigationId=${ID}`]: [500, ''] });
-    expect(await readInvestigation(ID, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'i' }, decisions: null } });
+    expect(await readInvestigation(ID, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'i' }, decisions: null, chosen: 'address' } });
   });
 
   it('an aborted read returns null', async () => {
@@ -94,5 +94,46 @@ describe('liveStateKind', () => {
     expect(liveStateKind('invalid')).toBe('error');
     expect(liveStateKind('rate_limited')).toBe('error');
     expect(liveStateKind('error')).toBe('error');
+  });
+});
+
+describe('readInvestigation with no id: the newest visible investigation (BACK-51 P1, owner decision 2026-11-26)', () => {
+  const NEWER = '00000000-0000-4000-8000-0000000000aa';
+  const list = (items: unknown) => [200, JSON.stringify({ items })] as [number, string];
+
+  it('reads GET /api/investigations and opens its first item (the server sorts newest first)', async () => {
+    const f = routes({
+      '/api/investigations': list([{ id: NEWER, title: 'b' }, { id: ID, title: 'a' }]),
+      [`/api/investigations/${NEWER}`]: [200, '{"id":"n"}'],
+      [`/api/decisions?investigationId=${NEWER}`]: [200, '{"items":[]}'],
+    });
+    expect(await readInvestigation(null, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'n' }, decisions: { items: [] }, chosen: 'newest' } });
+    expect(f.mock.calls.map((c) => c[0])).toEqual(['/api/investigations', `/api/investigations/${NEWER}`, `/api/decisions?investigationId=${NEWER}`]);
+  });
+
+  it('an empty list: nothing to show, said in words, and no further request', async () => {
+    const f = routes({ '/api/investigations': list([]) });
+    expect(await readInvestigation(null, undefined, f)).toEqual({ status: 'failed', failure: 'notChosen' });
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed list read keeps its own kind', async () => {
+    expect(await readInvestigation(null, undefined, routes({ '/api/investigations': [404, ''] }))).toEqual({ status: 'failed', failure: 'not_found' });
+    expect(await readInvestigation(null, undefined, routes({ '/api/investigations': [502, ''] }))).toEqual({ status: 'failed', failure: 'unavailable' });
+  });
+
+  it('a malformed list, or a first item without a UUID id, is an error: never a guessed case, never a path built from it', async () => {
+    for (const body of ['{"nope":true}', '{"items":"x"}', JSON.stringify({ items: [{ id: '../auth/me' }] }), JSON.stringify({ items: [7] })]) {
+      const f = routes({ '/api/investigations': [200, body] });
+      expect(await readInvestigation(null, undefined, f), body).toEqual({ status: 'failed', failure: 'error' });
+      expect(f).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it('an aborted list read returns null', async () => {
+    const f = vi.fn(async () => {
+      throw new DOMException('aborted', 'AbortError');
+    });
+    expect(await readInvestigation(null, new AbortController().signal, f)).toBeNull();
   });
 });

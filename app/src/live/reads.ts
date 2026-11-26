@@ -14,7 +14,7 @@ export function liveMode(env: { readonly VITE_KAWALYS_LIVE?: string }): boolean 
 /** Written inline (not through liveMode()) so Vite replaces it and the default build drops the live code. */
 export const LIVE: boolean = import.meta.env.VITE_KAWALYS_LIVE === '1';
 
-/** Why a live panel shows nothing: an HTTP failure, or no investigation chosen (no request was made). */
+/** Why a live panel shows nothing: an HTTP failure, or no investigation to show (none named, and none visible on the server). */
 export type LiveFailure = HttpFailure | 'notChosen';
 
 export type LiveRead<T> =
@@ -26,13 +26,15 @@ export interface InvestigationBodies {
   readonly investigation: unknown;
   /** null when GET /decisions failed: the view then says the list is incomplete, never that there are none. */
   readonly decisions: unknown;
+  /** Where the case came from: the address (`?investigation=`), or the newest one the server lists for this session. */
+  readonly chosen: 'address' | 'newest';
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * The investigation a live Investigation Room reads: `?investigation=<uuid>` (npm run local:up prints one). The local seed's ids
- * are random and the app has no investigation picker yet, so nothing else names one. Anything but a UUID is no choice at all.
+ * The investigation named in the address, `?investigation=<uuid>` (npm run local:up prints one). Anything but a UUID is no choice
+ * at all, and readInvestigation() then opens the newest visible investigation instead.
  */
 export function investigationIdFrom(search: string): string | null {
   const v = new URLSearchParams(search).get('investigation');
@@ -46,9 +48,37 @@ export async function readPortfolio(signal?: AbortSignal, fetcher?: Fetcher): Pr
   return { status: 'ok', body: r.body };
 }
 
-/** GET /investigations/:id and GET /decisions?investigationId=:id, in parallel. null when aborted. */
-export async function readInvestigation(id: string | null, signal?: AbortSignal, fetcher?: Fetcher): Promise<LiveRead<InvestigationBodies> | null> {
-  if (id === null) return { status: 'failed', failure: 'notChosen' };
+type Pick = { readonly id: string } | { readonly failure: LiveFailure } | null;
+
+/**
+ * The newest investigation this session can see: the first item of GET /investigations, which the server sorts newest first and
+ * limits to visible projects. An empty list is notChosen; a malformed list, or a first item without a UUID id, is an error, so no
+ * case is guessed and no request path is built from an unchecked value. null when aborted.
+ */
+async function newestInvestigation(signal?: AbortSignal, fetcher?: Fetcher): Promise<Pick> {
+  const r = await apiRequest('/api/investigations', { signal, fetcher });
+  if (!r.ok) return r.aborted ? null : { failure: r.failure };
+  const items = typeof r.body === 'object' && r.body !== null ? (r.body as { items?: unknown }).items : undefined;
+  if (!Array.isArray(items)) return { failure: 'error' };
+  if (items.length === 0) return { failure: 'notChosen' };
+  const first: unknown = items[0];
+  const id = typeof first === 'object' && first !== null ? (first as { id?: unknown }).id : undefined;
+  return typeof id === 'string' && UUID.test(id) ? { id } : { failure: 'error' };
+}
+
+/**
+ * GET /investigations/:id and GET /decisions?investigationId=:id, in parallel. The case is the one named in the address; with
+ * none, the newest visible one (owner decision 2026-11-26), so a live demo needs no id copied into the link. null when aborted.
+ */
+export async function readInvestigation(named: string | null, signal?: AbortSignal, fetcher?: Fetcher): Promise<LiveRead<InvestigationBodies> | null> {
+  let id = named;
+  if (id === null) {
+    const pick = await newestInvestigation(signal, fetcher);
+    if (pick === null) return null;
+    if ('failure' in pick) return { status: 'failed', failure: pick.failure };
+    id = pick.id;
+  }
+  const chosen = named === null ? 'newest' : 'address';
   const path = encodeURIComponent(id);
   const [inv, dec] = await Promise.all([
     apiRequest(`/api/investigations/${path}`, { signal, fetcher }),
@@ -56,7 +86,7 @@ export async function readInvestigation(id: string | null, signal?: AbortSignal,
   ]);
   if ((!inv.ok && inv.aborted) || (!dec.ok && dec.aborted)) return null;
   if (!inv.ok) return { status: 'failed', failure: inv.failure };
-  return { status: 'ok', body: { investigation: inv.body, decisions: dec.ok ? dec.body : null } };
+  return { status: 'ok', body: { investigation: inv.body, decisions: dec.ok ? dec.body : null, chosen } };
 }
 
 /**

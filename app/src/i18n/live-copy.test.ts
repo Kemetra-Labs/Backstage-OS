@@ -22,3 +22,15 @@ describe('live copy (BACK-51 P1)', () => {
       for (const s of Object.values(SHELL[lang].live.states)) expect(`${s.title} ${s.body}`).not.toMatch(/\bhealthy\b(?<!not healthy)|all good|operational/i);
   });
 });
+
+describe('newest-investigation fallback copy (BACK-51 P1)', () => {
+  it('says the newest visible case is shown and how to open another, in EN and AR', () => {
+    for (const lang of ['en', 'ar'] as const) expect(SHELL[lang].live.newest, lang).toContain('{?investigation=}');
+    expect(SHELL.en.live.newest).toMatch(/newest/i);
+  });
+
+  it('nothing to show no longer reads as "you forgot the address": the server listed no case this session can see', () => {
+    expect(SHELL.en.live.states.notChosen.title).toBe('No investigation to show');
+    expect(SHELL.en.live.states.notChosen.body).toMatch(/no investigation this session can see/i);
+  });
+});
