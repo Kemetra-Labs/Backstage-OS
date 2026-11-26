@@ -9,17 +9,18 @@ Missing evidence counts as NOT RUN/BLOCKED, never PASS.
 Serve the React app: `cd app && npm ci && npm run build && npx vite preview` and open `http://127.0.0.1:4178/`.
 Every screen shows a demo marker. Nothing calls the server.
 
-### Script (about 8 minutes, Owner and Technical)
+### Script (about 9 minutes, Owner and Technical)
 
 | Min | Step | Route | What to point out |
 | --- | --- | --- | --- |
 | 0–1 | Home, persona **Owner**, EN | `#/` | Source health in words; a source never read says "not read yet", not healthy. |
-| 1–2 | Portfolio | `#/portfolio` | GitHub reads panel: current, stale, not read yet, unknown, unavailable, each with a reason in words. Counts are lower bounds when a page was full. |
+| 1–2 | Portfolio | `#/portfolio` | GitHub reads panel: current, stale, not read yet, unknown, unavailable, each with a reason in words. Counts are lower bounds when a page was full. Optional (BACK-62): open `/?github=error#/portfolio` (also `denied`, `timeout`, `malformed`, `empty`) to force a connector failure: every source reads unavailable with its reason, or the panel shows an explicit error or empty state. Never blank, never green. |
 | 2–4 | Investigation Room | `#/investigation/INV-DEMO-7` | Every evidence row has a type badge (Observed / Correlated / Hypothesis / Proposed). Stale rows carry an amber side rule; unread rows say why. Customer impact is **Unknown**, not "none". |
-| 4–5 | Open one evidence item, then the Evidence Explorer | drawer, then `#/evidence/E-5?from=INV-DEMO-7` | Freshness and age in words; demo links are inert. |
-| 5–6 | Switch persona to **Technical** | same | Ids, rule text and raw output appear; nothing hidden from Owner is revealed by count or gap. |
-| 6–7 | Decisions | `#/decisions` | A decision shows Approved only when its owning record was read and resolves as approved; otherwise Proposed. Kawalys records no decision and runs nothing in this version. |
-| 7–8 | Switch language to **Arabic** | any | Full RTL layout, every string translated. |
+| 4–5 | "Server-shaped demo records" panel, lower on the same page | same | Records of a separate synthetic case, shaped like the server's `GET /investigations/:id` and `GET /decisions` answers and read from a committed file (BACK-57; nothing is requested). It is marked as demo data. One record is a Hypothesis read as Stale. The other is Unknown and Not read, with "The source read failed." The decision is Proposed, with "Creator recorded" (BACK-59/100). It shows no health word and no link. Nontechnical gets no panel. |
+| 5–6 | Open one evidence item, then the Evidence Explorer | drawer, then `#/evidence/E-5?from=INV-DEMO-7` | Freshness and age in words; demo links are inert. |
+| 6–7 | Switch persona to **Technical** | same | Ids, rule text and raw output appear, and the server-shaped records show their source references. Nothing hidden from Owner is revealed by count or gap. |
+| 7–8 | Decisions | `#/decisions` | A decision shows Approved only when its owning record was read and resolves as approved; otherwise Proposed. Kawalys records no decision and runs nothing in this version. |
+| 8–9 | Switch language to **Arabic** | any | Full RTL layout, every string translated. |
 
 Backend half (Technical only, optional): `cd server && npm run local:up` (BACK-61) brings up a loopback Postgres with
 synthetic evidence, then prints what was seeded. The HTTP routes stay deny-all without a configured Descope owner.
@@ -28,12 +29,16 @@ synthetic evidence, then prints what was seeded. The HTTP routes stay deny-all w
 
 1. **No login in the app.** Customers never sign in; staff sign-in exists only as the owner-only BFF lab (BACK-56) and is
    off until `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set.
-2. **The app never calls the server** (owner decision on BACK-57, 2026-11-25). Portfolio uses synthetic fixtures that
-   are kept equal to real server responses by a parity test.
+2. **The app never calls the server** (owner decision on BACK-57, 2026-11-25). Portfolio and the Investigation Room's
+   server-shaped records panel use committed synthetic fixtures, which parity tests keep equal to real server
+   responses.
 3. **No live connector.** GitHub, Jira and Confluence exist as mappers behind read-only ports with canned answers; there
-   is no transport and no token. Jira/Confluence records cannot be stored yet (schema allows `github` only).
+   is no transport and no token. Jira and Confluence records can be stored since BACK-99 (migration 0005), but the
+   portfolio reads GitHub sources only.
 4. **Decisions are recorded through the API only** (`POST /investigations/:id/decisions`); the UI has no "record
-   decision" control. `GET /decisions` (BACK-59) lists them with creator and time.
+   decision" control. `GET /decisions` (BACK-59) lists them with creator and time. Since BACK-100 (migration 0004) a
+   decision cannot be stored without its audit row, so its creator is always recorded. `GET /decisions` has no cursor
+   pagination (`limit` up to 100, optional `investigationId` filter).
 5. **No hosting.** Nothing is deployed (BACK-64); no database, Descope project or secrets are provisioned.
 6. **One role.** Only `owner` exists server-side; personas in the app are a display switch, never authorization.
 
