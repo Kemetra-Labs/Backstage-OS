@@ -43,7 +43,7 @@ What you'll see (ids differ):
 
 ```
 provisioned roles kawalys_migrator, kawalys_app, kawalys_auth and schema kawalys
-applied: 0001_foundation.sql, 0002_identity.sql, 0003_evidence.sql
+applied: 0001_foundation.sql, 0002_identity.sql, 0003_evidence.sql, 0004_decision_audit.sql
 seeded for the synthetic local owner (no Descope configured):
 ...
 evidence      6 visible to the owner (6 created by this run):
@@ -245,9 +245,10 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 
 - Needs a session and `evidence.read` (404 otherwise, like every refusal). Exists only when both database URLs are set.
 - Query: `limit` from 1 to 100, default 20; any other value, or a repeated one, is 400 `validation_error`. Optional `investigationId`: an unknown, malformed or repeated value gives `{ items: [] }`, like the `GET /evidence` filter.
-- Returns `{ items: [{ id, investigationId, decision, rationale, citations, createdBy, createdAt }] }`. `createdBy` is the user id of the `decision.recorded` audit row that `POST /investigations/:id/decisions` writes in the same transaction (joined at read time; no schema change). `createdAt` is the evidence row's `received_at`, which only the database sets. `createdBy` is null only for a decision row written without its audit row, which the application never does (see the role-hardening limit below).
+- Returns `{ items: [{ id, investigationId, decision, rationale, citations, createdBy, createdAt }] }`. `createdBy` is the user id of the `decision.recorded` audit row that `POST /investigations/:id/decisions` writes in the same transaction (joined at read time through the index `audit_events_by_target`, migration 0004). `createdAt` is the evidence row's `received_at`, which only the database sets. A decision row cannot exist without that audit row (BACK-100, below), so `createdBy` is always set; it is `null` only if the audit row's actor is (never written by the application).
 - Visibility is the one `GET /evidence` uses: a decision is absent unless its project and every row it cites are visible to the reader, so a decision citing evidence of a disconnected source, an uncited decision of a hidden project, and another workspace's decisions never appear.
 - Append-only: `kawalys_app` holds no UPDATE or DELETE on `evidence`, `evidence_citations` or `audit_events`, and ALWAYS-enabled triggers refuse both even for a superuser in replica mode. A changed decision is a new decision. `test/evidence/decisions-db.spec.ts` covers this, the visibility cases and the parameter bounds.
+- **Decision audit row enforced (BACK-100, `migrations/0004_decision_audit.sql`).** A `DEFERRABLE INITIALLY DEFERRED` constraint trigger on `evidence` (`evidence_decision_audited`, enabled ALWAYS) refuses at commit, with SQLSTATE 23000, any `HumanDecision` row without a `decision.recorded` audit row of the same workspace whose `target_type` is `evidence` and `target_id` is the decision id. `recordDecision()` writes the audit row after the evidence row in the same transaction, so it passes; `SET CONSTRAINTS ALL IMMEDIATE` only runs the check earlier. The function is SECURITY INVOKER (no definer rights; `kawalys_app` already reads `audit_events`) with a pinned `search_path` and a schema-qualified table, so it sees only the current workspace context: a context switched before commit fails closed. It also holds for a superuser. The index `audit_events_by_target (workspace_id, target_type, target_id, action, occurred_at, id)` serves the creator lookup (the subquery is `DECISION_CREATOR` in `evidence.repository.ts`). Tests: `test/evidence/decision-audit-db.spec.ts` (including an `EXPLAIN` that must name the index).
 
 **Restart test.** `test/evidence/evidence-http.spec.ts` proves that evidence, decisions and sessions survive a full restart with new pools.
 
@@ -258,7 +259,7 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 - Projects and sources have no write routes, and investigations have read routes only (see Investigation API below).
 - Correlation and Hypothesis evidence each come from one source, including user notes: a note cannot link evidence of two sources (for example a GitHub pull request and a monitoring alert). Doing that safely needs a schema change and its own visibility rule; it is not built. This already applies today to two repositories of one project: a note citing both is refused with 400.
 - The list is capped at 500 rows and has no pagination or truncation flag yet.
-- Database-role hardening not done yet: `kawalys_app` could insert a `HumanDecision` row directly without an audit row, or a grant for any user id; the application never does, and a later slice can enforce it in the database.
+- Database-role hardening is partial: since BACK-100 a `HumanDecision` row cannot commit without its audit row, but `kawalys_app` could still insert a grant for any user id, or an audit row of its own choosing; the application never does.
 - There is no way yet for an administrator to revoke another user's grant (single owner).
 
 ## GitHub observation mapper (BACK-52 mock slice)
