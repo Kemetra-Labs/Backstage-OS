@@ -43,6 +43,11 @@ html[lang="ar"] .demo, html[lang="ar"] .demo-mark { font-family: var(--f-ar); }
 /* BACK-51 P1: live data says where it came from, in place of the demo marker. Solid, never the demo hatching. */
 .live-mark { font: 600 12px/1 var(--f-mono); color: var(--muted); padding: 6px 8px; border-radius: var(--r-sm); border: 1px solid var(--line); }
 html[lang="ar"] .live-mark { font-family: var(--f-ar); }
+.session-bar { margin-block-end: 16px; }
+.session-in { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg-2); }
+.session-who { margin: 0; }
+.session-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; }
+.session-bar .btn { min-height: 44px; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px 20px; }
 .seg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .seg-label { font-size: 12px; color: var(--muted); }
