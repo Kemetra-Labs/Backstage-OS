@@ -165,3 +165,24 @@ describe('forced connector errors (BACK-62)', () => {
     expect(githubReadViewFor('?github=empty').state).toBe('empty');
   });
 });
+
+describe('live origin (BACK-51 P1)', () => {
+  it('a live body is never marked as demo data, in any state', () => {
+    expect(githubReadView({ projects: [] }, FIXTURE_NOW, 'live')).toEqual({ projects: [], state: 'empty', demo: false, incomplete: false });
+    expect(githubReadView({ nope: true }, FIXTURE_NOW, 'live')).toEqual({ projects: [], state: 'unreadable', demo: false, incomplete: true });
+    expect(githubReadView(RESPONSE, FIXTURE_NOW, 'live').demo).toBe(false);
+  });
+
+  it('reads the same statuses as the fixture: only the marker changes', () => {
+    const status = (v: ReturnType<typeof githubReadView>) => rows(v).map((s) => [s.externalRef, s.status, s.failure, s.ageMinutes]);
+    expect(status(githubReadView(RESPONSE, FIXTURE_NOW, 'live'))).toEqual(status(githubReadView()));
+  });
+
+  it('the ?github= review seeds are ignored in live mode: a URL cannot dress live data as a forced failure', () => {
+    for (const form of FORCED_FORMS) expect(githubReadViewFor(`?github=${form}`, FIXTURE_NOW, 'live', RESPONSE)).toEqual(githubReadView(RESPONSE, FIXTURE_NOW, 'live'));
+  });
+
+  it('in live mode the fetched body is used, never the fixture', () => {
+    expect(githubReadViewFor('', FIXTURE_NOW, 'live', { projects: [] }).state).toBe('empty');
+  });
+});

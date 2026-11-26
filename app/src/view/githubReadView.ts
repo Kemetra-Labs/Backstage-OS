@@ -1,8 +1,8 @@
 // GitHub reads on the Portfolio screen (BACK-57, owner decision 2026-11-25, Jira comment 18848): the BACK-57
-// adapters (src/api) applied to a SYNTHETIC `GET /portfolio` body. Nothing here, or anywhere in app/, calls
-// the server (CLAUDE.md): the body is a committed fixture that server/test/portfolio/portfolio-parity.spec.ts
-// keeps equal to what the server's read model produces. The only file outside src/api allowed to import it
-// (see src/api/api.guard.test.ts). Pure: the clock is the fixture's, never the system time.
+// adapters (src/api) applied to a `GET /portfolio` body. By default the body is a committed SYNTHETIC fixture that
+// server/test/portfolio/portfolio-parity.spec.ts keeps equal to what the server's read model produces. In live mode
+// (BACK-51 P1, VITE_KAWALYS_LIVE=1) the caller passes the body live/reads.ts fetched, with origin 'live' and the real
+// clock. This file makes no request (src/live/live.guard.test.ts). Pure: the clock is passed in, never read here.
 import { parsePortfolio, toPortfolio, GITHUB_TTL_SECONDS } from '../api/portfolio';
 import { countDisplay, freshnessOf, type CountView } from '../contract/rules';
 import RESPONSE from '../fixture/portfolio-response.json';
@@ -10,8 +10,8 @@ import RESPONSE from '../fixture/portfolio-response.json';
 /** The fixture's "now": its reads are 5 minutes to 4 hours before this. */
 export const FIXTURE_NOW = new Date('2026-11-25T12:00:00.000Z');
 
-/** No transport exists: every body this view reads is synthetic. */
-const SYNTHETIC = true;
+/** Where a body came from: the committed synthetic fixture, or the Kawalys server in live mode (BACK-51 P1). */
+export type ReadOrigin = 'fixture' | 'live';
 
 /**
  * What one source shows. Never "healthy": these are read states only.
@@ -49,7 +49,7 @@ export type GitHubPanelState = 'ok' | 'empty' | 'unreadable';
 export interface GitHubReadView {
   readonly projects: readonly GitHubProjectRow[];
   readonly state: GitHubPanelState;
-  /** Always true: the body is synthetic, so the panel says so in every state, failures included. */
+  /** True for the synthetic fixture, so the panel says so in every state, failures included; false for a live body. */
   readonly demo: boolean;
   /** The body could not be read, or some of it was left out: say so, never show it as complete. */
   readonly incomplete: boolean;
@@ -58,9 +58,10 @@ export interface GitHubReadView {
 const failureOf = (code: string | null): FailureReason =>
   (FAILURE_REASONS as readonly string[]).includes(code ?? '') ? (code as FailureReason) : 'other';
 
-export function githubReadView(body: unknown = RESPONSE, now: Date = FIXTURE_NOW): GitHubReadView {
+export function githubReadView(body: unknown = RESPONSE, now: Date = FIXTURE_NOW, origin: ReadOrigin = 'fixture'): GitHubReadView {
+  const synthetic = origin === 'fixture';
   const parse = parsePortfolio(body);
-  const api = toPortfolio(parse, { now, ttlSeconds: GITHUB_TTL_SECONDS, synthetic: SYNTHETIC });
+  const api = toPortfolio(parse, { now, ttlSeconds: GITHUB_TTL_SECONDS, synthetic });
   const projects = api.projects.map((p) => ({
     id: p.id,
     name: p.name,
@@ -88,8 +89,8 @@ export function githubReadView(body: unknown = RESPONSE, now: Date = FIXTURE_NOW
   return {
     projects,
     state: projects.length > 0 ? 'ok' : incomplete ? 'unreadable' : 'empty',
-    // The body is always the committed synthetic one (or a forced failure of it): never present any state as live.
-    demo: SYNTHETIC,
+    // A fixture body (or a forced failure of it) is never presented as live, in any state.
+    demo: synthetic,
     incomplete,
   };
 }
@@ -128,8 +129,12 @@ export function forcedFormFrom(search: string): ForcedForm | null {
   return (FORCED_FORMS as readonly string[]).includes(v ?? '') ? (v as ForcedForm) : null;
 }
 
-/** The panel's view for a URL: the fixture, or the forced failure form the seed names. */
-export function githubReadViewFor(search: string, now: Date = FIXTURE_NOW): GitHubReadView {
+/**
+ * The panel's view for a URL. Fixture mode: the fixture, or the forced failure form the seed names. Live mode: the fetched body,
+ * and the seed is ignored, so a URL can never dress live data up as a forced failure.
+ */
+export function githubReadViewFor(search: string, now: Date = FIXTURE_NOW, origin: ReadOrigin = 'fixture', body: unknown = RESPONSE): GitHubReadView {
+  if (origin === 'live') return githubReadView(body, now, 'live');
   const form = forcedFormFrom(search);
-  return githubReadView(form ? forcedBody(form) : RESPONSE, now);
+  return githubReadView(form ? forcedBody(form) : body, now);
 }

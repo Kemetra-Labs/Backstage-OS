@@ -81,3 +81,19 @@ describe('persona redaction and truth in copy', () => {
     }
   });
 });
+
+describe('server records panel, live mode (BACK-51 P1)', () => {
+  it('the live title and lede never claim synthetic data, a committed file or no request, in either language', () => {
+    for (const lang of ['en', 'ar'] as const) {
+      const s = INVESTIGATION[lang].serverRecords;
+      expect(s.liveTitle).toMatch(/\S/);
+      expect(s.liveLede).toMatch(/\S/);
+      expect(s.liveTitle).not.toBe(s.title);
+      expect(s.liveLede).not.toBe(s.lede);
+    }
+    const en = INVESTIGATION.en.serverRecords;
+    expect(`${en.liveTitle} ${en.liveLede}`).not.toMatch(/demo|synthetic|committed|file|nothing is requested/i);
+    const ar = INVESTIGATION.ar.serverRecords;
+    expect(`${ar.liveTitle} ${ar.liveLede}`).not.toMatch(/تجريبي|اصطناعي|ملف|لا يُرسل/);
+  });
+});

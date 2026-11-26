@@ -1,9 +1,9 @@
-// Boundary guard (BACK-57): src/api is a pure adapter. Nothing in app/ calls the server (CLAUDE.md), so no
-// source file under src/api may make a request or pull in anything that could. The owner approved wiring the
-// adapters into the Portfolio screen on SYNTHETIC data only (2026-11-25, Jira BACK-57 comment 18848), and extended
-// that to the Investigation Room on 2026-11-26: exactly two view modules may import src/api (one per screen), they
-// and their fixtures must not make a request either, each reads only its own fixtures, and nothing else may
-// reference src/api. Real calls to the server are a separate owner decision.
+// Boundary guard (BACK-57): src/api is a pure adapter. The app calls the server only in live mode, through src/live/http.ts
+// (BACK-51 P1; src/live/live.guard.test.ts), so no source file under src/api may make a request or pull in anything that could. The owner approved wiring the
+// adapters into the Portfolio screen (2026-11-25, Jira BACK-57 comment 18848) and extended that to the Investigation
+// Room on 2026-11-26: exactly two view modules may import src/api (one per screen), they and their fixtures must not
+// make a request either, each reads only its own fixtures, and nothing else may reference src/api. In live mode the
+// same view modules are handed bodies that src/live fetched; they still make no request themselves.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';

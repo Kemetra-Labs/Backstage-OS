@@ -20,7 +20,33 @@ failure form, built in memory from the synthetic fixture (nothing is requested).
 The Investigation Room's "Server-shaped demo records" panel (BACK-57) reads the committed synthetic `GET /investigations/:id`
 and `GET /decisions` fixtures through `src/api`, with no request; Owner and Technical only.
 
-**Demo data only.** No backend, auth, real API, credentials, AI calls or agents. Every link is inert.
+**Demo data by default.** The default build has no backend, auth, real API, credentials, AI calls or agents, and makes no
+request. Every link is inert.
+
+## Live mode (BACK-51 P1)
+
+The app calls the server only in live mode, same origin, through `src/live/http.ts` (owner decisions D1 (a) and D2 (a),
+2026-11-26). `src/live/live.guard.test.ts` refuses a request API in any other file, and an import of `src/live/http` anywhere
+but `src/live/reads.ts`.
+
+- **Switch.** Build or serve with `VITE_KAWALYS_LIVE=1` (exactly `1`). Without it, the build is the fixture demo above.
+- **Transport.** Relative `/api/...` paths only, `credentials: 'same-origin'`, JSON. `vite.config.ts` proxies `/api` to the
+  BFF at `http://127.0.0.1:8787` with the prefix stripped (`server.proxy` and `preview.proxy`). No CORS: the session cookie
+  is `__Host-`, `SameSite=Strict`.
+- **Results.** 401 or 404 → not found (identical on purpose). 400 → invalid. 429 → rate limited. A network failure, or a
+  502/503/504 from the proxy → unavailable. Any other failure, or a 2xx body that is not JSON → error. Every one is said in
+  words through `StateBlock`, never as an empty list and never as healthy.
+- **Reads.** Portfolio reads `GET /portfolio`. The Investigation Room reads `GET /investigations/:id` and
+  `GET /decisions?investigationId=:id` for the case named by `?investigation=<uuid>` (`npm run local:up` in `server/`
+  prints one). Both go through the same `src/api` adapters as the fixtures. Live panels show "Live: read from the Kawalys
+  server" in place of the demo marker, and the `?github=` review seeds are ignored.
+- **Not yet.** No sign-in in the app (P2), so the server answers not found until a session exists. No decision form (P3).
+
+```bash
+cd server && npm run local:up          # loopback Postgres + synthetic seed; prints the investigation id
+cd server && npm run start             # BFF on 127.0.0.1:8787
+cd app && VITE_KAWALYS_LIVE=1 npx vite  # or: VITE_KAWALYS_LIVE=1 npx vite build && npx vite preview
+```
 
 ## Decision note: tooling (BACK-6 scope item 1)
 

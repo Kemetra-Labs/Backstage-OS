@@ -7,7 +7,8 @@ Missing evidence counts as NOT RUN/BLOCKED, never PASS.
 ## What can be demonstrated today (synthetic data only)
 
 Serve the React app: `cd app && npm ci && npm run build && npx vite preview` and open `http://127.0.0.1:4178/`.
-Every screen shows a demo marker. Nothing calls the server.
+Every screen shows a demo marker. The default build calls nothing: the app calls the server only in live mode
+(`VITE_KAWALYS_LIVE=1`, BACK-51 P1), same origin, through `app/src/live/http.ts`. See `app/README.md`, "Live mode".
 
 ### Script (about 9 minutes, Owner and Technical)
 
@@ -29,9 +30,11 @@ synthetic evidence, then prints what was seeded. The HTTP routes stay deny-all w
 
 1. **No login in the app.** Customers never sign in; staff sign-in exists only as the owner-only BFF lab (BACK-56) and is
    off until `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set.
-2. **The app never calls the server** (owner decision on BACK-57, 2026-11-25). Portfolio and the Investigation Room's
-   server-shaped records panel use committed synthetic fixtures, which parity tests keep equal to real server
-   responses.
+2. **The app calls the server only in live mode** (BACK-51 P1; owner decisions D1 (a) and D2 (a), 2026-11-26). By
+   default, Portfolio and the Investigation Room's server-shaped records panel use committed synthetic fixtures, which
+   parity tests keep equal to real server responses. With `VITE_KAWALYS_LIVE=1` they read `GET /portfolio`,
+   `GET /investigations/:id` and `GET /decisions` same origin (`/api`, proxied), through `app/src/live/http.ts` only. There
+   is no sign-in in the app yet (P2), so live reads answer "not found, or not signed in" until a session exists.
 3. **No live connector.** GitHub, Jira and Confluence exist as mappers behind read-only ports with canned answers; there
    is no transport and no token. Jira and Confluence records can be stored since BACK-99 (migration 0005), but the
    portfolio reads GitHub sources only.

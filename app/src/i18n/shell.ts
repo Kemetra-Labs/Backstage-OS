@@ -4,6 +4,8 @@ import type { Lang } from '../contract/types';
 import type { EdgeKind, Severity } from '../contract/world';
 
 export type StateKind = 'loading' | 'empty' | 'error' | 'restricted' | 'unavailable' | 'not_configured' | 'unknown';
+/** The live states a panel can show instead of data (BACK-51 P1); live/reads.ts LiveFailure plus loading. */
+export type LiveStateKey = 'loading' | 'not_found' | 'notChosen' | 'unavailable' | 'invalid' | 'rate_limited' | 'error';
 export type NavKey = 'home' | 'portfolio' | 'map' | 'project' | 'investigation' | 'decisions' | 'agents' | 'sources';
 
 export interface ShellCopy {
@@ -39,6 +41,16 @@ export interface ShellCopy {
   readonly timeline: string;
   readonly back: string;
   readonly notFound: { readonly title: string; readonly body: string; readonly home: string };
+  /**
+   * Live mode (BACK-51 P1, VITE_KAWALYS_LIVE=1): where the data came from, and every state a live panel shows instead of data.
+   * Never the default `states` copy, which speaks of demo data. not_found covers 401 too: the server makes them identical.
+   */
+  readonly live: {
+    readonly source: string;
+    /** The footer of a live build: says which panels read the server, never that nothing is live. */
+    readonly footer: string;
+    readonly states: Readonly<Record<LiveStateKey, { readonly title: string; readonly body: string }>>;
+  };
   readonly footer: string;
   /** Label for the top-bar source strip, which shows one product's sources (the S1 investigation's), not the whole workspace. */
   readonly sourcesFor: (product: string) => string;
@@ -97,6 +109,19 @@ const en: ShellCopy = {
   timeline: 'Timeline',
   back: 'Back',
   notFound: { title: 'Page not found', body: 'This address is not part of the demo.', home: 'Open Command Home' },
+  live: {
+    source: 'Live: read from the {Kawalys} server',
+    footer: 'Kawalys review build, live mode. The GitHub reads and server records panels read the {Kawalys} server; everything else is synthetic, and no action is taken.',
+    states: {
+      loading: { title: 'Reading the {Kawalys} server', body: 'Asking the server for the latest stored reads.' },
+      not_found: { title: 'Not found, or not signed in', body: 'The server did not return this. It may not exist, or this session may not see it.' },
+      notChosen: { title: 'No investigation chosen', body: 'Open this page with {?investigation=} and an investigation id ({npm run local:up} prints one).' },
+      unavailable: { title: 'The server could not be reached', body: 'Nothing was read. This is unknown, not healthy.' },
+      invalid: { title: 'The server refused the request', body: 'The request was not accepted. Nothing is shown.' },
+      rate_limited: { title: 'Too many requests', body: 'The server asked us to slow down. Try again in a minute.' },
+      error: { title: 'The server answered with an error', body: 'Nothing is shown. This is unknown, not healthy.' },
+    },
+  },
   footer: 'Kawalys review build. Synthetic data only: nothing here is live, and no action is taken.',
   sourcesFor: (product) => `Sources for {${product}}`,
 };
@@ -158,6 +183,19 @@ const ar: ShellCopy = {
   timeline: 'الخط الزمني',
   back: 'رجوع',
   notFound: { title: 'الصفحة غير موجودة', body: 'هذا العنوان ليس جزءًا من العرض التجريبي.', home: 'فتح مركز القيادة' },
+  live: {
+    source: 'مباشر: مقروء من خادم {Kawalys}',
+    footer: 'نسخة مراجعة {Kawalys}، الوضع المباشر. لوحتا قراءات {GitHub} وسجلات الخادم تقرآن من خادم {Kawalys}؛ وكل ما عداهما مصطنع، ولا يُتخذ أي إجراء.',
+    states: {
+      loading: { title: 'جارٍ القراءة من خادم {Kawalys}', body: 'نطلب من الخادم آخر القراءات المحفوظة.' },
+      not_found: { title: 'غير موجود، أو لم يتم تسجيل الدخول', body: 'لم يُرجع الخادم هذا. قد لا يكون موجودًا، أو قد لا تراه هذه الجلسة.' },
+      notChosen: { title: 'لم يتم اختيار تحقيق', body: 'افتح هذه الصفحة مع {?investigation=} ومعرّف تحقيق (يطبعه {npm run local:up}).' },
+      unavailable: { title: 'تعذّر الوصول إلى الخادم', body: 'لم يُقرأ شيء. الحالة غير معروفة وليست سليمة.' },
+      invalid: { title: 'رفض الخادم الطلب', body: 'لم يُقبل الطلب. لا يُعرض شيء.' },
+      rate_limited: { title: 'طلبات كثيرة جدًا', body: 'طلب الخادم الإبطاء. حاول بعد دقيقة.' },
+      error: { title: 'أجاب الخادم بخطأ', body: 'لا يُعرض شيء. الحالة غير معروفة وليست سليمة.' },
+    },
+  },
   footer: 'نسخة مراجعة من {Kawalys}. بيانات اصطناعية فقط: لا شيء هنا حي، ولا يُتخذ أي إجراء.',
   sourcesFor: (product) => `مصادر {${product}}`,
 };

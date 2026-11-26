@@ -49,6 +49,9 @@ export interface InvestigationCopy {
   readonly serverRecords: {
     readonly title: string;
     readonly lede: string;
+    /** Live mode (BACK-51 P1): the same panel read from the server, so no demo or committed-file wording. */
+    readonly liveTitle: string;
+    readonly liveLede: string;
     readonly demo: string;
     readonly recordsTitle: string;
     readonly decisionsTitle: string;
@@ -130,6 +133,8 @@ const en: InvestigationCopy = {
   serverRecords: {
     title: 'Server-shaped demo records',
     lede: 'Records of a separate synthetic case, shaped like the Kawalys server\'s answer and read from a committed file. Nothing is requested. These are read states, not a health claim.',
+    liveTitle: 'Server records',
+    liveLede: 'The records and decisions of one investigation, read from the {Kawalys} server. These are read states, not a health claim.',
     demo: 'Demo data: synthetic records, not live',
     recordsTitle: 'Evidence records',
     decisionsTitle: 'Decisions',
@@ -219,6 +224,8 @@ const ar: InvestigationCopy = {
   serverRecords: {
     title: 'سجلات تجريبية بصيغة الخادم',
     lede: 'سجلات حالة اصطناعية منفصلة، بصيغة إجابة خادم {Kawalys}، مقروءة من ملف محفوظ. لا يُرسل أي طلب. هذه حالات قراءة، وليست حكمًا على السلامة.',
+    liveTitle: 'سجلات الخادم',
+    liveLede: 'سجلات وقرارات تحقيق واحد، مقروءة من خادم {Kawalys}. هذه حالات قراءة، وليست حكمًا على السلامة.',
     demo: 'بيانات تجريبية: سجلات مصطنعة، ليست مباشرة',
     recordsTitle: 'سجلات الأدلة',
     decisionsTitle: 'القرارات',

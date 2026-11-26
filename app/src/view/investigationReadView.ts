@@ -1,9 +1,8 @@
 // Server-shaped evidence in the Investigation Room (BACK-57, owner decision 2026-11-26, extending the 25 Nov Portfolio
-// decision, Jira BACK-57 comment 18848): the BACK-57 adapters (src/api) applied to the SYNTHETIC `GET /investigations/:id` and
-// `GET /decisions` bodies. Nothing here, or anywhere in app/, calls the server (CLAUDE.md): both bodies are committed fixtures
-// that server/test/evidence/evidence-parity.spec.ts keeps equal to what the server's repositories produce. With
-// githubReadView.ts, the only file outside src/api allowed to import it (src/api/api.guard.test.ts). Pure: the clock is the
-// fixture's, never the system time.
+// decision, Jira BACK-57 comment 18848): the BACK-57 adapters (src/api) applied to `GET /investigations/:id` and `GET /decisions`
+// bodies. By default both are committed SYNTHETIC fixtures that server/test/evidence/evidence-parity.spec.ts keeps equal to what
+// the server's repositories produce. In live mode (BACK-51 P1) the caller passes the bodies live/reads.ts fetched, with
+// origin 'live' and the real clock. This file makes no request (src/live/live.guard.test.ts). Pure: the clock is passed in.
 //
 // Rules: read states only, never health. A record that was not read stays not read, with its reason. A decision is `proposed`
 // unless decisionLabel() finds citations AND a link to the owning record (the server stores no such link, so never today).
@@ -11,14 +10,12 @@ import { decisionLabel, toEvidenceReference } from '../api/evidence';
 import { GITHUB_TTL_SECONDS } from '../api/portfolio';
 import { effectiveFreshness, resolveLabel } from '../contract/rules';
 import type { DisplayLabel, Persona, SourceAuthority } from '../contract/types';
+import type { ReadOrigin } from './githubReadView';
 import DECISIONS from '../fixture/decisions-response.json';
 import INVESTIGATION from '../fixture/investigation-response.json';
 
 /** The server's fixture clock (evidence-parity.spec.ts NOW): the investigation was opened at this time. */
 export const FIXTURE_NOW = new Date('2026-11-25T12:00:00.000Z');
-
-/** No transport exists: every body this view reads is synthetic. */
-const SYNTHETIC = true;
 
 /** What one record shows. `unknown`: read, but with no usable time. Never "healthy". */
 export type RecordRead = 'current' | 'stale' | 'unknown' | 'notRead';
@@ -57,7 +54,7 @@ export interface InvestigationReadView {
   readonly state: InvestigationReadState;
   /** Part of an answer could not be read and was left out: say so, never show the list as complete. */
   readonly incomplete: boolean;
-  /** Always true: both bodies are synthetic, so every state, failures included, is marked as demo data. */
+  /** True for the synthetic fixtures, so every state, failures included, is marked as demo data; false for live bodies. */
   readonly demo: boolean;
 }
 
@@ -77,7 +74,7 @@ function ageOf(at: unknown, now: Date): number | null {
  * (it answers 404 otherwise), so a read record means a reachable, granted source; its last read is the latest time the server
  * received a read record of it. Only GitHub has a TTL here: any other source gets no authority, so its records stay unread.
  */
-function sourcesOf(records: readonly Rec[], now: Date): Map<string, SourceAuthority> {
+function sourcesOf(records: readonly Rec[], now: Date, synthetic: boolean): Map<string, SourceAuthority> {
   const latest = new Map<string, string>();
   for (const r of records) {
     const id = str(r['sourceId']);
@@ -89,7 +86,7 @@ function sourcesOf(records: readonly Rec[], now: Date): Map<string, SourceAuthor
   }
   return new Map([...latest].map(([id, at]) => {
     const age = ageOf(at, now);
-    return [id, { provider: 'github', connectivity: 'reachable', lastSuccessAt: age === null ? null : at, ageMinutes: age, ttlSeconds: GITHUB_TTL_SECONDS, synthetic: SYNTHETIC }];
+    return [id, { provider: 'github', connectivity: 'reachable', lastSuccessAt: age === null ? null : at, ageMinutes: age, ttlSeconds: GITHUB_TTL_SECONDS, synthetic }];
   }));
 }
 
@@ -111,16 +108,18 @@ export function investigationReadView(
   body: unknown = INVESTIGATION,
   decisions: unknown = DECISIONS,
   now: Date = FIXTURE_NOW,
+  origin: ReadOrigin = 'fixture',
 ): InvestigationReadView | null {
   if (persona === 'nontechnical') return null;
   const technical = persona === 'technical';
-  const empty = { records: [], decisions: [], demo: SYNTHETIC };
+  const synthetic = origin === 'fixture';
+  const empty = { records: [], decisions: [], demo: synthetic };
   if (!isObject(body) || !str(body['id']) || !Array.isArray(body['evidence'])) return { ...empty, state: 'unreadable', incomplete: true };
 
   const invId = body['id'] as string;
   const evidence = (body['evidence'] as unknown[]).filter(isObject);
   let dropped = (body['evidence'] as unknown[]).length - evidence.length;
-  const sources = sourcesOf(evidence, now);
+  const sources = sourcesOf(evidence, now, synthetic);
 
   const records: RecordRow[] = [];
   const decisionById = new Map<string, Rec>();
@@ -181,6 +180,6 @@ export function investigationReadView(
     decisions: decisionRows,
     state: nothing ? (dropped > 0 ? 'unreadable' : 'empty') : 'ok',
     incomplete: dropped > 0,
-    demo: SYNTHETIC,
+    demo: synthetic,
   };
 }

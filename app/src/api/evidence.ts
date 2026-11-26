@@ -1,6 +1,6 @@
 // Evidence record adapter (BACK-57 slice 3). Pure: one record from the server's `GET /evidence`
 // (server/src/evidence/evidence.types.ts EvidenceRecord, shape duplicated here) to an EvidenceReference.
-// No request code; nothing in app/ calls the server (see portfolio.ts).
+// No request code: requests live only in src/live/http.ts, in live mode (see portfolio.ts).
 //
 // HumanDecision mapping, accepted by the owner on BACK-94 (comment 18828): `approved` only when the
 // decision cites evidence AND links to the owning record; otherwise `proposed`. The server stores no
