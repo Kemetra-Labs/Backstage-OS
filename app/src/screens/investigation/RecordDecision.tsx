@@ -1,0 +1,201 @@
+import { useState } from 'react';
+import { useApp } from '../../app/AppContext';
+import { useSession, useSessionDraft, useSessionStore } from '../../app/SessionContext';
+import { StateBlock } from '../../components/StateBlock';
+import { Text } from '../../components/Text';
+import { TruthChip } from '../../components/TruthChip';
+import { hostCopy } from '../../i18n/host';
+import type { StateKind } from '../../i18n/shell';
+import {
+  createSubmitGuard, DECISION_MAX, draftProblems, EMPTY_DRAFT, planSubmit, RATIONALE_MAX, refreshesList, submitDecision, type DecisionDraft, type DraftProblem, type SubmitResult,
+} from '../../live/decisions';
+import type { SessionStatus } from '../../live/session';
+import type { RecordRow } from '../../view/investigationReadView';
+
+/** What the form can show after a submit: the server's answer, or (nothing sent) a ticked record that left the list. */
+export type FormResult = SubmitResult | 'citationsChanged';
+
+export interface RecordDecisionViewProps {
+  readonly draft: DecisionDraft;
+  /** The records of this case that can be cited. */
+  readonly records: readonly RecordRow[];
+  /** Technical also sees each record's source reference. */
+  readonly technical: boolean;
+  readonly sessionStatus: SessionStatus;
+  readonly submitting: boolean;
+  /** After a submit attempt: blank fields are named too. A broken limit is always named. */
+  readonly showProblems: boolean;
+  readonly result: FormResult | null;
+  readonly onChange: (d: DecisionDraft) => void;
+  readonly onSubmit: () => void;
+}
+
+/** Problems that are always said (the owner is mid-typing past a limit); blank fields wait for a submit attempt. */
+const ALWAYS: readonly DraftProblem[] = ['decisionTooLong', 'rationaleTooLong', 'tooManyEvidence', 'unstorable'];
+
+const RESULT_KIND: Readonly<Record<Exclude<FormResult, 'recorded'>, StateKind>> = {
+  citationsChanged: 'unknown',
+  invalid: 'error',
+  not_found: 'unknown',
+  rate_limited: 'error',
+  unavailable: 'unavailable',
+  error: 'error',
+};
+
+/**
+ * The decision form (BACK-51 P3, live mode), in words for every state. Prop-driven so it renders anywhere. It records what a
+ * person decided and never says approved. While the session is not signed in the draft stays and submit is off, with the
+ * reason; a failed or unconfirmed send keeps the draft and says so. No record id is shown.
+ */
+export function RecordDecisionView({ draft, records, technical, sessionStatus, submitting, showProblems, result, onChange, onSubmit }: RecordDecisionViewProps) {
+  const { lang, copy } = useApp();
+  const c = hostCopy('INVESTIGATION', lang).recordDecision;
+  const s = hostCopy('INVESTIGATION', lang).serverRecords;
+  const all = draftProblems(draft);
+  const shown = all.filter((p) => showProblems || ALWAYS.includes(p));
+  const bad = (a: DraftProblem, b: DraftProblem) => shown.includes(a) || shown.includes(b);
+  const canSubmit = sessionStatus === 'signedIn' && !submitting;
+  const toggle = (id: string) =>
+    onChange({ ...draft, evidenceIds: draft.evidenceIds.includes(id) ? draft.evidenceIds.filter((x) => x !== id) : [...draft.evidenceIds, id] });
+
+  return (
+    <section className="rec-decision" aria-labelledby="rd-title" data-testid="record-decision">
+      <h3 id="rd-title">{c.title}</h3>
+      <p className="note"><Text s={c.lede} /></p>
+      <form noValidate aria-busy={submitting ? 'true' : undefined} onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+        <div className="rd-field">
+          <label htmlFor="rd-decision">{c.decisionLabel}</label>
+          <textarea
+            id="rd-decision"
+            rows={3}
+            value={draft.decision}
+            readOnly={submitting}
+            onChange={(e) => onChange({ ...draft, decision: e.target.value })}
+            aria-invalid={bad('decisionBlank', 'decisionTooLong') ? 'true' : undefined}
+            aria-describedby="rd-decision-count rd-errors"
+          />
+          <p id="rd-decision-count" className="rd-count"><Text s={c.counter(draft.decision.length, DECISION_MAX)} /></p>
+        </div>
+        <div className="rd-field">
+          <label htmlFor="rd-rationale">{c.rationaleLabel}</label>
+          <textarea
+            id="rd-rationale"
+            rows={5}
+            value={draft.rationale}
+            readOnly={submitting}
+            onChange={(e) => onChange({ ...draft, rationale: e.target.value })}
+            aria-invalid={bad('rationaleBlank', 'rationaleTooLong') ? 'true' : undefined}
+            aria-describedby="rd-rationale-count rd-errors"
+          />
+          <p id="rd-rationale-count" className="rd-count"><Text s={c.counter(draft.rationale.length, RATIONALE_MAX)} /></p>
+        </div>
+        <fieldset className="rd-evidence">
+          <legend>{c.evidenceLegend}</legend>
+          <p className="note">{c.evidenceHint}</p>
+          {records.length === 0 ? <p className="note">{c.evidenceNone}</p> : (
+            <ul className="rows rd-rows">
+              {records.map((r, i) => (
+                <li key={r.id}>
+                  <label className="rd-pick">
+                    <input type="checkbox" checked={draft.evidenceIds.includes(r.id)} disabled={submitting} onChange={() => toggle(r.id)} />
+                    <span className="rd-pos"><Text s={c.record(i + 1)} /></span>
+                    <TruthChip label={r.label} style="standard" copy={copy} />
+                    <span className="srv-read">{s.read[r.read]}</span>
+                    {r.ageMinutes !== null && <span className="srv-age"> · <Text s={s.age(r.ageMinutes)} /></span>}
+                    {technical && r.sourceRef && <span> · <bdi dir="ltr" className="srv-ref">{r.sourceRef}</bdi></span>}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </fieldset>
+        <div id="rd-errors" aria-live="polite">
+          {shown.length > 0 && <ul className="rd-errors">{shown.map((p) => <li key={p}>{c.problems[p]}</li>)}</ul>}
+        </div>
+        {sessionStatus !== 'signedIn' && <p className="note rd-session">{c.needSession[sessionStatus]}</p>}
+        <p className="rd-actions">
+          <button type="submit" className="btn" disabled={!canSubmit}>{submitting ? c.submitting : c.submit}</button>
+        </p>
+      </form>
+      {/* Always in the page, so a screen reader announces the text when it is filled in. */}
+      <div role="status">
+        {result === 'recorded' && (
+          <div className="rd-result rd-ok">
+            <p className="state-title">{c.result.recorded.title}</p>
+            <p className="note">{c.result.recorded.body}</p>
+          </div>
+        )}
+      </div>
+      {result !== null && result !== 'recorded' && (
+        <div role="alert" className="rd-result">
+          <StateBlock kind={RESULT_KIND[result]} title={c.result[result].title} body={c.result[result].body} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * The decision form wired to the live session and the in-memory draft (useSessionDraft, key `decision:<investigationId>`): the
+ * draft survives a session that ends and the sign-in after it, and is cleared only by a recorded decision or an explicit sign-out.
+ * One submit at a time (D5 (a)); a not_found is reported to the session, which decides signed out versus a hidden case.
+ */
+export function RecordDecision({ investigationId, records, technical, onSubmitted }: {
+  readonly investigationId: string;
+  readonly records: readonly RecordRow[];
+  readonly technical: boolean;
+  /** The decision list should be read again: after a recorded decision, and after an answer where it may have been recorded anyway. */
+  readonly onSubmitted: () => void;
+}) {
+  const store = useSessionStore();
+  const session = useSession();
+  const [draft, setDraft] = useSessionDraft<DecisionDraft>(`decision:${investigationId}`);
+  const [guard] = useState(createSubmitGuard);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<FormResult | null>(null);
+  const [showProblems, setShowProblems] = useState(false);
+  const current = draft ?? EMPTY_DRAFT;
+
+  const submit = () => {
+    if (session?.status !== 'signedIn') return;
+    const plan = planSubmit(current, records.map((r) => r.id));
+    if (plan.kind === 'problems') {
+      setShowProblems(true);
+      return;
+    }
+    if (plan.kind === 'citationsChanged') {
+      // A ticked record left the list: prune it and send nothing, so the owner sees the change first.
+      setDraft(plan.sendable);
+      setResult('citationsChanged');
+      return;
+    }
+    void guard.run(async () => {
+      setSubmitting(true);
+      try {
+        const r = await submitDecision(investigationId, plan.sendable);
+        setResult(r);
+        if (r === 'recorded') {
+          setDraft(undefined);
+          setShowProblems(false);
+        } else if (r === 'not_found') store?.reportNotFound();
+        if (refreshesList(r)) onSubmitted();
+      } finally {
+        setSubmitting(false);
+      }
+    });
+  };
+
+  return (
+    <RecordDecisionView
+      draft={current}
+      records={records}
+      technical={technical}
+      sessionStatus={session?.status ?? 'checking'}
+      submitting={submitting}
+      showProblems={showProblems}
+      result={result === 'not_found' && session?.status !== 'signedIn' ? null : result}
+      onChange={(d) => { setDraft(d); setResult(null); }}
+      onSubmit={submit}
+    />
+  );
+}

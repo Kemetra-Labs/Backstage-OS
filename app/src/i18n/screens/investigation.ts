@@ -68,6 +68,28 @@ export interface InvestigationCopy {
     readonly incomplete: string;
     readonly unreadable: { readonly title: string; readonly body: string };
   };
+  /**
+   * Record a decision (BACK-51 P3, live mode only, owner decision D4). A decision records what a person decided: it runs nothing
+   * and never reads as approved. A failed or unconfirmed send keeps the draft and says so; a hidden case reveals nothing.
+   */
+  readonly recordDecision: {
+    readonly title: string;
+    readonly lede: string;
+    readonly decisionLabel: string;
+    readonly rationaleLabel: string;
+    /** `{n / max}`: code units, like the server. */
+    readonly counter: (n: number, max: number) => string;
+    readonly evidenceLegend: string;
+    readonly evidenceHint: string;
+    readonly evidenceNone: string;
+    readonly record: (i: number) => string;
+    readonly problems: Readonly<Record<'decisionBlank' | 'decisionTooLong' | 'rationaleBlank' | 'rationaleTooLong' | 'tooManyEvidence' | 'unstorable', string>>;
+    readonly submit: string;
+    readonly submitting: string;
+    /** Why submit is off while the session is not signed in; the draft is kept. */
+    readonly needSession: Readonly<Record<'checking' | 'signedOut' | 'ended' | 'unavailable' | 'error', string>>;
+    readonly result: Readonly<Record<'recorded' | 'invalid' | 'not_found' | 'rate_limited' | 'unavailable' | 'error' | 'citationsChanged', { readonly title: string; readonly body: string }>>;
+  };
 }
 
 const en: InvestigationCopy = {
@@ -159,6 +181,43 @@ const en: InvestigationCopy = {
       body: 'The answer was not in a form we can read, so nothing is shown. It is unknown, not healthy.',
     },
   },
+  recordDecision: {
+    title: 'Record a decision',
+    lede: 'Write down what was decided and why, and cite the records it rests on. Recording keeps a note of the decision. It runs nothing and approves nothing.',
+    decisionLabel: 'Decision',
+    rationaleLabel: 'Rationale',
+    counter: (n, max) => `{${n} / ${max}}`,
+    evidenceLegend: 'Cited records (optional)',
+    evidenceHint: 'Pick the records this decision rests on. Up to 50.',
+    evidenceNone: 'No record is listed to cite. You can still record the decision without citing one.',
+    record: (i) => `Record {${i}}`,
+    problems: {
+      decisionBlank: 'Write the decision.',
+      decisionTooLong: 'The decision is too long. The limit is 2000 characters.',
+      rationaleBlank: 'Write the rationale.',
+      rationaleTooLong: 'The rationale is too long. The limit is 4000 characters.',
+      tooManyEvidence: 'Too many records are cited. The limit is 50.',
+      unstorable: 'The text holds a character that cannot be stored. Remove it and try again.',
+    },
+    submit: 'Record decision',
+    submitting: 'Recording…',
+    needSession: {
+      checking: 'Checking your session. You can record once it is confirmed.',
+      signedOut: 'You are not signed in, so nothing can be recorded. Your draft is kept; sign in, then choose Check again.',
+      ended: 'Your session ended, so nothing can be recorded. Your draft is kept; sign in again, then choose Check again.',
+      unavailable: 'The server could not be reached, so we cannot tell whether you are signed in. Your draft is kept.',
+      error: 'The sign-in status is unknown. Your draft is kept.',
+    },
+    result: {
+      recorded: { title: 'Decision recorded', body: 'The decision is saved, with who recorded it. It is recorded only: nothing is run and nothing is approved.' },
+      invalid: { title: 'The server did not accept this decision', body: 'Check the decision, the rationale and the cited records, then try again. Your draft is kept.' },
+      not_found: { title: 'This case or a cited record is not visible', body: 'The server did not return it. It may not exist, or this session may not see it. Nothing was recorded. Your draft is kept.' },
+      rate_limited: { title: 'Too many requests', body: 'Nothing was recorded. Try again in a minute. Your draft is kept.' },
+      unavailable: { title: 'Not confirmed', body: 'We could not confirm that the decision was recorded. Check the decision list before trying again. Your draft is kept.' },
+      error: { title: 'The server answered with an error', body: 'Do not assume the decision was recorded: check the decision list before trying again. Your draft is kept.' },
+      citationsChanged: { title: 'A cited record is no longer listed', body: 'It was removed from your selection. Check the cited records, then record again. Nothing was sent. Your draft is kept.' },
+    },
+  },
 };
 
 const ar: InvestigationCopy = {
@@ -248,6 +307,43 @@ const ar: InvestigationCopy = {
     unreadable: {
       title: 'تعذّرت قراءة هذه السجلات',
       body: 'لم تكن الإجابة بصيغة نستطيع قراءتها، لذا لا يُعرض شيء. الحالة غير معروفة، وليست سليمة.',
+    },
+  },
+  recordDecision: {
+    title: 'تسجيل قرار',
+    lede: 'اكتب ما تقرّر ولماذا، واذكر السجلات التي يستند إليها. التسجيل يحفظ ملاحظة بالقرار فقط؛ لا ينفّذ شيئًا ولا يعتمد شيئًا.',
+    decisionLabel: 'القرار',
+    rationaleLabel: 'المبرّر',
+    counter: (n, max) => `{${n} / ${max}}`,
+    evidenceLegend: 'السجلات المُستشهد بها (اختياري)',
+    evidenceHint: 'اختر السجلات التي يستند إليها هذا القرار. حتى 50 سجلًا.',
+    evidenceNone: 'لا يوجد سجل مُدرج للاستشهاد به. يمكنك تسجيل القرار دون الاستشهاد بسجل.',
+    record: (i) => `السجل {${i}}`,
+    problems: {
+      decisionBlank: 'اكتب القرار.',
+      decisionTooLong: 'القرار طويل جدًا. الحد الأقصى 2000 حرف.',
+      rationaleBlank: 'اكتب المبرّر.',
+      rationaleTooLong: 'المبرّر طويل جدًا. الحد الأقصى 4000 حرف.',
+      tooManyEvidence: 'عدد السجلات المُستشهد بها كبير جدًا. الحد الأقصى 50.',
+      unstorable: 'يحتوي النص على رمز لا يمكن حفظه. أزله وحاول مرة أخرى.',
+    },
+    submit: 'تسجيل القرار',
+    submitting: 'جارٍ التسجيل…',
+    needSession: {
+      checking: 'نتحقق من جلستك. يمكنك التسجيل بعد التأكد منها.',
+      signedOut: 'لم تسجّل الدخول، لذا لا يمكن تسجيل شيء. مسودتك محفوظة؛ سجّل الدخول ثم اختر «تحقّق مرة أخرى».',
+      ended: 'انتهت جلستك، لذا لا يمكن تسجيل شيء. مسودتك محفوظة؛ سجّل الدخول مرة أخرى ثم اختر «تحقّق مرة أخرى».',
+      unavailable: 'تعذّر الوصول إلى الخادم، لذا لا نعرف إن كنت مسجّل الدخول. مسودتك محفوظة.',
+      error: 'حالة تسجيل الدخول غير معروفة. مسودتك محفوظة.',
+    },
+    result: {
+      recorded: { title: 'سُجّل القرار', body: 'حُفظ القرار مع اسم من سجّله. هو مسجَّل فقط: لا يُنفَّذ شيء ولا يُعتمد شيء.' },
+      invalid: { title: 'لم يقبل الخادم هذا القرار', body: 'راجع القرار والمبرّر والسجلات المُستشهد بها ثم حاول مرة أخرى. مسودتك محفوظة.' },
+      not_found: { title: 'هذه الحالة أو أحد السجلات المُستشهد بها غير مرئي', body: 'لم يُرجعها الخادم. قد لا تكون موجودة، أو قد لا تراها هذه الجلسة. لم يُسجَّل شيء. مسودتك محفوظة.' },
+      rate_limited: { title: 'طلبات كثيرة جدًا', body: 'لم يُسجَّل شيء. حاول بعد دقيقة. مسودتك محفوظة.' },
+      unavailable: { title: 'لم يتأكد التسجيل', body: 'لم نتمكن من التأكد من تسجيل القرار. راجع قائمة القرارات قبل المحاولة مرة أخرى. مسودتك محفوظة.' },
+      error: { title: 'أجاب الخادم بخطأ', body: 'لا تفترض أن القرار سُجّل: راجع قائمة القرارات قبل المحاولة مرة أخرى. مسودتك محفوظة.' },
+      citationsChanged: { title: 'لم يعد أحد السجلات المُستشهد بها مُدرجًا', body: 'أُزيل من اختيارك. راجع السجلات المُستشهد بها ثم سجّل مرة أخرى. لم يُرسل شيء. مسودتك محفوظة.' },
     },
   },
 };
