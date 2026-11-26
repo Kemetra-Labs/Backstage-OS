@@ -83,8 +83,27 @@ describe('GET /investigations/:id fixture (BACK-98)', () => {
   });
 });
 
+/** A GET /decisions page: exactly `items` and `nextCursor` (null on the last page, else an opaque string). */
+function isDecisionPage(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return false;
+  const b = v as Rec;
+  const cursor = b['nextCursor'];
+  return Array.isArray(b['items']) && (cursor === null || (typeof cursor === 'string' && cursor.length > 0))
+    && Object.keys(b).sort().join() === ['items', 'nextCursor'].join();
+}
+
 describe('GET /decisions fixture (BACK-98)', () => {
   const items = DECISIONS.items as Rec[];
+
+  it('the body is one page: exactly items and nextCursor, null here because the seed fits one page', () => {
+    expect(isDecisionPage(DECISIONS)).toBe(true);
+    expect(DECISIONS.nextCursor).toBeNull();
+    expect(isDecisionPage({ items })).toBe(false);
+    expect(isDecisionPage({ ...DECISIONS, nextCursor: '' })).toBe(false);
+    expect(isDecisionPage({ ...DECISIONS, nextCursor: 1 })).toBe(false);
+    expect(isDecisionPage({ ...DECISIONS, extra: 1 })).toBe(false);
+    expect(isDecisionPage({ ...DECISIONS, nextCursor: 'opaque' })).toBe(true);
+  });
 
   it('every item has exactly the decision record shape, with creator and time', () => {
     expect(items.length).toBeGreaterThan(0);

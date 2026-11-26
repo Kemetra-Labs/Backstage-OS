@@ -101,12 +101,12 @@ async function bodies() {
   const items = await evidence.list(seed.workspaceId, seed.userId, {}); // EvidenceController.list
   const investigation = await new InvestigationRepository(app).get(seed.workspaceId, seed.userId, seed.investigationId);
   const invEvidence = await evidence.list(seed.workspaceId, seed.userId, { investigationId: seed.investigationId });
-  const decisions = await evidence.recentDecisions(seed.workspaceId, seed.userId, { limit: 20 }); // default limit
+  const decisions = await evidence.recentDecisions(seed.workspaceId, seed.userId, { limit: 20 }); // EvidenceController.decisions, default limit
   return normalise({
     evidence: { items: byRef(items) },
     investigation: { ...investigation, evidence: byRef(invEvidence) }, // InvestigationController.get
-    decisions: { items: decisions },
-  }) as { evidence: { items: { id: string; type: string; state: string }[] }; investigation: { status: string; evidence: unknown[] }; decisions: { items: { createdBy: string | null; citations: string[] }[] } };
+    decisions,
+  }) as { evidence: { items: { id: string; type: string; state: string }[] }; investigation: { status: string; evidence: unknown[] }; decisions: { items: { createdBy: string | null; citations: string[] }[]; nextCursor: string | null } };
 }
 
 describe('evidence, investigation and decision response parity with the app fixtures (BACK-98)', () => {
@@ -128,6 +128,7 @@ describe('evidence, investigation and decision response parity with the app fixt
   it('GET /decisions: creator and time on every decision', async () => {
     const { decisions } = await bodies();
     expect(decisions.items).toHaveLength(1);
+    expect(decisions.nextCursor).toBeNull();
     expect(decisions.items[0]!.createdBy).not.toBeNull();
     expect(decisions.items[0]!.citations).toHaveLength(2);
     matchesFixture('decisions-response.json', decisions);

@@ -20,7 +20,7 @@ import { RequireCapability, WorkspaceGuard, type WorkspaceRequest } from '../aut
 import type { WorkspacePrincipal } from '../auth/workspace-resolver';
 import { decisionBody, noteBody } from './evidence.body';
 import { EvidenceRepository } from './evidence.repository';
-import { DECISION_LIMIT_DEFAULT, DECISION_LIMIT_MAX, NotVisibleError, RefusedError, UUID } from './evidence.types';
+import { DECISION_LIMIT_DEFAULT, DECISION_LIMIT_MAX, NotVisibleError, RefusedError, UUID, type DecisionPage } from './evidence.types';
 
 export const EVIDENCE_REPOSITORY = Symbol('KAWALYS_EVIDENCE_REPOSITORY');
 
@@ -42,6 +42,13 @@ export function decisionLimit(value: unknown): number {
   const n = Number(value);
   if (n < 1 || n > DECISION_LIMIT_MAX) throw new BadRequestException();
   return n;
+}
+
+/** `cursor` is absent (the first page) or one non-empty string; anything else is a 400. Its content is checked later. */
+export function decisionCursor(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || value.length === 0) throw new BadRequestException();
+  return value;
 }
 
 @Controller()
@@ -73,18 +80,30 @@ export class EvidenceController {
   }
 
   /**
-   * Recent human decisions with who recorded them and when (BACK-59), newest first. Read-only. The same
-   * visibility as GET /evidence: an invisible decision is absent. A malformed or repeated
-   * `investigationId` matches nothing, like the GET /evidence filter; a bad `limit` is a 400.
+   * Recent human decisions with who recorded them and when (BACK-59), newest first, one page at a time.
+   * Read-only. The same visibility as GET /evidence on every page: an invisible decision is absent. A malformed
+   * or repeated `investigationId` matches nothing, like the GET /evidence filter; a bad `limit`, or a `cursor`
+   * that is malformed, repeated or was issued for another query, is a 400. The cursor is checked first, so a
+   * malformed `investigationId` with any cursor is a 400 too (no cursor is ever issued for it).
    */
   @Get('decisions')
   @RequireCapability('evidence.read')
-  async decisions(@Req() req: Req, @Query() query: Record<string, unknown>) {
+  async decisions(@Req() req: Req, @Query() query: Record<string, unknown>): Promise<DecisionPage> {
     const limit = decisionLimit(query['limit']);
+    const cursor = decisionCursor(query['cursor']);
     const investigationId = optionalId(query['investigationId']);
-    if (investigationId === null) return { items: [] };
+    if (investigationId === null) {
+      // No cursor is ever issued for a repeated filter, so one here is foreign.
+      if (cursor !== undefined) throw new BadRequestException();
+      return { items: [], nextCursor: null };
+    }
     const principal = workspaceOf(req);
-    return { items: await this.repo.recentDecisions(principal.workspaceId, principal.userId, { investigationId, limit }) };
+    try {
+      return await this.repo.recentDecisions(principal.workspaceId, principal.userId, { investigationId, limit, cursor });
+    } catch (err) {
+      if (err instanceof RefusedError) throw new BadRequestException();
+      throw err;
+    }
   }
 
   @Post('investigations/:id/decisions')
