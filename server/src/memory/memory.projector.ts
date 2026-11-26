@@ -1,16 +1,15 @@
-// COG-02 memory projector (BACK-105 S1). A pure function over evidence rows the reader can already see:
-// runs and revisions (D2), status from row state, failed reads, absence and TTL (D3), full-set answers
-// with a bounded history list (D3a), a canonical fingerprint (D5) and the purge horizon (D6).
-// It writes nothing, reads nothing and decides no permission. Not wired to any route (COG-07 owns that).
+// COG-02 memory projector (BACK-105). Pure functions over evidence the reader can already see: runs and
+// revisions (D2), status from row state, failed reads, absence and TTL (D3), full-set answers with a
+// bounded history list (D3a), a canonical fingerprint (D5) and the purge horizon (D6).
+// `project(rows)` collapses raw rows first; `projectCollapsed(input)` takes what the S2 SQL returns.
+// It writes nothing and decides no permission. Not wired to any route (COG-07 owns that).
 // Design: docs/planning/BACK-105/cog-02-design.md.
 import { sha256 } from './memory.canonical';
+import { collapse, type CollapsedInput, type Marker, type RunRecord } from './memory.collapse';
 import {
   coveringFailureRefs,
   HISTORY_CAP,
-  isGithubHead,
-  isItemKind,
   isProvider,
-  MARKER_KINDS,
   MEMORY_POLICY_VERSION,
   scopeReadOf,
   scopeRoot,
@@ -18,13 +17,12 @@ import {
   TTL_MS,
   type ItemKind,
 } from './memory.policy';
-import { buildRuns, currentOf, iso, maxOf, ms, obsOrder, toObs, toRun, type Obs, type RunAcc } from './memory.runs';
+import { currentOf, iso, maxOf, ms, runInfoOrder, toInfo, toRun, type RunInfo } from './memory.runs';
 import type { FactStatus, MemoryItem, MemoryProjection, MemoryRequest, MemoryRow, MemorySource, Run } from './memory.types';
 
 const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
-const kindOf = (r: MemoryRow): unknown => r.payload['kind'];
 
-/** A row with its observed time parsed once. Lists of these are kept sorted by (t, id). */
+/** A marker row with its observed time parsed once. */
 interface Timed {
   readonly row: MemoryRow;
   readonly t: number;
@@ -38,15 +36,15 @@ interface Clocks {
   readonly now: number;
 }
 
-/** Everything about one source that item judgements look up, built once per projection. */
+/** The read markers of one source, keyed for the item judgements. */
 interface SourceIndex {
   readonly source: MemorySource;
   readonly horizon: number | null;
-  readonly failuresByRef: ReadonlyMap<string, readonly Timed[]>;
-  readonly listPagesByRef: ReadonlyMap<string, readonly Timed[]>;
-  readonly itemsByRoot: ReadonlyMap<string, readonly Timed[]>;
-  /** GitHub only: the lowest-id row of each batch with more than one repository-level row. */
-  readonly ambiguousBatches: readonly Timed[];
+  readonly failureByRef: ReadonlyMap<string, Timed>;
+  readonly pageByRef: ReadonlyMap<string, Timed>;
+  readonly scopeByRoot: ReadonlyMap<string, Timed>;
+  /** GitHub only: one row per batch with more than one repository-level row, oldest first. */
+  readonly ambiguous: readonly Timed[];
 }
 
 interface Signal {
@@ -57,37 +55,31 @@ interface Signal {
 const STALE = 1;
 const UNKNOWN = 2;
 
-function pushTo<K>(map: Map<K, Timed[]>, key: K, value: Timed): void {
-  const list = map.get(key);
-  if (list) list.push(value);
-  else map.set(key, [value]);
+/** Keep the newest per key; equal instants keep the highest id (failures, pages) as collapse() does. */
+function newestBy(map: Map<string, Timed>, key: string, v: Timed): void {
+  const prev = map.get(key);
+  if (!prev || timedOrder(prev, v) < 0) map.set(key, v);
 }
-const sortAll = <K>(map: Map<K, Timed[]>): Map<K, Timed[]> => {
-  for (const list of map.values()) list.sort(timedOrder);
-  return map;
-};
 
-function indexSource(source: MemorySource, rows: readonly MemoryRow[]): SourceIndex {
-  const failures = new Map<string, Timed[]>();
-  const pages = new Map<string, Timed[]>();
-  const items = new Map<string, Timed[]>();
-  const heads = new Map<string, Timed[]>();
-  for (const row of rows) {
-    const timed = { row, t: ms(row.observedAt, `row ${row.id} observedAt`) };
-    const kind = kindOf(row);
-    if (kind === 'source_status' && row.state !== 'ok') pushTo(failures, row.sourceRef, timed);
-    if (kind === 'list_page' && row.state === 'ok') pushTo(pages, row.sourceRef, timed);
-    if (isItemKind(kind) && (row.state === 'ok' || row.state === 'stale')) pushTo(items, scopeRoot(row.sourceRef), timed);
-    if (source.provider === 'github' && isGithubHead(row.sourceRef, kind)) pushTo(heads, `${row.receivedAt}|${row.observedAt}`, timed);
+function indexSource(source: MemorySource, markers: readonly Marker[]): SourceIndex {
+  const failureByRef = new Map<string, Timed>();
+  const pageByRef = new Map<string, Timed>();
+  const scopeByRoot = new Map<string, Timed>();
+  const ambiguous: Timed[] = [];
+  for (const m of markers) {
+    const timed = { row: m.row, t: ms(m.row.observedAt, `marker ${m.row.id}`) };
+    if (m.role === 'failure') newestBy(failureByRef, m.row.sourceRef, timed);
+    else if (m.role === 'list_page') newestBy(pageByRef, m.row.sourceRef, timed);
+    else if (m.role === 'scope_item') scopeByRoot.set(scopeRoot(m.row.sourceRef), timed);
+    else ambiguous.push(timed);
   }
-  const ambiguous = [...heads.values()].filter((b) => b.length > 1).map((b) => [...b].sort(timedOrder)[0]!);
   return {
     source,
     horizon: source.purgeHorizon === null ? null : ms(source.purgeHorizon, `purge horizon of ${source.sourceId}`),
-    failuresByRef: sortAll(failures),
-    listPagesByRef: sortAll(pages),
-    itemsByRoot: sortAll(items),
-    ambiguousBatches: ambiguous.sort(timedOrder),
+    failureByRef,
+    pageByRef,
+    scopeByRoot,
+    ambiguous: ambiguous.sort(timedOrder),
   };
 }
 
@@ -95,19 +87,14 @@ function indexSource(source: MemorySource, rows: readonly MemoryRow[]): SourceIn
 function laterScopeRead(ix: SourceIndex, kind: ItemKind, ref: string, lastSeen: number): Timed | undefined {
   const scope = scopeReadOf(kind, ref);
   if (scope === null) return undefined;
-  if (scope.by === 'list_page') {
-    const top = ix.listPagesByRef.get(scope.ref)?.at(-1);
-    return top && top.t > lastSeen ? top : undefined;
-  }
-  const list = (ix.itemsByRoot.get(scopeRoot(ref)) ?? []).filter((x) => x.row.sourceRef.startsWith(scope.prefix));
-  const top = list.at(-1);
+  const top = scope.by === 'list_page' ? ix.pageByRef.get(scope.ref) : ix.scopeByRoot.get(scopeRoot(ref));
   if (!top || top.t <= lastSeen) return undefined;
-  // The batch-defining marker is the lowest id observed at that instant: input-order free.
-  return list.find((x) => x.t === top.t);
+  if (scope.by === 'items' && !top.row.sourceRef.startsWith(scope.prefix)) return undefined;
+  return top;
 }
 
 function failureSignal(ix: SourceIndex, kind: ItemKind, ref: string, lastSeen: number, scopeRead: Timed | undefined): Signal | null {
-  const tops = [...coveringFailureRefs(ix.source.provider, kind, ref)].flatMap((r) => ix.failuresByRef.get(r)?.at(-1) ?? []);
+  const tops = [...coveringFailureRefs(ix.source.provider, kind, ref)].flatMap((r) => ix.failureByRef.get(r) ?? []);
   const failure = tops.sort(timedOrder).at(-1);
   if (!failure || failure.t <= lastSeen) return null;
   // A later successful read of the scope supersedes the failure; absence then decides.
@@ -118,7 +105,7 @@ function failureSignal(ix: SourceIndex, kind: ItemKind, ref: string, lastSeen: n
 
 /** GitHub: a batch with several repository-level rows cannot be told apart (summarizeSource). */
 function ambiguitySignal(ix: SourceIndex, lastSeen: number, scopeRead: Timed | undefined): Signal | null {
-  const top = ix.ambiguousBatches.at(-1);
+  const top = ix.ambiguous.at(-1);
   if (!top || top.t < lastSeen) return null;
   // A later clean read of the scope supersedes it, as for a failure.
   if (scopeRead && scopeRead.t > top.t) return null;
@@ -148,8 +135,8 @@ const decide = (signals: readonly (Signal | null)[], current: Run | null): Judge
 
 const fixed = (status: FactStatus, reason: string): Judged => ({ status, reason, current: null, markers: [] });
 
-function judge(ix: SourceIndex, kind: ItemKind, ref: string, obs: readonly Obs[], runs: readonly RunAcc[], c: Clocks): Judged {
-  const lastSeen = maxOf(obs.map((o) => o.observed));
+function judge(ix: SourceIndex, kind: ItemKind, ref: string, runs: readonly RunInfo[], c: Clocks): Judged {
+  const lastSeen = maxOf(runs.map((r) => r.lastObserved));
   const scopeRead = laterScopeRead(ix, kind, ref, lastSeen);
   // Precedence for the reason: ambiguous batch (it may contain the failure row itself, as in
   // summarizeSource), failed read, row state, absence, TTL (D3). Unknown outranks everything else.
@@ -165,8 +152,8 @@ function judge(ix: SourceIndex, kind: ItemKind, ref: string, obs: readonly Obs[]
   if (outcome.kind === 'conflict') return fixed('conflict', 'same-order-key-different-content');
   if (outcome.kind === 'ambiguous') return fixed('unknown', 'ambiguous_read');
   if (outcome.kind === 'unreadable') return fixed('unknown', 'unreadable-order-key');
-  const current = toRun(outcome.run, kind);
-  const ttlExpired = c.evaluation >= ms(current.lastObservedAt, 'run') + TTL_MS[ix.source.provider];
+  const current = toRun(outcome.run);
+  const ttlExpired = c.evaluation >= outcome.run.lastObserved + TTL_MS[ix.source.provider];
   return decide(
     [
       ambiguity,
@@ -193,22 +180,19 @@ function sourcesOf(req: MemoryRequest): Map<string, MemorySource> {
   return new Map(req.sources.map((s) => [s.sourceId, s]));
 }
 
-const runOrder = (a: Run, b: Run): number =>
-  byCodeUnit(a.firstObservedAt, b.firstObservedAt) || byCodeUnit(a.firstKnownAt, b.firstKnownAt) || byCodeUnit(a.firstEvidenceId, b.firstEvidenceId);
-
-function buildItem(ix: SourceIndex, ref: string, kind: ItemKind, group: readonly MemoryRow[], c: Clocks, cap: number): { item: MemoryItem; markers: readonly string[] } {
-  const obs = group.map((r) => toObs(kind, r)).sort(obsOrder);
-  const runs = buildRuns(obs, ix.horizon);
-  const judged = judge(ix, kind, ref, obs, runs, c);
-  const all = runs.map((r) => toRun(r, kind)).sort(runOrder);
+function buildItem(ix: SourceIndex, records: readonly RunRecord[], c: Clocks, cap: number): { item: MemoryItem; markers: readonly string[] } {
+  const first = records[0]!;
+  const runs = records.map(toInfo).sort(runInfoOrder);
+  const judged = judge(ix, first.kind, first.sourceRef, runs, c);
+  const all = runs.map(toRun);
   const history = all.slice(-cap);
   const item: MemoryItem = {
-    sourceId: ix.source.sourceId,
-    sourceRef: ref,
-    kind,
+    sourceId: first.sourceId,
+    sourceRef: first.sourceRef,
+    kind: first.kind,
     status: judged.status,
     reason: judged.reason,
-    orderedBy: kind === 'repository' ? 'latest-read' : 'provider',
+    orderedBy: first.kind === 'repository' ? 'latest-read' : 'provider',
     current: judged.current,
     history,
     historyInfo: { complete: all.length === history.length && ix.horizon === null, runsReturned: history.length, runsTotal: all.length },
@@ -216,35 +200,35 @@ function buildItem(ix: SourceIndex, ref: string, kind: ItemKind, group: readonly
   return { item, markers: judged.markers };
 }
 
-/** Project visible evidence rows into memory items. Deterministic: input order never matters. */
-export function project(rows: readonly MemoryRow[], req: MemoryRequest): MemoryProjection {
+/** Project already-collapsed input (what the S2 SQL statement returns). Deterministic. */
+export function projectCollapsed(input: CollapsedInput, req: MemoryRequest): MemoryProjection {
   const c = clocksOf(req);
   const cap = req.historyCap ?? HISTORY_CAP;
   if (!Number.isSafeInteger(cap) || cap < 1) throw new RangeError('memory: historyCap must be a positive integer');
   const sources = sourcesOf(req);
 
-  const bySource = new Map<string, MemoryRow[]>();
-  const groups = new Map<string, MemoryRow[]>();
-  for (const r of rows) {
-    const kind = kindOf(r);
-    if (r.type !== 'Observation' || !sources.has(r.sourceId) || !(isItemKind(kind) || MARKER_KINDS.has(kind as string))) continue;
-    if (ms(r.receivedAt, `row ${r.id} receivedAt`) > c.known) continue;
-    const perSource = bySource.get(r.sourceId);
-    if (perSource) perSource.push(r);
-    else bySource.set(r.sourceId, [r]);
-    if (!isItemKind(kind)) continue;
-    const key = JSON.stringify([r.sourceId, r.sourceRef, kind]);
-    const group = groups.get(key);
-    if (group) group.push(r);
+  const markersBySource = new Map<string, Marker[]>();
+  for (const m of input.markers) {
+    if (!sources.has(m.row.sourceId)) continue;
+    const list = markersBySource.get(m.row.sourceId);
+    if (list) list.push(m);
+    else markersBySource.set(m.row.sourceId, [m]);
+  }
+  const indexes = new Map([...sources.values()].map((s) => [s.sourceId, indexSource(s, markersBySource.get(s.sourceId) ?? [])]));
+
+  const groups = new Map<string, RunRecord[]>();
+  for (const r of input.runs) {
+    if (!sources.has(r.sourceId)) continue;
+    const key = JSON.stringify([r.sourceId, r.sourceRef, r.kind]);
+    const g = groups.get(key);
+    if (g) g.push(r);
     else groups.set(key, [r]);
   }
 
-  const indexes = new Map([...bySource].map(([id, list]) => [id, indexSource(sources.get(id)!, list)]));
   const markers = new Set<string>();
   const items: MemoryItem[] = [];
-  for (const [key, group] of groups) {
-    const [sourceId, ref, kind] = JSON.parse(key) as [string, string, ItemKind];
-    const built = buildItem(indexes.get(sourceId)!, ref, kind, group, c, cap);
+  for (const records of groups.values()) {
+    const built = buildItem(indexes.get(records[0]!.sourceId)!, records, c, cap);
     built.markers.forEach((m) => markers.add(m));
     items.push(built.item);
   }
@@ -260,6 +244,13 @@ export function project(rows: readonly MemoryRow[], req: MemoryRequest): MemoryP
     historyCap: cap,
     clocks,
   };
+}
+
+/** Project visible evidence rows into memory items. Deterministic: input order never matters. */
+export function project(rows: readonly MemoryRow[], req: MemoryRequest): MemoryProjection {
+  clocksOf(req);
+  sourcesOf(req);
+  return projectCollapsed(collapse(rows, req), req);
 }
 
 function fingerprintOf(items: readonly MemoryItem[], req: MemoryRequest, cap: number, clocks: MemoryProjection['clocks'], markers: ReadonlySet<string>): string {

@@ -110,13 +110,21 @@ describe('memory module is pure and not exposed', () => {
       .filter((e) => e.isFile() && e.name.endsWith('.ts'))
       .map((e) => join(e.parentPath, e.name));
 
-  it.each(files(MEMORY).map((f) => [f.slice(SRC.length + 1).replaceAll('\\', '/'), f]))('%s imports only memory, evidence types and node:crypto', (_name, file) => {
+  it('only the S2 read files may use the database, and the projector core never imports them', () => {
+    const core = files(MEMORY).filter((f) => !/memory\.(?:repository|sql)\.ts$/.test(f));
+    for (const f of core) expect([f, /from\s*['"]\.\/memory\.(?:repository|sql)['"]/.test(readFileSync(f, 'utf8'))]).toEqual([f, false]);
+  });
+
+  it.each(files(MEMORY).map((f) => [f.slice(SRC.length + 1).replaceAll('\\', '/'), f]))('%s imports only memory, evidence types and node:crypto (plus the database for the S2 read)', (_name, file) => {
     const text = readFileSync(file, 'utf8');
     const specifiers = [
       ...text.matchAll(/\bfrom\s*['"`]([^'"`]+)['"`]|^\s*import\s*['"`]([^'"`]+)['"`]|\bimport\s*\(\s*['"`]?([^'"`)]*)|\brequire\s*\(/gm),
     ].map((m) => m[1] ?? m[2] ?? m[3] ?? 'require');
-    const allowed = /^(?:\.\/memory\.[a-z]+|\.\.\/evidence\/evidence\.types|node:crypto)$/;
-    expect(specifiers.filter((s) => !allowed.test(s))).toEqual([]);
+    const pure = /^(?:\.\/memory\.[a-z]+|\.\.\/evidence\/evidence\.types|node:crypto)$/;
+    // Only the S2 read may touch the database: the pg types, the workspace context and the visibility rule.
+    const db = /^(?:pg|\.\.\/db\/workspace-context|\.\.\/evidence\/visibility)$/;
+    const isDbFile = /memory\.(?:repository|sql)\.ts$/.test(file);
+    expect(specifiers.filter((s) => !(pure.test(s) || (isDbFile && db.test(s))))).toEqual([]);
     expect(text).not.toMatch(/\bfetch\b|\bprocess\b|\bglobalThis\b|\bMath\.random\b|\bDate\.now\b|\bnew Date\(\s*\)|\bset(?:Timeout|Interval|Immediate)\b/);
   });
 
