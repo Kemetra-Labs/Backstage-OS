@@ -15,6 +15,8 @@ shell and every screen, all reading **one** synthetic world:
 | `#/agents`, `#/sources` | Agent activity and Source health, demo only |
 
 Review seed: `?persona=owner|technical|nontechnical&lang=en|ar`, kept in the URL across navigation.
+Portfolio forced connector error (BACK-62): `?github=error|denied|timeout|malformed|empty` shows the GitHub reads panel for that
+failure form, built in memory from the synthetic fixture (nothing is requested).
 
 **Demo data only.** No backend, auth, real API, credentials, AI calls or agents. Every link is inert.
 
