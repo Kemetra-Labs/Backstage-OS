@@ -39,11 +39,28 @@ The script now also reports the plan nodes with the most exclusive time (`plan.t
 
 - The time is in the window pipeline over **all** the reader's rows (`items`, `marked`, `numbered`): sorts and `WindowAgg`. It is not in the index scan or the grant join.
 - `numbered` is consumed three times (`run_agg`, `run_first`, `run_last`), and each consumer sorts or aggregates the same rows again. That is visible redundancy in the statement.
-- **Untested:** that folding the three consumers into one pass would save a given amount. Whatever it saves, the cost stays linear in the rows read; only bounding the rows read per identity or a cache breaks that.
+- Folding the three consumers into one pass was then tried: see the next section. It did not help.
+
+### Single-pass experiment (`MEASURE_VARIANT=single-pass`): no gain
+
+Hypothesis from the plan: `numbered` is sorted again by `run_first` and `run_last`, so finding each run's first and last row with `lead()` on the window that already orders the rows should remove two sorts. The script builds the variant from the text of the production statement (it fails if that text changes shape) and `src/memory/memory.sql.ts` is untouched. The variant is not used by the product.
+
+| scenario | variant output | production p50 | variant p50 | production exec (EXPLAIN) | variant exec (EXPLAIN) |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `pilot-7d` (8 iterations, alternating) | identical, 969 rows | 1.30 s | 1.38 s | 1.35 s | 1.54 s |
+| `retention-180d` (3 iterations, alternating) | identical, 21,729 rows | 37.4 s | 150.0 s | 39.1 s | 184.6 s |
+
+- **Output equality is checked row by row** (every returned row except the clock row, as sorted JSON, equal in both directions), so the variant computes the same answer. It is just not faster.
+- **First attempt, kept for the record:** filtering `numbered` directly for the first and last rows made the planner nest-loop join the run pieces and rescan the 81,312-row CTE 961 times: 12.2 s against 1.4 s on the pilot. The version above keeps only the boundary rows (about two per run) in a small CTE `bounds` first.
+- **Pilot:** with a sane plan the variant is about 6% slower, so removing the extra sorts does not pay. The extra `lead()` pass and the `bounds` scans cost what the sorts saved.
+- **180 days:** 4 times slower. The planner again chose nested loops over `bounds` (43,441 rows against 21,721 runs), which dominate the plan (a `CTE Scan` of `bounds` alone is 120 s). The sort spill did drop (559,768 to 486,083 temp blocks) and did not matter.
+- **Not tried:** forcing hash joins (for example `SET LOCAL enable_nestloop = off`) or a different decomposition (one `GROUP BY` with ordered aggregates). The pilot result, where the plan was sane and the time did not improve, is the evidence against expecting a gain from removing the sorts. It is not a proof that no rewrite helps.
+
+**Conclusion:** a single-pass rewrite of this shape is not a mitigation. The cost is the window pipeline over every row the reader owns (result 1 above), which this does not change.
 
 ### Not measured
 
-- Per-node time free of double counting, and a node breakdown at 180 days. Result 3 says only that the cost is CPU per row rather than spill.
+- Per-node time free of double counting, and a node breakdown at 180 days for the production statement. Result 3 says only that the cost is CPU per row rather than spill.
 - Concurrent readers, the ingest rate while reading, a cold cache (the first read after a restart) and a production-sized instance.
 - Absolute milliseconds on other hardware. The shape (linear in rows) transfers, the constants do not.
 
@@ -70,7 +87,7 @@ D6: a cache table "only if S3 measures a projection read above **500 ms p95**. I
 The trigger is met, so the choice goes to the owner. What the numbers add:
 
 - **A cache table (D6)** removes the read cost, and needs a migration, an invalidation rule (every ingest, revoke, re-grant and policy change, which D1 listed as the reason not to start with one) and an owner decision. The fingerprint key was designed for it.
-- **Reducing the statement's work without a schema change** is not shown to be possible by these numbers. Result 3 rules out `work_mem`. The plan shows `numbered` consumed three times, so a single-pass rewrite is a candidate, but its gain is untested and stays linear in rows. Bounding the rows read per identity, or returning only the newest runs, may help the transfer (result 4); a new index would be a migration too.
+- **Reducing the statement's work without a schema change** is not shown to be possible by these numbers. Result 3 rules out `work_mem`. A single-pass rewrite of the run pieces was tried and gave no gain (equal output, 6% slower on the pilot and 4 times slower at 180 days), so it is not a candidate in that form. Bounding the rows read per identity, or returning only the newest runs, may help the transfer (result 4); a new index would be a migration too.
 - **Retention (BACK-47 item 6, open)** changes the problem size: the 180-day recommendation is the 38 s case, a 7-day window is the 1.3 s case. Neither is below 500 ms.
 - **Not an option from these numbers:** serving this read on a request path (COG-07) as it is. At the pilot scale alone it is 2.8 times over the trigger.
 

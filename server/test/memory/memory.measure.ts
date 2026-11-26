@@ -157,11 +157,11 @@ function exclusiveTimes(root: PlanNode): { node: string; exclusiveMs: number; ro
   return out;
 }
 
-async function explain(h: StoreHarness, s: Seeded, userId: string, workMem?: string): Promise<PlanSummary> {
+async function explain(h: StoreHarness, s: Seeded, userId: string, workMem?: string, sql: string = MEMORY_READ_SQL): Promise<PlanSummary> {
   const [row] = await runWithWorkspaceContext(h.db.app, s.workspaceId, async (c) => {
     // Diagnostic only: the transaction-local setting is not applied by the production read.
     if (workMem) await c.query(`SET LOCAL work_mem = '${workMem}'`);
-    const res = await c.query<{ 'QUERY PLAN': Record<string, unknown>[] }>(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${MEMORY_READ_SQL}`, [userId, s.projectId, null, ITEM_KIND_LIST, [], []]);
+    const res = await c.query<{ 'QUERY PLAN': Record<string, unknown>[] }>(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${sql}`, [userId, s.projectId, null, ITEM_KIND_LIST, [], []]);
     return res.rows;
   });
   const top = row!['QUERY PLAN'][0] as unknown as { Plan: PlanNode & Record<string, number>; 'Execution Time': number; 'Planning Time': number };
@@ -182,6 +182,79 @@ async function sizes(admin: pg.Pool): Promise<{ evidenceRows: number; tableMb: n
     `SELECT (SELECT count(*) FROM kawalys.evidence)::text AS n, pg_table_size('kawalys.evidence')::text AS t, pg_indexes_size('kawalys.evidence')::text AS i`,
   );
   return { evidenceRows: Number(rows[0]!.n), tableMb: Math.round(Number(rows[0]!.t) / 1048576), indexesMb: Math.round(Number(rows[0]!.i) / 1048576) };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Experiment (MEASURE_VARIANT=single-pass): the production statement consumes the CTE `numbered`
+// three times (run_agg, run_first, run_last), and run_first/run_last each sort it again. A run's first
+// row is the row with starts = 1 and its last row is the row whose successor starts a run, so both are
+// found with lead() on the window that already orders the rows, with no further sort. The variant is
+// derived from MEMORY_READ_SQL by text substitution (it fails loudly if the production statement
+// changes shape) and is NOT used by the product: src/memory/memory.sql.ts is untouched.
+const IDENT = 'source_id, source_ref, kind';
+const ORD = 'obs, rcv, id';
+
+export function singlePassSql(base: string = MEMORY_READ_SQL): string {
+  const runNo = `sum(starts) OVER (PARTITION BY ${IDENT} ORDER BY ${ORD} ROWS UNBOUNDED PRECEDING) AS run_no`;
+  if (!base.includes(runNo)) throw new Error('variant: production statement changed shape (run_no)');
+  const withLead = base.replace(runNo, `${runNo},\n         lead(starts) OVER (PARTITION BY ${IDENT} ORDER BY ${ORD}) AS next_starts`);
+  const from = withLead.indexOf('run_first AS (');
+  const to = withLead.indexOf('failures AS (');
+  if (from < 0 || to < from) throw new Error('variant: production statement changed shape (run_first..failures)');
+  // `bounds` keeps only each run's first and last row (about two rows per run), so joining the run
+  // pieces never rescans the full `numbered` set: the planner has no statistics on a filtered CTE.
+  const boundaries = `bounds AS (
+  SELECT ${IDENT}, run_no, id, obs, rcv, state, payload, starts, next_starts FROM numbered
+   WHERE starts = 1 OR next_starts IS NULL OR next_starts = 1
+),
+run_first AS (
+  SELECT ${IDENT}, run_no, id AS first_id, obs AS first_obs, rcv AS first_row_rcv FROM bounds WHERE starts = 1
+),
+run_last AS (
+  SELECT ${IDENT}, run_no, id AS last_id, obs AS last_obs, rcv AS last_row_rcv, state AS last_state, payload AS last_payload
+    FROM bounds WHERE next_starts IS NULL OR next_starts = 1
+),
+`;
+  return withLead.slice(0, from) + boundaries + withLead.slice(to);
+}
+
+async function rawRows(h: StoreHarness, s: Seeded, userId: string, sql: string): Promise<{ rows: Record<string, unknown>[]; ms: number }> {
+  const t0 = performance.now();
+  const rows = await runWithWorkspaceContext(h.db.app, s.workspaceId, async (c) => (await c.query(sql, [userId, s.projectId, null, ITEM_KIND_LIST, [], []])).rows as Record<string, unknown>[]);
+  return { rows, ms: performance.now() - t0 };
+}
+
+/** UTF-16 code-unit order, the same order the default sort uses, stated explicitly: no locale dependence (localeCompare would add one). */
+const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+/** Every returned row but the clock row, as sorted JSON lines: equal lines mean equal statements. */
+const canonicalRows = (rows: readonly Record<string, unknown>[]): string[] => rows.filter((r) => r.role !== 'clock').map((r) => JSON.stringify(r)).sort(byCodeUnit);
+
+async function runVariant(h: StoreHarness, s: Seeded, userId: string): Promise<Record<string, unknown>> {
+  const variant = singlePassSql();
+  const a = await rawRows(h, s, userId, MEMORY_READ_SQL);
+  const b = await rawRows(h, s, userId, variant);
+  const ca = canonicalRows(a.rows);
+  const cb = canonicalRows(b.rows);
+  const identical = ca.length === cb.length && ca.every((line, i) => line === cb[i]);
+  const baseline: number[] = [];
+  const candidate: number[] = [];
+  // Alternate the two statements so drift (cache, noise) hits both equally.
+  for (let i = 0; i < ITERATIONS; i += 1) {
+    baseline.push((await rawRows(h, s, userId, MEMORY_READ_SQL)).ms);
+    candidate.push((await rawRows(h, s, userId, variant)).ms);
+  }
+  return {
+    name: 'single-pass',
+    identicalToProduction: identical,
+    rows: ca.length,
+    rowsOnlyInProduction: ca.filter((x) => !new Set(cb).has(x)).length,
+    rowsOnlyInVariant: cb.filter((x) => !new Set(ca).has(x)).length,
+    productionMs: stats(baseline),
+    variantMs: stats(candidate),
+    productionPlan: await explain(h, s, userId),
+    variantPlan: await explain(h, s, userId, undefined, variant),
+  };
 }
 
 async function runScenario(s: Scenario): Promise<Record<string, unknown>> {
@@ -249,8 +322,9 @@ async function runScenario(s: Scenario): Promise<Record<string, unknown>> {
     }
     const plan = await explain(h, reader, ids.owner);
     const planWorkMem256 = await explain(h, reader, ids.owner, '256MB');
+    const variant = process.env.MEASURE_VARIANT === 'single-pass' ? await runVariant(h, reader, ids.owner) : undefined;
     if (Number(shape.items ?? 0) === 0) throw new Error(`${s.name}: the read returned no items; the seed is wrong`);
-    return { scenario: s.name, description: s.description, readerRows: reader.rows, noiseRows, seedSeconds, table, shape, iterations: ITERATIONS, ms: { sql: stats(sql), project: stats(project), total: stats(total) }, plan, planWorkMem256 };
+    return { scenario: s.name, description: s.description, readerRows: reader.rows, noiseRows, seedSeconds, table, shape, iterations: ITERATIONS, ms: { sql: stats(sql), project: stats(project), total: stats(total) }, plan, planWorkMem256, ...(variant ? { variant } : {}) };
   } finally {
     await stopStore(h);
   }
