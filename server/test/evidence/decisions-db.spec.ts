@@ -9,7 +9,7 @@ import type { WorkspacePrincipal, WorkspaceResolver } from '../../src/auth/works
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { EvidenceController } from '../../src/evidence/evidence.controller';
 import type { EvidenceRepository } from '../../src/evidence/evidence.repository';
-import { DECISION_LIMIT_DEFAULT, DECISION_LIMIT_MAX } from '../../src/evidence/evidence.types';
+import { DECISION_LIMIT_DEFAULT, DECISION_LIMIT_MAX, RefusedError } from '../../src/evidence/evidence.types';
 import { sqlState } from '../db/pg-container';
 import { expectNotFound, expectSessionRequired, startOwnerApp, type OwnerApp } from '../db/owner-app';
 
@@ -110,14 +110,14 @@ describe('visibility: invisible is absent', () => {
     const d = await evidence.recordDecision(ws, owner, { investigationId: inv, decision: 'x', rationale: 'y', evidenceIds: [] }, null);
     expect(ids(await get({ investigationId: inv }))).toEqual([d]);
     await evidence.disconnectSource(ws, owner, src);
-    expect(await get({ investigationId: inv }).then((r) => r.body)).toEqual({ items: [] });
+    expect(await get({ investigationId: inv }).then((r) => r.body)).toEqual({ items: [], nextCursor: null });
     expect(ids(await get({ limit: String(DECISION_LIMIT_MAX) }))).not.toContain(d);
   });
 
   it('a user without any grant sees no decisions', async () => {
     const stranger = randomUUID();
     await db.admin.query('INSERT INTO kawalys.users (id) VALUES ($1)', [stranger]);
-    expect(await evidence.recentDecisions(ws, stranger, { limit: DECISION_LIMIT_MAX })).toEqual([]);
+    expect(await evidence.recentDecisions(ws, stranger, { limit: DECISION_LIMIT_MAX })).toEqual({ items: [], nextCursor: null });
   });
 
   it("another workspace's decisions never appear, even filtered by their investigation id", async () => {
@@ -132,8 +132,8 @@ describe('visibility: invisible is absent', () => {
     await evidence.connectSource(otherWs, otherOwner, { projectId: p, provider: 'github', externalRef: 'kemetra-labs/theirs' });
     const inv = await evidence.createInvestigation(otherWs, otherOwner, { projectId: p, title: 'Theirs' });
     const theirs = await evidence.recordDecision(otherWs, otherOwner, { investigationId: inv, decision: 'x', rationale: 'y', evidenceIds: [] }, null);
-    expect((await evidence.recentDecisions(otherWs, otherOwner, { limit: 5 })).map((d) => d.id)).toEqual([theirs]);
-    expect(await get({ investigationId: inv }).then((r) => r.body)).toEqual({ items: [] });
+    expect((await evidence.recentDecisions(otherWs, otherOwner, { limit: 5 })).items.map((d) => d.id)).toEqual([theirs]);
+    expect(await get({ investigationId: inv }).then((r) => r.body)).toEqual({ items: [], nextCursor: null });
     expect(ids(await get({ limit: String(DECISION_LIMIT_MAX) }))).not.toContain(theirs);
   });
 });
@@ -162,9 +162,226 @@ describe('query parameters', () => {
   });
 
   it('an unknown, malformed or repeated investigationId matches nothing', async () => {
-    expect((await get({ investigationId: '00000000-0000-4000-8000-000000000000' })).body).toEqual({ items: [] });
-    expect((await get({ investigationId: 'not-a-uuid' })).body).toEqual({ items: [] });
-    expect((await get({ investigationId: [investigationId, investigationId] })).body).toEqual({ items: [] });
+    expect((await get({ investigationId: '00000000-0000-4000-8000-000000000000' })).body).toEqual({ items: [], nextCursor: null });
+    expect((await get({ investigationId: 'not-a-uuid' })).body).toEqual({ items: [], nextCursor: null });
+    expect((await get({ investigationId: [investigationId, investigationId] })).body).toEqual({ items: [], nextCursor: null });
+  });
+});
+
+describe('cursor pagination', () => {
+  type Page = { items: { id: string; createdAt: string }[]; nextCursor: string | null };
+  const page = async (query: Record<string, string | string[]>): Promise<Page> => {
+    const res = await get(query);
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body).sort()).toEqual(['items', 'nextCursor']);
+    return res.body as Page;
+  };
+  /** Every page of one query, following nextCursor until it is null. */
+  const walk = async (query: Record<string, string>): Promise<{ pages: Page[]; ids: string[] }> => {
+    const pages: Page[] = [];
+    let cursor: string | null = null;
+    do {
+      const p = await page(cursor === null ? query : { ...query, cursor });
+      pages.push(p);
+      cursor = p.nextCursor;
+      expect(pages.length).toBeLessThan(200);
+    } while (cursor !== null);
+    return { pages, ids: pages.flatMap((p) => p.items.map((d) => d.id)) };
+  };
+  const newInvestigation = (title: string) => evidence.createInvestigation(ws, owner, { projectId, title });
+  const decide = (inv: string, decision: string, evidenceIds: string[] = []) =>
+    evidence.recordDecision(ws, owner, { investigationId: inv, decision, rationale: 'r', evidenceIds }, null);
+  /** `n` decisions in ONE transaction: they share received_at (now() is the transaction time). */
+  const decideTied = (inv: string, n: number): Promise<string[]> =>
+    runWithWorkspaceContext(db.app, ws, async (c) => {
+      const out: string[] = [];
+      for (let i = 0; i < n; i++) {
+        const { rows } = await c.query<{ id: string }>(
+          `INSERT INTO evidence (workspace_id, project_id, source_id, investigation_id, type, state, source_ref, observed_at, payload)
+           VALUES ($1, $2, NULL, $3, 'HumanDecision', 'ok', 'kawalys:decision', now(), $4::jsonb) RETURNING id`,
+          [ws, projectId, inv, JSON.stringify({ decision: `Tied ${i}`, rationale: 'r' })],
+        );
+        await c.query(
+          `INSERT INTO audit_events (workspace_id, actor_user_id, action, target_type, target_id) VALUES ($1, $2, 'decision.recorded', 'evidence', $3)`,
+          [ws, owner, rows[0]!.id],
+        );
+        out.push(rows[0]!.id);
+      }
+      return out;
+    });
+
+  it('walks every page newest first: the pages joined equal one big read, nothing repeated, the last nextCursor null', async () => {
+    const inv = await newInvestigation('Paged');
+    for (let i = 0; i < 15; i++) await decide(inv, `Paged ${i}`);
+    const all = await page({ investigationId: inv, limit: String(DECISION_LIMIT_MAX) });
+    expect(all.items).toHaveLength(15);
+    expect(all.nextCursor).toBeNull();
+    const { pages, ids: walked } = await walk({ investigationId: inv, limit: '4' });
+    expect(pages.map((p) => p.items.length)).toEqual([4, 4, 4, 3]);
+    expect(pages.slice(0, -1).every((p) => typeof p.nextCursor === 'string' && p.nextCursor.length > 0)).toBe(true);
+    expect(walked).toEqual(all.items.map((d) => d.id));
+    expect(new Set(walked).size).toBe(15);
+  });
+
+  it('exactly `limit` decisions answer one page with nextCursor null, and no decisions answer an empty page', async () => {
+    const inv = await newInvestigation('Exact');
+    for (let i = 0; i < 3; i++) await decide(inv, `Exact ${i}`);
+    const p = await page({ investigationId: inv, limit: '3' });
+    expect(p.items).toHaveLength(3);
+    expect(p.nextCursor).toBeNull();
+    expect(await page({ investigationId: await newInvestigation('None') })).toEqual({ items: [], nextCursor: null });
+  });
+
+  it('pages across decisions with the same timestamp one at a time, skipping and repeating none', async () => {
+    const inv = await newInvestigation('Tied');
+    const before = await decide(inv, 'Before the tie');
+    const tied = await decideTied(inv, 5);
+    const after = await decide(inv, 'After the tie');
+    const all = await page({ investigationId: inv, limit: String(DECISION_LIMIT_MAX) });
+    expect(new Set(all.items.slice(1, 6).map((d) => d.createdAt)).size).toBe(1);
+    const { ids: walked } = await walk({ investigationId: inv, limit: '1' });
+    expect(walked).toEqual(all.items.map((d) => d.id));
+    expect(walked[0]).toBe(after);
+    expect(walked.at(-1)).toBe(before);
+    expect(walked.slice(1, 6).sort()).toEqual([...tied].sort());
+    const { ids: byTwo } = await walk({ investigationId: inv, limit: '2' });
+    expect(byTwo).toEqual(walked);
+  });
+
+  it('keeps microseconds in the cursor: decisions in the same millisecond page one at a time, none skipped', async () => {
+    const inv = await newInvestigation('Same millisecond');
+    // The application never sets received_at; only an operator insert can place rows microseconds apart on purpose.
+    const sameMs = await runWithWorkspaceContext(db.admin, ws, async (c) => {
+      const out: string[] = [];
+      for (const at of ['2026-11-20T10:00:00.123100Z', '2026-11-20T10:00:00.123400Z', '2026-11-20T10:00:00.123700Z']) {
+        const { rows } = await c.query<{ id: string }>(
+          `INSERT INTO kawalys.evidence (workspace_id, project_id, source_id, investigation_id, type, state, source_ref, observed_at, received_at, payload)
+           VALUES ($1, $2, NULL, $3, 'HumanDecision', 'ok', 'kawalys:decision', $4, $4, '{"decision":"d","rationale":"r"}') RETURNING id`,
+          [ws, projectId, inv, at],
+        );
+        await c.query(`INSERT INTO kawalys.audit_events (workspace_id, actor_user_id, action, target_type, target_id) VALUES ($1, $2, 'decision.recorded', 'evidence', $3)`, [
+          ws,
+          owner,
+          rows[0]!.id,
+        ]);
+        out.push(rows[0]!.id);
+      }
+      return out;
+    });
+    const { ids: walked } = await walk({ investigationId: inv, limit: '1' });
+    expect(walked).toEqual([...sameMs].reverse());
+  });
+
+  it('walks the whole unfiltered list (decisions microseconds apart in separate transactions) exactly once', async () => {
+    const expected = await runWithWorkspaceContext(db.app, ws, async (c) =>
+      (await c.query<{ n: string }>(`SELECT count(*) AS n FROM evidence WHERE type = 'HumanDecision'`)).rows[0]!.n,
+    );
+    // Every decision in this workspace is visible to the owner here (the hidden ones above were in their own projects).
+    const visible = (await page({ limit: String(DECISION_LIMIT_MAX) })).items.map((d) => d.id);
+    const { ids: walked } = await walk({ limit: '7' });
+    expect(new Set(walked).size).toBe(walked.length);
+    expect(walked.slice(0, visible.length)).toEqual(visible);
+    expect(walked.length).toBeGreaterThan(DECISION_LIMIT_MAX);
+    expect(walked.length).toBeLessThanOrEqual(Number(expected));
+    const { ids: byHundred } = await walk({ limit: String(DECISION_LIMIT_MAX) });
+    expect(byHundred).toEqual(walked);
+  }, 120_000);
+
+  it('applies visibility on every page: a decision hidden after page 1 is absent from page 2, nothing visible is skipped', async () => {
+    const project = await evidence.createProject(ws, owner, { key: 'paged-visibility', name: 'Paged visibility' });
+    await evidence.connectSource(ws, owner, { projectId: project, provider: 'github', externalRef: 'kemetra-labs/paged-kept' });
+    const lost = await evidence.connectSource(ws, owner, { projectId: project, provider: 'github', externalRef: 'kemetra-labs/paged-lost' });
+    const inv = await evidence.createInvestigation(ws, owner, { projectId: project, title: 'Paged visibility' });
+    const cited = await observe(lost, inv, 'github:kemetra-labs/paged-lost#pull/1');
+    const oldest = await decide(inv, 'Oldest');
+    const hidden = await decide(inv, 'Cites lost', [cited]);
+    const second = await decide(inv, 'Second');
+    const newest = await decide(inv, 'Newest');
+    const first = await page({ investigationId: inv, limit: '1' });
+    expect(first.items.map((d) => d.id)).toEqual([newest]);
+    await evidence.disconnectSource(ws, owner, lost);
+    const rest: string[] = [];
+    let cursor = first.nextCursor;
+    while (cursor !== null) {
+      const p = await page({ investigationId: inv, limit: '1', cursor });
+      rest.push(...p.items.map((d) => d.id));
+      cursor = p.nextCursor;
+    }
+    expect(rest).toEqual([second, oldest]);
+    expect(rest).not.toContain(hidden);
+  });
+
+  it('a malformed or repeated cursor is a 400 validation_error, never a silent first page', async () => {
+    const inv = await newInvestigation('Bad cursors');
+    for (let i = 0; i < 3; i++) await decide(inv, `Bad ${i}`);
+    const good = (await page({ investigationId: inv, limit: '1' })).nextCursor!;
+    const json = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
+    const decoded = JSON.parse(Buffer.from(good, 'base64url').toString('utf8')) as Record<string, unknown>;
+    const { v: _v, ...noVersion } = decoded;
+    const bad: (string | string[])[] = [
+      '',
+      'abc',
+      'not base64!',
+      `${good}=`,
+      ` ${good}`,
+      [good, good],
+      json('x'),
+      json([]),
+      json(null),
+      json(noVersion),
+      json({ ...decoded, v: 2 }),
+      json({ ...decoded, extra: 1 }),
+      json({ ...decoded, t: '2026-13-40T25:61:61.000000Z' }),
+      json({ ...decoded, t: '2026-02-30T10:00:00.000000Z' }),
+      json({ ...decoded, t: 'yesterday' }),
+      json({ ...decoded, id: 'not-a-uuid' }),
+      'A'.repeat(2000),
+    ];
+    for (const cursor of bad) {
+      const res = await get({ investigationId: inv, limit: '1', cursor });
+      expect({ cursor, status: res.status }).toEqual({ cursor, status: 400 });
+      expect(res.body.error.code).toBe('validation_error');
+    }
+  });
+
+  it('a foreign cursor is a 400: issued for another investigation, for no filter, or for another user', async () => {
+    const a = await newInvestigation('Cursor A');
+    const b = await newInvestigation('Cursor B');
+    for (let i = 0; i < 2; i++) {
+      await decide(a, `A ${i}`);
+      await decide(b, `B ${i}`);
+    }
+    const fromA = (await page({ investigationId: a, limit: '1' })).nextCursor!;
+    const unfiltered = (await page({ limit: '1' })).nextCursor!;
+    for (const query of [
+      { investigationId: b, cursor: fromA },
+      { cursor: fromA },
+      { investigationId: a, cursor: unfiltered },
+      { investigationId: a.toUpperCase(), cursor: unfiltered },
+      { investigationId: [a, a], cursor: fromA },
+    ]) {
+      const res = await get({ limit: '1', ...query });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('validation_error');
+    }
+    // An empty filter is not "no filter": the unfiltered cursor does not fit it.
+    expect((await get({ limit: '1', investigationId: '', cursor: unfiltered })).status).toBe(400);
+    // The same cursor still works for the query it was issued for, whatever the case of the filter.
+    expect((await page({ investigationId: a, limit: '1', cursor: fromA })).items).toHaveLength(1);
+    expect((await page({ investigationId: a.toUpperCase(), limit: '1', cursor: fromA })).items).toHaveLength(1);
+    // Another workspace: the owner of another workspace cannot use it, even for an investigation id of the same text.
+    const otherOwner = randomUUID();
+    const otherWs = randomUUID();
+    await db.admin.query('INSERT INTO kawalys.users (id) VALUES ($1)', [otherOwner]);
+    await runWithWorkspaceContext(db.app, otherWs, async (c) => {
+      await c.query('INSERT INTO workspaces (id, owner_user_id) VALUES ($1, $2)', [otherWs, otherOwner]);
+      await c.query(`INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`, [otherWs, otherOwner]);
+    });
+    await expect(evidence.recentDecisions(otherWs, otherOwner, { investigationId: a, limit: 1, cursor: fromA })).rejects.toBeInstanceOf(RefusedError);
+    await expect(evidence.recentDecisions(otherWs, owner, { investigationId: a, limit: 1, cursor: fromA })).rejects.toBeInstanceOf(RefusedError);
+    const stranger = randomUUID();
+    await db.admin.query('INSERT INTO kawalys.users (id) VALUES ($1)', [stranger]);
+    await expect(evidence.recentDecisions(ws, stranger, { investigationId: a, limit: 1, cursor: fromA })).rejects.toBeInstanceOf(RefusedError);
   });
 });
 

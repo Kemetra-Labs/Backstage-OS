@@ -54,6 +54,12 @@ export interface DecisionRecord {
   readonly createdAt: string;
 }
 
+/** One GET /decisions page. `nextCursor` reads the next page; it is null on the last one. */
+export interface DecisionPage {
+  readonly items: readonly DecisionRecord[];
+  readonly nextCursor: string | null;
+}
+
 /** GET /decisions page size: the default and the most a caller may ask for. */
 export const DECISION_LIMIT_DEFAULT = 20;
 export const DECISION_LIMIT_MAX = 100;
