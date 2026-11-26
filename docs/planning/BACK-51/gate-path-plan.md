@@ -55,16 +55,16 @@ Each phase is one PR with its own tests, merged only on your approval.
 
 **P1 Live-mode plumbing (app).** Depends on D1, D2.
 - **Mode switch.** A build-time flag `VITE_KAWALYS_LIVE=1` turns on live mode. Without it the build is byte-for-byte today's demo, so the existing e2e suites run unchanged.
-- **HTTP client.** One new module, `app/src/api/http.ts`, is the only file allowed to call `fetch`.
+- **HTTP client.** One new module, `app/src/live/http.ts`, is the only file allowed to call `fetch`. It sits outside `src/api` on purpose, so `src/api` stays a pure adapter folder and its guard keeps every current rule.
   - Relative `/api/...` paths only, with `credentials: 'same-origin'` and `Content-Type: application/json`.
   - No absolute URLs.
   - It maps errors to typed results:
-    - 401 or 404 → `not_found`. The server makes these identical on purpose: we never learn whether a row exists.
+    - 401 or 404 → `not_found`. The server makes these identical on purpose: we never learn whether a row exists. To tell an expired session from a hidden case, the app re-checks `GET /api/auth/me` after a `not_found`.
     - 400 → `invalid`
     - 429 → `rate_limited`
     - network failure → `unavailable`
     - 5xx → `error`
-- **Guard.** `api.guard.test.ts` changes to allow exactly that file. All other bans stay, and new tests check that absolute URLs are still refused.
+- **Guard.** `api.guard.test.ts` keeps all its rules for `src/api`. A new `live.guard.test.ts` allows `fetch` only in `src/live/http.ts`, with relative `/api/` paths only. It also tests that absolute URLs and `fetch` anywhere else are still refused.
 - **Reads.** Live Portfolio and Investigation reads reuse the existing `src/api` adapters, so the parity tests keep covering the shapes.
 - **States.** Loading, empty and error use `StateBlock`. Unknown is never Healthy.
 - **Proxy.** `app/vite.config.ts` gets `preview.proxy` and `server.proxy` from `/api` to `127.0.0.1:8787`, with the prefix stripped.
@@ -72,12 +72,12 @@ Each phase is one PR with its own tests, merged only on your approval.
 **P2 Session in the app.** Depends on D3.
 - On start in live mode, the app calls `GET /api/auth/me`.
 - Signed out, it shows a sign-in state that links to `/api/auth/lab` (local only).
-- **Not verified yet:** whether the lab page's own `POST /auth/session` and its return work behind the `/api` prefix. P2 checks that first; if not, the lab page needs a small change (a configurable base path, no other behaviour change).
+- **The lab page needs a change.** It calls root-absolute `/auth/session` and `/auth/me` (`server/src/auth/lab/sign-in-page.ts:48,51`), so it breaks behind the `/api` prefix. P2 gives it a base path (relative URLs or a configured prefix) with no other change in behaviour.
 - It also shows who is signed in, plus sign-out (`DELETE /api/auth/session`).
 - When the session expires mid-task, the app returns to sign-in and keeps any unsent decision draft in memory.
 
 **P3 Record decision.** Depends on D4, D5.
-- **Form.** The form, its validation copy in EN and AR (RTL), the evidence picker, and the submit button disabled while a submit is in flight.
+- **Form.** The form, its validation copy in EN and AR (RTL), the evidence picker, and the submit button disabled while a submit is in flight. Length counters count UTF-16 code units, like the server's `v.length` check, so a long Arabic text and the server agree.
 - **Results:**
   - On 201, the decision list is re-read.
   - On 400, the reason is shown and the draft is kept.
@@ -112,7 +112,7 @@ Each phase is one PR with its own tests, merged only on your approval.
 ## 5. Risks and limits
 
 - **Same origin is mandatory.** The cookie is `__Host-` and `SameSite=Strict`, so anything other than D2 (a) or (b) breaks sign-in, by design.
-- **Local transport.** Locally the cookie's `Secure` flag relies on browsers treating `127.0.0.1`/`localhost` as secure. Deployed, HTTPS is required (BACK-64).
+- **Local transport.** Locally the cookie's `Secure` flag relies on browsers treating `127.0.0.1`/`localhost` as secure. That holds for Chromium. **Not verified for WebKit**, which may refuse `Secure`/`__Host-` cookies over http. So the P4 live suite starts Chromium-only, and P4 checks WebKit before adding it. Deployed, HTTPS is required (BACK-64).
 - **No second role.** Personas stay a display switch. Any wider staff access needs a new role and capability design: out of scope here.
 - **Live mode is real data.** It is no longer "demo only": every live screen must drop the demo marker and say where its data came from. Copy and tests change accordingly.
 - **Size, roughly:** P1 is medium, P2 small, P3 medium, P4 medium. P5 is your provisioning time plus one run.
