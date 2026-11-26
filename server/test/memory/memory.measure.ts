@@ -125,6 +125,36 @@ interface PlanSummary {
   readonly sharedReadBlocks: number;
   readonly tempWrittenBlocks: number;
   readonly sortSpilledToDisk: boolean;
+  /** The plan nodes with the most exclusive time (node time minus its children's), largest first. */
+  readonly topNodes: readonly { readonly node: string; readonly exclusiveMs: number; readonly rows: number }[];
+}
+
+interface PlanNode {
+  readonly 'Node Type': string;
+  readonly 'Actual Total Time'?: number;
+  readonly 'Actual Loops'?: number;
+  readonly 'Actual Rows'?: number;
+  readonly 'Relation Name'?: string;
+  readonly 'CTE Name'?: string;
+  readonly 'Subplan Name'?: string;
+  readonly 'Parent Relationship'?: string;
+  readonly Plans?: readonly PlanNode[];
+}
+
+/** Flattens the plan tree; exclusive time of a node is its total (per loop times loops) minus its direct children's. */
+function exclusiveTimes(root: PlanNode): { node: string; exclusiveMs: number; rows: number }[] {
+  const out: { node: string; exclusiveMs: number; rows: number }[] = [];
+  const total = (n: PlanNode): number => (n['Actual Total Time'] ?? 0) * (n['Actual Loops'] ?? 1);
+  const walk = (n: PlanNode): void => {
+    const children = n.Plans ?? [];
+    // InitPlan/CTE children run once and are reported under their own subtree; subtract only inline children.
+    const inline = children.filter((c) => c['Parent Relationship'] !== 'InitPlan' && c['Parent Relationship'] !== 'SubPlan');
+    const label = [n['Node Type'], n['Relation Name'], n['CTE Name'] ? `cte ${n['CTE Name']}` : undefined, n['Subplan Name']].filter(Boolean).join(' ');
+    out.push({ node: label, exclusiveMs: round(Math.max(0, total(n) - inline.reduce((t, c) => t + total(c), 0))), rows: n['Actual Rows'] ?? 0 });
+    children.forEach(walk);
+  };
+  walk(root);
+  return out;
 }
 
 async function explain(h: StoreHarness, s: Seeded, userId: string, workMem?: string): Promise<PlanSummary> {
@@ -134,7 +164,7 @@ async function explain(h: StoreHarness, s: Seeded, userId: string, workMem?: str
     const res = await c.query<{ 'QUERY PLAN': Record<string, unknown>[] }>(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${MEMORY_READ_SQL}`, [userId, s.projectId, null, ITEM_KIND_LIST, [], []]);
     return res.rows;
   });
-  const top = row!['QUERY PLAN'][0] as { Plan: Record<string, number>; 'Execution Time': number; 'Planning Time': number };
+  const top = row!['QUERY PLAN'][0] as unknown as { Plan: PlanNode & Record<string, number>; 'Execution Time': number; 'Planning Time': number };
   const text = JSON.stringify(row);
   return {
     executionMs: round(top['Execution Time']),
@@ -143,6 +173,7 @@ async function explain(h: StoreHarness, s: Seeded, userId: string, workMem?: str
     sharedReadBlocks: top.Plan['Shared Read Blocks'] ?? 0,
     tempWrittenBlocks: top.Plan['Temp Written Blocks'] ?? 0,
     sortSpilledToDisk: text.includes('"Sort Space Type":"Disk"') || text.includes('external merge'),
+    topNodes: exclusiveTimes(top.Plan).sort((a, b) => b.exclusiveMs - a.exclusiveMs).slice(0, 8),
   };
 }
 
