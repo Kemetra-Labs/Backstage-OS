@@ -1,56 +1,40 @@
 // The Confluence mapper's output, including every failure state, is accepted and stored by the real
 // evidence repository and database constraints (BACK-99, migration 0005). Disposable Docker Postgres only.
-import { randomUUID } from 'node:crypto';
 import { observeConfluenceSpaces, pagesPath, spacePath } from '../../../src/connectors/confluence/confluence.observer';
 import { ConfluenceTransportFailure, type ConfluenceResponse } from '../../../src/connectors/confluence/confluence.transport';
 import { runWithWorkspaceContext } from '../../../src/db/workspace-context';
 import { EvidenceRepository, type ObservationInput } from '../../../src/evidence/evidence.repository';
-import { sqlState } from '../../db/pg-container';
-import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../../db/kawalys-db';
+import type { KawalysDb } from '../../db/kawalys-db';
+import { expectOtherWorkspaceSeesNothing, freshIds, pairs, providerInsertCode, startStore, stopStore, storedFor, type StoreHarness } from '../../db/store-harness';
 import { ENG_ID, happyScript, NOW, ok, OPS_ID, ScriptedTransport, SITE, type Script } from './confluence.fixture';
 
-let db: KawalysDb | undefined;
+let h: StoreHarness;
+let db: KawalysDb;
 let repo: EvidenceRepository;
-const owner = randomUUID();
-const stranger = randomUUID();
-const ws = randomUUID();
-const otherWs = randomUUID();
+const ids = freshIds();
+const { owner, stranger, ws, otherWs } = ids;
 let projectId = '';
 let sourceId = '';
 
-async function makeWorkspace(id: string): Promise<void> {
-  await runWithWorkspaceContext(db!.app, id, async (c) => {
-    await c.query('INSERT INTO workspaces (id, owner_user_id) VALUES ($1, $2)', [id, owner]);
-    await c.query(`INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`, [id, owner]);
-  });
-}
-
 beforeAll(async () => {
-  db = await startKawalysDb();
-  await db.admin.query('INSERT INTO kawalys.users (id) VALUES ($1), ($2)', [owner, stranger]);
-  await makeWorkspace(ws);
-  await makeWorkspace(otherWs);
-  repo = new EvidenceRepository(db.app);
-  projectId = await repo.createProject(ws, owner, { key: 'backstage-os', name: 'Backstage OS' });
-  sourceId = await repo.connectSource(ws, owner, { projectId, provider: 'confluence', externalRef: 'kemetra-synthetic.atlassian.net' });
+  h = await startStore(ids, { provider: 'confluence', externalRef: 'kemetra-synthetic.atlassian.net' });
+  ({ db, repo, projectId, sourceId } = h);
 }, 180_000);
 
 afterAll(async () => {
-  await stopKawalysDb(db);
+  await stopStore(h);
 }, 60_000);
 
 const observe = (script: Script, spaceKeys: readonly string[] = ['ENG', 'OPS']) =>
   observeConfluenceSpaces(new ScriptedTransport(script), { sourceId, site: SITE, spaceKeys }, NOW);
 
-const pairs = (items: readonly { sourceRef: string; state: string }[]) => items.map((i) => `${i.sourceRef} ${i.state}`).sort();
 
-const storedFor = async (ids: readonly string[]) => (await repo.list(ws, owner, { sourceId })).filter((e) => ids.includes(e.id));
 
 describe('Confluence observations in the evidence store', () => {
   it('the source is stored with provider confluence, beside a jira source of the same site', async () => {
     const jira = await repo.connectSource(ws, owner, { projectId, provider: 'jira', externalRef: 'kemetra-synthetic.atlassian.net' });
     expect(jira).not.toBe(sourceId);
-    const { rows } = await runWithWorkspaceContext(db!.app, ws, (c) => c.query('SELECT provider FROM sources ORDER BY provider'));
+    const { rows } = await runWithWorkspaceContext(db.app, ws, (c) => c.query('SELECT provider FROM sources ORDER BY provider'));
     expect(rows.map((r) => r.provider)).toEqual(['confluence', 'jira']);
   });
 
@@ -58,7 +42,7 @@ describe('Confluence observations in the evidence store', () => {
     const batch = await observe(happyScript());
     const ids = await repo.ingest(ws, batch);
     expect(ids).toHaveLength(3);
-    const stored = await storedFor(ids);
+    const stored = await storedFor(h, ids);
     expect(pairs(stored)).toEqual(pairs(batch));
     expect(stored.every((e) => e.type === 'Observation' && e.sourceId === sourceId && e.projectId === projectId && e.state === 'ok')).toBe(true);
     expect(stored.find((e) => e.sourceRef === 'confluence:ENG#page/1001')!.payload).toEqual(batch[0]!.payload);
@@ -77,22 +61,15 @@ describe('Confluence observations in the evidence store', () => {
     const perBatch: string[][] = [];
     for (const batch of batches) perBatch.push(await repo.ingest(ws, batch));
     const ids = perBatch.flat();
-    const stored = await storedFor(ids);
+    const stored = await storedFor(h, ids);
     expect(pairs(stored)).toEqual(pairs(expected));
     expect(stored.filter((e) => e.payload['kind'] === 'source_status').some((e) => e.state === 'ok')).toBe(false);
     // Only the reachable OPS pages of the first two reads are ok; the stale ENG pages stay stale.
-    expect((await storedFor(perBatch[0]!)).filter((e) => e.sourceRef.startsWith('confluence:ENG#page/')).map((e) => e.state)).toEqual(['stale', 'stale']);
+    expect((await storedFor(h, perBatch[0]!)).filter((e) => e.sourceRef.startsWith('confluence:ENG#page/')).map((e) => e.state)).toEqual(['stale', 'stale']);
   });
 
   it('another workspace sees nothing, not even the source', async () => {
-    expect(await repo.list(otherWs, owner, { sourceId })).toEqual([]);
-    expect(await repo.list(otherWs, owner, {})).toEqual([]);
-    const counts = await runWithWorkspaceContext(db!.app, otherWs, async (c) => ({
-      evidence: (await c.query('SELECT 1 FROM evidence')).rowCount,
-      sources: (await c.query('SELECT 1 FROM sources')).rowCount,
-    }));
-    expect(counts).toEqual({ evidence: 0, sources: 0 });
-    await expect(repo.ingest(otherWs, await observe(happyScript()))).rejects.toThrow('no active grant');
+    await expectOtherWorkspaceSeesNothing(h, await observe(happyScript()));
   });
 
   it('a user without a grant on the source sees nothing', async () => {
@@ -100,12 +77,6 @@ describe('Confluence observations in the evidence store', () => {
   });
 
   it.each(['wiki', 'Confluence', 'github '])('refuses provider %p (check_violation)', async (provider) => {
-    let code: string | undefined;
-    await runWithWorkspaceContext(db!.app, ws, (c) =>
-      c.query('INSERT INTO sources (workspace_id, project_id, provider, external_ref) VALUES ($1, $2, $3, $4)', [ws, projectId, provider, `x-${randomUUID()}`]),
-    ).catch((err: unknown) => {
-      code = sqlState(err);
-    });
-    expect(code).toBe('23514');
+    expect(await providerInsertCode(h, provider)).toBe('23514');
   });
 });

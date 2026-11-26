@@ -6,6 +6,7 @@ import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { DECISION_CREATOR, EvidenceRepository } from '../../src/evidence/evidence.repository';
 import { sqlState } from '../db/pg-container';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
+import { makeWorkspace } from '../db/store-harness';
 
 let db: KawalysDb | undefined;
 let repo: EvidenceRepository;
@@ -18,18 +19,11 @@ let observationId = '';
 
 const INTEGRITY = '23000';
 
-async function makeWorkspace(id: string): Promise<void> {
-  await runWithWorkspaceContext(db!.app, id, async (c) => {
-    await c.query('INSERT INTO workspaces (id, owner_user_id) VALUES ($1, $2)', [id, owner]);
-    await c.query(`INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`, [id, owner]);
-  });
-}
-
 beforeAll(async () => {
   db = await startKawalysDb();
   await db.admin.query('INSERT INTO kawalys.users (id) VALUES ($1)', [owner]);
-  await makeWorkspace(ws);
-  await makeWorkspace(otherWs);
+  await makeWorkspace(db, ws, owner);
+  await makeWorkspace(db, otherWs, owner);
   repo = new EvidenceRepository(db.app);
   projectId = await repo.createProject(ws, owner, { key: 'backstage-os', name: 'Backstage OS' });
   const sourceId = await repo.connectSource(ws, owner, { projectId, provider: 'github', externalRef: 'kemetra-labs/backstage-os' });
