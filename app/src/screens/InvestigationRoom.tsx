@@ -14,6 +14,7 @@ import { hrefFor } from '../nav/routes';
 import { crumbTrail } from '../view/investigationView';
 import { investigationById } from '../view/world';
 import { RoomExtras } from './investigation/RoomExtras';
+import { ServerRecords } from './investigation/ServerRecords';
 import { hostCopy } from '../i18n/host';
 
 interface Props {
@@ -117,6 +118,8 @@ export function InvestigationRoom({ persona, lang, copy }: Props) {
       </section>
 
       <RoomExtras id={meta.id} />
+
+      <ServerRecords />
 
       {item && (
         <EvidenceDrawer

@@ -18,3 +18,19 @@
 .signal .row-item { justify-items: start; }
 .conflict-explain { max-width: 78ch; font-size: 15px; }
 .conflict-health { display: grid; gap: 6px; }
+
+/* server-shaped demo records (BACK-57): read states only, never health */
+.srv-lede { color: var(--muted); max-width: 78ch; }
+.srv-incomplete { color: var(--amber); }
+.srv-group { display: grid; gap: 8px; padding-top: 12px; min-width: 0; }
+.srv-group h3 { font-size: 16px; margin: 0; }
+.srv-rows li { display: grid; gap: 6px; padding: 10px 0; border-top: 1px dashed var(--line); min-width: 0; }
+.srv-rows li:first-child { border-top: 0; }
+.srv-state { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.srv-read[data-read="current"] { color: var(--ink); }
+.srv-read[data-read="stale"] { color: var(--amber); }
+.srv-read[data-read="unknown"], .srv-read[data-read="notRead"], .srv-creator[data-creator="notRecorded"] { color: var(--unk); }
+.srv-reason, .srv-age, .srv-note { color: var(--muted); }
+.srv-note { margin: 0; }
+.srv-kv { margin: 0; min-width: 0; }
+.srv-ref { font-family: var(--f-mono); overflow-wrap: anywhere; }

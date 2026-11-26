@@ -42,6 +42,29 @@ export interface InvestigationCopy {
     readonly impact: { readonly title: string; readonly label: string; readonly text: ByPersona };
   };
   readonly notFound: { readonly title: string; readonly body: string };
+  /**
+   * BACK-57 (owner decision 2026-11-26): records shaped like the server's answer, from committed synthetic files. Read states
+   * only, never health; always demo data. The empty state reuses the BACK-62 evidence copy (COPY.noEvidence).
+   */
+  readonly serverRecords: {
+    readonly title: string;
+    readonly lede: string;
+    readonly demo: string;
+    readonly recordsTitle: string;
+    readonly decisionsTitle: string;
+    readonly read: Readonly<Record<'current' | 'stale' | 'unknown' | 'notRead', string>>;
+    readonly reason: Readonly<Record<'error' | 'denied' | 'unknown' | 'noSource', string>>;
+    readonly age: (minutes: number) => string;
+    readonly recordedAge: (minutes: number) => string;
+    readonly source: string;
+    readonly creator: Readonly<Record<'recorded' | 'notRecorded', string>>;
+    readonly proposedNote: string;
+    readonly decisionText: string;
+    readonly noRecords: string;
+    readonly noDecisions: string;
+    readonly incomplete: string;
+    readonly unreadable: { readonly title: string; readonly body: string };
+  };
 }
 
 const en: InvestigationCopy = {
@@ -104,6 +127,33 @@ const en: InvestigationCopy = {
     },
   },
   notFound: { title: 'Case not found', body: 'No investigation with this id exists in the demo data.' },
+  serverRecords: {
+    title: 'Server-shaped demo records',
+    lede: 'Records of a separate synthetic case, shaped like the Kawalys server\'s answer and read from a committed file. Nothing is requested. These are read states, not a health claim.',
+    demo: 'Demo data: synthetic records, not live',
+    recordsTitle: 'Evidence records',
+    decisionsTitle: 'Decisions',
+    read: { current: 'Current', stale: 'Stale', unknown: 'Read, time unknown', notRead: 'Not read' },
+    reason: {
+      error: 'The source read failed.',
+      denied: 'Access was denied.',
+      unknown: 'The read state is unknown.',
+      noSource: 'No source read is linked to this record.',
+    },
+    age: (m) => `Observed {${m}} min ago`,
+    recordedAge: (m) => `Recorded {${m}} min ago`,
+    source: 'Source',
+    creator: { recorded: 'Creator recorded', notRecorded: 'Creator not recorded' },
+    proposedNote: 'Not approved: there is no link to the record that owns this decision.',
+    decisionText: 'Decision',
+    noRecords: 'No evidence record is listed. That is not the same as nothing being wrong.',
+    noDecisions: 'No decision is recorded for this case.',
+    incomplete: 'Part of this answer could not be read and is left out, so this list is incomplete.',
+    unreadable: {
+      title: 'These records could not be read',
+      body: 'The answer was not in a form we can read, so nothing is shown. It is unknown, not healthy.',
+    },
+  },
 };
 
 const ar: InvestigationCopy = {
@@ -166,6 +216,33 @@ const ar: InvestigationCopy = {
     },
   },
   notFound: { title: 'الحالة غير موجودة', body: 'لا يوجد تحقيق بهذا المعرّف في البيانات التجريبية.' },
+  serverRecords: {
+    title: 'سجلات تجريبية بصيغة الخادم',
+    lede: 'سجلات حالة اصطناعية منفصلة، بصيغة إجابة خادم {Kawalys}، مقروءة من ملف محفوظ. لا يُرسل أي طلب. هذه حالات قراءة، وليست حكمًا على السلامة.',
+    demo: 'بيانات تجريبية: سجلات مصطنعة، ليست مباشرة',
+    recordsTitle: 'سجلات الأدلة',
+    decisionsTitle: 'القرارات',
+    read: { current: 'حديثة', stale: 'قديمة', unknown: 'مقروءة، والوقت غير معروف', notRead: 'غير مقروءة' },
+    reason: {
+      error: 'فشلت قراءة المصدر.',
+      denied: 'رُفض الوصول.',
+      unknown: 'حالة القراءة غير معروفة.',
+      noSource: 'لا توجد قراءة مصدر مرتبطة بهذا السجل.',
+    },
+    age: (m) => `رُصدت قبل {${m}} دقيقة`,
+    recordedAge: (m) => `سُجّل قبل {${m}} دقيقة`,
+    source: 'المصدر',
+    creator: { recorded: 'المُنشئ مسجّل', notRecorded: 'المُنشئ غير مسجّل' },
+    proposedNote: 'غير معتمد: لا يوجد رابط إلى السجل الذي يملك هذا القرار.',
+    decisionText: 'القرار',
+    noRecords: 'لا يوجد سجل دليل مدرج. وهذا لا يعني أن كل شيء على ما يرام.',
+    noDecisions: 'لا يوجد قرار مسجّل لهذه الحالة.',
+    incomplete: 'تعذّرت قراءة جزء من هذه الإجابة فاستُبعد، لذا القائمة غير مكتملة.',
+    unreadable: {
+      title: 'تعذّرت قراءة هذه السجلات',
+      body: 'لم تكن الإجابة بصيغة نستطيع قراءتها، لذا لا يُعرض شيء. الحالة غير معروفة، وليست سليمة.',
+    },
+  },
 };
 
 export const INVESTIGATION: Readonly<Record<Lang, InvestigationCopy>> = { en, ar };

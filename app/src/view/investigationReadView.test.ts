@@ -1,0 +1,162 @@
+// Server-shaped evidence view (BACK-57) over the synthetic GET /investigations/:id and GET /decisions fixtures. The server side
+// of the parity check is server/test/evidence/evidence-parity.spec.ts: it requires these fixtures to equal what the server's
+// repositories produce. Failure inputs are built here; the fixtures themselves are never edited.
+import { describe, expect, it } from 'vitest';
+import DECISIONS from '../fixture/decisions-response.json';
+import INVESTIGATION from '../fixture/investigation-response.json';
+import { FIXTURE_NOW, investigationReadView } from './investigationReadView';
+
+const CORRELATION = '00000000-0000-4000-8000-000000000001';
+const DECISION = '00000000-0000-4000-8000-000000000005';
+const FAILED_RUN = '00000000-0000-4000-8000-000000000007';
+
+const view = (persona: 'owner' | 'technical' = 'technical', body: unknown = INVESTIGATION, decisions: unknown = DECISIONS, now = FIXTURE_NOW) =>
+  investigationReadView(persona, body, decisions, now)!;
+const row = (id: string, v = view()) => v.records.find((r) => r.id === id)!;
+type Body = { evidence: Record<string, unknown>[] };
+const withRecord = (id: string, over: Record<string, unknown>) => {
+  const body = structuredClone(INVESTIGATION) as unknown as Body;
+  Object.assign(body.evidence.find((r) => r['id'] === id)!, over);
+  return body;
+};
+
+describe('the synthetic investigation and decisions fixtures', () => {
+  it('every record is parsed: two source records, one decision, nothing left out, always demo data', () => {
+    const v = view();
+    expect(v).toMatchObject({ state: 'ok', incomplete: false, demo: true });
+    expect(v.records.map((r) => r.id)).toEqual([CORRELATION, FAILED_RUN]);
+    expect(v.decisions.map((d) => d.id)).toEqual([DECISION]);
+    expect(v.records.length + v.decisions.length).toBe(INVESTIGATION.evidence.length);
+  });
+
+  it('the correlation has no written rule, so its badge is a hypothesis; it is 40 min old against a 30 min TTL, so stale', () => {
+    expect(row(CORRELATION)).toEqual({
+      id: CORRELATION, label: 'hypothesis', read: 'stale', reason: null, ageMinutes: 40,
+      sourceRef: 'github:example-org/demo-storefront#pull/42',
+    });
+  });
+
+  it('the failed read stays not read with its reason: unknown badge, no age, never current', () => {
+    expect(row(FAILED_RUN)).toEqual({
+      id: FAILED_RUN, label: 'unknown', read: 'notRead', reason: 'error', ageMinutes: null,
+      sourceRef: 'github:example-org/demo-storefront#actions/runs/1002',
+    });
+  });
+
+  it('the decision is proposed, cites evidence but has no owning link, and its creator is recorded', () => {
+    expect(view().decisions[0]).toEqual({
+      id: DECISION, label: 'proposed', creator: 'recorded', ageMinutes: 0,
+      text: 'Revert pull request #42 on main and re-run checkout-e2e',
+    });
+  });
+
+  it('never says healthy: no row carries a health word', () => {
+    const v = view();
+    expect(JSON.stringify([v.records, v.decisions])).not.toMatch(/health|"ok"/i);
+  });
+});
+
+describe('persona scoping', () => {
+  it('Nontechnical gets no panel at all', () => {
+    expect(investigationReadView('nontechnical')).toBeNull();
+  });
+
+  it('Owner gets types, read states, ages and decisions, but no source reference and no server free text', () => {
+    const owner = view('owner');
+    const technical = view('technical');
+    expect(owner.records.map((r) => r.sourceRef)).toEqual([null, null]);
+    expect(owner.decisions.map((d) => d.text)).toEqual([null]);
+    expect(owner.records.map(({ sourceRef: _s, ...r }) => r)).toEqual(technical.records.map(({ sourceRef: _s, ...r }) => r));
+    expect(owner.decisions[0]).toMatchObject({ label: 'proposed', creator: 'recorded' });
+    expect(JSON.stringify(owner)).not.toMatch(/#42|checkout-e2e|example-org|actions\/runs/);
+  });
+});
+
+describe('read states stay honest', () => {
+  it('ages and freshness come from the injected clock: 10 min after the read the correlation is current, never before it', () => {
+    expect(row(CORRELATION, view('technical', INVESTIGATION, DECISIONS, new Date('2026-11-25T11:30:00.000Z')))).toMatchObject({
+      read: 'unknown', ageMinutes: 10,
+    });
+    const body = withRecord(CORRELATION, { receivedAt: '2026-11-25T11:20:00.000Z' });
+    expect(row(CORRELATION, view('technical', body, DECISIONS, new Date('2026-11-25T11:30:00.000Z')))).toMatchObject({ read: 'current', ageMinutes: 10 });
+  });
+
+  it('a record dated in the future is unknown with no age, never current', () => {
+    expect(row(CORRELATION, view('technical', withRecord(CORRELATION, { observedAt: '2026-11-25T13:00:00.000Z' })))).toMatchObject({ read: 'unknown', ageMinutes: null });
+  });
+
+  it.each(['error', 'denied', 'unknown'] as const)('a record in %s is not read, with that reason', (state) => {
+    expect(row(CORRELATION, view('technical', withRecord(CORRELATION, { state })))).toMatchObject({ label: 'unknown', read: 'notRead', reason: state, ageMinutes: null });
+  });
+
+  it('a server stale record stays stale', () => {
+    expect(row(CORRELATION, view('technical', withRecord(CORRELATION, { state: 'stale', observedAt: '2026-11-25T11:59:00.000Z' })))).toMatchObject({ read: 'stale' });
+  });
+
+  it('a record from a source with no read authority stays unread ("noSource"), never invented', () => {
+    expect(row(CORRELATION, view('technical', withRecord(CORRELATION, { sourceRef: 'jira:DEMO-1' })))).toMatchObject({ read: 'notRead', reason: 'noSource' });
+    expect(row(CORRELATION, view('technical', withRecord(CORRELATION, { sourceId: null })))).toMatchObject({ read: 'notRead', reason: 'noSource' });
+  });
+
+  it('an Observation read in time is observed and current', () => {
+    const body = withRecord(FAILED_RUN, { state: 'ok', observedAt: '2026-11-25T11:50:00.000Z' });
+    expect(row(FAILED_RUN, view('technical', body))).toMatchObject({ label: 'observed', read: 'current', ageMinutes: 10 });
+  });
+});
+
+describe('decisions are never approved without their owning link', () => {
+  // The approved case (citations AND an https github.com link) is pinned on the adapter in src/api/evidence.test.ts; this file
+  // holds no URL literal, so the boundary guard's request scan stays strict for the approved importers.
+  it('a decision whose owning link is not a followable https github.com link stays proposed, whatever it cites', () => {
+    for (const url of ['github.com/example-org/demo-storefront/pull/43', 'ftp:github.com/x', '', 42]) {
+      const body = withRecord(DECISION, { payload: { decision: 'x', url } });
+      expect(view('technical', body).decisions[0]!.label, String(url)).toBe('proposed');
+    }
+    expect(view('technical', withRecord(DECISION, { citations: [] })).decisions[0]!.label).toBe('proposed');
+  });
+
+  it('a GET /decisions item alone is proposed (the record shape has no link), and a missing creator says so', () => {
+    const body = { ...INVESTIGATION, evidence: INVESTIGATION.evidence.filter((r) => r.type !== 'HumanDecision') };
+    const items = [{ ...DECISIONS.items[0]!, createdBy: null }];
+    expect(view('technical', body, { items }).decisions).toEqual([
+      { id: DECISION, label: 'proposed', creator: 'notRecorded', ageMinutes: 0, text: 'Revert pull request #42 on main and re-run checkout-e2e' },
+    ]);
+  });
+
+  it('a decision in the investigation with no GET /decisions item is proposed with its creator not recorded', () => {
+    expect(view('technical', INVESTIGATION, { items: [] }).decisions[0]).toMatchObject({ label: 'proposed', creator: 'notRecorded' });
+  });
+
+  it('decisions of another investigation are not shown', () => {
+    const body = { ...INVESTIGATION, evidence: INVESTIGATION.evidence.filter((r) => r.type !== 'HumanDecision') };
+    expect(view('technical', body, { items: [{ ...DECISIONS.items[0]!, investigationId: 'other' }] }).decisions).toEqual([]);
+  });
+});
+
+describe('failure forms are said in words, never as an empty success', () => {
+  it.each([null, 'x', [], {}, { id: 'i' }, { evidence: [] }, { id: 'i', evidence: 'x' }])('a malformed investigation body (%j) is unreadable', (body) => {
+    for (const persona of ['owner', 'technical'] as const) {
+      expect(view(persona, body)).toEqual({ records: [], decisions: [], state: 'unreadable', incomplete: true, demo: true });
+    }
+  });
+
+  it('an investigation with no record and no decision is an explicit empty view, not unreadable', () => {
+    expect(view('technical', { ...INVESTIGATION, evidence: [] }, { items: [] })).toEqual({ records: [], decisions: [], state: 'empty', incomplete: false, demo: true });
+  });
+
+  it('records that cannot be read are left out and the view says it is incomplete', () => {
+    const body = { ...INVESTIGATION, evidence: [...INVESTIGATION.evidence, { id: 'bad', type: 'observation' }, 7] };
+    const v = view('technical', body);
+    expect(v).toMatchObject({ state: 'ok', incomplete: true });
+    expect(v.records).toHaveLength(2);
+  });
+
+  it('only unreadable records: unreadable, not empty', () => {
+    expect(view('technical', { ...INVESTIGATION, evidence: [{ id: 'bad' }] }, { items: [] })).toMatchObject({ state: 'unreadable', incomplete: true });
+  });
+
+  it('a malformed GET /decisions body or item makes the view incomplete, never "no decision"', () => {
+    expect(view('technical', INVESTIGATION, { nope: true })).toMatchObject({ state: 'ok', incomplete: true });
+    expect(view('technical', INVESTIGATION, { items: [{ id: 'x' }] })).toMatchObject({ incomplete: true });
+  });
+});

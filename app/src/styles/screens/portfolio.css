@@ -34,4 +34,5 @@
 .pf-gh-status[data-read="notReadYet"], .pf-gh-status[data-read="unknown"] { color: var(--unk); }
 .pf-gh-status[data-read="unavailable"] { color: var(--coral); }
 .pf-gh-age, .pf-gh-failure { color: var(--muted); }
+.pf-gh-none { color: var(--unk); margin: 0; }
 @media (min-width: 760px) { .pf-gh-project li { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto; align-items: center; } }

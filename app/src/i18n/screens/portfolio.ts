@@ -34,6 +34,10 @@ export interface PortfolioCopy {
     readonly lede: string;
     readonly demo: string;
     readonly incomplete: string;
+    /** BACK-62: the panel never goes blank. A well-formed answer with no project, and one that could not be read at all. */
+    readonly empty: { readonly title: string; readonly body: string };
+    readonly unreadable: { readonly title: string; readonly body: string };
+    readonly noSources: string;
     readonly status: Readonly<Record<'current' | 'stale' | 'notReadYet' | 'unknown' | 'unavailable', string>>;
     readonly failure: Readonly<Record<'timeout' | 'network' | 'denied' | 'not_visible' | 'rate_limited' | 'unavailable' | 'malformed' | 'other', string>>;
     readonly age: (minutes: number) => string;
@@ -103,6 +107,15 @@ const en: PortfolioCopy = {
     lede: 'The latest read of each connected repository. These are read states, not a health claim.',
     demo: 'Demo data: synthetic reads, not live',
     incomplete: 'Part of this answer could not be read and is left out, so this list is incomplete.',
+    empty: {
+      title: 'No GitHub reads to show',
+      body: 'The answer listed no project, so nothing was read. That is unknown, not healthy.',
+    },
+    unreadable: {
+      title: 'GitHub reads could not be read',
+      body: 'The answer was not in a form we can read, so nothing is shown. Every read is unknown, not healthy.',
+    },
+    noSources: 'No repository is connected to this project, so nothing was read. Unknown, not healthy.',
     status: { current: 'Current', stale: 'Stale', notReadYet: 'Not read yet', unknown: 'Unknown', unavailable: 'Unavailable' },
     failure: {
       timeout: 'The read timed out.',
@@ -181,6 +194,15 @@ const ar: PortfolioCopy = {
     lede: 'آخر قراءة لكل مستودع متصل. هذه حالات قراءة، وليست حكمًا على السلامة.',
     demo: 'بيانات تجريبية: قراءات مصطنعة، ليست مباشرة',
     incomplete: 'تعذّرت قراءة جزء من هذه الإجابة فاستُبعد، لذا القائمة غير مكتملة.',
+    empty: {
+      title: 'لا توجد قراءات {GitHub} لعرضها',
+      body: 'لم تذكر الإجابة أي مشروع، لذا لم يُقرأ شيء. الحالة غير معروفة، وليست سليمة.',
+    },
+    unreadable: {
+      title: 'تعذّرت قراءة قراءات {GitHub}',
+      body: 'لم تكن الإجابة بصيغة نستطيع قراءتها، لذا لا يُعرض شيء. كل قراءة غير معروفة، وليست سليمة.',
+    },
+    noSources: 'لا يوجد مستودع متصل بهذا المشروع، لذا لم يُقرأ شيء. غير معروف، وليس سليمًا.',
     status: { current: 'حديثة', stale: 'قديمة', notReadYet: 'لم تُقرأ بعد', unknown: 'غير معروفة', unavailable: 'غير متاحة' },
     failure: {
       timeout: 'انتهت مهلة القراءة.',
