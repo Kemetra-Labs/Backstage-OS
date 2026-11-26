@@ -1,7 +1,8 @@
 // The collapsed projection input (BACK-105 S2). Raw evidence rows reduce to one record per run plus
 // the few read markers the projector consults. `collapse()` below is the reference implementation;
 // the S2 SQL statement (memory.sql.ts) must return exactly the same records for the same rows, and
-// the differential test proves it. Times are whole milliseconds (the SQL truncates received_at).
+// the differential test proves it. Times are whole milliseconds (the SQL truncates observed_at and
+// received_at).
 import type { EvidenceState } from '../evidence/evidence.types';
 import { sha256 } from './memory.canonical';
 import { CONTENT_FIELDS, isGithubHead, isItemKind, MARKER_KINDS, scopeRoot, type ItemKind } from './memory.policy';
@@ -18,8 +19,12 @@ export interface RunRecord {
   readonly lastObservedAt: string;
   readonly lastState: EvidenceState;
   readonly lastPayload: Readonly<Record<string, unknown>>;
+  /** Min and max receivedAt over the run: the run's first and last known times. */
   readonly firstReceivedAt: string;
   readonly lastReceivedAt: string;
+  /** receivedAt of the run's first and last rows: the tie-breakers of S1's row order. */
+  readonly firstRowReceivedAt: string;
+  readonly lastRowReceivedAt: string;
   readonly count: number;
   /** Distinct row states in the run, sorted by code unit. */
   readonly states: readonly EvidenceState[];
@@ -122,6 +127,8 @@ function toRecord(run: readonly MemoryRow[], kind: ItemKind, retained: boolean):
     lastPayload: last.payload,
     firstReceivedAt: new Date(received.reduce((m, x) => (x < m ? x : m), Infinity)).toISOString(),
     lastReceivedAt: new Date(received.reduce((m, x) => (x > m ? x : m), -Infinity)).toISOString(),
+    firstRowReceivedAt: first.receivedAt,
+    lastRowReceivedAt: last.receivedAt,
     count: run.length,
     states: [...new Set(run.map((r) => r.state))].sort(byCodeUnit) as EvidenceState[],
     retained,

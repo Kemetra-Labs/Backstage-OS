@@ -27,6 +27,8 @@ export interface RunInfo {
   readonly lastObserved: number;
   readonly firstReceived: number;
   readonly lastReceived: number;
+  readonly firstRowReceived: number;
+  readonly lastRowReceived: number;
 }
 
 function orderKeyOf(kind: ItemKind, payload: Readonly<Record<string, unknown>>): number | null {
@@ -57,16 +59,18 @@ export function toInfo(rec: RunRecord): RunInfo {
     lastObserved: ms(rec.lastObservedAt, `run ${rec.lastId}`),
     firstReceived: ms(rec.firstReceivedAt, `run ${rec.firstId}`),
     lastReceived: ms(rec.lastReceivedAt, `run ${rec.lastId}`),
+    firstRowReceived: ms(rec.firstRowReceivedAt, `run ${rec.firstId}`),
+    lastRowReceived: ms(rec.lastRowReceivedAt, `run ${rec.lastId}`),
   };
 }
 
-/** Run order for history and selection: (first observed, first received, first id). */
+/** Run order for history and selection: the first row's (observed, received, id), as S1's row order. */
 export const runInfoOrder = (a: RunInfo, b: RunInfo): number =>
-  a.firstObserved - b.firstObserved || a.firstReceived - b.firstReceived || byCodeUnit(a.rec.firstId, b.rec.firstId);
+  a.firstObserved - b.firstObserved || a.firstRowReceived - b.firstRowReceived || byCodeUnit(a.rec.firstId, b.rec.firstId);
 
-/** Latest confirmation order: (last observed, last received, last id). */
+/** Latest confirmation order: the last row's (observed, received, id), as S1's row order. */
 const latestOrder = (a: RunInfo, b: RunInfo): number =>
-  a.lastObserved - b.lastObserved || a.lastReceived - b.lastReceived || byCodeUnit(a.rec.lastId, b.rec.lastId);
+  a.lastObserved - b.lastObserved || a.lastRowReceived - b.lastRowReceived || byCodeUnit(a.rec.lastId, b.rec.lastId);
 
 export function toRun(info: RunInfo): Run {
   const rec = info.rec;

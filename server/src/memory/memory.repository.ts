@@ -44,6 +44,8 @@ interface ReadRow {
   readonly n: number | null;
   readonly states: string[] | null;
   readonly retained: boolean | null;
+  readonly first_row_rcv: Date | null;
+  readonly last_row_rcv: Date | null;
 }
 
 const MARKER_ROLES: ReadonlySet<string> = new Set<MarkerRole>(['failure', 'list_page', 'scope_item', 'ambiguous']);
@@ -66,6 +68,8 @@ function toRunRecord(r: ReadRow): RunRecord {
     lastPayload: r.payload ?? {},
     firstReceivedAt: iso(r.first_rcv, 'first_rcv'),
     lastReceivedAt: iso(r.last_rcv, 'last_rcv'),
+    firstRowReceivedAt: iso(r.first_row_rcv, 'first_row_rcv'),
+    lastRowReceivedAt: iso(r.last_row_rcv, 'last_row_rcv'),
     count: r.n!,
     states: (r.states ?? []) as EvidenceState[],
     retained: r.retained === true,

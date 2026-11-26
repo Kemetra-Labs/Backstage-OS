@@ -68,11 +68,12 @@ run_agg AS (
    GROUP BY ${IDENTITY}, run_no
 ),
 run_first AS (
-  SELECT DISTINCT ON (${IDENTITY}, run_no) ${IDENTITY}, run_no, id AS first_id, obs AS first_obs
+  SELECT DISTINCT ON (${IDENTITY}, run_no) ${IDENTITY}, run_no, id AS first_id, obs AS first_obs, rcv AS first_row_rcv
     FROM numbered ORDER BY ${IDENTITY}, run_no, obs, rcv, id
 ),
 run_last AS (
-  SELECT DISTINCT ON (${IDENTITY}, run_no) ${IDENTITY}, run_no, id AS last_id, obs AS last_obs, state AS last_state, payload AS last_payload
+  SELECT DISTINCT ON (${IDENTITY}, run_no) ${IDENTITY}, run_no, id AS last_id, obs AS last_obs, rcv AS last_row_rcv,
+         state AS last_state, payload AS last_payload
     FROM numbered ORDER BY ${IDENTITY}, run_no, obs DESC, rcv DESC, id DESC
 ),
 failures AS (
@@ -101,22 +102,23 @@ ambiguous AS (
 SELECT 'grant'::text AS role, grant_id AS id, source_id, NULL::text AS source_ref, provider::text AS kind, NULL::text AS state,
        NULL::timestamptz AS obs, NULL::timestamptz AS rcv, NULL::jsonb AS payload, NULL::uuid AS first_id,
        NULL::timestamptz AS first_obs, NULL::timestamptz AS first_rcv, NULL::timestamptz AS last_rcv,
-       NULL::int AS n, NULL::text[] AS states, NULL::boolean AS retained
+       NULL::int AS n, NULL::text[] AS states, NULL::boolean AS retained,
+       NULL::timestamptz AS first_row_rcv, NULL::timestamptz AS last_row_rcv
   FROM granted
 UNION ALL
-SELECT 'clock', NULL, NULL, NULL, NULL, NULL, now_at, known_at, ${NULLS(8)} FROM clock
+SELECT 'clock', NULL, NULL, NULL, NULL, NULL, now_at, known_at, ${NULLS(10)} FROM clock
 UNION ALL
 SELECT 'run', l.last_id, a.source_id, a.source_ref, a.kind, l.last_state, l.last_obs, NULL, l.last_payload,
-       f.first_id, f.first_obs, a.first_rcv, a.last_rcv, a.n, a.states, a.retained
+       f.first_id, f.first_obs, a.first_rcv, a.last_rcv, a.n, a.states, a.retained, f.first_row_rcv, l.last_row_rcv
   FROM run_agg a
   JOIN run_first f USING (${IDENTITY}, run_no)
   JOIN run_last l USING (${IDENTITY}, run_no)
 UNION ALL
-SELECT 'failure', id, source_id, source_ref, kind, state, obs, rcv, payload, ${NULLS(7)} FROM failures
+SELECT 'failure', id, source_id, source_ref, kind, state, obs, rcv, payload, ${NULLS(9)} FROM failures
 UNION ALL
-SELECT 'list_page', id, source_id, source_ref, kind, state, obs, rcv, payload, ${NULLS(7)} FROM pages
+SELECT 'list_page', id, source_id, source_ref, kind, state, obs, rcv, payload, ${NULLS(9)} FROM pages
 UNION ALL
-SELECT 'scope_item', id, source_id, source_ref, kind, state, obs, rcv, payload, ${NULLS(7)} FROM scope_items
+SELECT 'scope_item', id, source_id, source_ref, kind, state, obs, rcv, payload, ${NULLS(9)} FROM scope_items
 UNION ALL
-SELECT 'ambiguous', id, source_id, source_ref, kind, state, obs, rcv, payload, ${NULLS(7)} FROM ambiguous
+SELECT 'ambiguous', id, source_id, source_ref, kind, state, obs, rcv, payload, ${NULLS(9)} FROM ambiguous
 `;

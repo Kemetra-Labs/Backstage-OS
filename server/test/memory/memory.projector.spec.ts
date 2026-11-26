@@ -105,6 +105,32 @@ describe('runs keep freshness and history (D2, correction A)', () => {
     expect(i.current?.payload['title']).toBe('B');
   });
 
+  it('ties on the last observed instant break by the last ROW\'s receivedAt, not the run\'s latest receivedAt (S1 order)', () => {
+    // Run 1 = [B@09:50 received 11:59, B@10:00 received 10:01]; run 2 = [A@10:00]; run 3 = [B@10:00 received 10:03].
+    // Both B runs end at 10:00. S1 picks the run whose actual last row was received later: run 3.
+    const B = { updatedAt: at('09:30'), title: 'B' };
+    const rows = [
+      pr(1, B, { id: 'r1a', observedAt: at('09:50'), receivedAt: at('11:59') }),
+      pr(1, B, { id: 'r1b', observedAt: at('10:00'), receivedAt: at('10:01') }),
+      pr(1, { updatedAt: at('09:00'), title: 'A' }, { id: 'r2', observedAt: at('10:00'), receivedAt: at('10:02') }),
+      pr(1, B, { id: 'r3', observedAt: at('10:00'), receivedAt: at('10:03') }),
+    ];
+    const i = item(project(rows, request()), PR1);
+    expect([i.current?.firstEvidenceId, i.current?.lastEvidenceId]).toEqual(['r3', 'r3']);
+  });
+
+  it('history runs that start at the same observed instant are ordered by their first row\'s receivedAt', () => {
+    // Row order (observed, received, id): y (10:00 / 10:03), x1 (10:00 / 10:05), x2 (10:20 / 10:00)
+    // -> runs [y], [x1, x2]. Run x's MIN received (10:00) is earlier than y's, but its first row's (10:05) is later.
+    const rows = [
+      repo({ archived: true }, { id: 'y', observedAt: at('10:00'), receivedAt: at('10:03') }),
+      repo({ archived: false }, { id: 'x1', observedAt: at('10:00'), receivedAt: at('10:05') }),
+      repo({ archived: false }, { id: 'x2', observedAt: at('10:20'), receivedAt: at('10:00') }),
+    ];
+    const i = item(project(rows, request()), REPO, 'repository');
+    expect(i.history.map((r) => r.firstEvidenceId)).toEqual(['y', 'x1']);
+  });
+
   it('ok -> stale -> ok of the same content recovers: the latest row state counts, not the worst', () => {
     const rows = [
       jiraIssue('BACK-1', { updatedAt: at('09:00') }, { id: 'e-01', observedAt: at('11:00') }),
