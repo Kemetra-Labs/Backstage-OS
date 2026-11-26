@@ -19,6 +19,7 @@ import {
   type EvidenceState,
   type EvidenceType,
   type NoteType,
+  type SourceProvider,
 } from './evidence.types';
 import { PROJECT_VISIBLE } from './visibility';
 
@@ -173,7 +174,7 @@ export class EvidenceRepository {
    * on it before (reconnecting after their own disconnect); nobody can attach themselves to a
    * source someone else connected. An active grant makes this a no-op.
    */
-  async connectSource(workspaceId: string, actor: string, input: { projectId: string; provider: 'github'; externalRef: string }): Promise<string> {
+  async connectSource(workspaceId: string, actor: string, input: { projectId: string; provider: SourceProvider; externalRef: string }): Promise<string> {
     const externalRef = input.externalRef.trim().toLowerCase();
     return this.inWorkspace(workspaceId, async (c) => {
       const existing = await c.query<{ id: string; project_id: string }>(

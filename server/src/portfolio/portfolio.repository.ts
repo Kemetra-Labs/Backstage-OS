@@ -2,7 +2,7 @@
 // Runs in the workspace context (forced RLS). A project is visible only through a source the
 // reader holds an active grant on, and only granted sources are listed or counted, so the
 // portfolio never reveals that a project or source exists to a reader without a grant.
-// Kawalys-owned BUILD on the BACK-55 evidence store; no schema change.
+// Kawalys-owned BUILD on the BACK-55 evidence store; no schema change. GitHub sources only (BACK-99).
 import type pg from 'pg';
 import { runWithWorkspaceContext } from '../db/workspace-context';
 import { UUID } from '../evidence/evidence.types';
@@ -15,6 +15,15 @@ export const PROJECT_LIMIT = 100;
 /** $1 holds an active grant on source `alias`. */
 const GRANTED = (alias: string) =>
   `EXISTS (SELECT 1 FROM source_grants g WHERE g.source_id = ${alias}.id AND g.user_id = $1 AND g.revoked_at IS NULL)`;
+
+/**
+ * The portfolio read model is GitHub-repository-shaped (one repository read, pull requests, issues).
+ * Jira and Confluence sources (BACK-99) have no repository read, so the portfolio would show them as
+ * never read and drag their project to `unknown`. It lists and counts only GitHub sources, and a project
+ * appears only through a granted GitHub source, so it never takes a slot of PROJECT_LIMIT with nothing to
+ * show. Investigations and evidence keep the provider-neutral PROJECT_VISIBLE rule.
+ */
+export const PORTFOLIO_PROVIDER = 'github';
 
 interface SourceRow {
   project_id: string;
@@ -64,11 +73,12 @@ export class PortfolioRepository {
            SELECT p.id, p.key, p.name FROM projects p
             WHERE ($2::uuid IS NULL OR p.id = $2)
               AND ${PROJECT_VISIBLE('p.id')}
+              AND EXISTS (SELECT 1 FROM sources ps WHERE ps.project_id = p.id AND ps.provider = '${PORTFOLIO_PROVIDER}' AND ${GRANTED('ps')})
             ORDER BY p.key LIMIT ${PROJECT_LIMIT})
          SELECT v.id AS project_id, v.key AS project_key, v.name AS project_name,
                 s.id AS source_id, s.provider, s.external_ref
            FROM visible v JOIN sources s ON s.project_id = v.id
-          WHERE ${GRANTED('s')}
+          WHERE s.provider = '${PORTFOLIO_PROVIDER}' AND ${GRANTED('s')}
           ORDER BY v.key, s.external_ref, s.id`,
         [user, options.projectId ?? null],
       );
