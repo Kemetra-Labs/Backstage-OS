@@ -271,3 +271,10 @@ The first attempt was stopped by the provider's content filter. A narrower rerun
 | Low | `related(p, null)` and `search(p, 'x', null)` threw | Both refuse with `invalid-request` / `invalid-query` |
 
 Independence note: this reviewer was a Claude agent without the author's conclusions, not an external model. The owner delegated the decisions on 2026-11-27 and the previous ten rounds used Codex.
+
+## 18. Pre-COG-07 decision: GO at commit 3c675da (2026-11-27)
+
+- The eleventh independent review (section 17) returned **GO conditional on finding 1**. Finding 1 and every other finding of that review are fixed in #150, merged as `3c675da`, with CI and SonarCloud green.
+- **Decision: GO for the pre-COG-07 gate at `3c675da`.** COG-07 may start within the scope in [cog-07-scope-decision.md](cog-07-scope-decision.md): read-only, fixtures by default, shadow-labelled, no actions.
+- **Still tracked, not blockers:** memory read work budget; a second-project DB test; SQL timing; validator top-level key enumeration.
+- **COG-05:** decisions recorded ([cog-05-decisions.md](../BACK-108/cog-05-decisions.md)); activation stays blocked until BACK-45 approval evidence and real outcomes exist. **COG-06:** deferred.
