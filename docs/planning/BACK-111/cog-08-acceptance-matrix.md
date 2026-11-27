@@ -24,7 +24,7 @@ Status: **interim matrix, written by the implementing session.** It is **not** t
 | No unmarked stale or unknown output | Stale, conflict and unknown are carried on every hit and fact. Unknown is never ready. | open |
 | Zero LLM calls in the deterministic baseline | Purity guards on `src/memory`, `src/retrieval` and `src/reasoning`: no network, clock, randomness or model client. | open |
 | Bounded computation | Query, limit, depth, node, task and requirement bounds, each with a refusal test. | open |
-| Malicious imported text | `test/retrieval/retrieval.adversarial.spec.ts`: markup returned as stored; prototype-like words neither throw nor pollute; mention spam deduplicated and bounded; pathological titles (20k hashes, key-like runs, Arabic diacritic runs) in linear time. **Finding fixed:** invisible format characters (`BACK​-8`) let a key-shaped query escape the never-fuzzy rule; normalization now strips Unicode `Cf` (`retrieval-v2`). | open |
+| Malicious imported text | `test/retrieval/retrieval.adversarial.spec.ts`: markup returned as stored; prototype-like words neither throw nor pollute; mention spam deduplicated and bounded; pathological titles (20k hashes, key-like runs, Arabic diacritic runs) in linear time. **Finding fixed:** invisible format characters (`BACK\u200B-8`) let a key-shaped query escape the never-fuzzy rule; normalization now strips Unicode `Cf` (`retrieval-v2`). | open |
 | Replay and revocation | COG-02 `validateAtRead`; best-effort replay is stated, not hidden. Revocation is tested in PostgreSQL for COG-02, COG-03 and COG-04. | open |
 
 ## 3. Known limitations (for the reviewer)

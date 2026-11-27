@@ -32,6 +32,12 @@ describe('retrieval module is pure and not exposed', () => {
     expect(text).not.toMatch(IMPURE);
   });
 
+  it('no raw invisible format or bidi control character appears in the cognitive modules or their tests (Trojan Source)', () => {
+    const roots = ['src/memory', 'src/retrieval', 'src/reasoning', 'test/memory', 'test/retrieval', 'test/reasoning'].map((d) => resolve(process.cwd(), d));
+    const offenders = roots.flatMap(files).filter((f) => /\p{Cf}/u.test(readFileSync(f, 'utf8')));
+    expect(offenders).toEqual([]);
+  });
+
   it('the checks catch the forms they claim to', () => {
     const bad = (t: string) => IMPURE.test(t) || specifiersOf(t).some((s) => !ALLOWED.test(s));
     for (const t of ["import pg from 'pg';", "import { x } from '../db/workspace-context';", "import { y } from '../memory/memory.repository';", 'const d = new Date();', "fetch('x')", "require('fs')", "import 'node:http';"])
