@@ -234,3 +234,18 @@ The first attempt was stopped by the provider's content filter. A narrower rerun
 | Low | History observation times were not in the fingerprint | Covered (`memory-v5`) |
 
 **Next:** a tenth review of the fixed commit.
+
+## 15. Tenth independent review: Codex, commit fecc299 (2026-11-27)
+
+**Verdict: NO-GO, with one blocker.**
+- **Confirmed fixed:** the Greek and accent order cases; decomposed and precomposed `PR 99`; the history fallback across caps; the observation-time fingerprint.
+- **Reasoning:** an approval-gated task stays `unknown`, and a forged recommendation is rejected.
+- **Fixes:** the findings below are fixed or decided on the branch that adds this section.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| Medium (blocker) | NFD lengthened Hangul past the source-ref shape's 400-unit cap, so the query reached title matching | Recompose after removing marks; no separate cap (`retrieval-v12`) |
+| Low | `résumé/guide` became identifier-shaped and exact-only | Decided: R4 reserves every identifier shape; pinned by a test |
+| Low | `textClipped` on the current run was outside the fingerprint | The current run's whole payload is covered (`memory-v6`) |
+
+**Next:** an eleventh review of the fixed commit.

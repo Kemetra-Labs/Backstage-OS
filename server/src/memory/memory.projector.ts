@@ -281,7 +281,9 @@ function fingerprintOf(items: readonly MemoryItem[], req: MemoryRequest, cap: nu
       // Every field of the current run a consumer cites or shows, even when that run is outside the
       // returned history: a late commit can extend it backwards (COG-08 review, D5).
       current: i.current
-        ? [i.current.contentKey, i.current.firstEvidenceId, i.current.lastEvidenceId, i.current.observationCount, i.current.firstObservedAt, i.current.lastObservedAt, i.current.firstKnownAt, i.current.lastKnownAt, i.current.lastState]
+        ? // The whole payload, not only the content key: consumers read fields outside it (for example
+          // textClipped, which decides whether a mention at a clip cut counts; COG-08 review 10).
+          [i.current.contentKey, i.current.firstEvidenceId, i.current.lastEvidenceId, i.current.observationCount, i.current.firstObservedAt, i.current.lastObservedAt, i.current.firstKnownAt, i.current.lastKnownAt, i.current.lastState, i.current.payload]
         : null,
       // Known times too: retrieval picks the fallback text by them when there is no current run (COG-08 review 8).
       // Observation times too: search reports them (COG-08 review 9).
