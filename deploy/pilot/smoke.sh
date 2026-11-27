@@ -13,12 +13,17 @@ PROJECT="kawalys-pilot-smoke-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
 case "$PROJECT" in kawalys-pilot-smoke-?*) ;; *) echo "FAIL  refusing to run: unsafe project name"; exit 1 ;; esac
 IMAGE_PREFIX="$PROJECT"   # smoke images never reuse the deployment's kawalys-pilot-*:local tags
 SUBNET="${KAWALYS_SMOKE_SUBNET:-172.31.77.0/24}"   # not the deployment default 172.30.42.0/24
+HTTP_PORT="${KAWALYS_HTTP_PORT:-18080}"
+HTTPS_PORT="${KAWALYS_HTTPS_PORT:-18443}"
+# Compose gives the shell environment precedence over --env-file, so any exported deployment setting
+# (KAWALYS_NODE_ENV=production, role passwords, site address...) would steer this run. Drop every inherited
+# KAWALYS_* and POSTGRES_* variable now; the run's own values are exported below or written to its env file.
+while IFS= read -r v; do unset "$v"; done < <(compgen -e | grep -E '^(KAWALYS_|POSTGRES_)')
 # Compose gives the shell environment precedence over --env-file: pin these so an operator's exported
 # deployment values (e.g. KAWALYS_IMAGE_PREFIX=kawalys-pilot) can never steer the smoke at a real pilot.
 export KAWALYS_IMAGE_PREFIX="$IMAGE_PREFIX" KAWALYS_NETWORK_SUBNET="$SUBNET"
 unset COMPOSE_PROJECT_NAME COMPOSE_FILE
-HTTP_PORT="${KAWALYS_HTTP_PORT:-18080}"
-HTTPS_PORT="${KAWALYS_HTTPS_PORT:-18443}"
+export KAWALYS_HTTP_PORT="$HTTP_PORT" KAWALYS_HTTPS_PORT="$HTTPS_PORT"
 # The canonical origin omits the default HTTPS port: the allowlist (and the positive probe) must use that form.
 if [ "$HTTPS_PORT" = 443 ]; then BASE="https://localhost"; else BASE="https://localhost:${HTTPS_PORT}"; fi
 # Pin the site address and allowlist for this run (the shell wins over --env-file): an exported deployment value must not steer the smoke.
