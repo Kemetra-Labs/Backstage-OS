@@ -50,6 +50,8 @@ test('another workspace sees nothing', async ({ page }) => {
   await openLive(page, ROUTE, { investigation: seed.foreign.investigationId });
   await read;
   await expect(page.getByTestId('session-bar')).toHaveAttribute('data-session', 'signedIn');
+  // Positive control first: the panel has rendered the server's "not found" (LiveState), so the negatives below cannot pass early.
+  await expect(page.getByTestId('server-records').getByTestId('live-state')).toHaveAttribute('data-live', 'not_found');
   await expect(page.getByTestId('server-record')).toHaveCount(0);
   await expect(page.locator('body')).not.toContainText(seed.foreign.projectName);
 });
@@ -64,6 +66,7 @@ test('double click records one decision', async ({ page }) => {
   const before = await decisionCount(page, seed.investigationId);
   await form.locator('button[type="submit"]').dblclick();
   await expect(form.getByRole('status')).toContainText('Decision recorded');
+  await page.waitForLoadState('networkidle'); // a late second POST would land before this settles
   expect(await decisionCount(page, seed.investigationId)).toBe(before + 1);
 });
 
@@ -146,6 +149,10 @@ test('nontechnical sees no decision form and makes no investigation request', as
   expect(await signIn(page)).toBe(200);
   await openLive(page, ROUTE, { persona: 'nontechnical', investigation: seed.investigationId });
   await expect(page.getByTestId('session-bar')).toHaveAttribute('data-session', 'signedIn');
+  // Settle point: the Investigation screen is fully rendered (h1 and the page's own panels) and the network is idle, so a
+  // regression that fetched the case or drew the form would have done so by now.
+  await expect(page.locator('main h1, h1').first()).toBeVisible();
+  await page.waitForLoadState('networkidle');
   await expect(page.getByTestId('record-decision')).toHaveCount(0);
   await expect(page.getByTestId('server-records')).toHaveCount(0);
   expect(requested).toEqual([]);
