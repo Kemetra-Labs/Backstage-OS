@@ -1,0 +1,16 @@
+# Cloudflare Origin CA certificate override (BACK-117). Use together with the managed and deploy files:
+#   docker compose -p kawalys-pilot -f deploy/pilot/compose.managed.yml -f deploy/pilot/compose.deploy.yml \
+#     -f deploy/pilot/compose.origin-cert.yml --env-file <.env.pilot> ...
+# Caddy then serves the mounted certificate and never asks an ACME CA (Let's Encrypt) for one, so renewal no longer depends
+# on Let's Encrypt reaching the origin through Cloudflare. Without this file nothing changes: automatic HTTPS stays on.
+# KAWALYS_ORIGIN_CERT_DIR (in .env.pilot) is a host directory that holds exactly:
+#   origin.pem  the certificate (mode 0444)
+#   origin.key  the private key (mode 0400)
+# Both are owned by uid 10001 (the Caddy user in the web image). Keep the directory outside the git checkout
+# (for example /opt/kawalys/tls) and never commit either file. Cloudflare SSL/TLS mode must be Full (strict).
+# Procedure: docs/planning/BACK-64/pilot-deployment-runbook.md, section 11, "Origin certificate".
+services:
+  web:
+    volumes:
+      - ./tls-origin.caddy:/etc/caddy/tls.d/origin.caddy:ro
+      - ${KAWALYS_ORIGIN_CERT_DIR:?set KAWALYS_ORIGIN_CERT_DIR in .env.pilot (a host directory with origin.pem and origin.key)}:/certs:ro

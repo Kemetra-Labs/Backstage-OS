@@ -131,6 +131,23 @@ check "deploy: pull_policy is missing for every service" deploy_json_check 'Obje
 grep -v '^KAWALYS_BFF_IMAGE=' "$TMP/deploy.env" > "$TMP/deploy-missing.env"
 check "deploy: config fails and names KAWALYS_BFF_IMAGE when it is unset" bash -c '! docker compose -f "$0" -f "$1" --env-file "$2" config >"$3" 2>&1 && grep -q KAWALYS_BFF_IMAGE "$3"' "$MANAGED_FILE" "$DEPLOY_FILE" "$TMP_NATIVE/deploy-missing.env" "$TMP_NATIVE/deploy-missing.out"
 
+# Cloudflare Origin CA override (BACK-117): config-only. The default (no override file) must not mount any certificate.
+ORIGIN_FILE="$(cygpath -m "$HERE/compose.origin-cert.yml" 2>/dev/null || echo "$HERE/compose.origin-cert.yml")"
+ORIGIN_SNIPPET="$(cygpath -m "$HERE/tls-origin.caddy" 2>/dev/null || echo "$HERE/tls-origin.caddy")"
+ORIGIN_DIR="$TMP/origincert"; mkdir -p "$ORIGIN_DIR"; chmod 777 "$ORIGIN_DIR"   # throwaway, written by uid 10001 below
+ORIGIN_DIR_NATIVE="$TMP_NATIVE/origincert"
+{ cat "$TMP/deploy.env"; echo "KAWALYS_ORIGIN_CERT_DIR=${ORIGIN_DIR_NATIVE}"; } > "$TMP/origin.env"
+ORIGIN_ENV="$TMP_NATIVE/origin.env"
+origin_json_check() {
+  docker compose -f "$MANAGED_FILE" -f "$DEPLOY_FILE" -f "$ORIGIN_FILE" --env-file "$ORIGIN_ENV" config --format json 2>"$TMP/origin.err" | docker run --rm -i --network none node:24.22.3-alpine node -e 'let d="";process.stdin.on("data",x=>d+=x).on("end",()=>{const c=JSON.parse(d);process.exit(eval(process.argv[1])?0:1)})' "$1"
+}
+check "origin-cert: config succeeds with the override and KAWALYS_ORIGIN_CERT_DIR set" quiet docker compose -f "$MANAGED_FILE" -f "$DEPLOY_FILE" -f "$ORIGIN_FILE" --env-file "$ORIGIN_ENV" config
+check "origin-cert: web mounts tls-origin.caddy into tls.d and the cert directory at /certs, both read-only" origin_json_check 'const v=c.services.web.volumes,a=v.find(x=>x.target==="/etc/caddy/tls.d/origin.caddy"),b=v.find(x=>x.target==="/certs");!!a&&a.read_only===true&&a.source.endsWith("tls-origin.caddy")&&!!b&&b.read_only===true&&b.source.endsWith("origincert")'
+check "origin-cert: the web hardening and the caddy data volumes are unchanged" origin_json_check 'const w=c.services.web,t=w.volumes.map(x=>x.target);w.read_only===true&&w.user==="10001:10001"&&w.cap_drop.includes("ALL")&&t.includes("/data")&&t.includes("/config")'
+check "origin-cert: without the override file no certificate directory is mounted (default unchanged)" deploy_json_check '!JSON.stringify(c.services.web.volumes).includes("/certs")&&!JSON.stringify(c.services.web.volumes).includes("tls.d")'
+grep -v '^KAWALYS_ORIGIN_CERT_DIR=' "$TMP/origin.env" > "$TMP/origin-missing.env"
+check "origin-cert: config fails and names KAWALYS_ORIGIN_CERT_DIR when it is unset" bash -c '! docker compose -f "$0" -f "$1" -f "$2" --env-file "$3" config >"$4" 2>&1 && grep -q KAWALYS_ORIGIN_CERT_DIR "$4"' "$MANAGED_FILE" "$DEPLOY_FILE" "$ORIGIN_FILE" "$TMP_NATIVE/origin-missing.env" "$TMP_NATIVE/origin-missing.out"
+
 # Deploy preflight (BACK-117 review): rejects mutable tags and missing refs; prints no value from the file.
 PF="$HERE/preflight-deploy.sh"
 printf 'KAWALYS_BFF_IMAGE=ghcr.io/kemetra-labs/kawalys-bff@sha256:%s
@@ -153,6 +170,11 @@ log "build images and start postgres"
 quiet dc build || { fail "images build"; exit 1; }
 pass "images build"
 check "caddy validate accepts the Caddyfile with KAWALYS_TRUSTED_PROXIES set to two CIDRs (BACK-117)" quiet docker run --rm --network none -e KAWALYS_SITE_ADDRESS=localhost -e "KAWALYS_TRUSTED_PROXIES=173.245.48.0/20 2400:cb00::/32" "${IMAGE_PREFIX}-web:local" caddy validate --config /etc/caddy/Caddyfile
+check "caddy validate accepts the Caddyfile with the tls.d import glob matching no files (default, BACK-117)" quiet docker run --rm --network none -e KAWALYS_SITE_ADDRESS=localhost "${IMAGE_PREFIX}-web:local" caddy validate --config /etc/caddy/Caddyfile
+# Origin CA override (BACK-117): a throwaway self-signed pair, generated as uid 10001 in the openssl image pinned in compose.yml.
+quiet docker run --rm --network none --user 10001:10001 -v "${ORIGIN_DIR_NATIVE}:/out" alpine/openssl:3.5.4 req -x509 -newkey rsa:2048 -nodes -keyout /out/origin.key -out /out/origin.pem -days 1 -subj "/CN=localhost"
+check "origin-cert: caddy validate accepts the real Caddyfile with tls-origin.caddy and a mounted certificate pair" quiet docker run --rm --network none -e KAWALYS_SITE_ADDRESS=localhost -v "${ORIGIN_SNIPPET}:/etc/caddy/tls.d/origin.caddy:ro" -v "${ORIGIN_DIR_NATIVE}:/certs:ro" "${IMAGE_PREFIX}-web:local" caddy validate --config /etc/caddy/Caddyfile
+check "origin-cert: caddy validate rejects tls-origin.caddy when the certificate files are missing (the check is not vacuous)" bash -c '! docker run --rm --network none -e KAWALYS_SITE_ADDRESS=localhost -v "$0:/etc/caddy/tls.d/origin.caddy:ro" "$1" caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1' "$ORIGIN_SNIPPET" "${IMAGE_PREFIX}-web:local"
 quiet dc up -d --wait postgres || { fail "postgres healthy"; exit 1; }
 pass "postgres healthy"
 pgver="$(dc exec -T postgres psql -U kawalys_admin -d kawalys -tAc 'SHOW server_version' 2>/dev/null | tr -d '[:space:]')"

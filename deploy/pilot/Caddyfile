@@ -11,6 +11,10 @@
 # Kawalys pilot edge (BACK-64). KAWALYS_SITE_ADDRESS is a host name (Caddy obtains a certificate for it)
 # or "localhost" (Caddy's internal CA, local smoke only).
 {$KAWALYS_SITE_ADDRESS} {
+	# Optional TLS override (BACK-117): compose.origin-cert.yml mounts tls-origin.caddy here to serve a Cloudflare Origin CA
+	# certificate instead of an ACME one. An empty glob is a no-op, so the default stays automatic HTTPS.
+	import /etc/caddy/tls.d/*
+
 	encode gzip
 
 	header {

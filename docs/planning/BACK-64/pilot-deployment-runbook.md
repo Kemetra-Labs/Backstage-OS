@@ -231,6 +231,20 @@ The wake-up is close to the readiness probe's 2 s bound. A slower wake gives one
 
 **Network.** IP Allow (an allowlist of host addresses) is a Neon Scale feature. On Launch there is no allowlist; protection is TLS verify-full, strong role passwords and role isolation (readiness doc, section 3).
 
+### Origin certificate (Cloudflare Origin CA) `[built; config and Caddy validation proven in smoke.sh, NOT RUN on a host]`
+
+Optional, off by default. By default Caddy obtains and renews its own Let's Encrypt certificate, which needs Let's Encrypt to reach the origin through Cloudflare. With an Origin CA certificate (valid only between Cloudflare and the origin) Caddy serves mounted files and never contacts an ACME CA. The override is `deploy/pilot/compose.origin-cert.yml`; the Caddyfile imports `/etc/caddy/tls.d/*`, which is empty (a no-op) unless the override mounts `tls-origin.caddy` there.
+
+1. On the host, create the directory outside the git checkout: `sudo mkdir -p /opt/kawalys/tls && cd /opt/kawalys/tls`.
+2. Generate the key and the CSR **on the host**. The key never leaves it: `sudo openssl req -new -newkey rsa:2048 -nodes -keyout origin.key -out origin.csr -subj "/CN=<site>"`.
+3. Obtain the certificate from Cloudflare for that CSR: dashboard SSL/TLS > Origin Server > Create Certificate > "use my own private key and CSR" (paste `origin.csr`; list `<site>` as the hostname), or the API. Save the returned certificate as `origin.pem`. Never paste `origin.key` anywhere.
+4. Set ownership and modes (uid 10001 is the Caddy user in the web image): `sudo chown 10001:10001 origin.pem origin.key && sudo chmod 0400 origin.key && sudo chmod 0444 origin.pem`.
+5. Add `KAWALYS_ORIGIN_CERT_DIR=/opt/kawalys/tls` to `.env.pilot` (see `env.managed.example`).
+6. Deploy with three compose files: `docker compose -p kawalys-pilot -f deploy/pilot/compose.managed.yml -f deploy/pilot/compose.deploy.yml -f deploy/pilot/compose.origin-cert.yml --env-file /path/to/.env.pilot up -d bff web`. Use the same three `-f` flags for every later `up`, `ps` and `logs`; dropping the third one switches Caddy back to automatic certificates.
+7. Verify on the host: `openssl s_client -connect 127.0.0.1:443 -servername <site> </dev/null 2>/dev/null | openssl x509 -noout -issuer -enddate`. The issuer must be Cloudflare Origin CA (not Let's Encrypt, not Caddy Local Authority). Then run the readiness gate above.
+
+Cloudflare SSL/TLS encryption mode must be **Full (strict)**; Origin CA certificates are not trusted by browsers, so a direct, unproxied request to the origin fails the browser's trust check by design. Put the certificate's expiry date (the `enddate` printed above) in a calendar reminder: nothing renews it. To rotate, repeat steps 2 to 4 (a new CSR and key, or the same key), then restart web: `docker compose ... restart web`.
+
 ## 12. Teardown
 
 ```bash
