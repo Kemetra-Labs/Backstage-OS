@@ -56,7 +56,7 @@ dc() { docker compose -p "$PROJECT" -f "$COMPOSE_FILE_NATIVE" --env-file "$ENVF"
 cleanup() {
   # Only ever this run's project (guarded above). Images carry this run's prefix, so they go too.
   dc --profile ops down -v --remove-orphans >/dev/null 2>&1
-  docker rmi "${IMAGE_PREFIX}-bff:local" "${IMAGE_PREFIX}-web:local" >/dev/null 2>&1
+  docker rmi "${IMAGE_PREFIX}-bff:local" "${IMAGE_PREFIX}-web:local" "${IMAGE_PREFIX}-web-sample:local" >/dev/null 2>&1
   rm -rf "$TMP"
 }
 trap cleanup EXIT
@@ -175,6 +175,37 @@ check "caddy validate accepts the Caddyfile with the tls.d import glob matching 
 quiet docker run --rm --network none --user 10001:10001 -v "${ORIGIN_DIR_NATIVE}:/out" alpine/openssl:3.5.4 req -x509 -newkey rsa:2048 -nodes -keyout /out/origin.key -out /out/origin.pem -days 1 -subj "/CN=localhost"
 check "origin-cert: caddy validate accepts the real Caddyfile with tls-origin.caddy and a mounted certificate pair" quiet docker run --rm --network none -e KAWALYS_SITE_ADDRESS=localhost -v "${ORIGIN_SNIPPET}:/etc/caddy/tls.d/origin.caddy:ro" -v "${ORIGIN_DIR_NATIVE}:/certs:ro" "${IMAGE_PREFIX}-web:local" caddy validate --config /etc/caddy/Caddyfile
 check "origin-cert: caddy validate rejects tls-origin.caddy when the certificate files are missing (the check is not vacuous)" bash -c '! docker run --rm --network none -e KAWALYS_SITE_ADDRESS=localhost -v "$0:/etc/caddy/tls.d/origin.caddy:ro" "$1" caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1' "$ORIGIN_SNIPPET" "${IMAGE_PREFIX}-web:local"
+
+log "web image reads the Descope project id at build time (D3(a))"
+# The id is a public identifier passed as a build arg (images.yml). No default in the Dockerfile; ENV is set before vite build.
+check "web.Dockerfile: ARG VITE_KAWALYS_DESCOPE_PROJECT_ID has no default value" bash -c 'grep -qE "^ARG VITE_KAWALYS_DESCOPE_PROJECT_ID\$" "$0" && ! grep -qE "^ARG VITE_KAWALYS_DESCOPE_PROJECT_ID=" "$0"' "$HERE/web.Dockerfile"
+check "web.Dockerfile: the ARG is exported as ENV before vite build" bash -c 'a=$(grep -n "^ARG VITE_KAWALYS_DESCOPE_PROJECT_ID" "$0" | head -1 | cut -d: -f1); e=$(grep -n "^ENV .*VITE_KAWALYS_DESCOPE_PROJECT_ID=" "$0" | head -1 | cut -d: -f1); b=$(grep -n "vite build" "$0" | head -1 | cut -d: -f1); [ -n "$a" ] && [ -n "$e" ] && [ -n "$b" ] && [ "$a" -lt "$e" ] && [ "$e" -lt "$b" ]' "$HERE/web.Dockerfile"
+SAMPLE_ID=PSAMPLE000000000000000000000000
+REAL_ID=P3MW4c80PMtyApvtGSONYmXy9fGt   # the pilot's public Descope project id (images.yml); must never be the default build's content
+SAMPLE_IMG="${IMAGE_PREFIX}-web-sample:local"
+ROOT_NATIVE="$(cygpath -m "$HERE/../.." 2>/dev/null || echo "$HERE/../..")"
+DOCKERFILE_NATIVE="$(cygpath -m "$HERE/web.Dockerfile" 2>/dev/null || echo "$HERE/web.Dockerfile")"
+check "web image builds WITH the project id build arg" quiet docker build -f "$DOCKERFILE_NATIVE" --build-arg "VITE_KAWALYS_DESCOPE_PROJECT_ID=$SAMPLE_ID" -t "$SAMPLE_IMG" "$ROOT_NATIVE"
+files_with() { # $1 image, $2 needle, $3 directory (default /): one path per file under it holding the needle
+  docker run --rm --entrypoint sh "$1" -c 'find "$1" -xdev -type f -not -path "/proc/*" -exec grep -lF -- "$0" {} + 2>/dev/null' "$2" "${3:-/}" 2>/dev/null | tr -d '\r'
+}
+SAMPLE_FILES="$(files_with "$SAMPLE_IMG" "$SAMPLE_ID")"
+DEFAULT_FILES="$(files_with "${IMAGE_PREFIX}-web:local" "$SAMPLE_ID" /srv)$(files_with "${IMAGE_PREFIX}-web:local" "$REAL_ID" /srv)"
+check "the sample id is in the built assets (at least one /srv/assets/*.js)" bash -c 'echo "$0" | grep -q "^/srv/assets/.*\.js$"' "$SAMPLE_FILES"
+check "the sample id is nowhere else in the web image (only /srv/assets/*.js hold it)" bash -c '[ -n "$0" ] && ! echo "$0" | grep -qv "^/srv/assets/.*\.js$"' "$SAMPLE_FILES"
+check "the sample id is not in the image environment or config" bash -c '! docker inspect --format "{{json .Config}}" "$0" | grep -qF "$1"' "$SAMPLE_IMG" "$SAMPLE_ID"
+check "the default web image (no build arg) serves neither the sample id nor the pilot id (nothing under /srv)" test -z "$DEFAULT_FILES"
+
+log "bundled stack passes KAWALYS_TRUSTED_PROXIES to Caddy like the managed profile (auth review F-003)"
+NODE_EVAL='let d="";process.stdin.on("data",x=>d+=x).on("end",()=>{const c=JSON.parse(d);process.exit(eval(process.argv[1])?0:1)})'
+stack_json_check() { # $1 JavaScript expression over the parsed compose.yml config `c`
+  dc config --format json 2>"$TMP/stack.err" | docker run --rm -i --network none node:24.22.3-alpine node -e "$NODE_EVAL" "$1"
+}
+CF_RANGES="173.245.48.0/20 2400:cb00::/32"
+check "compose.yml: web gets KAWALYS_TRUSTED_PROXIES, default 127.0.0.1/32 (trust nobody)" stack_json_check 'c.services.web.environment.KAWALYS_TRUSTED_PROXIES==="127.0.0.1/32"'
+# A value in the shell wins over the env file in Compose, so exporting it for this one subshell is the same as setting it in .env.pilot.
+check "compose.yml: a value set for the stack reaches web unchanged" bash -c 'export KAWALYS_TRUSTED_PROXIES="$1"; docker compose -p "$2" -f "$3" --env-file "$4" config --format json 2>/dev/null | docker run --rm -i --network none node:24.22.3-alpine node -e "$0" "c.services.web.environment.KAWALYS_TRUSTED_PROXIES===\"$1\""' "$NODE_EVAL" "$CF_RANGES" "$PROJECT" "$COMPOSE_FILE_NATIVE" "$ENVF"
+
 quiet dc up -d --wait postgres || { fail "postgres healthy"; exit 1; }
 pass "postgres healthy"
 pgver="$(dc exec -T postgres psql -U kawalys_admin -d kawalys -tAc 'SHOW server_version' 2>/dev/null | tr -d '[:space:]')"
@@ -226,6 +257,41 @@ check_headers() { # $1 label, $2 url
 }
 check_headers "/" "$BASE/"
 check_headers "/api/process" "$BASE/api/process"
+check_headers "/sign-in" "$BASE/sign-in"
+
+log "sign-in page edge (D3(a)): SPA fallback, no-store, report-only CSP"
+check "GET /sign-in serves the app (SPA fallback)" bash -c "curl -sk --max-time 10 '$BASE/sign-in' | grep -q 'id=\"root\"'"
+check "GET /sign-in?t=<token> still serves the app (the magic-link return)" bash -c "curl -sk --max-time 10 '$BASE/sign-in?t=abc.def' | grep -q 'id=\"root\"'"
+check "GET /sign-in/ serves the app" bash -c "curl -sk --max-time 10 '$BASE/sign-in/' | grep -q 'id=\"root\"'"
+SIGNIN_H="$(curl -skI --max-time 10 "$BASE/sign-in?t=abc.def" | tr -d '\r')"
+ROOT_H="$(curl -skI --max-time 10 "$BASE/" | tr -d '\r')"
+hdr() { echo "$1" | grep -i "^$2:" | head -n 1 | sed 's/^[^:]*: *//'; }
+directive() { # $1 policy, $2 directive name: the directive's value list
+  echo "$1" | tr ';' '\n' | sed 's/^ *//' | grep -E "^$2( |\$)" | head -n 1 | sed "s/^$2 *//"
+}
+has_directive() { # $1 policy, $2 whole directive text, exact
+  echo "$1" | tr ';' '\n' | sed 's/^ *//' | grep -qxF "$2"
+}
+SIGNIN_CSP="$(hdr "$SIGNIN_H" content-security-policy-report-only)"
+ROOT_CSP="$(hdr "$ROOT_H" content-security-policy-report-only)"
+SIGNIN_SCRIPT_SRC="$(directive "$SIGNIN_CSP" script-src)"
+check "/sign-in: Cache-Control no-store" bash -c 'echo "$0" | grep -qi "^cache-control: .*no-store"' "$SIGNIN_H"
+check "/: Cache-Control no-store is scoped to /sign-in only" bash -c '! echo "$0" | grep -qi "^cache-control: .*no-store"' "$ROOT_H"
+check "/sign-in: Content-Security-Policy-Report-Only is present" test -n "$SIGNIN_CSP"
+check "/sign-in: CSP connect-src allows 'self' and https://api.descope.com" bash -c 'echo "$0" | grep -qF "connect-src '"'self'"' https://api.descope.com"' "$SIGNIN_CSP"
+check "/sign-in: CSP default-src 'self'" has_directive "$SIGNIN_CSP" "default-src 'self'"
+check "/sign-in: CSP object-src 'none'" has_directive "$SIGNIN_CSP" "object-src 'none'"
+check "/sign-in: CSP frame-ancestors 'none'" has_directive "$SIGNIN_CSP" "frame-ancestors 'none'"
+check "/sign-in: CSP base-uri 'self'" has_directive "$SIGNIN_CSP" "base-uri 'self'"
+check "/sign-in: CSP script-src has no unsafe-inline, unsafe-eval, wildcard, data:, unpkg or jsdelivr" bash -c '[ -n "$0" ] && ! echo "$0" | grep -qE "unsafe-inline|unsafe-eval|\*|data:|unpkg|jsdelivr"' "$SIGNIN_SCRIPT_SRC"
+check "/sign-in: CSP script-src allows 'self' and the Descope components CDN" bash -c 'echo "$0" | grep -qF "'"'self'"'" && echo "$0" | grep -qF "https://descopecdn.com"' "$SIGNIN_SCRIPT_SRC"
+check "/sign-in: no enforcing Content-Security-Policy yet (report-only first)" bash -c '! echo "$0" | grep -qi "^content-security-policy:"' "$SIGNIN_H"
+check "/: Content-Security-Policy-Report-Only is present" test -n "$ROOT_CSP"
+check "/: CSP names no Descope host (the vendor allowances are for /sign-in only)" bash -c '[ -n "$0" ] && ! echo "$0" | grep -qi descope' "$ROOT_CSP"
+check "/: CSP script-src is exactly 'self'" test "$(directive "$ROOT_CSP" script-src)" = "'self'"
+check "/: no enforcing Content-Security-Policy yet" bash -c '! echo "$0" | grep -qi "^content-security-policy:"' "$ROOT_H"
+check "index.html has no inline script (every <script> has src), so script-src 'self' fits" bash -c 'h="$(curl -sk --max-time 10 "$0/")"; [ "$(echo "$h" | grep -oE "<script[^>]*>" | wc -l)" -ge 1 ] && ! echo "$h" | grep -oE "<script[^>]*>" | grep -qv "src="' "$BASE"
+check "bundled stack: the running web container has KAWALYS_TRUSTED_PROXIES" bash -c '[ "$(docker exec "$0" printenv KAWALYS_TRUSTED_PROXIES | tr -d "\r")" = "127.0.0.1/32" ]' "$(dc ps -q web)"
 published() { docker ps --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=$1" --format '{{.Ports}}' | grep -c -- '->'; }
 check "bff publishes no host port (docker compose port bff 8787 empty)" bash -c '[ -z "$(docker compose -p "$2" -f "$0" --env-file "$1" port bff 8787 2>/dev/null | grep -v "^:0$")" ]' "$COMPOSE_FILE_NATIVE" "$ENVF" "$PROJECT"
 check "bff has no host port mapping in docker ps" test "$(published bff)" = 0

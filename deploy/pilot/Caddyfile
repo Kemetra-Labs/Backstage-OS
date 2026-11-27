@@ -25,6 +25,52 @@
 		-Server
 	}
 
+	# The sign-in page (D3(a)) carries the Descope magic-link token in its URL (?t=...) and runs the Descope web component beside a
+	# bearer JWT, so it is never cached (Referrer-Policy no-referrer above already keeps the URL out of Referer). The path matcher
+	# ignores the query string, and the SPA fallback below still serves index.html for /sign-in and /sign-in?t=...
+	@signin path /sign-in /sign-in/
+	header @signin Cache-Control "no-store"
+
+	# Content-Security-Policy-Report-Only (auth review F-001). REPORT-ONLY on purpose: nothing is blocked. The owner decision is to
+	# read the reports in the browser console during the first real sign-in (P5) and enforce only if there are no violations; the
+	# header name then becomes Content-Security-Policy. Built from the vendored @descope/web-component 4.6.3 (and its
+	# @descope/web-js-sdk 1.54.5, @descope/sdk-mixins and @descope/core-js-sdk), and from the Descope project's own published
+	# files (https://static.descope.com/pages/<project id>/v2-beta/, read 27 Nov 2026), never from memory. No 'unsafe-eval', no
+	# script 'unsafe-inline': index.html has only an external module script (the smoke checks it). Style needs 'unsafe-inline':
+	# the component adopts constructable stylesheets, but falls back to <style> elements without a nonce
+	# (sdk-mixins/dist/esm/mixins/injectStyleMixin.js), and the app itself sets style attributes.
+	#
+	# Every path except /sign-in gets the strict policy: no Descope host, because only the sign-in page loads the component.
+	@app not path /sign-in /sign-in/
+	header @app Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+	# /sign-in adds only the Descope origins the component is shown to use. Each origin and where it comes from:
+	#   script-src  https://descopecdn.com     the component injects the UI-components bundle (@descope/web-components-ui) as a <script>
+	#                                          from here first: sdk-mixins/dist/esm/mixins/injectNpmLibMixin/constants.js (BASE_URLS[0]),
+	#                                          descopeUiMixin.js; the bundle then lazy-loads its chunks from the same directory
+	#                                          (checked in the published bundle, whose SRI hash equals componentsVersionSri in config.json).
+	#              https://static.descope.com  BASE_URLS[1], the same files; also the flow's static host (below).
+	#              NOT https://cdn.jsdelivr.net, BASE_URLS[2], the last fallback: it serves any npm package, so it would be a script
+	#              injection allowance for the whole page. If descopecdn.com and static.descope.com are both unreachable the load fails
+	#              and the report shows it.
+	#   connect-src https://api.descope.com    the SDK API: core-js-sdk/dist/index.esm.js (default base "https://api.<region>descope.com";
+	#                                          the project id P3MW4c80PMtyApvtGSONYmXy9fGt has no region part, so it is api.descope.com).
+	#              https://static.descope.com  flow and theme files, fetch(): sdk-mixins/dist/esm/mixins/staticResourcesMixin/constants.js
+	#                                          (BASE_CONTENT_URL), web-component/dist/esm/constants/content.js.
+	#              https://static2.descope.com the fallback host for the same files: same constants.js (BASE_CONTENT_URL_FALLBACK).
+	#   img-src     https://imgs.descope.com   placeholder images the component's CSS points at, in the project's published theme.json
+	#                                          (static.descope.com/pages/<project id>/v2-beta/theme.json). Not in the vendored JS.
+	#              data:                       the sign-in screen's icons are data:image/svg+xml, and web-component/dist/esm/helpers/templates.js
+	#                                          builds data:image/jpg images.
+	# NOT included, because source and the published project files show no need today (a violation in the first real sign-in would
+	# say otherwise): fonts.googleapis.com / fonts.gstatic.com (the project's config.json has no fonts, so no font <link> is created;
+	# the default theme CSS text only names Google Fonts in an unused variable); the device-fingerprint hosts (api.descope.com as a
+	# script, fpnpmcdn.net, api.fpjs.io; only if the flow response enables fingerprinting); the telemetry bundle and its collector (only
+	# if Descope's config turns telemetry on; the collector host is in a CDN bundle that was not read); accounts.google.com and
+	# oidc-client-ts (social and OIDC flows, not magic link). The screens after "Sign In Screen" (the magic-link wait and verification
+	# screens) were not enumerated; their content could name more hosts.
+	header @signin Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://descopecdn.com https://static.descope.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://imgs.descope.com; font-src 'self' data:; connect-src 'self' https://api.descope.com https://static.descope.com https://static2.descope.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
 	# /api/... goes to the BFF with the prefix stripped; the Host header is passed through.
 	# X-Forwarded-For is overwritten, never appended to a client-sent value, so the BFF (which trusts only this proxy)
 	# cannot be given a forged client address. {client_ip} equals the TCP peer unless the peer is a trusted proxy

@@ -17,7 +17,7 @@ Four Compose services in `deploy/pilot/compose.yml` (project `kawalys-pilot`):
 
 `ops` (profile `ops`) is an operator command container: provision and migrate with the admin login. `up` never starts it.
 
-**Blocking gap for real sign-in.** The lab page `/auth/lab` is refused in production (`KAWALYS_AUTH_LAB` cannot be set with `NODE_ENV=production`). The app has no Descope sign-in of its own yet. Until decision D3 (a), the Descope web SDK inside the app, is built, a deployed pilot cannot sign anyone in. D3 (a) adds a dependency and needs owner approval. So "at least one non-local environment can run the pilot" with real sign-in is **not met**. What this runbook gives you: a stack that starts, answers `/api/health`, and answers deny-all to every protected route.
+**Real sign-in (D3 (a), option B).** The lab page `/auth/lab` is refused in production (`KAWALYS_AUTH_LAB` cannot be set with `NODE_ENV=production`). The app now has its own `/sign-in` page (live mode only), built on the Descope web component; see section 5a. It has **never been used against a real Descope project**: a real sign-in (P5) has not been run, so "at least one non-local environment can run the pilot" with real sign-in is **not yet shown**. What this runbook gives you: a stack that starts, answers `/api/health`, and answers deny-all to every protected route until the owner signs in.
 
 ## 1. Owner: decisions and accounts
 
@@ -83,9 +83,18 @@ dc ps
 
 ## 5. Owner: Descope settings for the deployed origin `[NOT RUN]`
 
-- In the Kawalys Descope project, add the deployed host to Approved Domains, and set the sign-in redirect to the deployed origin once D3 (a) defines the page.
+- In the Kawalys Descope project console, set the **App URL** and add **Approved Domains** = `kawalys.kemetralabs.com` (the deployed host). The Descope connector cannot set these; the owner does.
 - Do **not** use `https://<name>/api/auth/lab`. The lab route is loopback-only and refused in production; it answers 404.
 - No Descope management key or secret is stored on the host.
+
+## 5a. Sign-in (D3 (a), option B) `[NOT RUN]`
+
+- **How it works.** The owner opens `https://<name>/sign-in`, enters the email, and follows the Descope **magic link**, which returns to `/sign-in?t=...`. The page makes one exchange (`POST /api/auth/session`, the Descope JWT in the `Authorization` header only), then calls the SDK logout and removes Descope's persisted storage keys. The Kawalys session cookie is the only session; each sign-in needs a fresh magic link.
+- **Build.** The web image reads the Descope project id at build time (`VITE_KAWALYS_DESCOPE_PROJECT_ID`, a public identifier, set as a literal in `.github/workflows/images.yml`). A build without it still works; the sign-in page then shows "not configured". The id must equal `KAWALYS_DESCOPE_PROJECT_ID` on the BFF.
+- **Edge headers.** `/sign-in` gets `Cache-Control: no-store`, `Referrer-Policy: no-referrer` (the magic-link token is in the URL) and a `Content-Security-Policy-Report-Only` header that allows the Descope hosts. Every other path gets a stricter report-only policy with no Descope host. The source of each non-`'self'` origin is in the comments of `deploy/pilot/Caddyfile`.
+- **The CSP is report-only.** Nothing is blocked yet. Read the reports in the browser console on the pilot (DevTools, Console, "Content Security Policy" lines) during the first real sign-in. No report endpoint exists; the console is the only place they appear. If the first real sign-in shows no violations, switch both headers to enforcing (`Content-Security-Policy`) in a follow-up change (auth review F-001). Descope may also load things that depend on the project's own settings (a Google font, device fingerprinting, telemetry); a violation for such a host means the policy needs that host before it is enforced.
+- **After the first real sign-in, the owner verifies in the browser:** DevTools, Application, **Local Storage** and **Session Storage** for the pilot origin hold no Descope credential keys (`DS` session JWT, `DSR` refresh JWT, `DSI`, `DSRCN`, `DTD`, `DKD`, `DSLI`, `dls_last_user_*`). The code removes exactly those; it deliberately leaves non-credential Descope state (`fp`, `vsid`, `vrid`, flow nonces, `dls_ab_testing_id`), so those may still be there. The removal was proven only in unit tests, not in a real browser against Descope.
+- **Open items.** The transitive dependency `@fingerprintjs/fingerprintjs-pro@3.11.6` (pulled in by the Descope SDK) has a proprietary licence ("SEE LICENSE IN LICENSE"); it awaits an owner decision. **Not run:** a real Descope sign-in (P5), any browser check against the deployed origin, the CSP in enforcing mode.
 
 ## 6. Operator: verify `[NOT RUN]` (the same kinds of checks pass locally in `smoke.sh`)
 
@@ -97,7 +106,7 @@ dc logs --tail 50 bff web
 ```
 
 - `/api/health` is readiness: 503 means the database is unreachable or not provisioned. It never reports healthy while unknown. `/api/process` is liveness only.
-- Deny-all means every protected route answers 404 (the standard not-found envelope). With the Descope variables set but no sign-in page (the gap in section 0), it stays that way.
+- Deny-all means every protected route answers 404 (the standard not-found envelope). With the Descope variables set it stays that way until the owner has signed in through `/sign-in` (section 5a).
 - In a browser, check the certificate is issued for the DNS name.
 
 ## 7. Operator: upgrade `[NOT RUN]`
@@ -263,6 +272,6 @@ Then the owner removes the DNS record and the VM, and revokes the Descope setup.
 
 ## 13. Local proof (operator, any machine with Docker) `[local, verified]`
 
-`bash deploy/pilot/smoke.sh` builds both images and runs pki, postgres, provision, migrate and the stack in development mode. It checks health, deny-all, container hardening, no password or `.env` inside images, the per-client sign-in limit behind Caddy, and a database outage. It uses a generated env file and `localhost`, and ends with `SMOKE RESULT: ALL PASS`.
+`bash deploy/pilot/smoke.sh` builds both images and runs pki, postgres, provision, migrate and the stack in development mode. It checks health, deny-all, container hardening, no password or `.env` inside images, the per-client sign-in limit behind Caddy, the `/sign-in` edge headers (no-store, report-only CSP), the build-time Descope project id, `KAWALYS_TRUSTED_PROXIES` reaching Caddy, and a database outage. It uses a generated env file and `localhost`, and ends with `SMOKE RESULT: ALL PASS`.
 
 It is safe to run on a host that already runs the pilot: each run uses its own unique Compose project (`kawalys-pilot-smoke-<random>`), image tags, volumes, network subnet (`KAWALYS_SMOKE_SUBNET`, default `172.31.77.0/24`) and non-default ports (18080/18443), refuses to run under the name `kawalys-pilot`, and its cleanup removes only that project. The deployment's containers, volumes and images are not touched.
