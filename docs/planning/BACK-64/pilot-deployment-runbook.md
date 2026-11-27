@@ -12,7 +12,7 @@ Four Compose services in `deploy/pilot/compose.yml` (project `kawalys-pilot`):
 | --- | --- | --- |
 | `web` | Caddy 2 serving the live-mode app build and proxying `/api/*` to the BFF. Gets a public certificate for `KAWALYS_SITE_ADDRESS`. | 80, 443 (the only ones) |
 | `bff` | The Kawalys BFF (`server/`), non-root, all capabilities dropped. | none |
-| `postgres` | PostgreSQL 17 with TLS on, on the private network. | none |
+| `postgres` | PostgreSQL 18.7 (`postgres:18.7-alpine`, BACK-113) with TLS on, on the private network. | none |
 | `pki` | One-shot: makes a private CA and the Postgres server certificate. | none |
 
 `ops` (profile `ops`) is an operator command container: provision and migrate with the admin login. `up` never starts it.
@@ -112,6 +112,17 @@ dc up -d bff web
 ```
 
 Then check `/api/health`. Migrations apply forward only.
+
+### 7a. PostgreSQL major version: 17 to 18.7 (BACK-113)
+
+The owner-approved baseline is **PostgreSQL 18.7** (decision 2026-11-27; no PostgreSQL 19). The pilot stack, the local development stack and the server tests all pin `postgres:18.7-alpine`. `smoke.sh` and `server/test/db/pg-version.spec.ts` fail if the running server is not 18.7.
+
+- **Fresh install** (the only case today: nothing is deployed): nothing extra. Section 4 creates an 18.7 cluster. `[local, verified]` through the smoke.
+- **Volume layout changed.** The 18 image keeps its data in `/var/lib/postgresql/18/docker`, so `compose.yml` mounts `pg-data` at `/var/lib/postgresql` (it was `/var/lib/postgresql/data` on 17).
+- **An existing 17 volume is refused, not silently replaced.** Started under 18.7, the container exits with code 1 and a "pg_upgrade" message instead of creating an empty cluster. `[local, verified]` with a throw-away 17.12 volume.
+- **Upgrading a stack that holds 17 data** `[NOT RUN]`: on the old commit (still 17.12), stop every writer first with `dc stop bff web`, leaving `postgres` running. A dump is a snapshot, so any write made after it would be missing from the new database. Then take the final dump (section 8) and keep it off the host. Stop the stack with `dc down` (no `-v`), keep the old `pg-data` volume, and check out the new commit. Start 18.7 on a **new** volume by setting a different Compose project name or renaming the volume in a local override. Run `provision --apply` only, restore the dump (section 8), then run `migrate --apply` and verify (section 6). `pg_upgrade --link` is faster but not prepared or tested here.
+- **Rollback**: the old volume was never touched. First bring the 18.7 stack down without `-v`, using the same project name or override it was started with. Otherwise it keeps ports 80 and 443 and the network subnet, and the old stack cannot start. Remove the override or project name, go back to the previous commit (17.12 and the old mount path) and start it on the old volume. Writes made on 18.7 after the cut-over are lost unless they are dumped and restored back, and a dump from 18 is not guaranteed to restore on 17.
+- **Local development stack** (`server/docker-compose.local.yml`): the data is disposable. Run `npm run local:down` (it deletes the volume), then `npm run local:up`.
 
 ## 8. Operator: backup and restore (not tested, not even locally)
 

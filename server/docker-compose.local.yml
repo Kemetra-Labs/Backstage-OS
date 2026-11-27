@@ -6,7 +6,7 @@
 name: kawalys-local
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18.7-alpine
     environment:
       POSTGRES_USER: kawalys_local_admin
       POSTGRES_PASSWORD: ${KAWALYS_LOCAL_PG_PASSWORD:-}
@@ -14,7 +14,7 @@ services:
     ports:
       - "127.0.0.1:${KAWALYS_LOCAL_PG_PORT:-55432}:5432"
     volumes:
-      - kawalys-local-pg:/var/lib/postgresql/data
+      - kawalys-local-pg:/var/lib/postgresql   # PG18 image layout (BACK-113)
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U kawalys_local_admin -d kawalys"]
       interval: 2s

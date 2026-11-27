@@ -10,7 +10,7 @@ It audits what exists; per the 22 Nov reconciliation it adds no duplicate pipeli
 | Root prototype | `tests/` (`smoke.spec.js`, `findings.spec.js`) | Playwright, chromium + webkit | all screens × 320–1440 px × personas × EN/AR × source states | a static server (started by the config) |
 | App unit + typecheck | `app/src/**/*.test.ts` | Vitest + `tsc --noEmit` | 940 tests, 54 files | Node only |
 | App e2e | `app/e2e/*.spec.ts` | Playwright, chromium + webkit (3 shards) | 33 spec files | `vite build` + preview |
-| Server | `server/test/**/*.spec.ts` | Jest (ESM) + `tsc` | 598 tests, 39 suites | **Docker** (disposable `postgres:17-alpine` via testcontainers; no skip) |
+| Server | `server/test/**/*.spec.ts` | Jest (ESM) + `tsc` | 598 tests, 39 suites | **Docker** (disposable `postgres:18.7-alpine` via testcontainers; no skip) |
 | G1 scorer | `docs/planning/G1/` | self-check script | n/a | Node |
 
 All of them run in CI (`.github/workflows/ci.yml`), selected by `.github/scripts/classify-changes.sh`. Only the

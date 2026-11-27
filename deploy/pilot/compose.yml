@@ -37,7 +37,7 @@ services:
     networks: [backend]
 
   postgres:
-    image: postgres:17.12-alpine
+    image: postgres:18.7-alpine
     restart: unless-stopped
     depends_on:
       pki:
@@ -55,7 +55,7 @@ services:
       - -c
       - ssl_key_file=/pki/server.key
     volumes:
-      - pg-data:/var/lib/postgresql/data
+      - pg-data:/var/lib/postgresql   # PG18 image layout: PGDATA=/var/lib/postgresql/18/docker (BACK-113)
       - pg-tls:/pki:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U kawalys_admin -d kawalys"]
