@@ -11,34 +11,47 @@ interface StatusSetter {
   setHeader(name: string, value: string): unknown;
 }
 
-// At most one probe query per pool is ever outstanding: a hung database cannot pile probes onto the shared pools.
-const inflight = new WeakMap<object, Promise<boolean>>();
+type Queryable = { query(sql: string): Promise<{ rows: Array<{ ok?: unknown }> }> };
 
-function probe(pool: { query(sql: string): Promise<unknown> }): Promise<boolean> {
-  const running = inflight.get(pool);
-  if (running) return running;
-  const started = (async () => {
-    try {
-      await pool.query("SELECT 1");
-      return true;
-    } catch {
-      return false;
-    }
-  })().finally(() => inflight.delete(pool));
-  inflight.set(pool, started);
-  return started;
-}
+// Each runtime role must reach the schema objects it needs at run time, not merely connect. Names are fully
+// qualified (schema "kawalys"), so the check does not depend on search_path. has_table_privilege reads the catalog
+// only: it returns no data and is not subject to row security. A missing table gives NULL, which counts as false.
+const SCHEMA_CHECK = {
+  app: `SELECT COALESCE(bool_and(COALESCE(has_table_privilege(current_user, to_regclass(t), 'SELECT'), false)), false) AS ok
+        FROM unnest(ARRAY['kawalys.projects', 'kawalys.evidence']) AS t`,
+  auth: `SELECT COALESCE(bool_and(COALESCE(has_table_privilege(current_user, to_regclass(t), 'SELECT'), false)), false) AS ok
+         FROM unnest(ARRAY['kawalys.sessions', 'kawalys.users']) AS t`,
+} as const;
+type Role = keyof typeof SCHEMA_CHECK;
 
-async function selectOne(pool: { query(sql: string): Promise<unknown> }): Promise<boolean> {
+// One bounded result per pool and role. While a query is outstanding every caller shares the same promise, so a
+// hung database neither piles queries onto the pool nor adds handlers to the stuck query: the single handler is
+// attached when the query is issued. After the 2 s bound the shared result is false; the entry is removed only
+// when the underlying query settles, so a stuck query keeps answering "not ready" without a new query.
+const probes: Record<Role, WeakMap<object, Promise<boolean>>> = { app: new WeakMap(), auth: new WeakMap() };
+
+function probe(role: Role, pool: Queryable): Promise<boolean> {
+  const shared = probes[role].get(pool);
+  if (shared) return shared;
   let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<boolean>((resolve) => {
-    timer = setTimeout(() => resolve(false), CHECK_TIMEOUT_MS);
+  const query: Promise<boolean> = Promise.resolve()
+    .then(() => pool.query(SCHEMA_CHECK[role]))
+    .then(
+      (r) => r.rows[0]?.ok === true,
+      () => false,
+    );
+  const bounded = Promise.race([
+    query,
+    new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(false), CHECK_TIMEOUT_MS);
+      timer.unref();
+    }),
+  ]).finally(() => clearTimeout(timer));
+  probes[role].set(pool, bounded);
+  void query.finally(() => {
+    if (probes[role].get(pool) === bounded) probes[role].delete(pool);
   });
-  try {
-    return await Promise.race([probe(pool), timeout]);
-  } finally {
-    clearTimeout(timer);
-  }
+  return bounded;
 }
 
 @Controller("health")
@@ -51,7 +64,7 @@ export class ReadinessController {
   @Get()
   async get(@Res({ passthrough: true }) res: StatusSetter) {
     const db = this.database;
-    const ready = db ? (await Promise.all([selectOne(db.appPool), selectOne(db.authPool)])).every(Boolean) : false;
+    const ready = db ? (await Promise.all([probe("app", db.appPool), probe("auth", db.authPool)])).every(Boolean) : false;
     res.setHeader("cache-control", "no-store");
     res.status(ready ? 200 : 503);
     return { service: "kawalys-bff", ready };

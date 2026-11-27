@@ -3,7 +3,8 @@ import type { INestApplication } from '@nestjs/common';
 import pg from 'pg';
 import request from 'supertest';
 import { createApp } from '../../src/create-app';
-import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
+import { runMigrations } from '../../src/db/migrate';
+import { MIGRATIONS_DIR, startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
 
 const ENV = { KAWALYS_DESCOPE_PROJECT_ID: 'PkawalysTest0001', KAWALYS_OWNER_SUBJECT: 'owner-subject' };
 
@@ -70,18 +71,57 @@ describe('GET /health (database)', () => {
   });
 });
 
-describe('GET /health (hung database)', () => {
-  const saved: Record<string, string | undefined> = {};
+describe('GET /health (provisioned but not migrated)', () => {
+  let db: KawalysDb;
+  let appPool: pg.Pool;
+  let authPool: pg.Pool;
   let app: INestApplication;
-  const hung = { query: jest.fn(() => new Promise<never>(() => undefined)) };
+  const saved: Record<string, string | undefined> = {};
 
   beforeAll(async () => {
     for (const [k, v] of Object.entries(ENV)) {
       saved[k] = process.env[k];
       process.env[k] = v;
     }
-    const pool = hung as unknown as pg.Pool;
-    app = await createApp([], {}, { database: { appPool: pool, authPool: pool } });
+    db = await startKawalysDb({ migrate: false });
+    appPool = new pg.Pool({ connectionString: db.appUrl, max: 2 });
+    authPool = new pg.Pool({ connectionString: db.authUrl, max: 2 });
+    app = await createApp([], {}, { database: { appPool, authPool } });
+  }, 120_000);
+
+  afterAll(async () => {
+    await app?.close().catch(() => undefined);
+    await Promise.all([appPool, authPool].map((p) => p?.end().catch(() => undefined)));
+    await stopKawalysDb(db);
+    for (const [k, v] of Object.entries(saved)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }, 60_000);
+
+  it('answers 503 while the schema is missing, then 200 once migrated', async () => {
+    const before = await request(app.getHttpServer()).get('/health');
+    expect(before.status).toBe(503);
+    expect(before.body).toEqual({ service: 'kawalys-bff', ready: false });
+    await runMigrations(db.migrator, MIGRATIONS_DIR);
+    const after = await request(app.getHttpServer()).get('/health');
+    expect(after.status).toBe(200);
+    expect(after.body).toEqual({ service: 'kawalys-bff', ready: true });
+  });
+});
+
+describe('GET /health (hung database)', () => {
+  const saved: Record<string, string | undefined> = {};
+  let app: INestApplication;
+  const hungApp = { query: jest.fn(() => new Promise<never>(() => undefined)) };
+  const hungAuth = { query: jest.fn(() => new Promise<never>(() => undefined)) };
+
+  beforeAll(async () => {
+    for (const [k, v] of Object.entries(ENV)) {
+      saved[k] = process.env[k];
+      process.env[k] = v;
+    }
+    app = await createApp([], {}, { database: { appPool: hungApp as unknown as pg.Pool, authPool: hungAuth as unknown as pg.Pool } });
   });
   afterAll(async () => {
     await app.close();
@@ -102,8 +142,15 @@ describe('GET /health (hung database)', () => {
       expect(res.headers['cache-control']).toBe('no-store');
       expect(res.body).toEqual({ service: 'kawalys-bff', ready: false });
     }
-    expect(hung.query).toHaveBeenCalledTimes(1);
-    await request(app.getHttpServer()).get('/health');
-    expect(hung.query).toHaveBeenCalledTimes(1);
-  });
+    expect(hungApp.query).toHaveBeenCalledTimes(1);
+    expect(hungAuth.query).toHaveBeenCalledTimes(1);
+    // Many later calls over more than another 2 s: still no new query (the first one never settled).
+    await new Promise((r) => setTimeout(r, 2200));
+    for (let i = 0; i < 4; i++) {
+      const res = await request(app.getHttpServer()).get('/health');
+      expect(res.status).toBe(503);
+    }
+    expect(hungApp.query).toHaveBeenCalledTimes(1);
+    expect(hungAuth.query).toHaveBeenCalledTimes(1);
+  }, 20_000);
 });

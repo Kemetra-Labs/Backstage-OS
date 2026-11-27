@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
-# Local smoke for the Kawalys pilot Compose stack (BACK-64). Disposable: throwaway passwords, project
-# "kawalys-pilot" (never the "kawalys-local" dev stack), everything removed at the end.
+# Local smoke for the Kawalys pilot Compose stack (BACK-64). Disposable: throwaway passwords, a unique
+# project name per run ("kawalys-pilot-smoke-<random>", never "kawalys-pilot" and never the "kawalys-local" dev
+# stack), its own image tags and subnet, everything of this run (and only this run) removed at the end.
+# It is safe to run on a host that already runs the pilot: nothing of the deployment is touched.
 # Run: bash deploy/pilot/smoke.sh      (Git Bash on Windows, or Linux; needs Docker with Compose v2 and curl)
 # Prints PASS/FAIL per line, never a password. Exit code 1 if any line fails.
 set -u
 export MSYS_NO_PATHCONV=1   # Git Bash must not rewrite /paths inside docker arguments
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT=kawalys-pilot
+PROJECT="kawalys-pilot-smoke-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
+case "$PROJECT" in kawalys-pilot-smoke-?*) ;; *) echo "FAIL  refusing to run: unsafe project name"; exit 1 ;; esac
+IMAGE_PREFIX="$PROJECT"   # smoke images never reuse the deployment's kawalys-pilot-*:local tags
+SUBNET="${KAWALYS_SMOKE_SUBNET:-172.31.77.0/24}"   # not the deployment default 172.30.42.0/24
 HTTP_PORT="${KAWALYS_HTTP_PORT:-18080}"
 HTTPS_PORT="${KAWALYS_HTTPS_PORT:-18443}"
 BASE="https://localhost:${HTTPS_PORT}"
@@ -25,6 +30,8 @@ KAWALYS_SITE_ADDRESS=localhost
 KAWALYS_NODE_ENV=development
 KAWALYS_HTTP_PORT=${HTTP_PORT}
 KAWALYS_HTTPS_PORT=${HTTPS_PORT}
+KAWALYS_IMAGE_PREFIX=${IMAGE_PREFIX}
+KAWALYS_NETWORK_SUBNET=${SUBNET}
 POSTGRES_PASSWORD=${PW_ADMIN}
 KAWALYS_ROLE_PASSWORD_MIGRATOR=${PW_MIG}
 KAWALYS_ROLE_PASSWORD_APP=${PW_APP}
@@ -34,7 +41,9 @@ ENV
 dc() { docker compose -p "$PROJECT" -f "$COMPOSE_FILE_NATIVE" --env-file "$ENVF" "$@"; }
 
 cleanup() {
+  # Only ever this run's project (guarded above). Images carry this run's prefix, so they go too.
   dc --profile ops down -v --remove-orphans >/dev/null 2>&1
+  docker rmi "${IMAGE_PREFIX}-bff:local" "${IMAGE_PREFIX}-web:local" >/dev/null 2>&1
   rm -rf "$TMP"
 }
 trap cleanup EXIT
@@ -53,6 +62,7 @@ quiet() { "$@" >"$TMP/step.log" 2>&1 || { echo "step failed: $*"; tail -n 40 "$T
 command -v docker >/dev/null && command -v curl >/dev/null || { echo "FAIL  docker and curl are required"; exit 1; }
 [ -f "$HERE/compose.yml" ] || { echo "FAIL  deploy/pilot/compose.yml is missing"; exit 1; }
 
+log "isolation: every resource of this run belongs to $PROJECT, none to the deployment project kawalys-pilot"
 log "build images and start postgres"
 quiet dc build || { fail "images build"; exit 1; }
 pass "images build"
@@ -104,9 +114,9 @@ check_headers() { # $1 label, $2 url
 check_headers "/" "$BASE/"
 check_headers "/api/process" "$BASE/api/process"
 published() { docker ps --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=$1" --format '{{.Ports}}' | grep -c -- '->'; }
-check "bff publishes no host port (docker compose port bff 8787 empty)" bash -c '[ -z "$(docker compose -p kawalys-pilot -f "$0" --env-file "$1" port bff 8787 2>/dev/null | grep -v "^:0$")" ]' "$COMPOSE_FILE_NATIVE" "$ENVF"
+check "bff publishes no host port (docker compose port bff 8787 empty)" bash -c '[ -z "$(docker compose -p "$2" -f "$0" --env-file "$1" port bff 8787 2>/dev/null | grep -v "^:0$")" ]' "$COMPOSE_FILE_NATIVE" "$ENVF" "$PROJECT"
 check "bff has no host port mapping in docker ps" test "$(published bff)" = 0
-check "postgres publishes no host port (docker compose port postgres 5432 empty)" bash -c '[ -z "$(docker compose -p kawalys-pilot -f "$0" --env-file "$1" port postgres 5432 2>/dev/null | grep -v "^:0$")" ]' "$COMPOSE_FILE_NATIVE" "$ENVF"
+check "postgres publishes no host port (docker compose port postgres 5432 empty)" bash -c '[ -z "$(docker compose -p "$2" -f "$0" --env-file "$1" port postgres 5432 2>/dev/null | grep -v "^:0$")" ]' "$COMPOSE_FILE_NATIVE" "$ENVF" "$PROJECT"
 check "postgres has no host port mapping in docker ps" test "$(published postgres)" = 0
 check "only web publishes ports (80/443)" bash -c "docker ps --filter label=com.docker.compose.project=$PROJECT --format '{{.Names}} {{.Ports}}' | awk '/->/ {print \$1}' | grep -v -- '-web-' | wc -l | grep -qx 0"
 
@@ -162,6 +172,12 @@ dc start postgres >/dev/null 2>&1
 back=no
 for _ in $(seq 1 30); do [ "$(code "$BASE/api/health")" = 200 ] && { back=yes; break; }; sleep 1; done
 check "postgres restarted -> /api/health 200 again" test "$back" = yes
+
+log "isolation check"
+check "smoke project name is not kawalys-pilot" test "$PROJECT" != kawalys-pilot
+check "every smoke volume is named for the smoke project" bash -c '[ "$(docker volume ls -q --filter "label=com.docker.compose.project=$0" | grep -vc "^$0_")" = 0 ] && [ "$(docker volume ls -q --filter "label=com.docker.compose.project=$0" | wc -l)" -ge 5 ]' "$PROJECT"
+check "smoke images are tagged with the smoke prefix, not kawalys-pilot-*:local" bash -c '! docker compose -p "$0" -f "$1" --env-file "$2" config --images | grep -q "^kawalys-pilot-\(bff\|web\):local$"' "$PROJECT" "$COMPOSE_FILE_NATIVE" "$ENVF"
+check "no volume of the smoke project is named like a deployment volume" bash -c '! docker volume ls -q --filter "label=com.docker.compose.project=$0" | grep -q "^kawalys-pilot_"' "$PROJECT"
 
 echo
 if [ "$FAILS" -eq 0 ]; then echo "SMOKE RESULT: ALL PASS"; else echo "SMOKE RESULT: $FAILS FAILED"; fi

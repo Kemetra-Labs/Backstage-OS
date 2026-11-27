@@ -185,3 +185,5 @@ Then the owner removes the DNS record and the VM, and revokes the Descope setup.
 ## 13. Local proof (operator, any machine with Docker) `[local, verified]`
 
 `bash deploy/pilot/smoke.sh` builds both images and runs pki, postgres, provision, migrate and the stack in development mode. It checks health, deny-all, container hardening, no password or `.env` inside images, the per-client sign-in limit behind Caddy, and a database outage. It uses a generated env file and `localhost`, and ends with `SMOKE RESULT: ALL PASS`.
+
+It is safe to run on a host that already runs the pilot: each run uses its own unique Compose project (`kawalys-pilot-smoke-<random>`), image tags, volumes, network subnet (`KAWALYS_SMOKE_SUBNET`, default `172.31.77.0/24`) and non-default ports (18080/18443), refuses to run under the name `kawalys-pilot`, and its cleanup removes only that project. The deployment's containers, volumes and images are not touched.

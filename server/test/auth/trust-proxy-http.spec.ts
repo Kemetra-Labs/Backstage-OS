@@ -5,7 +5,7 @@ import { TOKENS, startApp, type TestApp } from './_helpers';
 
 // The test client connects from loopback. Default sign-in limit is 10 per minute per key.
 describe('sign-in limiter key behind a proxy (KAWALYS_TRUST_PROXY)', () => {
-  let t: TestApp;
+  let t: TestApp | undefined;
   let errorLog: ReturnType<typeof jest.spyOn>;
   const saved = process.env['KAWALYS_TRUST_PROXY'];
 
@@ -15,19 +15,24 @@ describe('sign-in limiter key behind a proxy (KAWALYS_TRUST_PROXY)', () => {
     t = await startApp();
   }
   const attempt = (client: string) =>
-    request(t.app.getHttpServer()).post('/auth/session').set('X-Forwarded-For', client).set('Authorization', `Bearer ${TOKENS.refused}`);
+    request(t!.app.getHttpServer()).post('/auth/session').set('X-Forwarded-For', client).set('Authorization', `Bearer ${TOKENS.refused}`);
   async function burn(client: string): Promise<void> {
     for (let i = 0; i < 10; i++) expect((await attempt(client)).status).not.toBe(429);
   }
 
   beforeEach(() => {
+    t = undefined;
     errorLog = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   });
   afterEach(async () => {
-    errorLog.mockRestore();
-    await t.app.close();
-    if (saved === undefined) delete process.env['KAWALYS_TRUST_PROXY'];
-    else process.env['KAWALYS_TRUST_PROXY'] = saved;
+    try {
+      errorLog.mockRestore();
+      await t?.app.close();
+    } finally {
+      t = undefined;
+      if (saved === undefined) delete process.env['KAWALYS_TRUST_PROXY'];
+      else process.env['KAWALYS_TRUST_PROXY'] = saved;
+    }
   });
 
   it('unset: X-Forwarded-For is ignored, so a spoofed address does not get a fresh bucket', async () => {

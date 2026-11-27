@@ -58,14 +58,14 @@ services:
       - pg-data:/var/lib/postgresql/data
       - pg-tls:/pki:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kawalys_admin -d kawalys"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U kawalys_admin -d kawalys"]
       interval: 3s
       timeout: 3s
       retries: 30
     networks: [backend]
 
   bff:
-    image: kawalys-pilot-bff:local
+    image: ${KAWALYS_IMAGE_PREFIX:-kawalys-pilot}-bff:local
     build:
       context: ../..
       dockerfile: deploy/pilot/server.Dockerfile
@@ -106,7 +106,7 @@ services:
   #   docker compose ... --profile ops run --rm ops provision --apply
   #   docker compose ... --profile ops run --rm ops migrate --apply
   ops:
-    image: kawalys-pilot-bff:local
+    image: ${KAWALYS_IMAGE_PREFIX:-kawalys-pilot}-bff:local
     profiles: ["ops"]
     depends_on:
       postgres:
@@ -123,7 +123,7 @@ services:
     networks: [backend]
 
   web:
-    image: kawalys-pilot-web:local
+    image: ${KAWALYS_IMAGE_PREFIX:-kawalys-pilot}-web:local
     build:
       context: ../..
       dockerfile: deploy/pilot/web.Dockerfile

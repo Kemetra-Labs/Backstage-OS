@@ -17,14 +17,15 @@ export interface KawalysDb extends PgContainer {
   readonly appPassword: string;
 }
 
-export async function startKawalysDb(): Promise<KawalysDb> {
+/** `migrate: false` provisions roles and the database but leaves the schema empty (for not-ready checks). */
+export async function startKawalysDb(options: { migrate?: boolean } = {}): Promise<KawalysDb> {
   const base = await startPgContainer();
   const pw = () => randomBytes(18).toString('hex');
   const passwords = { migrator: pw(), app: pw(), auth: pw() };
   await provisionRoles(base.admin, passwords);
   await provisionDatabase(base.admin, 'kawalys');
   const migrator = new pg.Pool({ connectionString: base.urlFor(ROLE_MIGRATOR, passwords.migrator), max: 2 });
-  await runMigrations(migrator, MIGRATIONS_DIR);
+  if (options.migrate !== false) await runMigrations(migrator, MIGRATIONS_DIR);
   const appUrl = base.urlFor(ROLE_APP, passwords.app);
   const authUrl = base.urlFor(ROLE_AUTH, passwords.auth);
   const app = new pg.Pool({ connectionString: appUrl, max: 4 });
