@@ -33,15 +33,15 @@ describe('malicious imported text (COG-08)', () => {
   });
 
   it('zero-width and bidirectional-override characters cannot fake an identifier', () => {
-    const rows = [jira('BACK-7', 'Real target', 'j7'), titled(3, 'see BACK​-7 and ‮BACK-8')];
+    const rows = [jira('BACK-7', 'Real target', 'j7'), titled(3, 'see BACK\u200B-7 and \u202EBACK-8')];
     const p = projectionOf(rows);
     // Invisible characters are stripped, so a disguised key is still answered by exact match only:
     // it finds the real item when one exists ...
-    expect(search(p, 'BACK​-7')).toMatchObject({ outcome: 'match', selected: { sourceRef: 'jira:BACK#issue/BACK-7' } });
-    expect(search(p, '‮BACK-7').hits[0]!.tier).toBe('identifier');
+    expect(search(p, 'BACK\u200B-7')).toMatchObject({ outcome: 'match', selected: { sourceRef: 'jira:BACK#issue/BACK-7' } });
+    expect(search(p, '\u202EBACK-7').hits[0]!.tier).toBe('identifier');
     // ... and abstains when none does, instead of fuzzy-matching the PR whose title holds "BACK" and "8".
-    expect(search(p, 'BACK​-8').outcome).toBe('no-match');
-    expect(search(p, 'BACK⁠-8').outcome).toBe('no-match');
+    expect(search(p, 'BACK\u200B-8').outcome).toBe('no-match');
+    expect(search(p, 'BACK\u2060-8').outcome).toBe('no-match');
     // The zero-width key is not a mention of BACK-7; the bidi-prefixed BACK-8 is unresolved.
     const fromPr = relationships(p).edges.filter((e) => e.from.sourceId === GH && e.type === 'mentions');
     expect(fromPr).toEqual([]);
