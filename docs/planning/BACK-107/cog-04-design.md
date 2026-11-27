@@ -85,7 +85,7 @@ Work is linear in tasks × requirements plus the projection size, under the T1 b
 | Slice | Delivers | Tests first |
 | --- | --- | --- |
 | **S1 (this branch)** | `server/src/reasoning/`: types, rules, evaluator, validator | Each T1 refusal; each T2 rule (a closed PR is never "merged"); stale, conflict and unknown give `unknown`; a hidden dependency equals a nonexistent one; approval never passes; T4 classification and reasons; cycle refusal; ranking; the validator accepts the evaluator's output and rejects forged variants; permutation determinism; guard. |
-| S2 (later, own review) | PostgreSQL proof over `MemoryRepository.read`: revoke a dependency's source and the task becomes `unknown` with no trace | — |
+| **S2 (this branch)** | PostgreSQL proof over `MemoryRepository.read` (`test/reasoning/reasoning-db.spec.ts`) | Ready with every grant; revoking the dependency's source gives `unknown`, identical to a nonexistent dependency, with no trace; rows added to the hidden source change nothing; another workspace gets no task; the validator accepts every result. |
 | S3 (later, gated) | Approval evidence from cited HumanDecisions (BACK-45) | — |
 
 ## 5. Acceptance mapping (BACK-107)
