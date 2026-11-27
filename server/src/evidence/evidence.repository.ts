@@ -269,7 +269,8 @@ export class EvidenceRepository {
     if (!UUID.test(sourceId) || !Reauthorization.isGenuine(reauth) || !reauth.isFreshAt(Date.now())) throw new NotVisibleError('source not visible');
     return this.inWorkspace(workspaceId, async (c) => {
       await lockProjectIdentity(c, workspaceId, await projectOfSource(c, sourceId));
-      // Re-verified under the lock: nothing read before it is trusted.
+      // Re-verified under the lock: nothing read before it is trusted, and a long lock wait must not stretch the proof.
+      if (!reauth.isFreshAt(Date.now())) throw new NotVisibleError('source not visible');
       const source = await sourceIdentityOf(c, sourceId);
       const approvedSet = await this.approvedSetOf(c, source.projectId);
       if (!isApproved(approvedSet, source.identity) || !(await historyApproved(c, source.projectId, approvedSet))) throw new NotVisibleError('source not visible');

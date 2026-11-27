@@ -300,6 +300,47 @@ describe('one identity first-connected in two projects at once (C7)', () => {
   });
 });
 
+describe('a reconnect that waits for the project lock is judged again afterwards (C8)', () => {
+  const HELD_MS = 800;
+  /** Holds the project's identity lock in another transaction for HELD_MS, then commits. */
+  async function holdLock(projectId: string): Promise<{ released: Promise<void> }> {
+    const c = await racePool.connect();
+    await c.query('BEGIN');
+    await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`source-identity:${ws}:${projectId}`]);
+    const released = new Promise<void>((resolve) =>
+      setTimeout(() => void c.query('COMMIT').finally(() => (c.release(), resolve())), HELD_MS),
+    );
+    return { released };
+  }
+
+  async function revokedSource(tag: string): Promise<{ projectId: string; sourceId: string }> {
+    const { X, projects } = await freshProject(tag, 0);
+    const sourceId = await connect(ws, projects[0]!, X);
+    await disconnect(ws, sourceId);
+    return { projectId: projects[0]!, sourceId };
+  }
+
+  it('C8: a proof that is fresh at the call but expires while waiting for the lock creates no grant and no audit row', async () => {
+    const { projectId, sourceId } = await revokedSource('c8-expiring');
+    const before = await snapshot(projectId);
+    const lock = await holdLock(projectId);
+    const proof = Reauthorization.fromSessionIssuedAt(Date.now() - REAUTH_MAX_AGE_MS + 300);
+    await expect(repo.reconnectSource(ws, owner, sourceId, proof)).rejects.toBeInstanceOf(NotVisibleError);
+    await lock.released;
+    expect(await snapshot(projectId)).toEqual(before);
+  });
+
+  it('C8 control: a fresh proof waiting for the same lock still reconnects', async () => {
+    const { projectId, sourceId } = await revokedSource('c8-control');
+    const lock = await holdLock(projectId);
+    await expect(reconnect(ws, sourceId)).resolves.toBe(sourceId);
+    await lock.released;
+    const s = await snapshot(projectId);
+    expect(s.grants).toHaveLength(2);
+    expect(tally(s.audits).reconnected).toBe(1);
+  });
+});
+
 describe('every reader answers as if the source never existed (G8)', () => {
   const portfolio = () => new PortfolioRepository(db!.app);
   const investigations = () => new InvestigationRepository(db!.app);

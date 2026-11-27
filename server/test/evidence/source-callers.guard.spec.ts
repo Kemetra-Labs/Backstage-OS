@@ -1,26 +1,18 @@
 // Caller inventory guard (BACK-131, G9). Source connect, reconnect, disconnect and ingest are server-internal write
 // paths with no HTTP route, and a Reauthorization can only be minted by `fromSessionIssuedAt`. This test fails if a
 // new production caller appears in src/, if src/ imports test code, or if the GitHub transport port gains anything
-// besides a read-only `get`.
+// besides a read-only `get`. It reads the syntax tree (TypeScript compiler API, already a devDependency), so comments
+// and string contents are ignored by construction and whitespace or layout cannot hide a call.
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import ts from 'typescript';
 
 const SRC = resolve(process.cwd(), 'src');
-
-interface Rule {
-  readonly pattern: RegExp;
-  readonly allowed: ReadonlySet<string>;
-}
-
-const RULES: readonly Rule[] = [
-  {
-    pattern: /\b(?:connectSource|reconnectSource|disconnectSource)\b|\.ingest\(/,
-    allowed: new Set(['evidence/evidence.repository.ts', 'ops/local-stack.ts']),
-  },
-  // Only the definition may mint a Reauthorization: a route would have to be given a session issue time by the server.
-  { pattern: /\bfromSessionIssuedAt\b/, allowed: new Set(['evidence/source-approval.ts']) },
-];
-const TEST_IMPORT = /(?:from\s+|import\s*\(\s*|require\s*\(\s*)['"](?:[^'"]*\/)?test\//;
+const WRITE_PATH_FILES = new Set(['evidence/evidence.repository.ts', 'ops/local-stack.ts']);
+const MINT_FILES = new Set(['evidence/source-approval.ts']);
+const WRITE_NAMES = new Set(['connectSource', 'reconnectSource', 'disconnectSource']);
+const MINT_NAME = 'fromSessionIssuedAt';
+const TEST_SPECIFIER = /(^|\/)test(\/|$)/;
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -30,51 +22,56 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-/** Copies a string or template literal verbatim (a name inside one still counts as a mention) and returns the next index. */
-function copyLiteral(text: string, start: number, out: string[]): number {
-  const quote = text[start]!;
-  out.push(quote);
-  let i = start + 1;
-  while (i < text.length && text[i] !== quote) {
-    if (text[i] === '\\' && i + 1 < text.length) out.push(text[i++]!);
-    out.push(text[i++]!);
+const parse = (name: string, text: string) => ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+/** The specifier of an import, export-from, `import x = require()`, dynamic `import()` or `require()`, if this node is one. */
+function moduleSpecifier(node: ts.Node): string | undefined {
+  if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteralLike(node.moduleSpecifier)) {
+    return node.moduleSpecifier.text;
   }
-  if (i < text.length) out.push(text[i++]!);
-  return i;
+  if (ts.isExternalModuleReference(node) && ts.isStringLiteralLike(node.expression)) return node.expression.text;
+  if (ts.isCallExpression(node) && node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])) {
+    const callee = node.expression;
+    if (callee.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(callee) && callee.text === 'require')) return node.arguments[0].text;
+  }
+  return undefined;
 }
 
-/**
- * Code with every comment removed: `//` tails, block comments anywhere on a line and across lines. String and template
- * literals are copied whole, so a `/*` or `//` inside one never starts a comment. Any misreading (a regex literal with a
- * quote) keeps text rather than drops it, so the scanner can over-report but cannot be blinded.
- */
-export function stripComments(text: string): string {
-  const out: string[] = [];
-  let i = 0;
-  while (i < text.length) {
-    const c = text[i]!;
-    const next = text[i + 1];
-    if (c === '/' && next === '/') {
-      while (i < text.length && text[i] !== '\n') i++;
-    } else if (c === '/' && next === '*') {
-      const end = text.indexOf('*/', i + 2);
-      i = end < 0 ? text.length : end + 2;
-      out.push(' ');
-    } else if (c === "'" || c === '"' || c === '`') {
-      i = copyLiteral(text, i, out);
-    } else {
-      out.push(c);
-      i++;
-    }
-  }
-  return out.join('');
+/** Names this node uses as code: an identifier, a property name, or a string key of `x['name']`. */
+function usedName(node: ts.Node): string | undefined {
+  if (ts.isIdentifier(node)) return node.text;
+  if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)) return node.argumentExpression.text;
+  return undefined;
 }
 
-export function offendingFiles(files: ReadonlyMap<string, string>, rules: readonly Rule[] = RULES): string[] {
+export interface Findings {
+  readonly writePaths: string[];
+  readonly mints: string[];
+  readonly testImports: string[];
+}
+
+export function scan(name: string, text: string): Findings {
+  const found: Findings = { writePaths: [], mints: [], testImports: [] };
+  const visit = (node: ts.Node): void => {
+    const used = usedName(node);
+    const isIngestMember = ts.isPropertyAccessExpression(node) && node.name.text === 'ingest';
+    if (used !== undefined && WRITE_NAMES.has(used)) found.writePaths.push(used);
+    if (isIngestMember) found.writePaths.push('ingest');
+    if (used === MINT_NAME) found.mints.push(used);
+    const spec = moduleSpecifier(node);
+    if (spec !== undefined && TEST_SPECIFIER.test(spec)) found.testImports.push(spec);
+    ts.forEachChild(node, visit);
+  };
+  visit(parse(name, text));
+  return found;
+}
+
+/** Files that break a rule: write paths outside the repository and local stack, mints outside their definition, test imports anywhere. */
+export function offendingFiles(files: ReadonlyMap<string, string>): string[] {
   return [...files]
     .filter(([name, text]) => {
-      const code = stripComments(text);
-      return rules.some((r) => !r.allowed.has(name) && r.pattern.test(code));
+      const f = scan(name, text);
+      return (f.writePaths.length > 0 && !WRITE_PATH_FILES.has(name)) || (f.mints.length > 0 && !MINT_FILES.has(name)) || f.testImports.length > 0;
     })
     .map(([name]) => name);
 }
@@ -84,62 +81,63 @@ const files = new Map(sourceFiles(SRC).map((f) => [relative(SRC, f).split(sep).j
 describe('source write-path callers', () => {
   it('scans a real tree', () => {
     expect(files.size).toBeGreaterThan(40);
-    for (const rule of RULES) for (const name of rule.allowed) expect(files.has(name)).toBe(true);
+    for (const name of [...WRITE_PATH_FILES, ...MINT_FILES]) expect(files.has(name)).toBe(true);
   });
 
-  it('only the repository and the local stack seeder use connect, reconnect, disconnect or ingest; only the definition mints a Reauthorization', () => {
+  it('only the repository and the local stack use connect, reconnect, disconnect or ingest; only the definition mints a Reauthorization; src never imports test code', () => {
     expect(offendingFiles(files)).toEqual([]);
   });
 
-  it('flags synthetic offending callers, including ones next to comments and strings (self-test)', () => {
+  it('flags synthetic offenders however they are laid out (self-test)', () => {
     const synthetic = new Map([
-      ['http/rogue.controller.ts', 'await this.evidence.connectSource(ws, user, input);'],
+      ['http/rogue1.ts', 'await this.evidence.connectSource(ws, user, input);'],
       ['http/rogue2.ts', 'await repo.reconnectSource(ws, user, id, reauth);'],
       ['http/rogue3.ts', 'await repo.ingest(ws, items);'],
-      ['http/rogue4.ts', 'const u = "https://x.test"; repo.disconnectSource(ws, user, id);'],
-      ['http/rogue5.ts', "const a = '*/*'; repo.connectSource(ws, u, i); /** x */"],
-      ['http/rogue6.ts', 'const s = "a // b"; repo.ingest(ws, items);'],
+      ['http/rogue4.ts', 'await repo.ingest (ws, items);'],
+      ['http/rogue5.ts', 'const u = "https://x.test"; repo.disconnectSource(ws, user, id);'],
+      ['http/rogue6.ts', "const a = '*/*'; repo.connectSource(ws, u, i); /** x */"],
       ['http/rogue7.ts', '/* x */ repo.connectSource(ws, u, i);'],
-      ['http/rogue8.ts', '/* a comment\n that hides nothing below\n */ repo.reconnectSource(ws, u, id, r);'],
+      ['http/rogue8.ts', '/* a comment\n spanning lines\n */ repo.reconnectSource(ws, u, id, r);'],
       ['http/rogue9.ts', 'const r = Reauthorization.fromSessionIssuedAt(Date.now());'],
-      ['http/rogue10.ts', 'const a = 1; // trailing\nrepo.ingest(ws, items);'],
+      ['http/rogue10.ts', 'const r = /"/; const u = "https://x.test"; repo.connectSource(ws, user, input);'],
+      ['http/rogue11.ts', "import '../../test/evidence/approve-all-policy';"],
+      ['http/rogue12.ts', "import { approveAll } from '../../test/evidence/approve-all-policy';"],
+      ['http/rogue13.ts', "const m = await import('../test/db/store-harness');"],
+      ['http/rogue14.ts', "const m = require('test/db/store-harness');"],
+      ['http/rogue15.ts', "repo['connectSource'](ws, u, i);"],
+      ['http/rogue16.ts', 'const go = repo.ingest;'],
     ]);
     expect(offendingFiles(synthetic)).toEqual([...synthetic.keys()]);
   });
 
-  it('does not flag comment-only mentions, single or multi-line (self-test)', () => {
+  it('does not flag names that appear only in comments or string contents (self-test)', () => {
     const quiet = new Map([
       ['connectors/doc.ts', '// typed Observations for EvidenceRepository.ingest().\n/**\n * and connectSource\n * disconnectSource\n */\nexport const a = 1;'],
-      ['connectors/doc2.ts', 'export const a = 1; /* repo.connectSource(x)\n still a comment fromSessionIssuedAt\n */ export const b = 2; // repo.ingest(x)'],
+      ['connectors/doc2.ts', 'export const a = 1; /* repo.connectSource(x)\n fromSessionIssuedAt\n */ export const b = 2; // repo.ingest(x)'],
+      ['connectors/strings.ts', 'export const s = "call repo.connectSource(x) and ingest(y)"; export const t = `fromSessionIssuedAt ${1}`; export const u = \'/test/\';'],
     ]);
     expect(offendingFiles(quiet)).toEqual([]);
   });
-
-  it('no file under src/ imports from test/', () => {
-    const importing = [...files].filter(([, text]) => TEST_IMPORT.test(text)).map(([name]) => name);
-    expect(importing).toEqual([]);
-    expect(TEST_IMPORT.test(`import { approveAll } from '../../test/evidence/approve-all-policy';`)).toBe(true);
-  });
 });
 
-/** The members of `interface GitHubReadTransport`: every non-blank code line of its body. */
+/** The member names of `interface GitHubReadTransport` (call or construct signatures count as members too). */
 export function transportMembers(source: string): string[] {
-  const body = /export interface GitHubReadTransport\s*\{([\s\S]*?)\r?\n\}/.exec(source)?.[1] ?? '';
-  return stripComments(body)
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l !== '');
+  const names: string[] = [];
+  parse('transport.ts', source).forEachChild((node) => {
+    if (ts.isInterfaceDeclaration(node) && node.name.text === 'GitHubReadTransport') {
+      node.members.forEach((m) => names.push(m.name ? m.name.getText() : m.getText()));
+    }
+  });
+  return names;
 }
 
 describe('GitHub transport port', () => {
   it('declares exactly one member, a read-only get', () => {
-    const members = transportMembers(readFileSync(join(SRC, 'connectors/github/github.transport.ts'), 'utf8'));
-    expect(members).toHaveLength(1);
-    expect(members[0]).toMatch(/^get\(/);
+    expect(transportMembers(readFileSync(join(SRC, 'connectors/github/github.transport.ts'), 'utf8'))).toEqual(['get']);
   });
 
   it('flags a synthetic extra member such as a generic post (self-test)', () => {
     const synthetic = 'export interface GitHubReadTransport {\n  get(path: string): Promise<R>;\n  post<T>(path: string, body: T): Promise<R>;\n}\n';
-    expect(transportMembers(synthetic)).toHaveLength(2);
+    expect(transportMembers(synthetic)).toEqual(['get', 'post']);
   });
 });
