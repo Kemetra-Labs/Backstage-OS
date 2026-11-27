@@ -90,6 +90,10 @@ test('session expiring mid-form keeps the draft', async ({ page }) => {
   await page.context().clearCookies();
   await form.locator('button[type="submit"]').click();
   await expect(bar).toHaveAttribute('data-session', 'ended');
+  // L9: the owner's records leave the screen when the session ends (the draft stays, the server's data does not).
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByTestId('server-record')).toHaveCount(0);
+  await expect(page.getByTestId('server-decision')).toHaveCount(0);
   await expect(form.locator('#rd-decision')).toHaveValue(decision);
   await expect(form.locator('#rd-rationale')).toHaveValue(rationale);
 
@@ -103,6 +107,30 @@ test('session expiring mid-form keeps the draft', async ({ page }) => {
   await form.locator('button[type="submit"]').click();
   await expect(form.getByRole('status')).toContainText('Decision recorded');
   expect(await decisionCount(page, seed.investigationId)).toBe(before + 1);
+});
+
+test('Sign out leaves no portfolio project and no record on screen', async ({ page }) => {
+  const seed = readSeed();
+  const bar = page.getByTestId('session-bar');
+  await openLive(page, '/portfolio');
+  expect(await signIn(page)).toBe(200);
+  await page.reload();
+  await expect(bar).toHaveAttribute('data-session', 'signedIn');
+  // Positive control: the project is on screen before sign-out, so the absence below proves the panel was cleared.
+  await expect(page.getByTestId('portfolio-github')).toContainText(seed.projectName);
+
+  await bar.getByRole('button', { name: 'Sign out' }).click();
+  await expect(bar).toHaveAttribute('data-session', 'signedOut');
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByTestId('portfolio-github')).not.toContainText(seed.projectName);
+  await expect(page.locator('body')).not.toContainText(seed.projectName);
+  await expect(page.getByTestId('server-record')).toHaveCount(0);
+
+  // Moving on inside the app (no reload) shows nothing of the owner's data either.
+  await page.evaluate(() => { window.location.hash = '#/investigation/INV-DEMO-7'; });
+  // Wait for the Investigation panel itself to finish its read as not_found (h1 may still be the Portfolio heading).
+  await expect(page.getByTestId('server-records').getByTestId('live-state')).toHaveAttribute('data-live', 'not_found');
+  await expect(page.getByTestId('server-record')).toHaveCount(0);
 });
 
 test('Arabic copy is present for every live string', async ({ page }) => {

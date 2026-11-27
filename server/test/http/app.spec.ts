@@ -1,4 +1,5 @@
-import { Controller, ForbiddenException, Get, UnauthorizedException, type INestApplication } from '@nestjs/common';
+import { jest } from '@jest/globals';
+import { Controller, ForbiddenException, Get, Logger, UnauthorizedException, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Public } from '../../src/auth/public.decorator';
 import { startApp } from '../auth/_helpers';
@@ -44,6 +45,14 @@ describe('Kawalys BFF', () => {
   });
   afterAll(async () => {
     await app.close();
+  });
+  // The filter logs one line per 5xx (L6); /boom would print it on stderr. Silenced here, asserted below.
+  let errorLog: ReturnType<typeof jest.spyOn>;
+  beforeEach(() => {
+    errorLog = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('GET /process is up and synthetic, never "healthy"', async () => {
@@ -137,6 +146,7 @@ describe('Kawalys BFF', () => {
     expect(res.text).not.toContain('hunter2');
     expect(res.text).not.toContain('password');
     expect(res.text).not.toContain('at ');
+    expect(errorLog).toHaveBeenCalledTimes(1);
   });
 
   it('malformed JSON on POST /process: parser runs first, fixed 400 with no parser text', async () => {

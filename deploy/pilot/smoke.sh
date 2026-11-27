@@ -13,13 +13,21 @@ PROJECT="kawalys-pilot-smoke-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
 case "$PROJECT" in kawalys-pilot-smoke-?*) ;; *) echo "FAIL  refusing to run: unsafe project name"; exit 1 ;; esac
 IMAGE_PREFIX="$PROJECT"   # smoke images never reuse the deployment's kawalys-pilot-*:local tags
 SUBNET="${KAWALYS_SMOKE_SUBNET:-172.31.77.0/24}"   # not the deployment default 172.30.42.0/24
+HTTP_PORT="${KAWALYS_HTTP_PORT:-18080}"
+HTTPS_PORT="${KAWALYS_HTTPS_PORT:-18443}"
+# Compose gives the shell environment precedence over --env-file, so any exported deployment setting
+# (KAWALYS_NODE_ENV=production, role passwords, site address...) would steer this run. Drop every inherited
+# KAWALYS_* and POSTGRES_* variable now; the run's own values are exported below or written to its env file.
+while IFS= read -r v; do unset "$v"; done < <(compgen -e | grep -E '^(KAWALYS_|POSTGRES_)')
 # Compose gives the shell environment precedence over --env-file: pin these so an operator's exported
 # deployment values (e.g. KAWALYS_IMAGE_PREFIX=kawalys-pilot) can never steer the smoke at a real pilot.
 export KAWALYS_IMAGE_PREFIX="$IMAGE_PREFIX" KAWALYS_NETWORK_SUBNET="$SUBNET"
 unset COMPOSE_PROJECT_NAME COMPOSE_FILE
-HTTP_PORT="${KAWALYS_HTTP_PORT:-18080}"
-HTTPS_PORT="${KAWALYS_HTTPS_PORT:-18443}"
-BASE="https://localhost:${HTTPS_PORT}"
+export KAWALYS_HTTP_PORT="$HTTP_PORT" KAWALYS_HTTPS_PORT="$HTTPS_PORT"
+# The canonical origin omits the default HTTPS port: the allowlist (and the positive probe) must use that form.
+if [ "$HTTPS_PORT" = 443 ]; then BASE="https://localhost"; else BASE="https://localhost:${HTTPS_PORT}"; fi
+# Pin the site address and allowlist for this run (the shell wins over --env-file): an exported deployment value must not steer the smoke.
+export KAWALYS_SITE_ADDRESS=localhost KAWALYS_ALLOWED_ORIGINS="$BASE"
 
 TMP="$(mktemp -d)"
 TMP_NATIVE="$(cygpath -m "$TMP" 2>/dev/null || echo "$TMP")"   # native Windows path for docker.exe
@@ -32,6 +40,7 @@ umask 077
 cat > "$TMP/.env.pilot" <<ENV
 KAWALYS_SITE_ADDRESS=localhost
 KAWALYS_NODE_ENV=development
+KAWALYS_ALLOWED_ORIGINS=${BASE}
 KAWALYS_HTTP_PORT=${HTTP_PORT}
 KAWALYS_HTTPS_PORT=${HTTPS_PORT}
 KAWALYS_IMAGE_PREFIX=${IMAGE_PREFIX}
@@ -166,6 +175,18 @@ for i in $(seq 1 14); do
   [[ "$(code -X POST -H "X-Forwarded-For: 203.0.113.$i" "$BASE/api/auth/session")" = 429 ]] && { LIMITED=yes; break; }
 done
 check "14 sign-in attempts with 14 forged X-Forwarded-For values hit 429" test "$LIMITED" = yes
+
+log "origin check on state-changing routes (audit M1)"
+# NODE_ENV=development here, so a request with no Origin is allowed (the sign-in limit test above relies on it).
+# POST /api/auth/session with no Authorization header is 401->404 for auth reasons only if the origin check lets it
+# through, so a foreign Origin cannot be told apart by status alone. Use a malformed JSON body instead: the body
+# parser answers 400 validation_error, which only happens when the origin check passed.
+EVIL_CODE="$(code -X POST -H "Origin: https://evil.example" -H "Content-Type: application/json" --data '{bad' "$BASE/api/auth/session")"
+check "foreign Origin status is 404" test "$EVIL_CODE" = 404
+OK_CODE="$(code -X POST -H "Origin: $BASE" -H "Content-Type: application/json" --data '{bad' "$BASE/api/auth/session")"
+check "the site's own Origin passes the check (malformed body -> 400, not 404)" test "$OK_CODE" = 400
+SF_CODE="$(code -X POST -H "Sec-Fetch-Site: cross-site" -H "Content-Type: application/json" --data '{bad' "$BASE/api/auth/session")"
+check "Sec-Fetch-Site cross-site -> 404" test "$SF_CODE" = 404
 
 log "database outage: unknown is never healthy"
 dc stop postgres >/dev/null 2>&1

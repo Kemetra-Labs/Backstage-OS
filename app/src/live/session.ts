@@ -95,10 +95,15 @@ export class SessionStore {
     if (this.snapshot.status === 'signedIn') void this.recheck();
   }
 
-  /** DELETE /api/auth/session. An already-expired session (not_found) is signed out too; anything else may leave it live. */
+  /**
+   * DELETE /api/auth/session. The server answers a refused request (for example a foreign Origin) with the same uniform 404 as an
+   * already-expired session, so a not_found is signed out only when GET /api/auth/me also says so; any other answer to that
+   * re-check (the owner, unavailable, error) is a failed sign-out: never claim signed out without proof.
+   */
   async signOut(): Promise<void> {
     const r = await apiRequest(SIGN_OUT_PATH, { method: 'DELETE', fetcher: this.fetcher });
-    if (r.ok || r.failure === 'not_found') {
+    const ended = r.ok || (r.failure === 'not_found' && (await checkSession(undefined, this.fetcher)) === 'signedOut');
+    if (ended) {
       this.epoch += 1;
       this.inflight = null;
       this.hadSession = false;
