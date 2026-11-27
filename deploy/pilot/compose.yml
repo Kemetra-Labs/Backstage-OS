@@ -1,0 +1,138 @@
+# Kawalys pilot stack (BACK-64): Caddy (web) -> BFF -> PostgreSQL on a private network.
+# Run with: docker compose -p kawalys-pilot -f deploy/pilot/compose.yml --env-file <path to .env.pilot> ...
+# Only `web` publishes ports (80/443). postgres and bff publish nothing.
+# The BFF refuses a non-loopback database host unless sslmode=verify-full, so postgres serves TLS with a
+# certificate from a private CA generated once by `pki` into a volume; the BFF trusts that CA via NODE_EXTRA_CA_CERTS.
+name: kawalys-pilot
+
+services:
+  pki:
+    image: alpine/openssl:3.5.4
+    restart: "no"
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -e
+        cd /pki
+        if [ ! -f server.crt ]; then
+          openssl req -x509 -newkey rsa:3072 -nodes -keyout ca.key -out ca.crt -days 3650 -subj "/CN=kawalys-pilot-db-ca"
+          openssl req -newkey rsa:3072 -nodes -keyout server.key -out server.csr -subj "/CN=postgres"
+          printf 'subjectAltName=DNS:postgres\n' > san.cnf
+          openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 825 -extfile san.cnf
+          rm -f server.csr san.cnf ca.srl
+        fi
+        chown 70:70 server.key server.crt
+        chmod 600 server.key
+        chmod 644 server.crt ca.crt
+        chmod 600 ca.key
+    volumes:
+      - pg-tls:/pki
+    networks: [backend]
+
+  postgres:
+    image: postgres:17.12-alpine
+    restart: unless-stopped
+    depends_on:
+      pki:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_USER: kawalys_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.pilot}
+      POSTGRES_DB: kawalys
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/pki/server.crt
+      - -c
+      - ssl_key_file=/pki/server.key
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - pg-tls:/pki:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kawalys_admin -d kawalys"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    networks: [backend]
+
+  bff:
+    image: kawalys-pilot-bff:local
+    build:
+      context: ../..
+      dockerfile: deploy/pilot/server.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KAWALYS_BFF_HOST: 0.0.0.0
+      # Production (the image default) refuses to start without Descope settings: fail closed. Local smoke only sets development.
+      NODE_ENV: ${KAWALYS_NODE_ENV:-production}
+      NODE_EXTRA_CA_CERTS: /pki/ca.crt
+      KAWALYS_DATABASE_URL_APP: postgres://kawalys_app:${KAWALYS_ROLE_PASSWORD_APP:?set KAWALYS_ROLE_PASSWORD_APP in .env.pilot}@postgres:5432/kawalys?sslmode=verify-full
+      KAWALYS_DATABASE_URL_AUTH: postgres://kawalys_auth:${KAWALYS_ROLE_PASSWORD_AUTH:?set KAWALYS_ROLE_PASSWORD_AUTH in .env.pilot}@postgres:5432/kawalys?sslmode=verify-full
+      # Owner-only auth (BACK-47/56): both unset keeps the BFF deny-all. Empty counts as unset.
+      KAWALYS_DESCOPE_PROJECT_ID: ${KAWALYS_DESCOPE_PROJECT_ID:-}
+      KAWALYS_OWNER_SUBJECT: ${KAWALYS_OWNER_SUBJECT:-}
+      KAWALYS_DESCOPE_ISSUER: ${KAWALYS_DESCOPE_ISSUER:-}
+      KAWALYS_DESCOPE_MAX_TOKEN_AGE_SECONDS: ${KAWALYS_DESCOPE_MAX_TOKEN_AGE_SECONDS:-}
+      KAWALYS_SESSION_ABSOLUTE_TTL_SECONDS: ${KAWALYS_SESSION_ABSOLUTE_TTL_SECONDS:-}
+      KAWALYS_SESSION_IDLE_TTL_SECONDS: ${KAWALYS_SESSION_IDLE_TTL_SECONDS:-}
+      KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE: ${KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE:-}
+    volumes:
+      - pg-tls:/pki:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8787/health"]
+      interval: 3s
+      timeout: 4s
+      retries: 20
+      start_period: 5s
+    networks: [backend]
+
+  # Operator command (profile "ops", never started by `up`): provision and migrate, with the admin login.
+  #   docker compose ... --profile ops run --rm ops provision --apply
+  #   docker compose ... --profile ops run --rm ops migrate --apply
+  ops:
+    image: kawalys-pilot-bff:local
+    profiles: ["ops"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["node", "dist/ops/db-admin.js"]
+    environment:
+      NODE_EXTRA_CA_CERTS: /pki/ca.crt
+      KAWALYS_ADMIN_DATABASE_URL: postgres://kawalys_admin:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.pilot}@postgres:5432/kawalys?sslmode=verify-full
+      KAWALYS_ROLE_PASSWORD_MIGRATOR: ${KAWALYS_ROLE_PASSWORD_MIGRATOR:?set KAWALYS_ROLE_PASSWORD_MIGRATOR in .env.pilot}
+      KAWALYS_ROLE_PASSWORD_APP: ${KAWALYS_ROLE_PASSWORD_APP:?set KAWALYS_ROLE_PASSWORD_APP in .env.pilot}
+      KAWALYS_ROLE_PASSWORD_AUTH: ${KAWALYS_ROLE_PASSWORD_AUTH:?set KAWALYS_ROLE_PASSWORD_AUTH in .env.pilot}
+    volumes:
+      - pg-tls:/pki:ro
+    networks: [backend]
+
+  web:
+    image: kawalys-pilot-web:local
+    build:
+      context: ../..
+      dockerfile: deploy/pilot/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      bff:
+        condition: service_healthy
+    environment:
+      KAWALYS_SITE_ADDRESS: ${KAWALYS_SITE_ADDRESS:?set KAWALYS_SITE_ADDRESS in .env.pilot}
+    ports:
+      - "${KAWALYS_HTTP_PORT:-80}:80"
+      - "${KAWALYS_HTTPS_PORT:-443}:443"
+    volumes:
+      - caddy-data:/data
+    networks: [backend]
+
+networks:
+  backend:
+
+volumes:
+  pg-data:
+  pg-tls:
+  caddy-data:

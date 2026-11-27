@@ -1,0 +1,11 @@
+**/node_modules
+**/.env*
+!**/env.example
+server/.local-stack
+**/dist*
+.git
+.superpowers
+.claude
+test-results
+**/test-results
+**/playwright-report
