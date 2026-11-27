@@ -18,8 +18,11 @@
  * v7 (2026-11-27, fifth review): a clipped title needs a visible character after a mention; legacy
  * titles at the clip limit with no flag count as possibly clipped; fan-out past the edge budget is
  * recorded per target bucket, not per pair.
+ * v8 (2026-11-27, sixth review): control characters are invisible at boundaries; work past the edge
+ * budget is constant per mention after a bucket's first cut; a partly cut bucket records only its cut
+ * suffix.
  */
-export const RETRIEVAL_POLICY_VERSION = 'retrieval-v7';
+export const RETRIEVAL_POLICY_VERSION = 'retrieval-v8';
 
 export const MAX_QUERY_CHARS = 500;
 export const MAX_QUERY_TOKENS = 32;
@@ -59,7 +62,9 @@ export const JIRA_KEY_IN_TEXT = /[A-Z][A-Z0-9_]{1,63}-\d{1,18}/gu;
 export const GITHUB_NUMBER_IN_TEXT = /#(\d{1,16})/gu;
 
 const WORD = /^[\p{L}\p{M}\p{N}_]$/u;
-const FORMAT_CHAR = /^\p{Cf}$/u;
+// Invisible, not a separator: format characters and control characters other than whitespace (one rule
+// for the clip check and the mention boundary; COG-08 review 6). Tab, newline, CR, VT and FF separate.
+const FORMAT_CHAR = /^(?:\p{Cf}|[\x00-\x08\x0e-\x1f\x7f-\x9f])$/u;
 
 /** The nearest code point before the index (step -1) or at or after it (step 1), skipping format characters. */
 function neighbour(text: string, from: number, step: -1 | 1): string {

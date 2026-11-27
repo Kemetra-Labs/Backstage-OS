@@ -50,15 +50,18 @@ class Budget {
   }
 
   /**
-   * Once the budget is full, a mention's remaining targets are recorded as one bucket, once, instead
-   * of pair by pair: the work after the cap stays linear in mentions plus targets (COG-08 review 5).
+   * Records the cut targets `targets[from..]` of one mention. A whole bucket is walked once, the first
+   * time it is cut in full; after that each cut mention costs O(1), so the work past the cap is linear in
+   * mentions plus targets (COG-08 reviews 5 and 6). A partly cut bucket records only its cut suffix.
    */
-  cutMention(from: ItemIdentity, bucket: string, targets: readonly ItemIdentity[]): void {
+  cut(origin: Doc, bucket: string, targets: readonly Doc[], start: number): void {
     this.edgesTruncated = true;
-    this.omitted.add(identityKey(from));
-    if (this.omittedBuckets.has(bucket)) return;
-    this.omittedBuckets.add(bucket);
-    for (const t of targets) this.omitted.add(identityKey(t));
+    this.omitted.add(origin.key);
+    if (start === 0) {
+      if (this.omittedBuckets.has(bucket)) return;
+      this.omittedBuckets.add(bucket);
+    }
+    for (let i = start; i < targets.length; i++) if (targets[i]!.key !== origin.key) this.omitted.add(targets[i]!.key);
   }
 
   /** Adds an edge, or records its endpoints as cut once the budget is full. */
@@ -135,15 +138,21 @@ function mentionsOf(docs: readonly Doc[], budget: Budget): void {
     if (isGithubItem(d)) push(githubByNumber, githubKey(d.identity.sourceId, repoScope(d), d.payload['number']), d);
   }
   const record = (from: Doc, text: string, targets: readonly Doc[], bucket: string): void => {
-    const others = targets.filter((t) => t.key !== from.key);
-    if (targets.length && !others.length) return; // self-mention only: dropped
-    if (!others.length) {
+    // A bucket holds one identity at most once, so "only a self-mention" is a constant-time test.
+    if (targets.length === 1 && targets[0]!.key === from.key) return; // self-mention only: dropped
+    if (targets.length === 0) {
       budget.miss({ type: 'mentions', from: from.identity, text, target: null, status: 'unresolved', basis: from.item.status, evidence: from.evidence });
       return;
     }
-    for (const t of others) {
+    if (budget.full) {
+      budget.cut(from, bucket, targets, 0);
+      return;
+    }
+    for (let i = 0; i < targets.length; i++) {
+      const t = targets[i]!;
+      if (t.key === from.key) continue;
       if (budget.full) {
-        budget.cutMention(from.identity, bucket, targets.map((x) => x.identity));
+        budget.cut(from, bucket, targets, i);
         return;
       }
       budget.edge(from.identity, t.identity, () => ({ type: 'mentions', from: from.identity, to: t.identity, text, basis: from.item.status, evidence: sortedUnique([...from.evidence, ...t.evidence]) }));

@@ -141,7 +141,11 @@ function judge(ix: SourceIndex, kind: ItemKind, ref: string, runs: readonly RunI
   // A repository read strictly inside a run is the run as known by E (COG-08 reviews 4 and 5): its
   // first observation decides both the current value and which later reads (failures) are newer.
   const asOf = outcome.kind === 'current' && !isOrdered(kind) && c.effective < outcome.run.lastObserved ? asKnownAt(outcome.run) : null;
-  const lastSeen = asOf ? asOf.lastObserved : maxOf(runs.map((r) => r.lastObserved));
+  // Markers are compared with the observation the answer rests on. For the repository record that is
+  // the selected view (inside a run, or the chosen run when E falls between runs), never a later run
+  // observed after E (COG-08 review 6). Ordered kinds keep the latest confirmation of any run (D3).
+  const selected = asOf ?? (outcome.kind === 'current' && !isOrdered(kind) ? outcome.run : null);
+  const lastSeen = selected ? selected.lastObserved : maxOf(runs.map((r) => r.lastObserved));
   const scopeRead = laterScopeRead(ix, kind, ref, lastSeen);
   // Precedence for the reason: ambiguous batch (it may contain the failure row itself, as in
   // summarizeSource), failed read, row state, absence, TTL (D3). Unknown outranks everything else.
