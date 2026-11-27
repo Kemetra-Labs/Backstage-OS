@@ -284,3 +284,17 @@ Independence note: this reviewer was a Claude agent without the author's conclus
 - **COG-05:** the pure machinery (#152) and the storage tables (#153, independent database review GO) are merged. Activation stays blocked until BACK-45 approval evidence and real outcomes exist (D6).
 - **COG-07:** the read-only shadow view `#/shadow` is on the branch that adds this section ([cog-07-scope-decision.md](cog-07-scope-decision.md)). Its data is committed engine output that a server test keeps equal to the real output; it makes no request and has no controls.
 - **COG-06:** deferred (BACK-109 verdict).
+
+## 20. Owner sign-off (2026-11-27, main 2e3273c)
+
+**The owner signed off the delivered scope of the cognitive core (BACK-103) and the delegated COG-05 and COG-07 decisions.**
+
+| Item | State at sign-off |
+| --- | --- |
+| COG-02 memory, COG-03 retrieval, COG-04 reasoning | Delivered. Eleven independent reviews; pre-COG-07 gate GO at `3c675da` (sections 17 and 18). |
+| COG-05 learning | Delivered as decided: pure machinery (#152) and tables (#153, independent database review GO). **Activation stays blocked** until BACK-45 approval evidence and real outcomes exist (D6). |
+| COG-06 research | Deferred (BACK-109 verdict). |
+| COG-07 shadow view | Delivered: fixture view (#155) and, by the owner's choice, a live search read (#158, security review GO; #159). Live reasoning waits for a real task-plan source. |
+| COG-08 acceptance | This matrix; closed by this sign-off. |
+
+**Still tracked:** memory read work budget, second-project DB test, SQL timing, validator top-level key enumeration, and the COG-05 read/write-path requirements in `cog-05-decisions.md`.
