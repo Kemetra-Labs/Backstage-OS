@@ -24,3 +24,17 @@ The owner can change this scope before the build starts.
   - `app/src/view/shadowView.test.ts` and the route tests.
   - `app/e2e/shadow.spec.ts` (chromium and webkit): layout in English and Arabic at 320 to 1440 px; no request outside the app and none to `/api/`; no controls; unknown and blocked shown in words; axe WCAG A and AA.
 - **Not built:** a live read. It would need a BFF route that wires the cognitive core, and the guards keep that unwired; that would be a separate decision.
+
+## Live read: decided by the owner 2026-11-27 (search only)
+
+The owner chose to build a live read for the shadow view. The design was checked with the advisor tool before building.
+
+- **Search only.** No real source of task plans exists, so reasoning stays fixture-only. In live mode the reasoning panel says in words that it is not available live; synthetic and live output are never shown together under one label.
+- **Route:** `GET /cognition/projects/:projectId/search?q=`. Database mode only (registered like Portfolio), behind the global session guard and `WorkspaceGuard` with the existing `evidence.read` capability (no new capability or auth change). The persona header is never read.
+- **Nondisclosure:** a malformed id, a project that does not exist, one in another workspace, and one whose grants are revoked or never existed all answer the same 404 body (no visible granted source = not found).
+- **Response:** a trimmed DTO: query, outcome, total, truncated, and per hit title, kind, source reference, evidence status and match tier. No fingerprint, evidence ids or projection internals.
+- **Bounded:** the query is bounded by retrieval (500 characters, 32 tokens; invalid gives 400). Reads are rate-limited per user (fixed window, reusing the sign-in limiter design), so the memory read is no longer an unbounded per-request cost; the memory read work budget stays tracked.
+- **Guards:** `src/cognition` becomes the one allowed consumer of the memory and retrieval modules; its own guard pins its imports and forbids writes. Reasoning stays unwired.
+- **Process:** two PRs (server route, then app wiring). The server PR gets an independent read-only security review before it merges.
+
+**Server route built (2026-11-27).** `server/src/cognition/` and `MemoryRepository.readVisible`. An independent security review returned **GO** with no critical, high or medium findings; it was done by reading the code. Fixed from its low findings: an empty, blank, oversized or non-string query is refused before the database read; a fake-repository spec pins that a refused request (rate limit or query) never reaches the read; the object-shaped `q` case is tested. Accepted: the fixed window allows a burst at a window boundary (single-owner process).
