@@ -135,6 +135,7 @@ log "isolation: every resource of this run belongs to $PROJECT, none to the depl
 log "build images and start postgres"
 quiet dc build || { fail "images build"; exit 1; }
 pass "images build"
+check "caddy validate accepts the Caddyfile with KAWALYS_TRUSTED_PROXIES set to two CIDRs (BACK-117)" quiet docker run --rm --network none -e KAWALYS_SITE_ADDRESS=localhost -e "KAWALYS_TRUSTED_PROXIES=173.245.48.0/20 2400:cb00::/32" "${IMAGE_PREFIX}-web:local" caddy validate --config /etc/caddy/Caddyfile
 quiet dc up -d --wait postgres || { fail "postgres healthy"; exit 1; }
 pass "postgres healthy"
 pgver="$(dc exec -T postgres psql -U kawalys_admin -d kawalys -tAc 'SHOW server_version' 2>/dev/null | tr -d '[:space:]')"
