@@ -11,6 +11,7 @@ import { PostgresSessionStore } from "./auth/session/postgres-session-store";
 import { WorkspaceResolver } from "./auth/workspace-resolver";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { EvidenceRepository } from "./evidence/evidence.repository";
+import { trustProxy } from "./config/trust-proxy";
 import { ReadinessModule } from "./health/readiness.module";
 import { InvestigationModule } from "./investigations/investigation.module";
 import { InvestigationRepository } from "./investigations/investigation.repository";
@@ -61,6 +62,9 @@ export async function createApp(
   const app = await NestFactory.create<NestExpressApplication>(RootModule, { logger: ["error"], bodyParser: false });
   app.useBodyParser("json");
   app.getHttpAdapter().getInstance().disable("x-powered-by");
+  // Behind the pilot proxy: trust X-Forwarded-For only from the listed proxy addresses (BACK-64). Unset: ignored.
+  const trusted = trustProxy(process.env);
+  if (trusted !== null) app.getHttpAdapter().getInstance().set("trust proxy", [...trusted]);
   app.use(requestIdMiddleware);
   app.useGlobalFilters(new SafeErrorFilter());
   await app.init();

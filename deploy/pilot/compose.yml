@@ -6,6 +6,8 @@
 name: kawalys-pilot
 
 services:
+  # One-shot, idempotent. The CA (key included) lives in its own volume that only this service mounts;
+  # pg-tls gets only ca.crt, server.crt and server.key, which is all postgres, bff and ops need.
   pki:
     image: alpine/openssl:3.5.4
     restart: "no"
@@ -13,19 +15,22 @@ services:
     command:
       - |
         set -e
-        cd /pki
-        if [ ! -f server.crt ]; then
-          openssl req -x509 -newkey rsa:3072 -nodes -keyout ca.key -out ca.crt -days 3650 -subj "/CN=kawalys-pilot-db-ca"
-          openssl req -newkey rsa:3072 -nodes -keyout server.key -out server.csr -subj "/CN=postgres"
-          printf 'subjectAltName=DNS:postgres\n' > san.cnf
-          openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 825 -extfile san.cnf
-          rm -f server.csr san.cnf ca.srl
+        if [ ! -f /ca/ca.key ] || [ ! -f /ca/ca.crt ]; then
+          openssl req -x509 -newkey rsa:3072 -nodes -keyout /ca/ca.key -out /ca/ca.crt -days 3650 -subj "/CN=kawalys-pilot-db-ca"
+          rm -f /pki/server.crt /pki/server.key
         fi
-        chown 70:70 server.key server.crt
-        chmod 600 server.key
-        chmod 644 server.crt ca.crt
-        chmod 600 ca.key
+        if [ ! -f /pki/server.crt ] || [ ! -f /pki/server.key ]; then
+          openssl req -newkey rsa:3072 -nodes -keyout /pki/server.key -out /tmp/server.csr -subj "/CN=postgres"
+          printf 'subjectAltName=DNS:postgres\n' > /tmp/san.cnf
+          openssl x509 -req -in /tmp/server.csr -CA /ca/ca.crt -CAkey /ca/ca.key -CAserial /ca/ca.srl -CAcreateserial -out /pki/server.crt -days 825 -extfile /tmp/san.cnf
+        fi
+        cp /ca/ca.crt /pki/ca.crt
+        chown 70:70 /pki/server.key /pki/server.crt
+        chmod 600 /pki/server.key
+        chmod 644 /pki/server.crt /pki/ca.crt
+        chmod 600 /ca/ca.key
     volumes:
+      - pki-ca:/ca
       - pg-tls:/pki
     networks: [backend]
 
@@ -63,11 +68,15 @@ services:
       context: ../..
       dockerfile: deploy/pilot/server.Dockerfile
     restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       KAWALYS_BFF_HOST: 0.0.0.0
+      # Trust X-Forwarded-For only from the proxy network, so the sign-in limit is per client, not per proxy.
+      KAWALYS_TRUST_PROXY: ${KAWALYS_NETWORK_SUBNET:-172.30.42.0/24}
       # Production (the image default) refuses to start without Descope settings: fail closed. Local smoke only sets development.
       NODE_ENV: ${KAWALYS_NODE_ENV:-production}
       NODE_EXTRA_CA_CERTS: /pki/ca.crt
@@ -117,6 +126,13 @@ services:
       context: ../..
       dockerfile: deploy/pilot/web.Dockerfile
     restart: unless-stopped
+    # Caddy runs as root in its image: keep only the capability needed to bind 80/443, no privilege gain,
+    # and a read-only root filesystem with /data, /config and /tmp as the only writable paths.
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs: [/tmp]
     depends_on:
       bff:
         condition: service_healthy
@@ -127,12 +143,18 @@ services:
       - "${KAWALYS_HTTPS_PORT:-443}:443"
     volumes:
       - caddy-data:/data
+      - caddy-config:/config
     networks: [backend]
 
 networks:
   backend:
+    ipam:
+      config:
+        - subnet: ${KAWALYS_NETWORK_SUBNET:-172.30.42.0/24}
 
 volumes:
   pg-data:
   pg-tls:
+  pki-ca:
   caddy-data:
+  caddy-config:

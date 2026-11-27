@@ -162,6 +162,7 @@ Configuration (names only; none is a secret):
 | `KAWALYS_SESSION_ABSOLUTE_TTL_SECONDS` | Optional, 300-86400, default 28800. |
 | `KAWALYS_SESSION_IDLE_TTL_SECONDS` | Optional, 60 up to the absolute TTL, default 3600. |
 | `KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE` | Optional integer 1-100, default 10: sign-in attempts per 60 s window on `POST /auth/session`; over it, 429 `rate_limited`. A set but malformed value refuses to boot. |
+| `KAWALYS_TRUST_PROXY` | Optional. Comma-separated IP addresses or CIDR ranges of the reverse proxies whose `X-Forwarded-For` is trusted (the pilot sets the Compose network range). Unset (default): the header is ignored and the sign-in rate limit keys on the socket address, so behind a proxy all callers share one bucket. Set: the limit keys on the client address. Anything else (`true`, `*`, a name, `/0`) refuses to boot. |
 | `KAWALYS_AUTH_LAB` | Optional. `1` enables `GET /auth/lab` (needs `KAWALYS_DESCOPE_PROJECT_ID`) and the lab refusal log line. Any other non-empty value refuses to boot; `1` with `NODE_ENV=production` refuses to boot. Unset by default. |
 
 In production (`NODE_ENV=production`) the project id and owner subject are required, or the server refuses to boot. A

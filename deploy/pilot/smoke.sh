@@ -65,8 +65,20 @@ quiet dc --profile ops run --rm ops migrate --apply && pass "db-admin migrate --
 
 log "production without auth must refuse to start (fail closed)"
 # Override the smoke default back to production for this one run.
-PROD_OUT="$(KAWALYS_NODE_ENV=production dc run --rm --no-deps -T bff 2>&1)"; PROD_RC=$?
-check "NODE_ENV=production without Descope settings exits non-zero" test "$PROD_RC" -ne 0
+# Bounded: a hang counts as FAIL (rc 124). `timeout` exists in Git Bash and on Linux; else a background watchdog.
+run_bounded() { # $1 seconds, then the command; output in $TMP/bounded.out, status in BOUNDED_RC
+  local secs="$1"; shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$secs" "$@" >"$TMP/bounded.out" 2>&1; BOUNDED_RC=$?
+  else
+    "$@" >"$TMP/bounded.out" 2>&1 & local pid=$! waited=0
+    while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt "$secs" ]; do sleep 1; waited=$((waited + 1)); done
+    if kill -0 "$pid" 2>/dev/null; then kill -9 "$pid" 2>/dev/null; BOUNDED_RC=124; else wait "$pid"; BOUNDED_RC=$?; fi
+  fi
+}
+run_bounded 60 env KAWALYS_NODE_ENV=production docker compose -p "$PROJECT" -f "$COMPOSE_FILE_NATIVE" --env-file "$ENVF" run --rm --no-deps -T bff
+PROD_RC=$BOUNDED_RC; PROD_OUT="$(cat "$TMP/bounded.out")"
+check "NODE_ENV=production without Descope settings exits non-zero (not a timeout)" bash -c '[ "$0" -ne 0 ] && [ "$0" -ne 124 ]' "$PROD_RC"
 check "refusal names the missing settings, no secret" bash -c "echo \"\$0\" | grep -q 'required in production'" "$PROD_OUT"
 
 log "start bff and web"
@@ -82,11 +94,15 @@ check "GET / serves the app (HTML with the app root)" bash -c "curl -sk --max-ti
 check "GET /some/spa/route falls back to index.html" bash -c "curl -sk --max-time 10 '$BASE/investigations/x' | grep -q 'id=\"root\"'"
 check "GET /api/portfolio -> 404 (deny-all, Descope unset)" is_code 404 "$BASE/api/portfolio"
 check "GET /api/portfolio body is not_found" grep -q 'not_found' "$TMP/body"
-HDRS="$(curl -skI --max-time 10 "$BASE/")"
-check "security header: Strict-Transport-Security" bash -c "echo \"\$0\" | grep -qi '^strict-transport-security:'" "$HDRS"
-check "security header: X-Content-Type-Options nosniff" bash -c "echo \"\$0\" | grep -qi '^x-content-type-options: nosniff'" "$HDRS"
-check "security header: Referrer-Policy no-referrer" bash -c "echo \"\$0\" | grep -qi '^referrer-policy: no-referrer'" "$HDRS"
-check "security header: X-Frame-Options DENY" bash -c "echo \"\$0\" | grep -qi '^x-frame-options: deny'" "$HDRS"
+check_headers() { # $1 label, $2 url
+  local h; h="$(curl -skI --max-time 10 "$2")"
+  check "security header on $1: Strict-Transport-Security" bash -c 'echo "$0" | grep -qi "^strict-transport-security:"' "$h"
+  check "security header on $1: X-Content-Type-Options nosniff" bash -c 'echo "$0" | grep -qi "^x-content-type-options: nosniff"' "$h"
+  check "security header on $1: Referrer-Policy no-referrer" bash -c 'echo "$0" | grep -qi "^referrer-policy: no-referrer"' "$h"
+  check "security header on $1: X-Frame-Options DENY" bash -c 'echo "$0" | grep -qi "^x-frame-options: deny"' "$h"
+}
+check_headers "/" "$BASE/"
+check_headers "/api/process" "$BASE/api/process"
 published() { docker ps --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=$1" --format '{{.Ports}}' | grep -c -- '->'; }
 check "bff publishes no host port (docker compose port bff 8787 empty)" bash -c '[ -z "$(docker compose -p kawalys-pilot -f "$0" --env-file "$1" port bff 8787 2>/dev/null | grep -v "^:0$")" ]' "$COMPOSE_FILE_NATIVE" "$ENVF"
 check "bff has no host port mapping in docker ps" test "$(published bff)" = 0
@@ -114,6 +130,28 @@ check "web image contains no generated password" test "$(scan_image "$WEB_IMG")"
 check "bff image contains no .env file" test "$(dotenv_files "$BFF_IMG")" = 0
 check "web image contains no .env file" test "$(dotenv_files "$WEB_IMG")" = 0
 check "bff runs as non-root" test "$(dc exec -T bff id -u | tr -d '\r')" != 0
+
+log "container hardening"
+WEB_ID="$(dc ps -q web)"; BFF_ID="$(dc ps -q bff)"
+insp() { docker inspect --format "$1" "$2"; }
+check "web: CapDrop ALL" bash -c 'echo "$0" | grep -q ALL' "$(insp '{{json .HostConfig.CapDrop}}' "$WEB_ID")"
+check "web: CapAdd only NET_BIND_SERVICE" test "$(insp '{{json .HostConfig.CapAdd}}' "$WEB_ID")" = '["CAP_NET_BIND_SERVICE"]'
+check "web: no-new-privileges" bash -c 'echo "$0" | grep -q no-new-privileges' "$(insp '{{json .HostConfig.SecurityOpt}}' "$WEB_ID")"
+check "web: read-only root filesystem" test "$(insp '{{.HostConfig.ReadonlyRootfs}}' "$WEB_ID")" = true
+check "web: effective capabilities are only NET_BIND_SERVICE" bash -c 'docker exec "$0" grep -q "^CapEff:.*0000000000000400$" /proc/1/status' "$WEB_ID"
+check "bff: CapDrop ALL and no-new-privileges" bash -c 'echo "$0" | grep -q ALL && echo "$1" | grep -q no-new-privileges' "$(insp '{{json .HostConfig.CapDrop}}' "$BFF_ID")" "$(insp '{{json .HostConfig.SecurityOpt}}' "$BFF_ID")"
+check "bff: effective capabilities are empty" bash -c 'docker exec "$0" grep -q "^CapEff:.*0000000000000000$" /proc/1/status' "$BFF_ID"
+
+check "CA private key is not in the pg-tls volume seen by bff" bash -c '! docker exec "$0" ls /pki | grep -q "ca.key"' "$BFF_ID"
+check "bff sees ca.crt, server.crt, server.key only" test "$(docker exec "$BFF_ID" ls /pki | tr -d "" | sort | tr "
+" " ")" = "ca.crt server.crt server.key "
+
+log "sign-in limit is per client behind Caddy (forged X-Forwarded-For does not bypass it)"
+LIMITED=no
+for i in $(seq 1 14); do
+  [ "$(code -X POST -H "X-Forwarded-For: 203.0.113.$i" "$BASE/api/auth/session")" = 429 ] && { LIMITED=yes; break; }
+done
+check "14 sign-in attempts with 14 forged X-Forwarded-For values hit 429" test "$LIMITED" = yes
 
 log "database outage: unknown is never healthy"
 dc stop postgres >/dev/null 2>&1
