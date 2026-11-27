@@ -149,10 +149,11 @@ log "container hardening"
 WEB_ID="$(dc ps -q web)"; BFF_ID="$(dc ps -q bff)"
 insp() { docker inspect --format "$1" "$2"; }
 check "web: CapDrop ALL" bash -c 'echo "$0" | grep -q ALL' "$(insp '{{json .HostConfig.CapDrop}}' "$WEB_ID")"
-check "web: CapAdd only NET_BIND_SERVICE" test "$(insp '{{json .HostConfig.CapAdd}}' "$WEB_ID")" = '["CAP_NET_BIND_SERVICE"]'
+check "web: no added capabilities" bash -c '[[ "$0" = null || "$0" = "[]" ]]' "$(insp '{{json .HostConfig.CapAdd}}' "$WEB_ID")"
+check "web: runs as a non-root user" bash -c '[[ "$(docker exec "$0" id -u)" != 0 ]]' "$WEB_ID"
 check "web: no-new-privileges" bash -c 'echo "$0" | grep -q no-new-privileges' "$(insp '{{json .HostConfig.SecurityOpt}}' "$WEB_ID")"
 check "web: read-only root filesystem" test "$(insp '{{.HostConfig.ReadonlyRootfs}}' "$WEB_ID")" = true
-check "web: effective capabilities are only NET_BIND_SERVICE" bash -c 'docker exec "$0" grep -q "^CapEff:.*0000000000000400$" /proc/1/status' "$WEB_ID"
+check "web: effective capabilities are empty" bash -c 'docker exec "$0" grep -q "^CapEff:.*0000000000000000$" /proc/1/status' "$WEB_ID"
 check "bff: CapDrop ALL and no-new-privileges" bash -c 'echo "$0" | grep -q ALL && echo "$1" | grep -q no-new-privileges' "$(insp '{{json .HostConfig.CapDrop}}' "$BFF_ID")" "$(insp '{{json .HostConfig.SecurityOpt}}' "$BFF_ID")"
 check "bff: effective capabilities are empty" bash -c 'docker exec "$0" grep -q "^CapEff:.*0000000000000000$" /proc/1/status' "$BFF_ID"
 
