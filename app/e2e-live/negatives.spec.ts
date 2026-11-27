@@ -1,6 +1,8 @@
 // BACK-51 P4 negatives: signed-out and cross-workspace reads, double submit, an expiring session, Arabic copy, and privacy.
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
+import { INVESTIGATION } from '../src/i18n/screens/investigation';
+import { SHELL } from '../src/i18n/shell';
 import { explain, findLeaks, surfaces, type LeakOptions } from '../e2e/leaks';
 import { apiGet, decisionCount, openLive, readSeed, signIn } from './helpers';
 
@@ -20,7 +22,8 @@ test('signed out, every route reads as not found', async ({ page }) => {
   const seed = readSeed();
   await openLive(page, '/portfolio');
   const paths = ['/api/portfolio', '/api/investigations', `/api/investigations/${seed.investigationId}`, '/api/evidence', '/api/decisions', '/api/auth/me'];
-  for (const headers of [{}, { 'x-kawalys-demo-persona': 'technical' }]) {
+  const headerCases: Record<string, string>[] = [{}, { 'x-kawalys-demo-persona': 'technical' }];
+  for (const headers of headerCases) {
     for (const p of paths) {
       const r = await apiGet(page, p, headers);
       const label = `${p} ${JSON.stringify(headers)}`;
@@ -64,9 +67,12 @@ test('double click records one decision', async ({ page }) => {
   await form.locator('#rd-rationale').fill('Double submit check, BACK-51 P4.');
   await form.locator('input[type="checkbox"]').first().check();
   const before = await decisionCount(page, seed.investigationId);
+  const posts: string[] = [];
+  page.on('request', (r) => { if (r.method() === 'POST' && /^\/api\/investigations\/[^/]+\/decisions$/.test(new URL(r.url()).pathname)) posts.push(r.url()); });
   await form.locator('button[type="submit"]').dblclick();
   await expect(form.getByRole('status')).toContainText('Decision recorded');
-  await page.waitForLoadState('networkidle'); // a late second POST would land before this settles
+  await page.waitForLoadState('networkidle');
+  expect(posts, 'exactly one decision POST was sent').toHaveLength(1);
   expect(await decisionCount(page, seed.investigationId)).toBe(before + 1);
 });
 
@@ -102,16 +108,29 @@ test('session expiring mid-form keeps the draft', async ({ page }) => {
 test('Arabic copy is present for every live string', async ({ page }) => {
   await openCase(page, { lang: 'ar' });
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-  // EN labels hard-coded from app/src/i18n/shell.ts (live.session) and app/src/i18n/screens/investigation.ts (liveTitle, recordDecision).
-  const english: Record<string, string[]> = {
-    'session-bar': ['Sign out', 'Signed in as the owner'],
-    'record-decision': ['Record a decision', 'Record decision', 'Rationale', 'Cited records'],
-    'server-records': ['Server records'],
-  };
-  for (const [id, labels] of Object.entries(english)) {
-    const text = await page.getByTestId(id).innerText();
-    expect(text, id).toMatch(/[؀-ۿ]/);
-    for (const l of labels) expect(text, `${id} must not contain "${l}"`).not.toContain(l);
+  // The expected text is the app's own Arabic copy (i18n/shell.ts live.session, i18n/screens/investigation.ts), none of it containing {braces}.
+  const ar = INVESTIGATION.ar;
+  const session = SHELL.ar.live.session;
+  const bar = page.getByTestId('session-bar');
+  await expect(bar.getByRole('button', { name: session.signOut, exact: true })).toBeVisible();
+  await expect(bar.locator('.session-who')).toHaveText(session.signedIn);
+
+  const form = page.getByTestId('record-decision');
+  await expect(form.getByRole('heading', { name: ar.recordDecision.title, exact: true })).toBeVisible();
+  await expect(form.locator('label[for="rd-decision"]')).toHaveText(ar.recordDecision.decisionLabel);
+  await expect(form.locator('label[for="rd-rationale"]')).toHaveText(ar.recordDecision.rationaleLabel);
+  await expect(form.locator('button[type="submit"]')).toHaveText(ar.recordDecision.submit);
+
+  const records = page.getByTestId('server-records');
+  await expect(records.getByRole('heading', { name: ar.serverRecords.liveTitle, exact: true })).toBeVisible();
+  await expect(records.getByRole('heading', { name: ar.serverRecords.recordsTitle, exact: true })).toBeVisible();
+  await expect(records.getByRole('heading', { name: ar.serverRecords.decisionsTitle, exact: true })).toBeVisible();
+
+  // Nothing falls back to the English copy.
+  const en = INVESTIGATION.en;
+  const text = await page.locator('main').innerText();
+  for (const l of [en.recordDecision.title, en.recordDecision.submit, en.serverRecords.recordsTitle, en.serverRecords.decisionsTitle, SHELL.en.live.session.signOut]) {
+    expect(text, `must not contain "${l}"`).not.toContain(l);
   }
 });
 

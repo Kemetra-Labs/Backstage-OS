@@ -27,6 +27,9 @@ export default defineConfig({
       url: 'http://127.0.0.1:8787/process', // public, 200; there is no /health
       timeout: 240_000, // Testcontainers starts Postgres first (about 30-60 s)
       reuseExistingServer: false,
+      // SIGTERM lets serve-e2e.ts stop its Postgres container. Windows does not deliver signals, so there the Testcontainers
+      // reaper (ryuk) is what removes the container; running with TESTCONTAINERS_RYUK_DISABLED=true leaves it behind.
+      gracefulShutdown: { signal: 'SIGTERM', timeout: 15_000 },
       env: { KAWALYS_E2E_SEED_FILE: SEED_FILE },
     },
     {

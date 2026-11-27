@@ -90,8 +90,9 @@ npm run e2e       # Playwright smoke (builds, then serves on 127.0.0.1:4178)
 ### Live end-to-end suite (BACK-51 P4)
 
 ```bash
-cd server && npm ci && cd ../app && npm ci   # both package trees: the BFF test entry compiles from server/
-cd app && npm run e2e:live                   # needs Docker running; Chromium only
+(cd server && npm ci) && cd app && npm ci   # both package trees: the BFF test entry compiles from server/
+npx playwright install chromium             # once per machine
+npm run e2e:live                            # needs Docker running; Chromium only
 ```
 
 `playwright.live.config.ts` starts two servers. First, the test-only BFF (`npm run e2e:serve` in `server/`): the real
