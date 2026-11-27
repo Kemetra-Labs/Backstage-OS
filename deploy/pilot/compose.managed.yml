@@ -1,0 +1,100 @@
+# Kawalys pilot stack, managed PostgreSQL profile (BACK-115): Caddy (web) -> BFF -> a managed Postgres (for example Neon).
+# Run with: docker compose -p kawalys-pilot -f deploy/pilot/compose.managed.yml --env-file <path to .env.pilot> ...
+# Use compose.yml (bundled postgres + private CA) for the self-contained local stack and the smoke; use this file when the
+# database is a managed service. There is no postgres, no pki and no pg-tls volume here. Only `web` publishes ports (80/443).
+# The BFF still refuses a non-loopback database host unless sslmode=verify-full. A managed provider's certificate chains to
+# public roots, so Node needs no extra CA (proven on Neon, BACK-114 section 9). A provider with a private CA needs an override
+# file that mounts its CA into bff and ops and sets NODE_EXTRA_CA_CERTS to that path.
+# Runtime URLs (APP, AUTH) may use the provider's pooled host; the admin URL must be the direct host (db-admin refuses -pooler).
+name: kawalys-pilot
+
+services:
+  bff:
+    image: ${KAWALYS_IMAGE_PREFIX:-kawalys-pilot}-bff:local
+    build:
+      context: ../..
+      dockerfile: deploy/pilot/server.Dockerfile
+    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      KAWALYS_BFF_HOST: 0.0.0.0
+      # Trust X-Forwarded-For only from the proxy network, so the sign-in limit is per client, not per proxy.
+      KAWALYS_TRUST_PROXY: ${KAWALYS_NETWORK_SUBNET:-172.30.42.0/24}
+      # State-changing requests are accepted only from this exact origin (audit M1). Caddy serves https on 443 by default;
+      # for another host port set KAWALYS_ALLOWED_ORIGINS explicitly.
+      KAWALYS_ALLOWED_ORIGINS: ${KAWALYS_ALLOWED_ORIGINS:-https://${KAWALYS_SITE_ADDRESS:?set KAWALYS_SITE_ADDRESS in .env.pilot}}
+      # Production (the image default) refuses to start without Descope settings: fail closed.
+      NODE_ENV: ${KAWALYS_NODE_ENV:-production}
+      KAWALYS_DATABASE_URL_APP: ${KAWALYS_DATABASE_URL_APP:?set KAWALYS_DATABASE_URL_APP in .env.pilot}
+      KAWALYS_DATABASE_URL_AUTH: ${KAWALYS_DATABASE_URL_AUTH:?set KAWALYS_DATABASE_URL_AUTH in .env.pilot}
+      # Owner-only auth (BACK-47/56): both unset keeps the BFF deny-all. Empty counts as unset.
+      KAWALYS_DESCOPE_PROJECT_ID: ${KAWALYS_DESCOPE_PROJECT_ID:-}
+      KAWALYS_OWNER_SUBJECT: ${KAWALYS_OWNER_SUBJECT:-}
+      KAWALYS_DESCOPE_ISSUER: ${KAWALYS_DESCOPE_ISSUER:-}
+      KAWALYS_DESCOPE_MAX_TOKEN_AGE_SECONDS: ${KAWALYS_DESCOPE_MAX_TOKEN_AGE_SECONDS:-}
+      KAWALYS_SESSION_ABSOLUTE_TTL_SECONDS: ${KAWALYS_SESSION_ABSOLUTE_TTL_SECONDS:-}
+      KAWALYS_SESSION_IDLE_TTL_SECONDS: ${KAWALYS_SESSION_IDLE_TTL_SECONDS:-}
+      KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE: ${KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE:-}
+    healthcheck:
+      # Liveness only, so a background check never queries the database and Neon can suspend (BACK-115).
+      # Readiness is /health, checked at deploy.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8787/process"]
+      interval: 3s
+      timeout: 4s
+      retries: 20
+      start_period: 5s
+    networks: [backend]
+
+  # Operator command (profile "ops", never started by `up`): provision and migrate, with the admin login (direct host).
+  #   docker compose ... --profile ops run --rm ops provision --apply
+  #   docker compose ... --profile ops run --rm ops migrate --apply
+  ops:
+    image: ${KAWALYS_IMAGE_PREFIX:-kawalys-pilot}-bff:local
+    profiles: ["ops"]
+    entrypoint: ["node", "dist/ops/db-admin.js"]
+    environment:
+      KAWALYS_ADMIN_DATABASE_URL: ${KAWALYS_ADMIN_DATABASE_URL:?set KAWALYS_ADMIN_DATABASE_URL in .env.pilot}
+      KAWALYS_ROLE_PASSWORD_MIGRATOR: ${KAWALYS_ROLE_PASSWORD_MIGRATOR:?set KAWALYS_ROLE_PASSWORD_MIGRATOR in .env.pilot}
+      KAWALYS_ROLE_PASSWORD_APP: ${KAWALYS_ROLE_PASSWORD_APP:?set KAWALYS_ROLE_PASSWORD_APP in .env.pilot}
+      KAWALYS_ROLE_PASSWORD_AUTH: ${KAWALYS_ROLE_PASSWORD_AUTH:?set KAWALYS_ROLE_PASSWORD_AUTH in .env.pilot}
+    networks: [backend]
+
+  web:
+    image: ${KAWALYS_IMAGE_PREFIX:-kawalys-pilot}-web:local
+    build:
+      context: ../..
+      dockerfile: deploy/pilot/web.Dockerfile
+    restart: unless-stopped
+    # Caddy runs as uid 10001 with no capabilities. This container's network namespace lets unprivileged
+    # users bind low ports, so 80/443 need no NET_BIND_SERVICE. No privilege gain, and a read-only root
+    # filesystem with /data, /config and /tmp as the only writable paths.
+    user: "10001:10001"
+    cap_drop: [ALL]
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs: [/tmp]
+    depends_on:
+      bff:
+        condition: service_healthy
+    environment:
+      KAWALYS_SITE_ADDRESS: ${KAWALYS_SITE_ADDRESS:?set KAWALYS_SITE_ADDRESS in .env.pilot}
+    ports:
+      - "${KAWALYS_HTTP_PORT:-80}:80"
+      - "${KAWALYS_HTTPS_PORT:-443}:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [backend]
+
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: ${KAWALYS_NETWORK_SUBNET:-172.30.42.0/24}
+
+volumes:
+  caddy-data:
+  caddy-config:

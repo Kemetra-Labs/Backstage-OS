@@ -75,6 +75,39 @@ quiet() { "$@" >"$TMP/step.log" 2>&1 || { echo "step failed: $*"; tail -n 40 "$T
 command -v docker >/dev/null && command -v curl >/dev/null || { echo "FAIL  docker and curl are required"; exit 1; }
 [[ -f "$HERE/compose.yml" ]] || { echo "FAIL  deploy/pilot/compose.yml is missing"; exit 1; }
 
+log "managed profile (BACK-115): config-only checks, no managed container is started"
+MANAGED_FILE="$(cygpath -m "$HERE/compose.managed.yml" 2>/dev/null || echo "$HERE/compose.managed.yml")"
+MANAGED_ENV="$TMP_NATIVE/managed.env"
+cat > "$TMP/managed.env" <<ENV
+KAWALYS_SITE_ADDRESS=localhost
+KAWALYS_DATABASE_URL_APP=postgresql://kawalys_app:dummy@db.example.invalid/kawalys?sslmode=verify-full
+KAWALYS_DATABASE_URL_AUTH=postgresql://kawalys_auth:dummy@db.example.invalid/kawalys?sslmode=verify-full
+KAWALYS_ADMIN_DATABASE_URL=postgresql://kawalys_admin:dummy@db.example.invalid/kawalys?sslmode=verify-full
+KAWALYS_ROLE_PASSWORD_MIGRATOR=dummy-migrator
+KAWALYS_ROLE_PASSWORD_APP=dummy-app
+KAWALYS_ROLE_PASSWORD_AUTH=dummy-auth
+ENV
+mdc() { docker compose -f "$MANAGED_FILE" --env-file "$MANAGED_ENV" "$@"; }
+mdc_json() { mdc "$@" config --format json; }
+# $1 = node expression over the parsed config `c`; exits 0 when it is true.
+managed_json_check() { # $1 expression, rest: extra compose args (for example --profile ops)
+  local expr="$1"; shift
+  mdc_json "$@" 2>"$TMP/managed.err" | node -e 'let d="";process.stdin.on("data",x=>d+=x).on("end",()=>{const c=JSON.parse(d);process.exit(eval(process.argv[1])?0:1)})' "$expr"
+}
+check "managed: config succeeds with dummy env" quiet mdc config
+check "managed: services are exactly bff and web" managed_json_check 'Object.keys(c.services).sort().join()==="bff,web"'
+check "managed: services are bff, ops and web under --profile ops" managed_json_check 'Object.keys(c.services).sort().join()==="bff,ops,web"' --profile ops
+check "managed: no postgres or pki service" managed_json_check '!("postgres" in c.services)&&!("pki" in c.services)' --profile ops
+check "managed: no pg-data, pg-tls or pki-ca volume" managed_json_check '!["pg-data","pg-tls","pki-ca"].some(v=>v in (c.volumes||{}))' --profile ops
+check "managed: bff publishes no ports" managed_json_check '!(c.services.bff.ports&&c.services.bff.ports.length)'
+check "managed: web publishes 80 and 443 only" managed_json_check 'c.services.web.ports.map(p=>+p.target).sort((a,b)=>a-b).join()==="80,443"'
+check "managed: bff healthcheck is the liveness probe (8787/process)" managed_json_check 'c.services.bff.healthcheck.test.join(" ").includes("8787/process")'
+check "managed: bff and web keep the hardening (cap_drop ALL, no-new-privileges, web read_only)" managed_json_check '["bff","web"].every(n=>c.services[n].cap_drop.includes("ALL")&&c.services[n].security_opt.includes("no-new-privileges:true"))&&c.services.web.read_only===true'
+check "managed: no NODE_EXTRA_CA_CERTS and no pg-tls mount" managed_json_check '!("NODE_EXTRA_CA_CERTS" in c.services.bff.environment)&&!JSON.stringify(c).includes("pg-tls")' --profile ops
+grep -v '^KAWALYS_DATABASE_URL_APP=' "$TMP/managed.env" > "$TMP/managed-missing.env"
+MANAGED_ENV_MISSING="$TMP_NATIVE/managed-missing.env"
+check "managed: config fails and names KAWALYS_DATABASE_URL_APP when it is unset" bash -c '! docker compose -f "$0" --env-file "$1" config >"$2" 2>&1 && grep -q KAWALYS_DATABASE_URL_APP "$2"' "$MANAGED_FILE" "$MANAGED_ENV_MISSING" "$TMP_NATIVE/managed-missing.out"
+
 log "isolation: every resource of this run belongs to $PROJECT, none to the deployment project kawalys-pilot"
 log "build images and start postgres"
 quiet dc build || { fail "images build"; exit 1; }
