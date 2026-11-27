@@ -9,8 +9,15 @@
 const DIACRITICS = /[\u064b-\u065f\u0670\u0640]/gu; // Arabic harakat, superscript alef, tatweel
 // Invisible format characters (zero-width space/joiners, word joiner, bidi controls, BOM). Without this,
 // `BACK\u200B-8` escapes the identifier-shape check and is fuzzy-matched (COG-08 adversarial finding).
-// Default-ignorable code points too (e.g. U+2065, U+034F): invisible, though not all are Cf (COG-08 review 7).
-const FORMAT = /[\p{Cf}\p{DI}]/gu;
+// Invisible in every comparison: format characters, and default-ignorable code points that are not
+// combining marks (U+2065 and others outside Cf; COG-08 review 7). Default-ignorable marks such as the
+// variation selectors and U+034F stay in words, where they change meaning (COG-08 review 8); the shape
+// fold drops every mark, so they still cannot hide an identifier.
+const FORMAT = /(?:\p{Cf}|(?!\p{M})\p{DI})/gu;
+// Control characters other than whitespace are invisible, as at mention boundaries; U+0085 NEXT LINE
+// separates like a newline (COG-08 review 8: one classification for queries and mentions).
+const CONTROLS = /[\x00-\x08\x0e-\x1f\x7f-\x84\x86-\x9f]/gu;
+const NEXT_LINE = /\x85/gu;
 // Every dash, the minus sign and the small and fullwidth hyphen-minus fold to `-` (COG-08 reviews).
 const DASHES = /[\p{Pd}\u2212\ufe63\uff0d]/gu;
 const MARKS = /\p{M}/gu;
@@ -35,6 +42,8 @@ export function normalizeText(s: string): string {
     .normalize('NFKC')
     .toLowerCase()
     .replace(FORMAT, '')
+    .replace(CONTROLS, '')
+    .replace(NEXT_LINE, ' ')
     .replace(DIACRITICS, '')
     .replace(ALEF, '\u0627') // bare alef
     .replace(/\u0649/gu, '\u064a') // alef maqsura -> ya

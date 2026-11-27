@@ -23,8 +23,10 @@
  * suffix.
  * v9 (2026-11-27, seventh review): default-ignorable code points are invisible in normalization and at
  * boundaries; U+0085 separates; duplicate identities in a hand-built projection collapse to the last.
+ * v10 (2026-11-27, eighth review): queries share the boundary rule for controls and U+0085; default-
+ * ignorable marks (variation selectors, U+034F) stay in ordinary words.
  */
-export const RETRIEVAL_POLICY_VERSION = 'retrieval-v9';
+export const RETRIEVAL_POLICY_VERSION = 'retrieval-v10';
 
 export const MAX_QUERY_CHARS = 500;
 export const MAX_QUERY_TOKENS = 32;
