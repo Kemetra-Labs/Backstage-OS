@@ -191,3 +191,10 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 - **Work past the edge budget:** no mention scans its target bucket any more. The self-mention test is constant-time, a bucket cut in full is walked once, and every later cut mention costs O(1). Measured on 1,000 to 4,000 mentions and targets: about 3x for the fix, against about 7x for the scan it replaced. The regression test asserts under 5x, using a median of three.
 - **Partial cuts:** a bucket cut partway records only its cut suffix, so a walk that reaches a kept target but neither endpoint of a cut edge is not flagged.
 - Regression tests: `test/retrieval/retrieval.findings7.spec.ts`.
+
+## Eighth revision after the COG-08 seventh review (`retrieval-v9`, 2026-11-27)
+
+- Default-ignorable code points (Unicode `DI`, which includes U+2065 and U+034F, not all of them `Cf`) are invisible both in normalization (so they cannot hide an identifier shape) and at boundaries (so they cannot hide a clip cut).
+- U+0085 NEXT LINE separates like a newline.
+- A hand-built projection with duplicate identities resolves to the last item, as the reasoning evaluator and validator do. The projector never duplicates.
+- Regression tests: `test/retrieval/retrieval.findings8.spec.ts`.

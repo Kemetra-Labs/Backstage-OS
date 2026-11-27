@@ -81,7 +81,18 @@ export function toDoc(item: MemoryItem): Doc {
   };
 }
 
-export const docsOf = (projection: MemoryProjection): Doc[] => projection.items.map(toDoc).sort((a, b) => cmp(a.key, b.key));
+/**
+ * One document per identity, sorted. The projector never duplicates an identity; a hand-built projection
+ * that does resolves to the last item, as the reasoning evaluator and validator do (COG-08 review 7).
+ */
+export function docsOf(projection: MemoryProjection): Doc[] {
+  const byKey = new Map<string, Doc>();
+  for (const item of projection.items) {
+    const d = toDoc(item);
+    byKey.set(d.key, d);
+  }
+  return [...byKey.values()].sort((a, b) => cmp(a.key, b.key));
+}
 
 /** The GitHub repository scope of a PR or issue (`github:<owner/repo>`). */
 export const repoScope = (d: Doc): string => scopeRoot(d.identity.sourceRef);

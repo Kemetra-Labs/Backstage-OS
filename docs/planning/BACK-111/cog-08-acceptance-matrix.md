@@ -184,3 +184,20 @@ The first attempt was stopped by the provider's content filter. A narrower rerun
 | Low | The as-of view kept a run-wide `firstKnownAt` | Both known times from the first row |
 
 **Next:** a seventh review of the fixed commit.
+
+## 12. Seventh independent review: Codex, commit 6feac1b (2026-11-27)
+
+**Verdict: NO-GO, with one blocker.**
+- **Confirmed fixed:** both round-six blockers (between-run markers; per-mention bucket scans).
+- **Reasoning:** an approval-gated task stays `unknown`, and the validator rejects a result that selects it.
+- **Fixes:** all findings below are fixed on the branch that adds this section, each with a regression test that failed on 6feac1b, except the marker-clock item, which is recorded as a design decision.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| Medium (blocker) | A default-ignorable code point outside Cf (U+2065) hid a clip cut, so a clipped `#1234` linked PR 123 | `DI` is invisible at boundaries and in normalization (`retrieval-v9`) |
+| Medium (track) | A failure after E but before evaluation time makes a historical repository read `unknown` | Recorded as conservative; bounding markers by E is an owner decision (S2 change) |
+| Low | The as-of view's known times were not in the fingerprint | Fingerprint covers them (`memory-v3`) |
+| Low | U+0085 NEXT LINE stopped separating | It separates |
+| Low | Duplicate identities in a hand-built projection reported a false cut | Documents deduplicated to the last item |
+
+**Next:** an eighth review of the fixed commit.
