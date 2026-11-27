@@ -217,3 +217,20 @@ The first attempt was stopped by the provider's content filter. A narrower rerun
 | Low | History known times were not in the fingerprint | Covered (`memory-v4`) |
 
 **Next:** a ninth review of the fixed commit.
+
+## 14. Ninth independent review: Codex, commit 896dc43 (2026-11-27)
+
+**Verdict: NO-GO, with two blockers.**
+- **Confirmed fixed:** `memory-v4` (history receipt times).
+- **Partially fixed:** the round-eight control and variation-selector changes, because of the step order below.
+- **Reasoning:** no blocker; an approval-gated task stays `unknown`, and a forged recommendation is rejected.
+- **Fixes:** all findings below are fixed on the branch that adds this section, each with a regression test that failed on 896dc43.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| Medium (blocker) | Invisible characters were removed after lowercasing and composition (a control made a Greek final sigma; blocked an accent's composition) | Removed before NFKC and lowercasing (`retrieval-v11`) |
+| Medium (blocker) | NFKC composed `P` + acute into one letter before the shape fold removed marks | The shape fold decomposes first |
+| Low | Retrieval's fallback text used a different history order from memory's cap | The newest returned run in memory's order |
+| Low | History observation times were not in the fingerprint | Covered (`memory-v5`) |
+
+**Next:** a tenth review of the fixed commit.

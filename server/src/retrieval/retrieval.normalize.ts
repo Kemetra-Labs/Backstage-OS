@@ -38,26 +38,32 @@ function digitValue(ch: string): string {
 }
 
 export function normalizeText(s: string): string {
-  return s
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(FORMAT, '')
-    .replace(CONTROLS, '')
-    .replace(NEXT_LINE, ' ')
-    .replace(DIACRITICS, '')
-    .replace(ALEF, '\u0627') // bare alef
-    .replace(/\u0649/gu, '\u064a') // alef maqsura -> ya
-    .replace(/\u0629/gu, '\u0647') // ta marbuta -> ha
-    .replace(DIGIT, digitValue)
-    .replace(DASHES, '-')
-    .replace(/\s+/gu, ' ')
-    .trim();
+  return (
+    s
+      // Invisible characters go first: lowercasing (a Greek final sigma) and composition (a letter and its
+      // accent) both look at neighbours, so an invisible one must not still be there (COG-08 review 9).
+      .replace(FORMAT, '')
+      .replace(CONTROLS, '')
+      .replace(NEXT_LINE, ' ')
+      .normalize('NFKC')
+      .toLowerCase()
+      .replace(FORMAT, '') // NFKC can produce none in practice; kept as a guard
+      .replace(DIACRITICS, '')
+      .replace(ALEF, '\u0627') // bare alef
+      .replace(/\u0649/gu, '\u064a') // alef maqsura -> ya
+      .replace(/\u0629/gu, '\u0647') // ta marbuta -> ha
+      .replace(DIGIT, digitValue)
+      .replace(DASHES, '-')
+      .replace(/\s+/gu, ' ')
+      .trim()
+  );
 }
 
 /** For the identifier-shape test only: also drops every combining mark (e.g. U+034F, or U+0307 from lowercasing U+0130). */
 export const shapeFold = (s: string): string =>
-  // Whitespace collapses again after the marks go: `PR <mark> 99` must look like `pr 99` (COG-08 review 3).
-  normalizeText(s).replace(MARKS, '').replace(/\s+/gu, ' ').trim();
+  // Decompose first, so a mark NFKC composed into a letter (P + acute) is removable too (COG-08 review 9);
+  // whitespace collapses again after the marks go: `PR <mark> 99` must look like `pr 99` (review 3).
+  normalizeText(s).normalize('NFD').replace(MARKS, '').replace(/\s+/gu, ' ').trim();
 
 /** A token starts with a letter or digit and keeps the marks that follow it. */
 const TOKEN = /[\p{L}\p{N}][\p{L}\p{N}\p{M}]*/gu;

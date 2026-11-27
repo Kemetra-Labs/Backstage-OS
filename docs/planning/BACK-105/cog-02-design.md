@@ -383,3 +383,8 @@ It is `verified` only when every observation in the run was `ok`, and it never r
 
 - The fingerprint also covers the returned history runs' known times. Retrieval picks the fallback text by them when an item has no current run.
 - Regression test: `test/memory/memory.findings6.spec.ts`.
+
+## Revision after the COG-08 ninth review (`memory-v5`, 2026-11-27)
+
+- The fingerprint also covers the returned history runs' observation times, which search reports.
+- Regression test: `test/memory/memory.findings7.spec.ts`.

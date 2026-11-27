@@ -205,3 +205,10 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 - **Normalization strips** format characters and the default-ignorable code points that are **not** combining marks. Default-ignorable marks (the variation selectors, U+034F) stay in ordinary words, where they change meaning, so `<U+845B>` and `<U+845B><VS17>` are different titles. The shape fold still drops every mark, so these cannot hide an identifier.
 - **Known consequence:** U+034F blocks canonical composition, so `cafe<U+034F><U+0301>` does not match `cafe` written with a precomposed accent. That follows from keeping U+034F meaningful in words, and is recorded rather than changed.
 - Regression tests: `test/retrieval/retrieval.findings9.spec.ts`.
+
+## Tenth revision after the COG-08 ninth review (`retrieval-v11`, 2026-11-27)
+
+- **Order of the fold:** invisible characters (format, non-mark default-ignorables, non-whitespace controls) are removed **before** NFKC and lowercasing, and U+0085 becomes a space first. Context-sensitive steps (the Greek final sigma, composition of a letter with its accent) then see the text as it reads.
+- **Shape fold:** it decomposes (NFD) before removing marks, so a mark that NFKC composed into a letter (`P` + acute) cannot hide an identifier shape.
+- **Fallback text:** with no current revision, the fallback text is the newest returned history run in memory's own order, so it is stable across history caps.
+- Regression tests: `test/retrieval/retrieval.findings10.spec.ts`.

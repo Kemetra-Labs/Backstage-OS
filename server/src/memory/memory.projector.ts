@@ -284,7 +284,8 @@ function fingerprintOf(items: readonly MemoryItem[], req: MemoryRequest, cap: nu
         ? [i.current.contentKey, i.current.firstEvidenceId, i.current.lastEvidenceId, i.current.observationCount, i.current.firstObservedAt, i.current.lastObservedAt, i.current.firstKnownAt, i.current.lastKnownAt, i.current.lastState]
         : null,
       // Known times too: retrieval picks the fallback text by them when there is no current run (COG-08 review 8).
-      runs: i.history.map((r) => [r.contentKey, r.firstEvidenceId, r.lastEvidenceId, r.observationCount, r.firstKnownAt, r.lastKnownAt]),
+      // Observation times too: search reports them (COG-08 review 9).
+      runs: i.history.map((r) => [r.contentKey, r.firstEvidenceId, r.lastEvidenceId, r.observationCount, r.firstObservedAt, r.lastObservedAt, r.firstKnownAt, r.lastKnownAt]),
     })),
     markers: [...markers].sort(byCodeUnit),
   });
