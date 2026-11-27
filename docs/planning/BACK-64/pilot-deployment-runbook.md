@@ -177,6 +177,8 @@ The `pki` rotation commands for the certificate and the CA were run locally on a
 
 ## 11. Using a managed Postgres instead `[owner decision, not built, NOT RUN]`
 
+For Neon, read `docs/planning/BACK-114/neon-pg18-readiness.md` first. A Neon project cannot change major version, so 18.x needs a new project, and the current 3-second health check would keep Neon's compute from ever suspending (BACK-115).
+
 Remove `pki` and `postgres` from `compose.yml`, with their volumes `pg-data`, `pg-tls` and `pki-ca`, and the `depends_on: postgres` entries. Then:
 
 - Create the database and an admin login at the provider. Point `KAWALYS_ADMIN_DATABASE_URL` (`ops`) and the two runtime URLs (`bff`) at the provider's **direct** endpoint, with `sslmode=verify-full`. In `compose.yml` those URLs are built for host `postgres`, so they must be edited or turned into variables.
