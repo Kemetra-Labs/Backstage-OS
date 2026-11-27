@@ -231,6 +231,27 @@ The wake-up is close to the readiness probe's 2 s bound. A slower wake gives one
 
 **Network.** IP Allow (an allowlist of host addresses) is a Neon Scale feature. On Launch there is no allowlist; protection is TLS verify-full, strong role passwords and role isolation (readiness doc, section 3).
 
+### Origin certificate (Cloudflare Origin CA) `[built; config and Caddy validation proven in smoke.sh, NOT RUN on a host]`
+
+Optional, off by default. By default Caddy obtains and renews its own Let's Encrypt certificate, which needs Let's Encrypt to reach the origin through Cloudflare. With an Origin CA certificate (valid only between Cloudflare and the origin) Caddy serves mounted files and never contacts an ACME CA. The override is `deploy/pilot/compose.origin-cert.yml`; the Caddyfile imports `/etc/caddy/tls.d/*`, which is empty (a no-op) unless the override mounts `tls-origin.caddy` there.
+
+**Prerequisites (all three, before step 6):**
+- The DNS record is **proxied** (orange cloud) and Cloudflare SSL is **Full (strict)** for this host. Origin CA certificates are not trusted by browsers, so with a DNS-only record a browser, and the readiness `curl`, would connect straight to the origin and reject the certificate.
+- The `web` image in `.env.pilot` (`KAWALYS_WEB_IMAGE`) is a release **built after** the `import /etc/caddy/tls.d/*` line was added to the Caddyfile. An older digest mounts the certificate but keeps automatic HTTPS. Run the Images workflow and set the new digest first.
+- The checkout is at the commit that contains `compose.origin-cert.yml`.
+
+1. Create the directory outside the git checkout, **with absolute paths only** so your working directory stays in the checkout: `sudo mkdir -p /opt/kawalys/tls`.
+2. Generate the key and the CSR **on the host**. The key never leaves it: `sudo openssl req -new -newkey rsa:2048 -nodes -keyout /opt/kawalys/tls/origin.key -out /opt/kawalys/tls/origin.csr -subj "/CN=<site>"`.
+3. Obtain the certificate from Cloudflare for that CSR: dashboard SSL/TLS > Origin Server > Create Certificate > "use my own private key and CSR" (paste `origin.csr`; list `<site>` as the hostname), or the API. Save the returned certificate as `/opt/kawalys/tls/origin.pem`. Never paste `origin.key` anywhere.
+4. Set ownership and modes (uid 10001 is the Caddy user in the web image): `sudo chown 10001:10001 /opt/kawalys/tls/origin.pem /opt/kawalys/tls/origin.key && sudo chmod 0400 /opt/kawalys/tls/origin.key && sudo chmod 0444 /opt/kawalys/tls/origin.pem`.
+5. Add `KAWALYS_ORIGIN_CERT_DIR=/opt/kawalys/tls` to `.env.pilot` (see `env.managed.example`).
+6. From the checkout (`cd /opt/kawalys/repo`), deploy with three compose files: `docker compose -p kawalys-pilot -f deploy/pilot/compose.managed.yml -f deploy/pilot/compose.deploy.yml -f deploy/pilot/compose.origin-cert.yml --env-file /opt/kawalys/.env.pilot up -d bff web`. Use the same three `-f` flags for every later `up`, `ps` and `logs`; dropping the third one switches Caddy back to automatic certificates.
+7. Verify on the host: `openssl s_client -connect 127.0.0.1:443 -servername <site> </dev/null 2>/dev/null | openssl x509 -noout -issuer -enddate`. The issuer must be Cloudflare Origin CA (not Let's Encrypt, not Caddy Local Authority). Then run the readiness gate above.
+
+Put the certificate's expiry date (the `enddate` printed above) in a calendar reminder: nothing renews it.
+
+**Rotation (never overwrite the live pair):** create a new directory (for example `/opt/kawalys/tls-2`) and generate the new key and CSR there (steps 2 to 4 with that path). Check that the certificate and key match and the certificate is valid for `<site>` (`openssl x509 -noout -pubkey -in origin.pem | sha256sum` equals `openssl pkey -pubout -in origin.key | sha256sum`). Then change `KAWALYS_ORIGIN_CERT_DIR` in `.env.pilot` to the new directory, run step 6, and run the readiness gate. Keep the old directory until the new pair has served traffic; to roll back, point the variable at the old directory and run step 6 again.
+
 ## 12. Teardown
 
 ```bash
