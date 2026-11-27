@@ -1,6 +1,6 @@
 # BACK-111 (COG-08) continuous acceptance matrix — interim, 2026-11-27
 
-Status: **interim matrix, written by the implementing session.** It is **not** the independent review BACK-111 requires: the author built COG-03 and COG-04. Its purpose is to make that review fast and exact. The pre-COG-07 gate stays **NO-GO** until an independent reviewer fills in the last column.
+Status: **interim matrix, written by the implementing session, updated after the first independent review (section 5).** It is **not** the independent review BACK-111 requires: the author built COG-03 and COG-04. Its purpose is to make that review fast and exact. The pre-COG-07 gate stays **NO-GO** until an independent reviewer fills in the last column.
 
 ## 1. Slice evidence
 
@@ -44,3 +44,27 @@ Status: **interim matrix, written by the implementing session.** It is **not** t
 4. records GO or NO-GO here with exact commits.
 
 Owner approval is still required for any merge, deployment or release.
+
+## 5. First independent review: Codex, commit 96878ac (2026-11-27)
+
+**Verdict: NO-GO**, with two High findings. All findings below are fixed on the branch that adds this section, each with a regression test that failed on 96878ac.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| High | Two specs for one task item bypass its approval gate, or hide a cycle depending on order | Duplicate task identities refused (`reasoning-v2`) |
+| High | A PR with no `draft` field verified `open` | `open` needs explicit `draft: false`; otherwise `no-value` |
+| Medium | Identifier-shaped spoofs (combining marks, Unicode dashes, Cyrillic lookalikes, numbers over 9 digits) reached fuzzy tiers | `Mn` removed, `Pd` folded, any-script and 18-digit shapes (`retrieval-v3`) |
+| Medium | A late commit changed the cited first evidence id without changing the fingerprint | The fingerprint covers every cited field of the current run (`memory-v2`) |
+| Medium | A spec kind such as `constructor` threw | Own-property lookups |
+| Medium | Unbounded unresolved output, quadratic `#n` linking, and validator work proportional to the candidate | 50-mention cap with `truncated`; indexed links; bounded structural comparison |
+| Low | The 32-token bound counted distinct terms | Every token occurrence counts |
+| Low | Identifier-tier ranking disagreed with R4 (the one blind-relabel disagreement, 20 of 21 agreed) | R4 applied to every tier; corpus `cog03-corpus-v2` |
+
+**Not fixed, recorded for decision:**
+- the S2 memory read has no work budget independent of the history cap (performance, DEC-1);
+- there is no DB case with a second project on which the reader also has a grant;
+- the GitHub observer still writes `draft: false` for a missing field (BACK-48);
+- SQL timing noninterference is unverified.
+
+**Next:** a second independent review of the fixed commit decides GO or NO-GO for the pre-COG-07 gate.
+

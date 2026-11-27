@@ -6,7 +6,9 @@ import type { MemoryRow } from '../../src/memory/memory.types';
 import { at, confPage, ghIssue, pr, repo, REPO } from '../memory/memory.fixture';
 import { jira } from './retrieval.fixture';
 
-export const CORPUS_VERSION = 'cog03-corpus-v1';
+// v2 (2026-11-27): the `34` case relabelled after the COG-08 blind relabel (Codex) showed R4's title-
+// tightness tie-break also applies to the identifier tier: page 34 (2 tokens) before issue 34 (4).
+export const CORPUS_VERSION = 'cog03-corpus-v2';
 
 const o = (id: string, observedAt = at('11:55')) => ({ id, observedAt });
 
@@ -49,7 +51,7 @@ export interface SearchCase {
 export const SEARCH_CASES: readonly SearchCase[] = [
   { name: 'jira key, exact', query: 'OPS-3', outcome: 'match', refs: [REF.jira('OPS-3')] },
   { name: 'jira key, lower case', query: 'ops-3', outcome: 'match', refs: [REF.jira('OPS-3')] },
-  { name: 'collision: issue number and page id', query: '34', outcome: 'ambiguous', refs: [REF.issue(34), REF.page('34')] },
+  { name: 'collision: issue number and page id', query: '34', outcome: 'ambiguous', refs: [REF.page('34'), REF.issue(34)] },
   { name: 'hash number', query: '#34', outcome: 'match', refs: [REF.issue(34)] },
   { name: 'Arabic-Indic digits in an identifier', query: 'issue ٣٤', outcome: 'match', refs: [REF.issue(34)] },
   { name: 'English terms', query: 'arabic search', outcome: 'match', refs: [REF.pr(31)] },

@@ -2,7 +2,8 @@
 // evaluator: it finds cycles by Kahn ordering instead of DFS, looks items up and classifies tasks with
 // its own code, and accepts a candidate only if it is canonically equal to the result it recomputed.
 // It shares only the contract with the evaluator: the input types, input validation and the value table.
-import { canonicalJson } from '../memory/memory.canonical';
+// The comparison walks the expected result, never the candidate, so a huge or hostile candidate costs
+// no more than the answer itself (COG-08 review).
 import type { MemoryProjection } from '../memory/memory.types';
 import { APPROVAL_DETAIL, isValidInput, REASONING_POLICY_VERSION, specVersionOf, valueOf } from './reasoning.rules';
 import type { ReasoningInput, Reason, TaskResult } from './reasoning.types';
@@ -12,10 +13,33 @@ const ids = (xs: readonly string[]): string[] => [...new Set(xs)].sort(order);
 
 export function validateResult(projection: MemoryProjection, input: ReasoningInput, candidate: unknown): boolean {
   try {
-    return canonicalJson(candidate) === canonicalJson(expected(projection, input));
+    return sameData(candidate, expected(projection, input));
   } catch {
     return false;
   }
+}
+
+/** Plain-JSON equality bounded by `want`: own keys, exact key sets, array lengths checked before elements. */
+function sameData(got: unknown, want: unknown): boolean {
+  if (want === null || typeof want !== 'object') return got === want;
+  if (got === null || typeof got !== 'object') return false;
+  if (Array.isArray(want)) {
+    if (!Array.isArray(got) || got.length !== want.length) return false;
+    for (let i = 0; i < want.length; i++) if (!Object.hasOwn(got, i) || !sameData(got[i], want[i])) return false;
+    return true;
+  }
+  if (Array.isArray(got) || Object.getPrototypeOf(got) !== Object.prototype) return false;
+  const wantKeys = Object.keys(want);
+  const gotKeys = Object.keys(got);
+  if (gotKeys.length !== wantKeys.length || Reflect.ownKeys(got).length !== gotKeys.length) return false;
+  for (const k of wantKeys) {
+    if (!Object.hasOwn(got, k)) return false;
+    const w = (want as Record<string, unknown>)[k];
+    // An absent optional field in the expected result must be absent in the candidate too.
+    if (w === undefined) return false;
+    if (!sameData((got as Record<string, unknown>)[k], w)) return false;
+  }
+  return true;
 }
 
 function expected(projection: MemoryProjection, input: ReasoningInput): unknown {

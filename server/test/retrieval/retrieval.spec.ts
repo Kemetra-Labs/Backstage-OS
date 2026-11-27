@@ -54,8 +54,8 @@ describe('identifiers (R2) and identifier-shaped queries (R4)', () => {
     const r = search(world(), '12');
     expect(r.outcome).toBe('ambiguous');
     expect(r.selected).toBeNull();
-    // identity order is (sourceId, sourceRef, kind): the GitHub source sorts before the Confluence one
-    expect(idsOf(r)).toEqual([PR(12), PAGE('12')]);
+    // R4 in every tier: the tighter title first ('Login runbook', 2 tokens, before the PR's 6)
+    expect(idsOf(r)).toEqual([PAGE('12'), PR(12)]);
   });
 
   it('Arabic-Indic digits find the same identifier', () => {

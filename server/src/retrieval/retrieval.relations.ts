@@ -3,7 +3,7 @@
 // whether the target is hidden, revoked or nonexistent: the text comes from a visible title only.
 import type { MemoryProjection } from '../memory/memory.types';
 import { cmp, docsOf, repoScope, sortedUnique, type Doc } from './retrieval.documents';
-import { DEFAULT_DEPTH, DEFAULT_MAX_NODES, GITHUB_NUMBER_IN_TEXT, JIRA_KEY_IN_TEXT, MAX_DEPTH, MAX_NODES } from './retrieval.policy';
+import { DEFAULT_DEPTH, DEFAULT_MAX_NODES, GITHUB_NUMBER_IN_TEXT, JIRA_KEY_IN_TEXT, MAX_DEPTH, MAX_NODES, MAX_UNRESOLVED } from './retrieval.policy';
 import type { Edge, ItemIdentity, Relationships, Traversal, TraversalNode, TraversalOptions, UnresolvedMention } from './retrieval.types';
 import { identityKey } from './retrieval.documents';
 
@@ -34,7 +34,20 @@ function mentionsOf(docs: readonly Doc[]): { edges: Edge[]; unresolved: Unresolv
   const jiraByKey = new Map<string, Doc[]>();
   for (const d of docs) {
     const key = d.identity.kind === 'jira_issue' ? d.payload['key'] : undefined;
-    if (typeof key === 'string') jiraByKey.set(key, [...(jiraByKey.get(key) ?? []), d]);
+    if (typeof key !== 'string') continue;
+    const list = jiraByKey.get(key);
+    if (list) list.push(d);
+    else jiraByKey.set(key, [d]);
+  }
+  // Indexed once: each `#n` mention is a map lookup, not a scan of every document (COG-08 review).
+  const githubKey = (sourceId: string, scope: string, n: unknown) => JSON.stringify([sourceId, scope, n]);
+  const githubByNumber = new Map<string, Doc[]>();
+  for (const d of docs) {
+    if (!isGithubItem(d)) continue;
+    const k = githubKey(d.identity.sourceId, repoScope(d), d.payload['number']);
+    const list = githubByNumber.get(k);
+    if (list) list.push(d);
+    else githubByNumber.set(k, [d]);
   }
   const record = (from: Doc, text: string, targets: readonly Doc[]) => {
     const others = targets.filter((t) => t.key !== from.key);
@@ -51,7 +64,7 @@ function mentionsOf(docs: readonly Doc[]): { edges: Edge[]; unresolved: Unresolv
     if (!isGithubItem(d)) continue;
     for (const ref of matchesOf(d.title, GITHUB_NUMBER_IN_TEXT, '#')) {
       const n = Number(ref.slice(1));
-      const targets = docs.filter((t) => isGithubItem(t) && t.identity.sourceId === d.identity.sourceId && repoScope(t) === repoScope(d) && t.payload['number'] === n);
+      const targets = githubByNumber.get(githubKey(d.identity.sourceId, repoScope(d), n)) ?? [];
       record(d, ref, targets);
     }
   }
@@ -82,7 +95,11 @@ export function related(projection: MemoryProjection, start: ItemIdentity, optio
 
   const rel = relationshipsOf(docs);
   const adjacent = new Map<string, { key: string; edge: Edge }[]>();
-  const link = (a: string, b: string, edge: Edge) => adjacent.set(a, [...(adjacent.get(a) ?? []), { key: b, edge }]);
+  const link = (a: string, b: string, edge: Edge) => {
+    const list = adjacent.get(a);
+    if (list) list.push({ key: b, edge });
+    else adjacent.set(a, [{ key: b, edge }]);
+  };
   for (const e of rel.edges) {
     link(identityKey(e.from), identityKey(e.to), e);
     link(identityKey(e.to), identityKey(e.from), e);
@@ -105,5 +122,7 @@ export function related(projection: MemoryProjection, start: ItemIdentity, optio
       nodes.push({ identity: byKey.get(next.key)!.identity, depth: node.depth + 1, via: next.edge });
     }
   }
-  return { outcome: 'found', nodes, unresolved: rel.unresolved.filter((u) => visited.has(identityKey(u.from))), truncated };
+  const unresolved = rel.unresolved.filter((u) => visited.has(identityKey(u.from)));
+  if (unresolved.length > MAX_UNRESOLVED) truncated = true;
+  return { outcome: 'found', nodes, unresolved: unresolved.slice(0, MAX_UNRESOLVED), truncated };
 }

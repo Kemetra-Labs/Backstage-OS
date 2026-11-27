@@ -105,3 +105,10 @@ ADAPT the COG-01 research reasoner (classification, reason codes) and validator 
 ## 7. Stop conditions
 
 Return to the owner if a rule needs evidence that does not exist (for example "merged"), a consumer needs approvals to pass (S3 first), a test shows hidden data changing a classification, or the evaluator and validator disagree on any case.
+
+## Revision after the COG-08 independent review (`reasoning-v2`, 2026-11-27)
+
+- **T1:** two specs for the same task item are refused (`invalid-spec`). A second spec could bypass the first one's approval gate, or hide a cycle depending on input order. Requirement-kind tables are looked up by own property only, so a kind such as `constructor` is refused instead of throwing.
+- **T2:** a PR is `open` only with an explicit `draft: false`. A missing or non-boolean flag gives `no-value`. The GitHub observer still writes `draft: false` when the provider omits the field; changing that is a BACK-48 connector decision.
+- **T6:** the validator compares by walking the expected result, with own keys, exact key sets and array lengths checked first. A huge or hostile candidate costs no more than the answer itself.
+- Regression tests: `test/reasoning/reasoning.findings.spec.ts`.
