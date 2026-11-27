@@ -11,12 +11,13 @@ import { INVESTIGATION } from './screens/investigation';
 import { AGENTS_VIEW_COPY, MAP_LENS_COPY, REPLAY_VIEW_COPY, SOURCES_VIEW_COPY } from './screens/map';
 import { PORTFOLIO_COPY } from './screens/portfolio';
 import { PROJECT_COPY } from './screens/project';
+import { SHADOW_COPY } from './screens/shadow';
 import { SOURCES_COPY } from './screens/sources';
 
 /** Every host copy tree, by name. A new tree is added here so the shared copy rules and the no-change snapshot cover it. */
 export const HOST_COPY = {
   COPY, SHELL, AGENTS_COPY, DECISIONS_COPY, EVIDENCE, HOME_COPY, INVESTIGATION, AGENTS_VIEW_COPY, MAP_LENS_COPY, REPLAY_VIEW_COPY,
-  SOURCES_VIEW_COPY, PORTFOLIO_COPY, PROJECT_COPY, SOURCES_COPY,
+  SOURCES_VIEW_COPY, PORTFOLIO_COPY, PROJECT_COPY, SOURCES_COPY, SHADOW_COPY,
 } as const;
 
 export type HostCopyName = keyof typeof HOST_COPY;

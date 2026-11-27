@@ -18,6 +18,7 @@ import { InvestigationRoute } from './screens/InvestigationRoute';
 import { NotFound } from './screens/NotFound';
 import { Portfolio } from './screens/Portfolio';
 import { Project } from './screens/Project';
+import { Shadow } from './screens/Shadow';
 import { Sources } from './screens/Sources';
 import { hostCopy } from './i18n/host';
 import { LIVE } from './live/reads';
@@ -48,6 +49,7 @@ function screenFor(route: Route) {
     case 'decision': return <DecisionDetail id={route.id} />;
     case 'agents': return <Agents />;
     case 'sources': return <Sources />;
+    case 'shadow': return <Shadow />;
     case 'notFound': return <NotFound />;
   }
 }
@@ -79,6 +81,7 @@ export function App() {
     : route.name === 'evidence' ? copy.evidenceTitle
     : route.name === 'decision' ? shell.nav.decisions
     : route.name === 'notFound' ? shell.notFound.title
+    : route.name === 'shadow' ? hostCopy('SHADOW_COPY', lang).title
     : shell.nav[route.name];
 
   useEffect(() => {

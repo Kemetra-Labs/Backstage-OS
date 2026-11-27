@@ -37,7 +37,7 @@ const lens = allCopy();
 
 describe('shared copy rules: host copy trees', () => {
   it('covers every host set', () => {
-    expect(host.map((h) => h.name)).toHaveLength(14);
+    expect(host.map((h) => h.name)).toHaveLength(15); // 15th: SHADOW_COPY (COG-07)
     expect(host.reduce((n, h) => n + h.en.length + h.ar.length, 0)).toBeGreaterThan(1000);
   });
 
