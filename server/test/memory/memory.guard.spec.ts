@@ -129,7 +129,9 @@ describe('memory module is pure and not exposed', () => {
   });
 
   it('nothing else in src imports the memory module (no route, controller or module wiring)', () => {
-    const outside = files(SRC).filter((f) => !f.startsWith(MEMORY));
+    // COG-03 retrieval (BACK-106) is the one pure consumer; its own guard keeps it pure and unexposed.
+    const RETRIEVAL = join(SRC, 'retrieval');
+    const outside = files(SRC).filter((f) => !f.startsWith(MEMORY) && !f.startsWith(RETRIEVAL));
     const offenders = outside.filter((f) => /(?:from\s*|import\s*\(\s*|^\s*import\s*)['"`][^'"`]*\/memory\//m.test(readFileSync(f, 'utf8')));
     expect(offenders).toEqual([]);
   });
