@@ -47,6 +47,9 @@ services:
     networks: [backend]
 
   # Operator command (profile "ops", never started by `up`): provision and migrate, with the admin login (direct host).
+  # These four variables are needed only while running ops. They are unguarded here on purpose so bff and web start without
+  # the owner-level credential in the runtime env file; db-admin refuses missing or empty values at run time.
+  # Remove them from .env.pilot afterwards.
   #   docker compose ... --profile ops run --rm ops provision --apply
   #   docker compose ... --profile ops run --rm ops migrate --apply
   ops:
@@ -54,10 +57,10 @@ services:
     profiles: ["ops"]
     entrypoint: ["node", "dist/ops/db-admin.js"]
     environment:
-      KAWALYS_ADMIN_DATABASE_URL: ${KAWALYS_ADMIN_DATABASE_URL:?set KAWALYS_ADMIN_DATABASE_URL in .env.pilot}
-      KAWALYS_ROLE_PASSWORD_MIGRATOR: ${KAWALYS_ROLE_PASSWORD_MIGRATOR:?set KAWALYS_ROLE_PASSWORD_MIGRATOR in .env.pilot}
-      KAWALYS_ROLE_PASSWORD_APP: ${KAWALYS_ROLE_PASSWORD_APP:?set KAWALYS_ROLE_PASSWORD_APP in .env.pilot}
-      KAWALYS_ROLE_PASSWORD_AUTH: ${KAWALYS_ROLE_PASSWORD_AUTH:?set KAWALYS_ROLE_PASSWORD_AUTH in .env.pilot}
+      KAWALYS_ADMIN_DATABASE_URL: ${KAWALYS_ADMIN_DATABASE_URL:-}
+      KAWALYS_ROLE_PASSWORD_MIGRATOR: ${KAWALYS_ROLE_PASSWORD_MIGRATOR:-}
+      KAWALYS_ROLE_PASSWORD_APP: ${KAWALYS_ROLE_PASSWORD_APP:-}
+      KAWALYS_ROLE_PASSWORD_AUTH: ${KAWALYS_ROLE_PASSWORD_AUTH:-}
     networks: [backend]
 
   web:

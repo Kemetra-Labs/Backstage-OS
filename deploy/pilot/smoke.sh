@@ -102,7 +102,10 @@ check "managed: no pg-data, pg-tls or pki-ca volume" managed_json_check '!["pg-d
 check "managed: bff publishes no ports" managed_json_check '!(c.services.bff.ports&&c.services.bff.ports.length)'
 check "managed: web publishes 80 and 443 only" managed_json_check 'c.services.web.ports.map(p=>+p.target).sort((a,b)=>a-b).join()==="80,443"'
 check "managed: bff healthcheck is the liveness probe (8787/process)" managed_json_check 'c.services.bff.healthcheck.test.join(" ").includes("8787/process")'
-check "managed: bff and web keep the hardening (cap_drop ALL, no-new-privileges, web read_only)" managed_json_check '["bff","web"].every(n=>c.services[n].cap_drop.includes("ALL")&&c.services[n].security_opt.includes("no-new-privileges:true"))&&c.services.web.read_only===true'
+check "managed: bff and web keep the hardening (cap_drop ALL, no-new-privileges, web read_only, web user 10001:10001)" managed_json_check '["bff","web"].every(n=>c.services[n].cap_drop.includes("ALL")&&c.services[n].security_opt.includes("no-new-privileges:true"))&&c.services.web.read_only===true&&c.services.web.user==="10001:10001"'
+check "managed: bff has trust-proxy, allowed origins and NODE_ENV defaulting to production" managed_json_check 'c.services.bff.environment.NODE_ENV==="production"&&!!c.services.bff.environment.KAWALYS_TRUST_PROXY&&c.services.bff.environment.KAWALYS_ALLOWED_ORIGINS'
+grep -v -E '^(KAWALYS_ADMIN_DATABASE_URL|KAWALYS_ROLE_PASSWORD_[A-Z]+)=' "$TMP/managed.env" > "$TMP/managed-runtime.env"
+check "managed: config succeeds with runtime vars only (no admin URL or role passwords, no ops profile)" quiet docker compose -f "$MANAGED_FILE" --env-file "$TMP_NATIVE/managed-runtime.env" config
 check "managed: no NODE_EXTRA_CA_CERTS and no pg-tls mount" managed_json_check '!("NODE_EXTRA_CA_CERTS" in c.services.bff.environment)&&!JSON.stringify(c).includes("pg-tls")' --profile ops
 grep -v '^KAWALYS_DATABASE_URL_APP=' "$TMP/managed.env" > "$TMP/managed-missing.env"
 MANAGED_ENV_MISSING="$TMP_NATIVE/managed-missing.env"
