@@ -185,7 +185,7 @@ Only genuinely unresolved choices. Tick or replace the recommended default.
 - [ ] **3. Owner binding:** one-shot bootstrap by verified email in `KAWALYS_OWNER_EMAIL`, then subject-pinned (default), or another method?
 - [ ] **4. Passwordless method:** email magic link first, passkey later (default), or passkey first?
 - [ ] **5. First repo:** `Kemetra-Labs/Backstage-OS` (default), or name a different one (all org repos are public).
-- [ ] **6. Retention defaults:** Observations 180 days, decisions and audit kept until workspace deletion (default).
+- [x] **6. Retention defaults:** Observations 180 days, decisions and audit kept until workspace deletion (default). *Accepted 2026-11-27 under the owner's delegation ([BACK-105 DEC-4](../BACK-105/cog-02-decisions.md)); no purge job is built, and the purge mechanism stays open.*
 - [ ] **7. Neon (only needed for gate B):** Frankfurt, Launch plan, 7-day window, and **your monthly spend alert value**: `____`.
 - [ ] **8. Dependencies:** approve `pg`, `jose` (exact pins chosen at install), `@testcontainers/postgresql` (dev); decide `@octokit/auth-app` vs hand-rolled JWT at BACK-52.
 - [ ] **9. Hosting:** defer to gate D (default), nothing decided now.

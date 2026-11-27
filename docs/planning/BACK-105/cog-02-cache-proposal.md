@@ -1,6 +1,6 @@
 # BACK-105 (COG-02): proposal for the D6 memory cache, for owner review
 
-Status: **proposal only, plus a prototype measurement of option A (2026-11-27, section 4). Nothing is built, no migration is written, and no decision is taken here.** The owner delegated the choice of the next step to the implementation session on 2026-11-26. That delegation does **not** cover a schema change, the retention policy (BACK-47 item 6) or accepting COG-02. Each stays an owner decision, as D6 and BACK-105 require.
+Status: **decided on 2026-11-27 under the owner's delegation: see [cog-02-decisions.md](cog-02-decisions.md) (option D now, corrected A prepared, A maintained in `ingest()`, retention defaults accepted, COG-02 accepted as a background read).** Below is the proposal as it was, plus the prototype measurement of option A (section 4). Original status: **proposal only. Nothing is built, no migration is written, and no decision is taken here.** The owner delegated the choice of the next step to the implementation session on 2026-11-26. That delegation does **not** cover a schema change, the retention policy (BACK-47 item 6) or accepting COG-02. Each stays an owner decision, as D6 and BACK-105 require.
 
 Inputs: [cog-02-design.md](cog-02-design.md) (D1, D3, D3a, D5, D6) and [cog-02-s3-measurements.md](cog-02-s3-measurements.md). Facts about the schema are from `server/migrations/0003`/`0005` and `server/src/evidence/evidence.repository.ts` on `main` at 1d0d677.
 
@@ -78,6 +78,9 @@ B was not measured; it reads the same tables, so its read cost would be the same
 4. **State the bar.** 500 ms was D6's guard value. Whether it is the right bar for a shadow, non-request path is an owner question.
 
 ## 7. Questions for the owner
+
+Answered on 2026-11-27 in [cog-02-decisions.md](cog-02-decisions.md): 1 → DEC-1, 2 → DEC-4, 3 → DEC-2, 4 → DEC-3.
+
 
 1. Is the 500 ms bar meant for COG-07 shadow mode, or only for an interactive path?
 2. Retention values (BACK-47 item 6), and the purge mechanism the append-only triggers force (a break-glass or migration-defined path).
