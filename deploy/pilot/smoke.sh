@@ -259,7 +259,7 @@ check_headers "/" "$BASE/"
 check_headers "/api/process" "$BASE/api/process"
 check_headers "/sign-in" "$BASE/sign-in"
 
-log "sign-in page edge (D3(a)): SPA fallback, no-store, report-only CSP"
+log "sign-in page edge (D3(a)): SPA fallback, no-store, enforcing CSP"
 check "GET /sign-in serves the app (SPA fallback)" bash -c "curl -sk --max-time 10 '$BASE/sign-in' | grep -q 'id=\"root\"'"
 check "GET /sign-in?t=<token> still serves the app (the magic-link return)" bash -c "curl -sk --max-time 10 '$BASE/sign-in?t=abc.def' | grep -q 'id=\"root\"'"
 check "GET /sign-in/ serves the app" bash -c "curl -sk --max-time 10 '$BASE/sign-in/' | grep -q 'id=\"root\"'"
@@ -272,15 +272,15 @@ directive() { # $1 policy, $2 directive name: the directive's value list
 has_directive() { # $1 policy, $2 whole directive text, exact
   echo "$1" | tr ';' '\n' | sed 's/^ *//' | grep -qxF "$2"
 }
-SIGNIN_CSP="$(hdr "$SIGNIN_H" content-security-policy-report-only)"
-ROOT_CSP="$(hdr "$ROOT_H" content-security-policy-report-only)"
-check "/sign-in: Content-Security-Policy-Report-Only appears exactly once" test "$(echo "$SIGNIN_H" | grep -ic '^content-security-policy-report-only:')" = 1
-check "/: Content-Security-Policy-Report-Only appears exactly once" test "$(echo "$ROOT_H" | grep -ic '^content-security-policy-report-only:')" = 1
+SIGNIN_CSP="$(hdr "$SIGNIN_H" content-security-policy)"
+ROOT_CSP="$(hdr "$ROOT_H" content-security-policy)"
+check "/sign-in: Content-Security-Policy appears exactly once" test "$(echo "$SIGNIN_H" | grep -ic '^content-security-policy:')" = 1
+check "/: Content-Security-Policy appears exactly once" test "$(echo "$ROOT_H" | grep -ic '^content-security-policy:')" = 1
 check "images.yml passes VITE_KAWALYS_DESCOPE_PROJECT_ID as a build-arg to the web image build" bash -c 'awk "/file: deploy\/pilot\/web.Dockerfile/{f=1} f&&/build-args:/{b=1} b&&/VITE_KAWALYS_DESCOPE_PROJECT_ID=/{ok=1} f&&/tags:/{exit} END{exit !ok}" "$0"' "$HERE/../../.github/workflows/images.yml"
 SIGNIN_SCRIPT_SRC="$(directive "$SIGNIN_CSP" script-src)"
 check "/sign-in: Cache-Control no-store" bash -c 'echo "$0" | grep -qi "^cache-control: .*no-store"' "$SIGNIN_H"
 check "/: Cache-Control no-store is scoped to /sign-in only" bash -c '! echo "$0" | grep -qi "^cache-control: .*no-store"' "$ROOT_H"
-check "/sign-in: Content-Security-Policy-Report-Only is present" test -n "$SIGNIN_CSP"
+check "/sign-in: Content-Security-Policy is present" test -n "$SIGNIN_CSP"
 check "/sign-in: CSP connect-src allows 'self' and https://api.descope.com" bash -c 'echo "$0" | grep -qF "connect-src '"'self'"' https://api.descope.com"' "$SIGNIN_CSP"
 check "/sign-in: CSP default-src 'self'" has_directive "$SIGNIN_CSP" "default-src 'self'"
 check "/sign-in: CSP object-src 'none'" has_directive "$SIGNIN_CSP" "object-src 'none'"
@@ -288,11 +288,11 @@ check "/sign-in: CSP frame-ancestors 'none'" has_directive "$SIGNIN_CSP" "frame-
 check "/sign-in: CSP base-uri 'self'" has_directive "$SIGNIN_CSP" "base-uri 'self'"
 check "/sign-in: CSP script-src has no unsafe-inline, unsafe-eval, wildcard, data:, unpkg or jsdelivr" bash -c '[ -n "$0" ] && ! echo "$0" | grep -qE "unsafe-inline|unsafe-eval|\*|data:|unpkg|jsdelivr"' "$SIGNIN_SCRIPT_SRC"
 check "/sign-in: CSP script-src allows 'self' and the Descope components CDN" bash -c 'echo "$0" | grep -qF "'"'self'"'" && echo "$0" | grep -qF "https://descopecdn.com"' "$SIGNIN_SCRIPT_SRC"
-check "/sign-in: no enforcing Content-Security-Policy yet (report-only first)" bash -c '! echo "$0" | grep -qi "^content-security-policy:"' "$SIGNIN_H"
-check "/: Content-Security-Policy-Report-Only is present" test -n "$ROOT_CSP"
+check "/sign-in: no Content-Security-Policy-Report-Only header is left (enforcing only)" bash -c '! echo "$0" | grep -qi "^content-security-policy-report-only:"' "$SIGNIN_H"
+check "/: Content-Security-Policy is present" test -n "$ROOT_CSP"
 check "/: CSP names no Descope host (the vendor allowances are for /sign-in only)" bash -c '[ -n "$0" ] && ! echo "$0" | grep -qi descope' "$ROOT_CSP"
 check "/: CSP script-src is exactly 'self'" test "$(directive "$ROOT_CSP" script-src)" = "'self'"
-check "/: no enforcing Content-Security-Policy yet" bash -c '! echo "$0" | grep -qi "^content-security-policy:"' "$ROOT_H"
+check "/: no Content-Security-Policy-Report-Only header is left (enforcing only)" bash -c '! echo "$0" | grep -qi "^content-security-policy-report-only:"' "$ROOT_H"
 check "index.html has no inline script (every <script> has src), so script-src 'self' fits" bash -c 'h="$(curl -sk --max-time 10 "$0/")"; [ "$(echo "$h" | grep -oE "<script[^>]*>" | wc -l)" -ge 1 ] && ! echo "$h" | grep -oE "<script[^>]*>" | grep -qv "src="' "$BASE"
 check "bundled stack: the running web container has KAWALYS_TRUSTED_PROXIES" bash -c '[ "$(docker exec "$0" printenv KAWALYS_TRUSTED_PROXIES | tr -d "\r")" = "127.0.0.1/32" ]' "$(dc ps -q web)"
 published() { docker ps --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=$1" --format '{{.Ports}}' | grep -c -- '->'; }

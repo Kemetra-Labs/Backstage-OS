@@ -31,9 +31,10 @@
 	@signin path /sign-in /sign-in/
 	header @signin Cache-Control "no-store"
 
-	# Content-Security-Policy-Report-Only (auth review F-001). REPORT-ONLY on purpose: nothing is blocked. The owner decision is to
-	# read the reports in the browser console during the first real sign-in (P5) and enforce only if there are no violations; the
-	# header name then becomes Content-Security-Policy. Built from the vendored @descope/web-component 4.6.3 (and its
+	# Content-Security-Policy (auth review F-001), ENFORCING since 28 Nov 2026 (owner decision, after the first real sign-in (P5)
+	# on 27 Nov showed no violation on the app pages; it was report-only until then). If a Descope screen needs a host not listed
+	# here, the browser console names the blocked host; rolling back is the previous web image digest (runbook 5a). Built from the
+	# vendored @descope/web-component 4.6.3 (and its
 	# @descope/web-js-sdk 1.54.5, @descope/sdk-mixins and @descope/core-js-sdk), and from the Descope project's own published
 	# files (https://static.descope.com/pages/<project id>/v2-beta/, read 27 Nov 2026), never from memory. No 'unsafe-eval', no
 	# script 'unsafe-inline': index.html has only an external module script (the smoke checks it). Style needs 'unsafe-inline':
@@ -42,7 +43,7 @@
 	#
 	# Every path except /sign-in gets the strict policy: no Descope host, because only the sign-in page loads the component.
 	@app not path /sign-in /sign-in/
-	header @app Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+	header @app Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
 	# /sign-in adds only the Descope origins the component is shown to use. Each origin and where it comes from:
 	#   script-src  https://descopecdn.com     the component injects the UI-components bundle (@descope/web-components-ui) as a <script>
@@ -69,7 +70,7 @@
 	# if Descope's config turns telemetry on; the collector host is in a CDN bundle that was not read); accounts.google.com and
 	# oidc-client-ts (social and OIDC flows, not magic link). The screens after "Sign In Screen" (the magic-link wait and verification
 	# screens) were not enumerated; their content could name more hosts.
-	header @signin Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://descopecdn.com https://static.descope.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://imgs.descope.com; font-src 'self' data:; connect-src 'self' https://api.descope.com https://static.descope.com https://static2.descope.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+	header @signin Content-Security-Policy "default-src 'self'; script-src 'self' https://descopecdn.com https://static.descope.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://imgs.descope.com; font-src 'self' data:; connect-src 'self' https://api.descope.com https://static.descope.com https://static2.descope.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
 	# /api/... goes to the BFF with the prefix stripped; the Host header is passed through.
 	# X-Forwarded-For is overwritten, never appended to a client-sent value, so the BFF (which trusts only this proxy)
