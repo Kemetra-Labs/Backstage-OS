@@ -11,6 +11,7 @@ import { PostgresSessionStore } from "./auth/session/postgres-session-store";
 import { WorkspaceResolver } from "./auth/workspace-resolver";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { EvidenceRepository } from "./evidence/evidence.repository";
+import { ReadinessModule } from "./health/readiness.module";
 import { InvestigationModule } from "./investigations/investigation.module";
 import { InvestigationRepository } from "./investigations/investigation.repository";
 import { PortfolioModule } from "./portfolio/portfolio.module";
@@ -42,7 +43,7 @@ export async function createApp(
   // Throws (AuthConfigError) before anything listens if the auth configuration is malformed, or incomplete in production.
   const auth = buildAuth(process.env, authOverrides, persistence);
 
-  const imports: (Type<unknown> | DynamicModule)[] = [AppModule, AuthModule.register(auth)];
+  const imports: (Type<unknown> | DynamicModule)[] = [AppModule, AuthModule.register(auth), ReadinessModule.register(db)];
   // Evidence routes exist only with the database; the global AuthGuard protects them like every route.
   if (db && workspaces) {
     const evidence = new EvidenceRepository(db.appPool);
