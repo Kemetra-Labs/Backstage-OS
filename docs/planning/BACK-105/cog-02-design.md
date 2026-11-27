@@ -388,3 +388,8 @@ It is `verified` only when every observation in the run was `ok`, and it never r
 
 - The fingerprint also covers the returned history runs' observation times, which search reports.
 - Regression test: `test/memory/memory.findings7.spec.ts`.
+
+## Revision after the COG-08 tenth review (`memory-v6`, 2026-11-27)
+
+- The fingerprint covers the current run's whole payload, not only its content key. Consumers read fields outside the content key: `textClipped` decides whether a mention at a clip cut counts.
+- Regression test: `test/memory/memory.findings8.spec.ts`.

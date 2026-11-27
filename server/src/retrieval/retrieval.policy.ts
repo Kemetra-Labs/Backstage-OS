@@ -27,8 +27,10 @@
  * ignorable marks (variation selectors, U+034F) stay in ordinary words.
  * v11 (2026-11-27, ninth review): invisible characters removed before case and composition; the shape
  * fold decomposes before removing marks; the fallback text is the newest returned history run.
+ * v12 (2026-11-27, tenth review): the shape fold recomposes after removing marks; the source-ref shape
+ * has no length cap of its own.
  */
-export const RETRIEVAL_POLICY_VERSION = 'retrieval-v11';
+export const RETRIEVAL_POLICY_VERSION = 'retrieval-v12';
 
 export const MAX_QUERY_CHARS = 500;
 export const MAX_QUERY_TOKENS = 32;
@@ -119,7 +121,8 @@ const IDENTIFIER_SHAPES: readonly RegExp[] = [
   // key-shaped, so it can only match exactly. Other scripts (CJK, Arabic) stay ordinary text.
   /^[\p{sc=Latin}\p{sc=Greek}\p{sc=Cyrillic}][\p{sc=Latin}\p{sc=Greek}\p{sc=Cyrillic}\p{N}_]+-\d+$/u,
   /^[\w.-]{1,100}\/[\w.-]{1,100}$/,
-  /^(?:github|jira|confluence):\S{1,400}$/,
+  // No length cap of its own: the 500-character query bound already bounds the work (COG-08 review 10).
+  /^(?:github|jira|confluence):\S+$/,
 ];
 
 /** Takes `shapeFold(query)`: marks are already gone, so they cannot hide a shape. */

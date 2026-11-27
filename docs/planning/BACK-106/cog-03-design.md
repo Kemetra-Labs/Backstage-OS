@@ -212,3 +212,10 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 - **Shape fold:** it decomposes (NFD) before removing marks, so a mark that NFKC composed into a letter (`P` + acute) cannot hide an identifier shape.
 - **Fallback text:** with no current revision, the fallback text is the newest returned history run in memory's own order, so it is stable across history caps.
 - Regression tests: `test/retrieval/retrieval.findings10.spec.ts`.
+
+## Eleventh revision after the COG-08 tenth review (`retrieval-v12`, 2026-11-27)
+
+- **Shape fold:** it recomposes (NFC) after removing marks, so decomposition never lengthens the text it tests (a Hangul syllable is three code units in NFD).
+- **Source-ref shape:** it has no length cap of its own; the 500-character query bound already bounds the work.
+- **Decided, pinned by a test:** accent-decorated `owner/repo` text (`résumé/guide`) is identifier-shaped and answered by exact match only, as R4 reserves every identifier shape. The same words without the slash are ordinary text. An explicit text-search mode would be a later product decision.
+- Regression tests: `test/retrieval/retrieval.findings11.spec.ts`.

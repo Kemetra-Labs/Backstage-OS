@@ -63,7 +63,9 @@ export function normalizeText(s: string): string {
 export const shapeFold = (s: string): string =>
   // Decompose first, so a mark NFKC composed into a letter (P + acute) is removable too (COG-08 review 9);
   // whitespace collapses again after the marks go: `PR <mark> 99` must look like `pr 99` (review 3).
-  normalizeText(s).normalize('NFD').replace(MARKS, '').replace(/\s+/gu, ' ').trim();
+  // ...and recompose (NFC) afterwards, so decomposition never lengthens the text it tests: a Hangul
+  // syllable is three code units in NFD (COG-08 review 10).
+  normalizeText(s).normalize('NFD').replace(MARKS, '').normalize('NFC').replace(/\s+/gu, ' ').trim();
 
 /** A token starts with a letter or digit and keeps the marks that follow it. */
 const TOKEN = /[\p{L}\p{N}][\p{L}\p{N}\p{M}]*/gu;
