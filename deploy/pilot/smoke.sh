@@ -81,6 +81,8 @@ quiet dc build || { fail "images build"; exit 1; }
 pass "images build"
 quiet dc up -d --wait postgres || { fail "postgres healthy"; exit 1; }
 pass "postgres healthy"
+pgver="$(dc exec -T postgres psql -U kawalys_admin -d kawalys -tAc 'SHOW server_version' 2>/dev/null | tr -d '[:space:]')"
+if [[ "$pgver" =~ ^18\.7($|[^0-9]) ]]; then pass "postgres reports server_version 18.7 (BACK-113)"; else fail "postgres reports server_version 18.7 (BACK-113), got '${pgver:-none}'"; fi
 
 log "operator step: provision, then migrate (before bff starts)"
 quiet dc --profile ops run --rm ops provision --apply && pass "db-admin provision --apply" || { fail "db-admin provision --apply"; exit 1; }

@@ -5,7 +5,9 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import pg from 'pg';
 
-export const PG_IMAGE = 'postgres:17-alpine';
+// BACK-113: PostgreSQL 18.7 is the owner-approved baseline (2026-11-27). Exact tag: no silent substitution;
+// pg-version.spec.ts proves the running server really is 18.7.
+export const PG_IMAGE = 'postgres:18.7-alpine';
 
 export interface PgContainer {
   readonly container: StartedPostgreSqlContainer;
