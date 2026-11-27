@@ -9,6 +9,16 @@ import { cmp, docsOf, identityKey, repoScope, sortedUnique, type Doc } from './r
 import { CLIP_LIMIT, DEFAULT_DEPTH, DEFAULT_MAX_NODES, GITHUB_NUMBER_IN_TEXT, hasVisibleAfter, isMentionBoundary, JIRA_KEY_IN_TEXT, MAX_DEPTH, MAX_EDGES, MAX_NODES, MAX_UNRESOLVED } from './retrieval.policy';
 import type { Edge, ItemIdentity, Relationships, Traversal, TraversalNode, TraversalOptions, UnresolvedMention } from './retrieval.types';
 
+/**
+ * True when `text` has at least CLIP_LIMIT code points, without walking a long text: fewer UTF-16 units
+ * than the limit cannot reach it, and twice the limit always does (a code point is one or two units).
+ */
+function reachesClipLimit(text: string): boolean {
+  if (text.length < CLIP_LIMIT) return false;
+  if (text.length >= 2 * CLIP_LIMIT) return true;
+  return Array.from(text).length >= CLIP_LIMIT;
+}
+
 const isGithubItem = (d: Doc): boolean => d.identity.kind === 'pull_request' || d.identity.kind === 'issue';
 const byFromThenText = (a: UnresolvedMention, b: UnresolvedMention): number => cmp(identityKey(a.from), identityKey(b.from)) || cmp(a.text, b.text);
 const edgeOrder = (e: Edge): string => JSON.stringify([identityKey(e.from), identityKey(e.to), e.type, e.text ?? '']);
@@ -144,7 +154,7 @@ function mentionsOf(docs: readonly Doc[], budget: Budget): void {
     if (!d.title || d.revision === null) continue;
     // A title with no flag predates it: at the clip limit it may have been cut (COG-08 review 5).
     const flag = d.payload['textClipped'];
-    const clipped = flag === true || (flag !== false && Array.from(d.title).length >= CLIP_LIMIT);
+    const clipped = flag === true || (flag !== false && reachesClipLimit(d.title));
     for (const key of matchesOf(d.title, JIRA_KEY_IN_TEXT, clipped)) record(d, key, jiraByKey.get(key) ?? [], `jira:${key}`);
     if (!isGithubItem(d)) continue;
     for (const ref of matchesOf(d.title, GITHUB_NUMBER_IN_TEXT, clipped, '#', '#')) {
