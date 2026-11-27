@@ -22,7 +22,7 @@ npm start        # node dist/main.js
 
 NestJS 12 is ESM-only, so `npm test` runs Jest in ESM mode (`node --experimental-vm-modules`, `useESM` in `jest.config.js`). The build still emits CommonJS, which loads NestJS through Node's `require(esm)`.
 
-`KAWALYS_BFF_PORT` sets the port (default `8787`). The server binds `127.0.0.1` only.
+`KAWALYS_BFF_PORT` sets the port (default `8787`). The server binds `127.0.0.1` by default; `KAWALYS_BFF_HOST` may be `127.0.0.1`, `::1` or `0.0.0.0` (the pilot container sets `0.0.0.0` behind its private network; anything else refuses to boot). `GET /health` is readiness (200 only when both database pools answer a `SELECT 1`, else 503; `GET /process` stays liveness only).
 
 ## Local run with synthetic data (BACK-61)
 

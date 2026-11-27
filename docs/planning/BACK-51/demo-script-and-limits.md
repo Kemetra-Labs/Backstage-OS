@@ -76,7 +76,7 @@ Descope, every protected route is deny-all and the app only shows "not found, or
    its own audit row. A server key is a logged follow-up (D5 (b)).
 6. **The live suite runs in Chromium only.** The session cookie is `__Host-` and `Secure`; whether WebKit accepts it over
    plain `http://127.0.0.1` is not verified. The default app suite still runs in Chromium and WebKit.
-7. **No hosting.** Nothing is deployed (BACK-64); no database, Descope project or secrets are provisioned.
+7. **No hosting.** Nothing is deployed (BACK-64). Deploy artifacts exist in `deploy/pilot/`, proven locally only; no host, database, Descope project or secrets are provisioned.
 8. **One role.** Only `owner` exists server-side. Personas in the app are a display switch, never authorization.
 9. **Synthetic data only.** No customer data, and no live telemetry is shown anywhere.
 
@@ -91,6 +91,6 @@ The gate is NOT PASSED. A row is PASS only with evidence; missing evidence stays
 | Known limitations listed | Above |
 | X02/X04 + BACK-30 restricted-existence security sign-off | NOT RUN (separate workstream preparing evidence) |
 | BACK-55/56/57/59/60/61/62 readiness | Code slices merged; BACK-56 real sign-in not run |
-| BACK-64 deployment | NOT RUN |
+| BACK-64 deployment | Deploy-ready, proven locally by `deploy/pilot/smoke.sh`; non-local run NOT RUN (owner: host, DNS, secrets; production sign-in needs D3 (a)). Runbook: `docs/planning/BACK-64/pilot-deployment-runbook.md` |
 | Negative / privacy / EN-AR / RTL / a11y checks documented | In CI (app e2e: `a11y`, `leaks`, `nondisclosure`, `arabic-copy`; live e2e: negative, Arabic and leak cases) |
 | Owner signs off | **NOT RUN (owner only)** |
