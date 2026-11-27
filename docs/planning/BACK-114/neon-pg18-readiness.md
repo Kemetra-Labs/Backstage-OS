@@ -1,6 +1,6 @@
 # BACK-114 (DEP-02): Neon PostgreSQL 18 readiness, 27 Nov 2026
 
-Status: **readiness and options only. Nothing on Neon was read, created or changed in this slice.** There is no Neon access from the agent's environment: no API key, no `neonctl`, no Neon connector. Facts about the existing project come from the BACK-55 run on 24 Nov (`docs/planning/BACK-55/neon-branch-validation-2026-11-24.md`) and must be rechecked by the owner (section 5). Facts about Neon come from its public docs and pricing page, read on 27 Nov 2026 (links in section 8). No secret appears here.
+Status: **owner ruled option A and approved execution on 27 Nov 2026; see section 9.** Sections 1 to 8 are the readiness analysis as written before the ruling. There is no Neon access from the agent's environment: no API key, no `neonctl`, no Neon connector. Facts about the existing project come from the BACK-55 run on 24 Nov (`docs/planning/BACK-55/neon-branch-validation-2026-11-24.md`) and must be rechecked by the owner (section 5). Facts about Neon come from its public docs and pricing page, read on 27 Nov 2026 (links in section 8). No secret appears here.
 
 ## 1. Stop condition: the ticket's upgrade cannot be done as written
 
@@ -93,3 +93,19 @@ Do not paste connection strings or passwords into Jira or the repo.
 - Neon, IP Allow: https://neon.com/docs/introduction/ip-allow
 - Neon, Pricing: https://neon.com/pricing
 - BACK-55 Neon validation: `docs/planning/BACK-55/neon-branch-validation-2026-11-24.md`
+
+## 9. Execution record, 27 Nov 2026 (owner: "create new project, delete the old")
+
+Done through the Neon connector and the repo's own `db-admin`. No secret is recorded here.
+
+| Step | Result |
+| --- | --- |
+| Recheck of the old project `kawalys` | Launch plan, PostgreSQL 17.12, only branch `main`, no Kawalys roles, only the `public` schema, 0 tables. Nothing to move. |
+| Create `kawalys-pg18` (`damp-dew-12696657`) | PostgreSQL **18.7** (`server_version_num` 180007), `aws-eu-central-1`, 0.25 to 1 CU, suspend 300 s, 7-day history, maintenance Saturday 04:00 to 05:00. Admin `kawalys_owner` is not a superuser (CREATEROLE, CREATEDB, BYPASSRLS). |
+| `db-admin provision --apply --plaintext-passwords` | Roles `kawalys_migrator`, `kawalys_app`, `kawalys_auth` and schema `kawalys` created over the direct endpoint, `sslmode=verify-full`, `channel_binding=require`. |
+| `db-admin migrate --apply` | Migrations 0001 to 0006 applied. |
+| Isolation checks (scripted, no data written) | **22/22 pass, 11 on the direct endpoint and 11 on the pooled one.** Covered: 18.7 over verify-full TLS; app and auth pass the boot role check; app cannot CREATE TABLE, SET ROLE migrator, read `users` or disable RLS; auth cannot read `workspaces`; zero rows without workspace context; the workspace setting does not outlive the transaction; role `search_path` is `pg_catalog, kawalys`. |
+| Password rotation | All four role passwords reset through the Neon API after provisioning. The provisioning-time ones no longer work. Current ones are stored by Neon (console); the local temp file was deleted. Role attributes rechecked: the three Kawalys roles are NOSUPERUSER, NOBYPASSRLS, NOINHERIT, with the pinned `search_path`. |
+| Delete old project `kawalys` (`shy-feather-77977151`) | Deleted. Neon can recover it within 7 days (`recover_project`). |
+
+Still open: the restore drill (a temporary branch at a past timestamp, check the migration history, delete the branch); custody of the runtime URLs for the host (BACK-58); idle-safe health checks before the pilot points at this project (BACK-115). Minor versions will move with Neon (section 2), so the repo pins follow each Neon minor release.
