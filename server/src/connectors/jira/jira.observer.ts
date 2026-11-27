@@ -71,7 +71,7 @@ function issuePayload(item: unknown, projectKey: string, base: string | null): R
     kind: 'jira_issue',
     key,
     summary: clip(summary),
-    ...(isClipped(summary) ? { textClipped: true } : {}),
+    textClipped: isClipped(summary),
     statusCategory: category,
     updatedAt: isoDate(updated),
     url: base === null ? null : `${base}/browse/${key}`,

@@ -34,6 +34,7 @@ describe('a reachable repository', () => {
       kind: 'pull_request',
       number: 12,
       title: 'Add the portfolio route',
+      textClipped: false,
       state: 'open',
       draft: false,
       updatedAt: '2026-11-24T08:00:00.000Z',

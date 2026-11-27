@@ -6,8 +6,18 @@
 // at most MAX_EDGES edges and MAX_UNRESOLVED unresolved mentions, with `truncated` (COG-08 reviews).
 import type { MemoryProjection } from '../memory/memory.types';
 import { cmp, docsOf, identityKey, repoScope, sortedUnique, type Doc } from './retrieval.documents';
-import { DEFAULT_DEPTH, DEFAULT_MAX_NODES, GITHUB_NUMBER_IN_TEXT, isMentionBoundary, JIRA_KEY_IN_TEXT, MAX_DEPTH, MAX_EDGES, MAX_NODES, MAX_UNRESOLVED } from './retrieval.policy';
+import { CLIP_LIMIT, DEFAULT_DEPTH, DEFAULT_MAX_NODES, GITHUB_NUMBER_IN_TEXT, hasVisibleAfter, isMentionBoundary, JIRA_KEY_IN_TEXT, MAX_DEPTH, MAX_EDGES, MAX_NODES, MAX_UNRESOLVED } from './retrieval.policy';
 import type { Edge, ItemIdentity, Relationships, Traversal, TraversalNode, TraversalOptions, UnresolvedMention } from './retrieval.types';
+
+/**
+ * True when `text` has at least CLIP_LIMIT code points, without walking a long text: fewer UTF-16 units
+ * than the limit cannot reach it, and twice the limit always does (a code point is one or two units).
+ */
+function reachesClipLimit(text: string): boolean {
+  if (text.length < CLIP_LIMIT) return false;
+  if (text.length >= 2 * CLIP_LIMIT) return true;
+  return Array.from(text).length >= CLIP_LIMIT;
+}
 
 const isGithubItem = (d: Doc): boolean => d.identity.kind === 'pull_request' || d.identity.kind === 'issue';
 const byFromThenText = (a: UnresolvedMention, b: UnresolvedMention): number => cmp(identityKey(a.from), identityKey(b.from)) || cmp(a.text, b.text);
@@ -31,7 +41,25 @@ class Budget {
   readonly cutTitles = new Set<string>();
   /** Identity keys of the endpoints of edges left out by the budget. */
   readonly omitted = new Set<string>();
+  /** Target buckets (one identifier's visible items) already recorded as cut. */
+  private readonly omittedBuckets = new Set<string>();
   edgesTruncated = false;
+
+  get full(): boolean {
+    return this.edges.length >= MAX_EDGES;
+  }
+
+  /**
+   * Once the budget is full, a mention's remaining targets are recorded as one bucket, once, instead
+   * of pair by pair: the work after the cap stays linear in mentions plus targets (COG-08 review 5).
+   */
+  cutMention(from: ItemIdentity, bucket: string, targets: readonly ItemIdentity[]): void {
+    this.edgesTruncated = true;
+    this.omitted.add(identityKey(from));
+    if (this.omittedBuckets.has(bucket)) return;
+    this.omittedBuckets.add(bucket);
+    for (const t of targets) this.omitted.add(identityKey(t));
+  }
 
   /** Adds an edge, or records its endpoints as cut once the budget is full. */
   edge(from: ItemIdentity, to: ItemIdentity, make: () => Edge): void {
@@ -88,7 +116,9 @@ function matchesOf(text: string, pattern: RegExp, clipped: boolean, prefix = '',
   const seen = new Set<string>();
   for (const m of text.matchAll(pattern)) {
     const end = m.index + m[0].length;
-    if (clipped && end >= text.length) continue;
+    // In a clipped text a match needs a visible character after it: reaching the cut, even through
+    // format characters, means the identifier may continue beyond what was stored.
+    if (clipped && !hasVisibleAfter(text, end)) continue;
     if (!isMentionBoundary(text, m.index, end, extraBefore)) continue;
     seen.add(prefix + (m[1] ?? m[0]));
   }
@@ -104,7 +134,7 @@ function mentionsOf(docs: readonly Doc[], budget: Budget): void {
     if (typeof key === 'string') push(jiraByKey, key, d);
     if (isGithubItem(d)) push(githubByNumber, githubKey(d.identity.sourceId, repoScope(d), d.payload['number']), d);
   }
-  const record = (from: Doc, text: string, targets: readonly Doc[]): void => {
+  const record = (from: Doc, text: string, targets: readonly Doc[], bucket: string): void => {
     const others = targets.filter((t) => t.key !== from.key);
     if (targets.length && !others.length) return; // self-mention only: dropped
     if (!others.length) {
@@ -112,20 +142,27 @@ function mentionsOf(docs: readonly Doc[], budget: Budget): void {
       return;
     }
     for (const t of others) {
+      if (budget.full) {
+        budget.cutMention(from.identity, bucket, targets.map((x) => x.identity));
+        return;
+      }
       budget.edge(from.identity, t.identity, () => ({ type: 'mentions', from: from.identity, to: t.identity, text, basis: from.item.status, evidence: sortedUnique([...from.evidence, ...t.evidence]) }));
     }
   };
   for (const d of docs) {
     // No established revision (conflict, or no current run): its title is no basis for any link.
     if (!d.title || d.revision === null) continue;
-    const clipped = d.payload['textClipped'] === true;
-    for (const key of matchesOf(d.title, JIRA_KEY_IN_TEXT, clipped)) record(d, key, jiraByKey.get(key) ?? []);
+    // A title with no flag predates it: at the clip limit it may have been cut (COG-08 review 5).
+    const flag = d.payload['textClipped'];
+    const clipped = flag === true || (flag !== false && reachesClipLimit(d.title));
+    for (const key of matchesOf(d.title, JIRA_KEY_IN_TEXT, clipped)) record(d, key, jiraByKey.get(key) ?? [], `jira:${key}`);
     if (!isGithubItem(d)) continue;
     for (const ref of matchesOf(d.title, GITHUB_NUMBER_IN_TEXT, clipped, '#', '#')) {
       const n = Number(ref.slice(1));
       // The observer only stores positive safe integers: anything else is no GitHub reference at all.
       if (!Number.isSafeInteger(n) || n < 1) continue;
-      record(d, ref, githubByNumber.get(githubKey(d.identity.sourceId, repoScope(d), n)) ?? []);
+      const bucket = githubKey(d.identity.sourceId, repoScope(d), n);
+      record(d, ref, githubByNumber.get(bucket) ?? [], `github:${bucket}`);
     }
   }
 }

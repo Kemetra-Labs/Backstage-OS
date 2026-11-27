@@ -177,3 +177,10 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 - **R6, per-title cap:** each title keeps its canonical first 50 unresolved mentions (sorted by text), whatever their order in the title.
 - **R6, clipped text:** the observers mark text cut to 300 characters (`textClipped: true`: GitHub titles, Jira summaries, Confluence titles). A mention touching the cut is skipped, because `#1234` cut to `#123` would name another item.
 - Regression tests: `test/retrieval/retrieval.findings5.spec.ts`, `test/connectors/github/github-clip.spec.ts`.
+
+## Sixth revision after the COG-08 fifth review (`retrieval-v7`, 2026-11-27)
+
+- **Clipped text:** a mention in clipped text needs a visible character after it. Reaching the cut, even through format characters, means the identifier may continue.
+- **Legacy rows:** observers now always state `textClipped` (`true` or `false`). A title with no flag predates it and counts as possibly clipped when it reaches the observers' limit (`CLIP_LIMIT`, 300 code points, pinned against `clip()`).
+- **Fan-out:** past the edge budget, a mention's targets are recorded once per target bucket instead of pair by pair.
+- Regression tests: `test/retrieval/retrieval.findings6.spec.ts`, `test/connectors/github/github-clip2.spec.ts`.

@@ -49,8 +49,8 @@ describe('a clipped title yields no mention across its cut', () => {
     expect(rel.unresolved).toEqual([]);
   });
 
-  it('the same text without the clip flag is a mention (control)', () => {
-    const rel = relationships(projectionOf([titled(1, `${head} #123`), titled(123, 'target')]));
+  it('the same text stated as unclipped is a mention (control)', () => {
+    const rel = relationships(projectionOf([titled(1, `${head} #123`, { textClipped: false }), titled(123, 'target')]));
     expect(rel.edges.filter((e) => e.type === 'mentions')).toHaveLength(1);
   });
 

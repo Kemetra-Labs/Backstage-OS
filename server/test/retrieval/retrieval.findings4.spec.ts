@@ -74,15 +74,26 @@ describe('format characters do not make a word boundary', () => {
 });
 
 describe('mention boundaries stay linear (Sonar S8786 on the lookaround version)', () => {
-  it('long runs of format characters around many keys parse quickly and correctly', () => {
-    const run = '\u200D'.repeat(5_000); // about 2 million characters in all: linear work, not a backtracking blow-up
-    const title = Array.from({ length: 200 }, (_, i) => `${run}BACK-${i + 1}${run} `).join('') + `x${run}BACK-9999`;
-    const p = projectionOf([titled(6, title), jira('BACK-1', 'target', 'j1')]);
+  // A ratio, not a wall-clock limit: four times the input must cost about four times as much (a
+  // backtracking boundary would cost about sixteen). Machine speed cancels out (CI runners vary).
+  const titleWith = (runLength: number) => {
+    const run = '\u200D'.repeat(runLength);
+    return Array.from({ length: 200 }, (_, i) => `${run}BACK-${i + 1}${run} `).join('') + `x${run}BACK-9999`;
+  };
+  const timed = (runLength: number) => {
+    const p = projectionOf([titled(6, titleWith(runLength)), jira('BACK-1', 'target', 'j1')]);
     const start = performance.now();
     const rel = relationships(p);
-    expect(performance.now() - start).toBeLessThan(1000);
+    return { ms: performance.now() - start, rel };
+  };
+
+  it('long runs of format characters around many keys parse correctly, in linear time', () => {
+    timed(250); // warm-up
+    const small = timed(1_250);
+    const large = timed(5_000);
+    expect(large.ms / Math.max(small.ms, 1)).toBeLessThan(10);
     // Space-separated keys are mentions (joiners are looked through); the one glued to `x` is not.
-    expect(rel.edges.filter((e) => e.type === 'mentions').map((e) => e.text)).toEqual(['BACK-1']);
-    expect(rel.unresolved.some((u) => u.text === 'BACK-9999')).toBe(false);
+    expect(large.rel.edges.filter((e) => e.type === 'mentions').map((e) => e.text)).toEqual(['BACK-1']);
+    expect(large.rel.unresolved.some((u) => u.text === 'BACK-9999')).toBe(false);
   });
 });

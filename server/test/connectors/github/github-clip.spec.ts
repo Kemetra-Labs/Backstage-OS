@@ -24,7 +24,7 @@ describe('clipped titles are flagged and never yield a mention at the cut', () =
     const long = await observed(`${'x'.repeat(295)} #1234`);
     expect((long.payload['title'] as string).endsWith(' #123')).toBe(true);
     expect(long.payload['textClipped']).toBe(true);
-    expect((await observed('short #1234')).payload['textClipped']).toBeUndefined();
+    expect((await observed('short #1234')).payload['textClipped']).toBe(false);
   });
 
   it('end to end: the clipped #1234 does not link PR 123', async () => {

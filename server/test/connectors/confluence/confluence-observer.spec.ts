@@ -30,6 +30,7 @@ describe('reachable Confluence spaces', () => {
       kind: 'confluence_page',
       pageId: '1001',
       title: 'Synthetic page 1001',
+      textClipped: false,
       spaceKey: 'ENG',
       lastModified: '2026-11-24T08:00:00.000Z',
       version: 3,

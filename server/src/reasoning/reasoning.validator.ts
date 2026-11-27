@@ -61,6 +61,8 @@ function expected(projection: MemoryProjection, input: ReasoningInput): unknown 
   if (!isValidInput(input)) return { ...head, kind: 'invalid-input', refusal: 'invalid-spec', selected: null, tasks: [] };
 
   // One pass over the projection: every lookup below is a map read, not a scan (COG-08 review 4).
+  // The projector emits one item per identity; a hand-built projection with duplicates resolves to the
+  // last one, as the evaluator's map does, so both sides agree (COG-08 review 5).
   const keyOf = (sourceId: string, sourceRef: string, kind: string) => JSON.stringify([sourceId, sourceRef, kind]);
   const index = new Map<string, (typeof projection.items)[number]>();
   for (const i of projection.items) index.set(keyOf(i.sourceId, i.sourceRef, i.kind), i);

@@ -137,7 +137,11 @@ const decide = (signals: readonly (Signal | null)[], current: Run | null): Judge
 const fixed = (status: FactStatus, reason: string): Judged => ({ status, reason, current: null, markers: [] });
 
 function judge(ix: SourceIndex, kind: ItemKind, ref: string, runs: readonly RunInfo[], c: Clocks): Judged {
-  const lastSeen = maxOf(runs.map((r) => r.lastObserved));
+  const outcome = currentOf(kind, runs, c.effective);
+  // A repository read strictly inside a run is the run as known by E (COG-08 reviews 4 and 5): its
+  // first observation decides both the current value and which later reads (failures) are newer.
+  const asOf = outcome.kind === 'current' && !isOrdered(kind) && c.effective < outcome.run.lastObserved ? asKnownAt(outcome.run) : null;
+  const lastSeen = asOf ? asOf.lastObserved : maxOf(runs.map((r) => r.lastObserved));
   const scopeRead = laterScopeRead(ix, kind, ref, lastSeen);
   // Precedence for the reason: ambiguous batch (it may contain the failure row itself, as in
   // summarizeSource), failed read, row state, absence, TTL (D3). Unknown outranks everything else.
@@ -148,15 +152,13 @@ function judge(ix: SourceIndex, kind: ItemKind, ref: string, runs: readonly RunI
     if (unknown) return { status: 'unknown', reason: unknown.reason, current: null, markers: [unknown.marker!] };
     return fixed('insufficient-history', 'before-retention-horizon');
   }
-  const outcome = currentOf(kind, runs, c.effective);
   if (outcome.kind === 'none') return fixed('unknown', 'no-revision-effective');
   if (outcome.kind === 'conflict') return fixed('conflict', 'same-order-key-different-content');
   if (outcome.kind === 'ambiguous') return fixed('unknown', 'ambiguous_read');
   if (outcome.kind === 'unreadable') return fixed('unknown', 'unreadable-order-key');
-  // A repository read strictly inside a run is the run as known by E, never a later observation.
-  const asOf = !isOrdered(kind) && c.effective < outcome.run.lastObserved ? asKnownAt(outcome.run) : outcome.run;
-  const current = toRun(asOf);
-  const ttlExpired = c.evaluation >= asOf.lastObserved + TTL_MS[ix.source.provider];
+  const run = asOf ?? outcome.run;
+  const current = toRun(run);
+  const ttlExpired = c.evaluation >= run.lastObserved + TTL_MS[ix.source.provider];
   return decide(
     [
       ambiguity,
