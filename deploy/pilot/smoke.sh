@@ -143,8 +143,7 @@ check "bff: CapDrop ALL and no-new-privileges" bash -c 'echo "$0" | grep -q ALL 
 check "bff: effective capabilities are empty" bash -c 'docker exec "$0" grep -q "^CapEff:.*0000000000000000$" /proc/1/status' "$BFF_ID"
 
 check "CA private key is not in the pg-tls volume seen by bff" bash -c '! docker exec "$0" ls /pki | grep -q "ca.key"' "$BFF_ID"
-check "bff sees ca.crt, server.crt, server.key only" test "$(docker exec "$BFF_ID" ls /pki | tr -d "" | sort | tr "
-" " ")" = "ca.crt server.crt server.key "
+check "bff sees ca.crt, server.crt, server.key only" test "$(docker exec "$BFF_ID" ls /pki | tr -d '\r' | sort | tr '\n' ' ')" = "ca.crt server.crt server.key "
 
 log "sign-in limit is per client behind Caddy (forged X-Forwarded-For does not bypass it)"
 LIMITED=no

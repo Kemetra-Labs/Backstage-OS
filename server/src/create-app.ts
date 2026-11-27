@@ -59,11 +59,12 @@ export async function createApp(
   // Error-only logger: the filter never logs exception messages. JSON bodies only: Nest's default also
   // parses urlencoded forms, and a plain HTML form on another localhost port (same site, so the SameSite
   // cookie is sent) could then post to a state-changing route. A form body now never parses (400).
+  // Validate before the app exists: a malformed KAWALYS_TRUST_PROXY must never leave a created app behind (BACK-64).
+  const trusted = trustProxy(process.env);
   const app = await NestFactory.create<NestExpressApplication>(RootModule, { logger: ["error"], bodyParser: false });
   app.useBodyParser("json");
   app.getHttpAdapter().getInstance().disable("x-powered-by");
   // Behind the pilot proxy: trust X-Forwarded-For only from the listed proxy addresses (BACK-64). Unset: ignored.
-  const trusted = trustProxy(process.env);
   if (trusted !== null) app.getHttpAdapter().getInstance().set("trust proxy", [...trusted]);
   app.use(requestIdMiddleware);
   app.useGlobalFilters(new SafeErrorFilter());

@@ -19,6 +19,8 @@ services:
           openssl req -x509 -newkey rsa:3072 -nodes -keyout /ca/ca.key -out /ca/ca.crt -days 3650 -subj "/CN=kawalys-pilot-db-ca"
           rm -f /pki/server.crt /pki/server.key
         fi
+        # An old CA key or serial must never linger in the volume that bff and postgres mount.
+        rm -f /pki/ca.key /pki/ca.srl
         if [ ! -f /pki/server.crt ] || [ ! -f /pki/server.key ]; then
           openssl req -newkey rsa:3072 -nodes -keyout /pki/server.key -out /tmp/server.csr -subj "/CN=postgres"
           printf 'subjectAltName=DNS:postgres\n' > /tmp/san.cnf
