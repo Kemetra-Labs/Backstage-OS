@@ -23,6 +23,8 @@ import { Sources } from './screens/Sources';
 import { hostCopy } from './i18n/host';
 import { LIVE } from './live/reads';
 import { SessionStore } from './live/session';
+import { SignInPage } from './live/signInPage';
+import { isSignInRoute } from './live/signInFlow';
 
 const PERSONAS: readonly Persona[] = ['owner', 'technical', 'nontechnical'];
 
@@ -54,7 +56,20 @@ function screenFor(route: Route) {
   }
 }
 
+/**
+ * D3(a): in live mode the path /sign-in is the sign-in page, bare (no shell: the magic link returns there with ?t=..., which the shell's
+ * URL sync would rewrite). In the default (fixture) build isSignInRoute is false, so /sign-in is the normal app. The app's own routes
+ * are hash routes; this one is a path because the Descope redirect URL is one. The path is fixed for a page's life, so which
+ * component renders never changes between renders. `LIVE &&` in front is load-bearing: it lets the build drop SignInPage (and so the Descope
+ * import) from the default build; without it the fixture build ships Descope code (checked: 4 files).
+ */
 export function App() {
+  return LIVE && isSignInRoute(window.location.pathname, LIVE)
+    ? <SignInPage projectId={import.meta.env.VITE_KAWALYS_DESCOPE_PROJECT_ID} />
+    : <MainApp />;
+}
+
+function MainApp() {
   const [{ persona, lang }, setState] = useState(initial);
   const route = useRoute();
   // Live mode only (BACK-51 P2): one session store for the app's life, above every screen. The default build creates none.

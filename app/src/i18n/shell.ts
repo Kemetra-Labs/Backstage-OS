@@ -54,7 +54,7 @@ export interface ShellCopy {
     readonly states: Readonly<Record<LiveStateKey, { readonly title: string; readonly body: string }>>;
     /**
      * The session (BACK-51 P2): signed in only from the server's answer, never the subject id. Signed out and ended link to the
-     * local lab sign-in page (new tab, so this page and any unsent draft stay loaded) and offer to check again.
+     * sign-in page (new tab, so this page and any unsent draft stay loaded) and offer to check again.
      */
     readonly session: {
       readonly label: string;
@@ -68,6 +68,19 @@ export interface ShellCopy {
       readonly error: { readonly title: string; readonly body: string };
       readonly signIn: string;
       readonly checkAgain: string;
+    };
+    /**
+     * The sign-in page (D3(a)). The messages are neutral on purpose: refused names no cause (a wrong account, an expired link and a
+     * rate limit read the same); only an unreachable server is told apart, so the owner knows to try again.
+     */
+    readonly signIn: {
+      readonly title: string;
+      readonly working: string;
+      readonly refused: { readonly title: string; readonly body: string };
+      readonly unavailable: { readonly title: string; readonly body: string };
+      readonly unconfigured: { readonly title: string; readonly body: string };
+      readonly retry: string;
+      readonly back: string;
     };
   };
   readonly footer: string;
@@ -147,12 +160,21 @@ const en: ShellCopy = {
       signedIn: 'Signed in as the owner.',
       signOut: 'Sign out',
       signOutFailed: { title: 'Sign-out did not complete', body: 'The server could not be reached, so you may still be signed in. Try again.' },
-      signedOut: { title: 'Not signed in', body: 'Sign in on the local lab page, which opens in a new tab, then come back and choose Check again.' },
-      ended: { title: 'Your session ended', body: 'Sign in again on the local lab page, then choose Check again. Anything you have not sent on this page is kept.' },
+      signedOut: { title: 'Not signed in', body: 'Sign in on the sign-in page, which opens in a new tab, then come back and choose Check again.' },
+      ended: { title: 'Your session ended', body: 'Sign in again on the sign-in page, then choose Check again. Anything you have not sent on this page is kept.' },
       unavailable: { title: 'Sign-in status unknown', body: 'The server could not be reached, so we cannot tell whether you are signed in.' },
       error: { title: 'Sign-in status unknown', body: 'The server gave an answer we could not read, so you are not shown as signed in.' },
-      signIn: 'Open the lab sign-in (new tab)',
+      signIn: 'Open the sign-in page (new tab)',
       checkAgain: 'Check again',
+    },
+    signIn: {
+      title: 'Sign in to {Kawalys}',
+      working: 'Signing you in',
+      refused: { title: 'Could not sign in', body: 'Sign-in did not complete. Start again.' },
+      unavailable: { title: 'The server could not be reached', body: 'Sign-in did not complete. Try again in a moment.' },
+      unconfigured: { title: 'Sign-in is not configured', body: 'This build has no sign-in set up, so nobody can sign in here.' },
+      retry: 'Start again',
+      back: 'Back to {Kawalys}',
     },
   },
   footer: 'Kawalys review build. Synthetic data only: nothing here is live, and no action is taken.',
@@ -235,12 +257,21 @@ const ar: ShellCopy = {
       signedIn: 'مسجّل الدخول بصفتك المالك.',
       signOut: 'تسجيل الخروج',
       signOutFailed: { title: 'لم يكتمل تسجيل الخروج', body: 'تعذّر الوصول إلى الخادم، لذا قد تكون ما زلت مسجّل الدخول. حاول مرة أخرى.' },
-      signedOut: { title: 'لم يتم تسجيل الدخول', body: 'سجّل الدخول من صفحة المختبر المحلية التي تُفتح في علامة تبويب جديدة، ثم عُد واختر «تحقّق مرة أخرى».' },
-      ended: { title: 'انتهت جلستك', body: 'سجّل الدخول مرة أخرى من صفحة المختبر المحلية، ثم اختر «تحقّق مرة أخرى». يُحفظ كل ما لم ترسله في هذه الصفحة.' },
+      signedOut: { title: 'لم يتم تسجيل الدخول', body: 'سجّل الدخول من صفحة تسجيل الدخول التي تُفتح في علامة تبويب جديدة، ثم عُد واختر «تحقّق مرة أخرى».' },
+      ended: { title: 'انتهت جلستك', body: 'سجّل الدخول مرة أخرى من صفحة تسجيل الدخول، ثم اختر «تحقّق مرة أخرى». يُحفظ كل ما لم ترسله في هذه الصفحة.' },
       unavailable: { title: 'حالة تسجيل الدخول غير معروفة', body: 'تعذّر الوصول إلى الخادم، لذا لا نعرف إن كنت مسجّل الدخول.' },
       error: { title: 'حالة تسجيل الدخول غير معروفة', body: 'أعطى الخادم إجابة لم نتمكن من قراءتها، لذا لا تظهر مسجّل الدخول.' },
-      signIn: 'فتح صفحة تسجيل الدخول في المختبر (علامة تبويب جديدة)',
+      signIn: 'فتح صفحة تسجيل الدخول (علامة تبويب جديدة)',
       checkAgain: 'تحقّق مرة أخرى',
+    },
+    signIn: {
+      title: 'تسجيل الدخول إلى {Kawalys}',
+      working: 'جارٍ تسجيل دخولك',
+      refused: { title: 'تعذّر تسجيل الدخول', body: 'لم يكتمل تسجيل الدخول. ابدأ من جديد.' },
+      unavailable: { title: 'تعذّر الوصول إلى الخادم', body: 'لم يكتمل تسجيل الدخول. حاول مرة أخرى بعد قليل.' },
+      unconfigured: { title: 'تسجيل الدخول غير مُعدّ', body: 'هذه النسخة لا تتضمن إعدادًا لتسجيل الدخول، لذا لا يستطيع أحد تسجيل الدخول هنا.' },
+      retry: 'ابدأ من جديد',
+      back: 'العودة إلى {Kawalys}',
     },
   },
   footer: 'نسخة مراجعة من {Kawalys}. بيانات اصطناعية فقط: لا شيء هنا حي، ولا يُتخذ أي إجراء.',

@@ -11,6 +11,11 @@ permissions:
   contents: read
   packages: write
 
+env:
+  # The Descope project id the sign-in page is built for (D3(a)). It is a PUBLIC identifier, not a secret: it is the
+  # project id that appears in every Descope API URL the browser calls. Passed to the web image build only.
+  VITE_KAWALYS_DESCOPE_PROJECT_ID: P3MW4c80PMtyApvtGSONYmXy9fGt
+
 concurrency:
   group: images-${{ github.ref }}
   cancel-in-progress: false
@@ -48,6 +53,8 @@ jobs:
         with:
           context: .
           file: deploy/pilot/web.Dockerfile
+          build-args: |
+            VITE_KAWALYS_DESCOPE_PROJECT_ID=${{ env.VITE_KAWALYS_DESCOPE_PROJECT_ID }}
           platforms: linux/amd64
           push: true
           tags: ghcr.io/kemetra-labs/kawalys-web:${{ github.sha }}

@@ -3,7 +3,8 @@ import { useApp } from '../app/AppContext';
 import { useSession, useSessionStore } from '../app/SessionContext';
 import { StateBlock } from '../components/StateBlock';
 import { Text } from '../components/Text';
-import { LAB_SIGN_IN_PATH, type SessionSnapshot } from '../live/session';
+import { SIGN_IN_PATH, type SessionSnapshot } from '../live/session';
+import { pathWithLang } from '../live/signInFlow';
 
 interface ViewProps {
   readonly snapshot: SessionSnapshot;
@@ -15,15 +16,15 @@ interface ViewProps {
 
 /**
  * The session in live mode (BACK-51 P2), in words for every state: checking, signed in (as the owner, never an id), signed out,
- * ended, unavailable or unreadable. Unknown is never shown as signed in. The lab sign-in opens in a new tab, so this page and any
+ * ended, unavailable or unreadable. Unknown is never shown as signed in. The sign-in page opens in a new tab, so this page and any
  * unsent draft stay loaded; the owner comes back and chooses Check again.
  */
 export function SessionBarView({ snapshot, onRecheck, onSignOut, barRef }: ViewProps) {
-  const { shell } = useApp();
+  const { shell, lang } = useApp();
   const c = shell.live.session;
   const checkAgain = <button type="button" className="btn btn-quiet" onClick={onRecheck}>{c.checkAgain}</button>;
   const signIn = (
-    <a className="btn btn-link" href={LAB_SIGN_IN_PATH} target="_blank" rel="noopener noreferrer">{c.signIn}</a>
+    <a className="btn btn-link" href={pathWithLang(SIGN_IN_PATH, lang)} target="_blank" rel="noopener noreferrer">{c.signIn}</a>
   );
   const body = (() => {
     switch (snapshot.status) {

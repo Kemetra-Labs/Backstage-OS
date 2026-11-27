@@ -5,7 +5,10 @@ COPY app/package.json app/package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY app/tsconfig.json app/vite.config.ts app/index.html ./
 COPY app/src ./src
-ENV VITE_KAWALYS_LIVE=1
+# The Descope project id for the /sign-in page (D3(a)). A public identifier, not a secret; images.yml passes it. Deliberately no
+# default: a build without it still works and the sign-in page then shows "not configured". Only the build stage sees it.
+ARG VITE_KAWALYS_DESCOPE_PROJECT_ID
+ENV VITE_KAWALYS_LIVE=1 VITE_KAWALYS_DESCOPE_PROJECT_ID=$VITE_KAWALYS_DESCOPE_PROJECT_ID
 # Typecheck runs in the app suite; the image only bundles (tests import e2e/ files that are not in this context).
 RUN ./node_modules/.bin/vite build
 
