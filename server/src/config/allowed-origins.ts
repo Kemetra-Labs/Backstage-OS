@@ -9,7 +9,7 @@ const NAME = 'KAWALYS_ALLOWED_ORIGINS';
 export const DEFAULT_ALLOWED_ORIGINS: readonly string[] = ['http://127.0.0.1:4178', 'http://localhost:4178'];
 
 function isExactOrigin(entry: string): boolean {
-  if (!/^https?:\/\/[^/\s?#@\\]+$/.test(entry)) return false;
+  if (!/^https?:\/\/[^/\s?#@\\*]+$/.test(entry)) return false; // no `*` anywhere: the guard never expands wildcards
   try {
     return new URL(entry).origin === entry; // canonical form only: lowercase host, no default port
   } catch {

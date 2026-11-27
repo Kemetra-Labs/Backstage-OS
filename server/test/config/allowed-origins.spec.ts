@@ -12,7 +12,7 @@ describe('allowedOrigins', () => {
     expect(allowedOrigins({ KAWALYS_ALLOWED_ORIGINS: 'https://a.example, http://localhost:18443' })).toEqual(['https://a.example', 'http://localhost:18443']);
   });
 
-  it.each(['*', 'null', 'https://a.example/', 'https://a.example/path', 'a.example', 'ftp://a.example', 'https://a.example,', ',https://a.example', 'https://A.example', 'https://a.example:443', 'https://u:p@a.example', 'https://a.example?x=1', 'https://a.example, *', 'https://a b.example'])(
+  it.each(['*', 'null', 'https://a.example/', 'https://a.example/path', 'a.example', 'ftp://a.example', 'https://a.example,', ',https://a.example', 'https://A.example', 'https://a.example:443', 'https://u:p@a.example', 'https://a.example?x=1', 'https://a.example, *', 'https://a b.example', 'https://*.example.com', 'https://a.*.example', 'http://localhost:*'])(
     'rejects %j, naming the variable and never the value',
     (value) => {
       let error: unknown;

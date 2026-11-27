@@ -160,10 +160,29 @@ describe('SessionStore', () => {
       expect(store.getSnapshot()).toMatchObject({ status: 'signedOut', signOutFailed: false });
     });
 
-    it('a session that had already expired (not_found) is signed out too', async () => {
-      const { store } = await started({ [ME]: [[200, OWNER]], [OUT]: [[401, '']] });
+    it('a session that had already expired (not_found, confirmed by /auth/me) is signed out too', async () => {
+      const { store, calls } = await started({ [ME]: [[200, OWNER], [401, '']], [OUT]: [[401, '']] });
+      store.setDraft('decision:a', 'unsent');
       await store.signOut();
-      expect(store.getSnapshot().status).toBe('signedOut');
+      expect(calls).toEqual([ME, OUT, ME]);
+      expect(store.getSnapshot()).toMatchObject({ status: 'signedOut', signOutFailed: false });
+      expect(store.getDraft('decision:a')).toBeUndefined();
+    });
+
+    it('a refused sign-out (uniform 404) while /auth/me still names the owner is a failed sign-out', async () => {
+      const { store } = await started({ [ME]: [[200, OWNER]], [OUT]: [[404, '{"error":{}}']] });
+      store.setDraft('decision:a', 'unsent');
+      await store.signOut();
+      expect(store.getSnapshot()).toMatchObject({ status: 'signedIn', signOutFailed: true });
+      expect(store.getDraft('decision:a')).toBe('unsent');
+    });
+
+    it('a sign-out 404 whose re-check is unavailable or an error is a failed sign-out, never signed out', async () => {
+      for (const reply of ['network', [502, ''], [500, ''], [200, '{}']] as Reply[]) {
+        const { store } = await started({ [ME]: [[200, OWNER], reply], [OUT]: [[404, '']] });
+        await store.signOut();
+        expect(store.getSnapshot(), JSON.stringify(reply)).toMatchObject({ status: 'signedIn', signOutFailed: true });
+      }
     });
 
     it('sign-out that cannot reach the server is not signed out: the cookie may still be live', async () => {

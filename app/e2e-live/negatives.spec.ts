@@ -128,8 +128,8 @@ test('Sign out leaves no portfolio project and no record on screen', async ({ pa
 
   // Moving on inside the app (no reload) shows nothing of the owner's data either.
   await page.evaluate(() => { window.location.hash = '#/investigation/INV-DEMO-7'; });
-  await expect(page.locator('h1')).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  // Wait for the Investigation panel itself to finish its read as not_found (h1 may still be the Portfolio heading).
+  await expect(page.getByTestId('server-records').getByTestId('live-state')).toHaveAttribute('data-live', 'not_found');
   await expect(page.getByTestId('server-record')).toHaveCount(0);
 });
 

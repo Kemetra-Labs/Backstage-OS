@@ -19,7 +19,10 @@ export KAWALYS_IMAGE_PREFIX="$IMAGE_PREFIX" KAWALYS_NETWORK_SUBNET="$SUBNET"
 unset COMPOSE_PROJECT_NAME COMPOSE_FILE
 HTTP_PORT="${KAWALYS_HTTP_PORT:-18080}"
 HTTPS_PORT="${KAWALYS_HTTPS_PORT:-18443}"
-BASE="https://localhost:${HTTPS_PORT}"
+# The canonical origin omits the default HTTPS port: the allowlist (and the positive probe) must use that form.
+if [ "$HTTPS_PORT" = 443 ]; then BASE="https://localhost"; else BASE="https://localhost:${HTTPS_PORT}"; fi
+# Pin the site address and allowlist for this run (the shell wins over --env-file): an exported deployment value must not steer the smoke.
+export KAWALYS_SITE_ADDRESS=localhost KAWALYS_ALLOWED_ORIGINS="$BASE"
 
 TMP="$(mktemp -d)"
 TMP_NATIVE="$(cygpath -m "$TMP" 2>/dev/null || echo "$TMP")"   # native Windows path for docker.exe
