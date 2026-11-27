@@ -5,7 +5,7 @@
 # value from it is printed (it may hold secrets). Run it before `docker compose pull` / `up`.
 set -u
 envfile="${1:-}"
-[ -n "$envfile" ] && [ -f "$envfile" ] || { echo "preflight: usage: preflight-deploy.sh <env-file>" >&2; exit 2; }
+[[ -n "$envfile" && -f "$envfile" ]] || { echo "preflight: usage: preflight-deploy.sh <env-file>" >&2; exit 2; }
 re='^[a-z0-9./_-]+@sha256:[0-9a-f]{64}$'
 bad=0
 for var in KAWALYS_BFF_IMAGE KAWALYS_WEB_IMAGE; do
@@ -16,5 +16,5 @@ for var in KAWALYS_BFF_IMAGE KAWALYS_WEB_IMAGE; do
     bad=1
   fi
 done
-[ "$bad" = 0 ] || exit 1
+[[ "$bad" = 0 ]] || exit 1
 echo "preflight: image references are digest-pinned"
