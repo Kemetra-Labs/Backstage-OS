@@ -111,3 +111,20 @@ All findings below are fixed on the branch that adds this section, each with a r
 | Low | A key next to a combining mark was parsed as a mention | Marks count as word characters at mention boundaries |
 
 **Next:** rerun the third review on the fixed commit, worded so the content filter does not stop it. Until a complete review returns GO, the pre-COG-07 decision stays **NO-GO**.
+
+## 8. Third independent review, complete rerun: Codex, commit 5375068 (2026-11-27)
+
+**Verdict: NO-GO.**
+- **Confirmed fixed:** the observer draft flag end to end; mention `basis` and conflict suppression; marks in ordinary words and CJK text; sparse arrays; decimal-digit folding (all 770 Nd digits in Node's Unicode tables).
+- **Access scoping:** no defect found. Absent and hidden sources gave byte-identical search, counts, ranking, relationships, traversal, reasoning reasons and fingerprints.
+- **Fixes:** all findings below are fixed on the branch that adds this section, each with a regression test that failed on 5375068.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| Medium | A mark beside whitespace (`PR <mark> 99`) hid an identifier shape | Whitespace collapses after the shape fold removes marks (`retrieval-v6`) |
+| Medium | Misses from unrelated titles used up a traversal's unresolved allowance | Allowance per title; traversal counts only visited titles; edge and unresolved truncation tracked separately |
+| Medium | An inherited array `toJSON` passed the validator | Standard array prototype required |
+| Low | `#n` parsing stopped at 15 digits; `#0` became an unresolved mention | The observer's positive safe-integer range |
+| Low | A zero-width joiner acted as a word boundary | Boundaries look through format characters |
+
+**Next:** a fourth review of the fixed commit. The pre-COG-07 decision stays **NO-GO** until a complete review returns GO.
