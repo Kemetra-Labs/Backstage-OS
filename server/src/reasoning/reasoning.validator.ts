@@ -19,27 +19,35 @@ export function validateResult(projection: MemoryProjection, input: ReasoningInp
   }
 }
 
-/** Plain-JSON equality bounded by `want`: own keys, exact key sets, array lengths checked before elements. */
+/**
+ * Plain-data equality bounded by `want`. A candidate must be plain JSON data: own data properties only
+ * (no accessors, so no getter runs), exactly the expected keys, and arrays that are dense with nothing
+ * but their indexes and `length` (so no extra property or `toJSON` hook). COG-08 reviews.
+ */
 function sameData(got: unknown, want: unknown): boolean {
   if (want === null || typeof want !== 'object') return got === want;
   if (got === null || typeof got !== 'object') return false;
   if (Array.isArray(want)) {
     if (!Array.isArray(got) || got.length !== want.length) return false;
-    for (let i = 0; i < want.length; i++) if (!Object.hasOwn(got, i) || !sameData(got[i], want[i])) return false;
+    if (Reflect.ownKeys(got).length !== want.length + 1) return false; // indexes + length, nothing else
+    for (let i = 0; i < want.length; i++) if (!sameValue(got, i, want[i])) return false;
     return true;
   }
   if (Array.isArray(got) || Object.getPrototypeOf(got) !== Object.prototype) return false;
   const wantKeys = Object.keys(want);
-  const gotKeys = Object.keys(got);
-  if (gotKeys.length !== wantKeys.length || Reflect.ownKeys(got).length !== gotKeys.length) return false;
+  if (Reflect.ownKeys(got).length !== wantKeys.length) return false;
   for (const k of wantKeys) {
-    if (!Object.hasOwn(got, k)) return false;
     const w = (want as Record<string, unknown>)[k];
     // An absent optional field in the expected result must be absent in the candidate too.
-    if (w === undefined) return false;
-    if (!sameData((got as Record<string, unknown>)[k], w)) return false;
+    if (w === undefined || !sameValue(got, k, w)) return false;
   }
   return true;
+}
+
+/** Compares one own data property, reading its descriptor so an accessor is refused, never run. */
+function sameValue(holder: object, key: string | number, want: unknown): boolean {
+  const d = Object.getOwnPropertyDescriptor(holder, key);
+  return d !== undefined && 'value' in d && d.enumerable === true && sameData(d.value, want);
 }
 
 function expected(projection: MemoryProjection, input: ReasoningInput): unknown {

@@ -136,7 +136,9 @@ function itemPayload(kind: 'pull_request' | 'issue', item: unknown, ref: string)
   if (typeof title !== 'string' || typeof state !== 'string' || !ITEM_STATES.has(state)) throw new Malformed();
   const base = { kind, number, title: clip(title), state };
   const tail = { updatedAt: isoDate(updated_at), url: ownUrl(html_url, ref) };
-  return kind === 'pull_request' ? { ...base, draft: draft === true, ...tail } : { ...base, ...tail };
+  // Only a boolean from the provider is evidence; anything else stays unknown (null), never "not a draft"
+  // (COG-08 second review: a missing flag made a task that needed an open PR look ready).
+  return kind === 'pull_request' ? { ...base, draft: typeof draft === 'boolean' ? draft : null, ...tail } : { ...base, ...tail };
 }
 
 /** A page longer than requested is not a page we asked for: it is refused, not truncated. */

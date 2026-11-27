@@ -125,7 +125,7 @@ describe('retrieval follows the reader\'s grants (R1, R6)', () => {
     for (const q of [query({ workspaceId: ids.otherWs }), query({ userId: ids.stranger })]) {
       const p = await memory.read(q);
       expect(search(p, 'login')).toMatchObject({ outcome: 'no-match', totalMatches: 0 });
-      expect(relationships(p)).toEqual({ edges: [], unresolved: [] });
+      expect(relationships(p)).toEqual({ edges: [], unresolved: [], truncated: false });
     }
   });
 });

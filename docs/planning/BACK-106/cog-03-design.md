@@ -146,3 +146,13 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 - **R4:** identifier shapes accept letters of any script (a Cyrillic or Greek lookalike key is still key-shaped, so it can only match exactly and never resolves to the real key) and numbers up to 18 digits. Title tightness ranks the identifier tier too: the Codex blind relabel read R4 this way, and the corpus is relabelled (`cog03-corpus-v2`).
 - **R6:** traversal returns at most 50 unresolved mentions and sets `truncated` when it cuts. `#n` targets and adjacency are indexed, so building links is near-linear.
 - Regression tests: `test/retrieval/retrieval.findings.spec.ts`.
+
+## Second revision after the COG-08 re-review (`retrieval-v4`, 2026-11-27)
+
+- **R3: two folds.** `normalizeText` keeps combining marks, so ordinary words in any script stay distinct; v3 merged different Devanagari words. `shapeFold` also drops every mark and is used only for the identifier-shape test. Every Unicode decimal digit folds to ASCII; the minus sign and the small and fullwidth hyphen-minus fold to `-`; tokens keep the marks that follow a letter.
+- **R4:** key shapes cover Latin, Greek and Cyrillic (the scripts that impersonate each other) with underscores (Jira allows them) and numbers of any length within the query bound. Other scripts (`CJK-2`) stay ordinary text.
+- **R6:**
+  - Mention parsing follows the provider grammars (Jira keys with digits and underscores, up to 18-digit issue numbers; GitHub numbers up to 15 digits) with Unicode word boundaries, so a key glued inside a word in any script is not a mention.
+  - A mention carries `basis`, the status of the title it comes from. A title with no established revision (conflict, or no current run) yields no mention and no unresolved marker.
+  - Both `relationships()` and `related()` are budgeted while they work: 2000 edges and 50 unresolved mentions, with `truncated`. Containment is indexed by source and repository.
+- Regression tests: `test/retrieval/retrieval.findings2.spec.ts`.

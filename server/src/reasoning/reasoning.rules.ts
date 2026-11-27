@@ -3,8 +3,11 @@
 import type { ItemIdentity } from '../retrieval/retrieval.types';
 import type { FactValue, ReasoningInput, RequirementSpec } from './reasoning.types';
 
-/** v2 (2026-11-27, COG-08 review): duplicate task identities refused; `open` needs explicit draft: false. */
-export const REASONING_POLICY_VERSION = 'reasoning-v2';
+/**
+ * v2 (2026-11-27, COG-08 review): duplicate task identities refused; `open` needs explicit draft: false.
+ * v3 (2026-11-27, second COG-08 review): sparse arrays refused.
+ */
+export const REASONING_POLICY_VERSION = 'reasoning-v3';
 export const MAX_TASKS = 50;
 export const MAX_REQUIREMENTS = 20;
 export const MAX_ID = 100;
@@ -52,15 +55,20 @@ function validRequirement(r: unknown): r is RequirementSpec {
 }
 
 const unique = (ids: readonly string[]): boolean => new Set(ids).size === ids.length;
+/** Every index an own, populated entry: `every` and `map` skip holes, so a sparse array would slip through. */
+const dense = (a: readonly unknown[]): boolean => {
+  for (let i = 0; i < a.length; i++) if (!Object.hasOwn(a, i)) return false;
+  return true;
+};
 
 /** T1: invalid input is refused, never repaired. */
 export function isValidInput(input: unknown): input is ReasoningInput {
-  if (!isObject(input) || !isId(input['specVersion']) || !Array.isArray(input['tasks']) || input['tasks'].length > MAX_TASKS) return false;
+  if (!isObject(input) || !isId(input['specVersion']) || !Array.isArray(input['tasks']) || input['tasks'].length > MAX_TASKS || !dense(input['tasks'])) return false;
   const tasks = input['tasks'] as unknown[];
   for (const t of tasks) {
     if (!isObject(t) || !isId(t['id']) || !isIdentity(t['task']) || t['task'].kind !== 'jira_issue') return false;
     const reqs = t['requirements'];
-    if (!Array.isArray(reqs) || reqs.length > MAX_REQUIREMENTS || !reqs.every(validRequirement)) return false;
+    if (!Array.isArray(reqs) || reqs.length > MAX_REQUIREMENTS || !dense(reqs) || !reqs.every(validRequirement)) return false;
     if (!unique(reqs.map((r: RequirementSpec) => r.id))) return false;
   }
   // One spec per task item: a second spec for the same issue could bypass its approval gate or hide a

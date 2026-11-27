@@ -3,7 +3,7 @@
 // is returned. Pure: the projection holds only what the reader may see, so counts carry no side channel.
 import type { MemoryProjection } from '../memory/memory.types';
 import { cmp, docsOf, type Doc } from './retrieval.documents';
-import { normalizeText, tokenCount, tokensOf } from './retrieval.normalize';
+import { normalizeText, shapeFold, tokenCount, tokensOf } from './retrieval.normalize';
 import { DEFAULT_LIMIT, isIdentifierShaped, MAX_LIMIT, MAX_QUERY_CHARS, MAX_QUERY_TOKENS, RETRIEVAL_POLICY_VERSION } from './retrieval.policy';
 import type { MatchTier, RetrievalHit, SearchOptions, SearchOutcome, SearchResult } from './retrieval.types';
 
@@ -17,10 +17,10 @@ const hasAll = (set: readonly string[], terms: readonly string[]): boolean => {
 /** Every tier, identifiers included (R4): tighter title first, then identity. */
 const rank = (a: Doc, b: Doc): number => a.titleTokens.length - b.titleTokens.length || cmp(a.key, b.key);
 
-function best(docs: readonly Doc[], folded: string, terms: readonly string[]): { tier: MatchTier; docs: Doc[] } | null {
+function best(docs: readonly Doc[], folded: string, shaped: boolean, terms: readonly string[]): { tier: MatchTier; docs: Doc[] } | null {
   const exact = docs.filter((d) => d.identifiers.includes(folded));
   if (exact.length) return { tier: 'identifier', docs: exact };
-  if (isIdentifierShaped(folded) || !terms.length) return null;
+  if (shaped || !terms.length) return null;
   const title = docs.filter((d) => hasAll(d.titleTokens, terms));
   if (title.length) return { tier: 'title', docs: title };
   const any = docs.filter((d) => hasAll([...d.titleTokens, ...d.identifierTokens], terms));
@@ -50,7 +50,7 @@ export function search(projection: MemoryProjection, query: string, options: Sea
   const terms = tokensOf(query);
   if (!folded || tokenCount(query) > MAX_QUERY_TOKENS) return empty('invalid-query');
 
-  const found = best(docsOf(projection), folded, terms);
+  const found = best(docsOf(projection), folded, isIdentifierShaped(shapeFold(query)), terms);
   if (!found) return empty('no-match');
   const ordered = [...found.docs].sort(rank);
   const outcome: SearchOutcome = ordered.length === 1 ? 'match' : 'ambiguous';
