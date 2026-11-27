@@ -8,6 +8,25 @@ const CHECK_TIMEOUT_MS = 2000;
 /** The one thing used from the platform response (express types are not a dependency). */
 interface StatusSetter {
   status(code: number): unknown;
+  setHeader(name: string, value: string): unknown;
+}
+
+// At most one probe query per pool is ever outstanding: a hung database cannot pile probes onto the shared pools.
+const inflight = new WeakMap<object, Promise<boolean>>();
+
+function probe(pool: { query(sql: string): Promise<unknown> }): Promise<boolean> {
+  const running = inflight.get(pool);
+  if (running) return running;
+  const started = (async () => {
+    try {
+      await pool.query("SELECT 1");
+      return true;
+    } catch {
+      return false;
+    }
+  })().finally(() => inflight.delete(pool));
+  inflight.set(pool, started);
+  return started;
 }
 
 async function selectOne(pool: { query(sql: string): Promise<unknown> }): Promise<boolean> {
@@ -16,7 +35,7 @@ async function selectOne(pool: { query(sql: string): Promise<unknown> }): Promis
     timer = setTimeout(() => resolve(false), CHECK_TIMEOUT_MS);
   });
   try {
-    return await Promise.race([pool.query("SELECT 1").then(() => true, () => false), timeout]);
+    return await Promise.race([probe(pool), timeout]);
   } finally {
     clearTimeout(timer);
   }
@@ -33,6 +52,7 @@ export class ReadinessController {
   async get(@Res({ passthrough: true }) res: StatusSetter) {
     const db = this.database;
     const ready = db ? (await Promise.all([selectOne(db.appPool), selectOne(db.authPool)])).every(Boolean) : false;
+    res.setHeader("cache-control", "no-store");
     res.status(ready ? 200 : 503);
     return { service: "kawalys-bff", ready };
   }
