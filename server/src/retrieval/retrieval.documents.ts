@@ -27,14 +27,13 @@ export const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0
 export const identityKey = (i: ItemIdentity): string => JSON.stringify([i.sourceId, i.sourceRef, i.kind]);
 export const sortedUnique = (xs: readonly string[]): string[] => [...new Set(xs)].sort(cmp);
 
-/** The current run, or the newest returned run when there is no current revision (R2). */
+/**
+ * The current run, or the newest returned run when there is no current revision (R2). Memory returns
+ * history in its own run order, newest last; using that same order keeps the fallback text stable across
+ * history caps (COG-08 review 9).
+ */
 function textRun(item: MemoryItem): Run | null {
-  if (item.current) return item.current;
-  let newest: Run | null = null;
-  for (const r of item.history) {
-    if (!newest || cmp(`${r.firstObservedAt}|${r.firstKnownAt}|${r.firstEvidenceId}`, `${newest.firstObservedAt}|${newest.firstKnownAt}|${newest.firstEvidenceId}`) > 0) newest = r;
-  }
-  return newest;
+  return item.current ?? item.history.at(-1) ?? null;
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null);

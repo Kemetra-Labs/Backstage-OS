@@ -25,8 +25,10 @@
  * boundaries; U+0085 separates; duplicate identities in a hand-built projection collapse to the last.
  * v10 (2026-11-27, eighth review): queries share the boundary rule for controls and U+0085; default-
  * ignorable marks (variation selectors, U+034F) stay in ordinary words.
+ * v11 (2026-11-27, ninth review): invisible characters removed before case and composition; the shape
+ * fold decomposes before removing marks; the fallback text is the newest returned history run.
  */
-export const RETRIEVAL_POLICY_VERSION = 'retrieval-v10';
+export const RETRIEVAL_POLICY_VERSION = 'retrieval-v11';
 
 export const MAX_QUERY_CHARS = 500;
 export const MAX_QUERY_TOKENS = 32;
