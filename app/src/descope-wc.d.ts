@@ -10,6 +10,8 @@ declare module 'react' {
         'project-id'?: string;
         'flow-id'?: string;
         'store-last-authenticated-user'?: string;
+        /** Form language: 'en' or 'ar' (BaseDescopeWc.js observedAttributes). */
+        locale?: string;
       };
     }
   }

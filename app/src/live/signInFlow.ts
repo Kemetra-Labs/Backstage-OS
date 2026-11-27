@@ -39,7 +39,19 @@ function sessionJwtOf(event: { readonly detail?: unknown }): string | null {
 export interface SignInEvents {
   readonly onSuccess: (event: { readonly detail?: unknown }) => Promise<void>;
   readonly onError: (event: { readonly detail?: unknown }) => Promise<void>;
+  /** The component's `ready` event: the first screen is shown, so the readiness timer is cancelled. */
+  readonly onReady: () => void;
+  /** Start (or restart) the readiness timer; the returned function cancels it (call it on unmount). */
+  readonly arm: () => () => void;
 }
+
+/**
+ * How long the page waits for the component to show its first screen (`ready`) or finish (`success`) before it shows the neutral
+ * 'unavailable' state. 15 s is three times the component's own SDK_SCRIPTS_LOAD_TIMEOUT (5000 ms, app/node_modules/@descope/web-component/
+ * dist/esm/constants/index.js), which covers its config load, the UI bundle from Descope's CDN and the flow start with its
+ * retries (withRetry(start, 1000, 3) in BaseDescopeWc.js), and is still short enough that a blank form is not left for long.
+ */
+export const SIGN_IN_READY_MS = 15000;
 
 /**
  * The listeners for the component's `success` and `error` events, sharing one latch. The event can fire twice (a re-render, a double
@@ -48,11 +60,30 @@ export interface SignInEvents {
  * neutral 'refused': it is terminal for this page (Start again), so a later event cannot turn a shown refusal into a sign-in.
  * An `error` event is the neutral 'unavailable' (no cause, no detail), but only before any success: once an exchange has started or
  * finished, it never overrides that outcome. An exchange that throws reads as refused, never as signed in.
+ * Readiness: the component can log and stay blank without emitting `error` (wrong project id, missing flow: BaseDescopeWc.js init()
+ * returns after loggerWrapper.error). So `arm()` starts a one-shot timer that ends in the same 'unavailable'; `ready`, `success` and
+ * `error` cancel it, and so does the function `arm()` returns (unmount).
  */
-export function makeSignInEvents(deps: SuccessDeps): SignInEvents {
+export function makeSignInEvents(deps: SuccessDeps, readyMs: number = SIGN_IN_READY_MS): SignInEvents {
   let taken = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const cancel = () => {
+    if (timer !== null) clearTimeout(timer);
+    timer = null;
+  };
   return {
+    arm: () => {
+      cancel();
+      timer = setTimeout(() => {
+        timer = null;
+        // Same rule as the `error` event: never overrides an exchange that has started or finished.
+        if (!taken) deps.onOutcome('unavailable');
+      }, readyMs);
+      return cancel;
+    },
+    onReady: cancel,
     onSuccess: async (event) => {
+      cancel();
       if (taken) return;
       taken = true;
       const jwt = sessionJwtOf(event);
@@ -70,6 +101,7 @@ export function makeSignInEvents(deps: SuccessDeps): SignInEvents {
       if (outcome === 'signedIn') deps.goHome();
     },
     onError: async () => {
+      cancel();
       if (taken) return;
       deps.onOutcome('unavailable');
     },
@@ -167,4 +199,36 @@ export function makeExchange(options: ExchangeOptions): (jwt: string) => Promise
       clearDescopeStorage(options.storages);
     }
   };
+}
+
+/** The component's `locale` attribute for a page language: 'en' or 'ar' only (never a caller string, never a region tag). */
+export function descopeLocale(lang: Lang): 'en' | 'ar' {
+  return lang === 'ar' ? 'ar' : 'en';
+}
+
+/** The part of the component class this module touches: the static accessor `sdkConfigOverrides` of DescopeWc. */
+interface DescopeClassLike {
+  sdkConfigOverrides: Record<string, unknown>;
+}
+
+/**
+ * Import the Descope component (the importer is the page's dynamic import) and, before the page may create any element, make its SDK
+ * keep tokens in memory only. Read from the vendored 4.6.3 packages, not from memory:
+ *   app/node_modules/@descope/web-component/dist/esm/descope-wc/DescopeWc.js: `static set/get sdkConfigOverrides` (delegating to the base
+ *     class; typed in dist/index.d.ts as `static sdkConfigOverrides: Partial<SdkConfig>`), and the module's default export is that class.
+ *   app/node_modules/@descope/web-component/dist/esm/descope-wc/BaseDescopeWc.js: the SDK is created per element when it connects, as
+ *     createSdk(Object.assign({persistTokens: true, ...}, sdkConfigOverrides, {projectId, baseUrl})), so the override wins over the
+ *     hard-coded persistTokens: true and applies to every element created after it is set.
+ *   app/node_modules/@descope/web-js-sdk/dist/index.esm.js: `if (!persistTokens || !<browser check>) return next(config)` skips the layer that
+ *     writes the session and refresh JWTs to storage (the afterRequest hook); the flow `success` event still carries `sessionJwt`.
+ * The existing key clearing stays as a backstop. Fails closed: when the class cannot take the override (a different package version)
+ * or it does not stick, this rejects, and the page shows the neutral unavailable state instead of a component that persists tokens.
+ */
+export async function loadDescopeComponent(importer: () => Promise<unknown>): Promise<void> {
+  const mod = (await importer()) as { readonly default?: Partial<DescopeClassLike> | null } | null;
+  const cls = mod?.default;
+  const current = cls?.sdkConfigOverrides;
+  if (!cls || typeof current !== 'object' || current === null) throw new Error('descope component: no sdkConfigOverrides');
+  cls.sdkConfigOverrides = { ...current, persistTokens: false };
+  if (cls.sdkConfigOverrides?.persistTokens !== false) throw new Error('descope component: persistTokens override not applied');
 }
