@@ -231,7 +231,13 @@ The wake-up is close to the readiness probe's 2 s bound. A slower wake gives one
 
 **Network.** IP Allow (an allowlist of host addresses) is a Neon Scale feature. On Launch there is no allowlist; protection is TLS verify-full, strong role passwords and role isolation (readiness doc, section 3).
 
-### Origin certificate (Cloudflare Origin CA) `[built; config and Caddy validation proven in smoke.sh, NOT RUN on a host]`
+### Origin certificate (Cloudflare Origin CA) `[proven on the pilot host 2026-11-27]`
+
+**Run record (27 Nov 2026):** the certificate for `kawalys.kemetralabs.com` was issued by Cloudflare (id `369951370120849616063248932064496707687717040930`, 1095 days) for a CSR whose key was created on the host and never left it. **It expires 2029-11-26 and nothing renews it: keep a calendar reminder and rotate before then (see Rotation).** On the host: the certificate matched the key, Caddy (uid 10001, read-only root filesystem) read it, the served issuer was `CloudFlare Origin SSL Certificate Authority`, and Caddy logged `skipping automatic certificate management`. Through Cloudflare `/api/health` returned `ready:true` with a verified certificate and a protected route returned 404.
+
+**Rollback floor for `web`:** release 1 `web` has no `import /etc/caddy/tls.d/*`. Putting it back keeps the mount but silently returns Caddy to automatic Let's Encrypt (the renewal risk this section removes). `web` never goes below release 2; the BFF can (see "Release rollback" below).
+
+**Always use all three `-f` files** (`compose.managed.yml`, `compose.deploy.yml`, `compose.origin-cert.yml`) for every `up`, `ps`, `logs` and `pull` on the host. Using only the first two recreates `web` without the certificate mount and switches back to automatic certificates.
 
 Optional, off by default. By default Caddy obtains and renews its own Let's Encrypt certificate, which needs Let's Encrypt to reach the origin through Cloudflare. With an Origin CA certificate (valid only between Cloudflare and the origin) Caddy serves mounted files and never contacts an ACME CA. The override is `deploy/pilot/compose.origin-cert.yml`; the Caddyfile imports `/etc/caddy/tls.d/*`, which is empty (a no-op) unless the override mounts `tls-origin.caddy` there.
 
@@ -249,6 +255,13 @@ Optional, off by default. By default Caddy obtains and renews its own Let's Encr
 7. Verify on the host: `openssl s_client -connect 127.0.0.1:443 -servername <site> </dev/null 2>/dev/null | openssl x509 -noout -issuer -enddate`. The issuer must be Cloudflare Origin CA (not Let's Encrypt, not Caddy Local Authority). Then run the readiness gate above.
 
 Put the certificate's expiry date (the `enddate` printed above) in a calendar reminder: nothing renews it.
+
+#### Release rollback (digest-pinned images) `[BFF drilled 2026-11-27]`
+
+1. Copy the env file first: `sudo cp -p /opt/kawalys/.env.pilot /opt/kawalys/.env.pilot.bak-<UTC timestamp>`.
+2. Change only the image variable of the service to roll (`KAWALYS_BFF_IMAGE` or `KAWALYS_WEB_IMAGE`) to the previous `@sha256:` digest, run `bash deploy/pilot/preflight-deploy.sh /opt/kawalys/.env.pilot`, then `up -d <service>` with the **three** `-f` files.
+3. Wait for `/api/health` `ready:true` (the readiness gate). To undo, copy the backup over `.env.pilot` and `up -d` again.
+4. Per service, the lowest allowed release: **bff** release 1 (`…@sha256:2aa5d074…`), **web** release 2 (`…@sha256:8e131351…`, see above). The migrations are forward only; rolling code back does not undo them.
 
 **Rotation (never overwrite the live pair):** create a new directory (for example `/opt/kawalys/tls-2`) and generate the new key and CSR there (steps 2 to 4 with that path). Check that the certificate and key match and the certificate is valid for `<site>` (`openssl x509 -noout -pubkey -in origin.pem | sha256sum` equals `openssl pkey -pubout -in origin.key | sha256sum`). Then change `KAWALYS_ORIGIN_CERT_DIR` in `.env.pilot` to the new directory, run step 6, and run the readiness gate. Keep the old directory until the new pair has served traffic; to roll back, point the variable at the old directory and run step 6 again.
 
