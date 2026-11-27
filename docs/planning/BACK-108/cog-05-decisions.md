@@ -19,3 +19,11 @@ Order: this record, then the pure logic (test-first), then the migration PR.
 - `server/src/learning/learning.core.ts`: `candidatesOf` (O2: deterministic; abstains below N = 5 visible, observation-labelled episodes with both decision and outcome cited; contested when episodes disagree), `approve` (O3, O5: owner-only, non-contested, expiry after approval, append-only hash chain), `rollback` (restores an earlier version byte for byte as a new row), `readLesson` (O4, O6: suspended when any cited evidence is not visible, expired at expiry, invalid on a tampered chain, otherwise an advisory note with no state, gate, recommendation or rule).
 - Tests: `test/learning/learning.spec.ts` (synthetic episodes only) and `learning.guard.spec.ts` (pure; nothing in `src` imports it, so it is not activated).
 - **Not built:** the `episodes` and `lessons` tables (D7, own migration PR) and any activation (D6).
+
+## Built: storage (2026-11-27, D7)
+
+- `server/migrations/0006_learning.sql`: `learning_episodes`, `learning_episode_citations`, `learning_lessons`, `learning_lesson_citations`. Forced workspace RLS, composite keys within one workspace and project, column-level INSERT grants, append-only (also for a superuser and under replica). Version 1 has no previous hash; later versions cite one; one row per version. A lesson reviewer must be a member of the workspace.
+- Tests: `test/learning/learning-db.spec.ts` (as `kawalys_app`).
+- **Independent database review: GO**, no blockers. Fixed: reviewer membership; an index for reads by key; a test that a citation cannot point at another workspace's episode. Accepted: global primary keys on the citation tables (same as `evidence_citations` in 0003; an oracle only with two known random UUIDs).
+- **Requirements for the read and write path (when activation is approved):** an episode needs at least one decision and one outcome citation, and a lesson at least one citation, or it is not shown; a `decision` citation must be a HumanDecision; the hash chain is verified in `src` (no gaps, `previous_hash` equals the previous version's hash, the hash covers the content); owner-only review (O5) is checked on write.
+- Nothing in `src` reads or writes these tables; activation stays blocked (D6).
