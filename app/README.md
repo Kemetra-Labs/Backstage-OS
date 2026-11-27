@@ -87,6 +87,21 @@ npm run build     # static build to app/dist
 npm run e2e       # Playwright smoke (builds, then serves on 127.0.0.1:4178)
 ```
 
+### Live end-to-end suite (BACK-51 P4)
+
+```bash
+cd server && npm ci && cd ../app && npm ci   # both package trees: the BFF test entry compiles from server/
+cd app && npm run e2e:live                   # needs Docker running; Chromium only
+```
+
+`playwright.live.config.ts` starts two servers. First, the test-only BFF (`npm run e2e:serve` in `server/`): the real
+`createApp` on a disposable Testcontainers PostgreSQL, a synthetic seed and a fake identity verifier (no Descope, no
+secrets). Second, a live-mode build (`VITE_KAWALYS_LIVE=1`, into `dist-live/`) behind `vite preview` on 127.0.0.1:4178,
+which proxies `/api` to the BFF on 127.0.0.1:8787. The tests in `e2e-live/` run the whole gate path (sign in, Portfolio,
+Investigation, record a decision, see it with its creator, sign out) plus the negative, Arabic and privacy cases. The
+first run pulls the Postgres image, so allow a few minutes. In CI this is the `live-e2e` job; it uploads
+`live-e2e-test-results` on failure. The default `npm run e2e` never picks up `e2e-live/`.
+
 ## Structure
 
 ```

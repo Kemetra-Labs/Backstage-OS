@@ -50,7 +50,7 @@ synthetic evidence, then prints what was seeded. The HTTP routes stay deny-all w
 
 | Requirement | State |
 | --- | --- |
-| Login → Portfolio → Investigation → record decision, end to end | **BLOCKED**: needs auth configured, app wiring approved, a decision UI |
+| Login → Portfolio → Investigation → record decision, end to end | Passes in CI (`live-e2e`) with the fake identity verifier; real Descope sign-in is P5 |
 | Demo script (5–10 min) | Draft above |
 | Known limitations listed | Above |
 | X02/X04 + BACK-30 restricted-existence security sign-off | NOT RUN |
