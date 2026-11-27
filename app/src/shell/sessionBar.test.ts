@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { AppContext, type AppState } from '../app/AppContext';
 import { hostCopy } from '../i18n/host';
-import type { SessionSnapshot, SessionStatus } from '../live/session';
+import { SIGN_IN_PATH, type SessionSnapshot, type SessionStatus } from '../live/session';
 import { SessionBarView } from './SessionBar';
 
 const STATUSES: readonly SessionStatus[] = ['checking', 'signedIn', 'signedOut', 'ended', 'unavailable', 'error'];
@@ -27,6 +27,7 @@ describe('SessionBarView', () => {
     expect(html).toMatch(/<button[^>]*type="button"[^>]*>Sign out<\/button>/);
     expect(html).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/i);
     expect(html).not.toContain('/api/auth/lab');
+    expect(html).not.toContain(SIGN_IN_PATH);
   });
 
   it('a failed sign-out says so in words, and still offers sign-out', () => {
@@ -36,10 +37,13 @@ describe('SessionBarView', () => {
     expect(html).toContain('>Sign out</button>');
   });
 
-  it('signed out links the lab sign-in in a new tab and offers Check again', () => {
+  it('signed out links the sign-in page in a new tab and offers Check again', () => {
     const html = render('signedOut');
     expect(text(html)).toContain('Not signed in');
-    expect(html).toMatch(/<a [^>]*href="\/api\/auth\/lab"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
+    expect(SIGN_IN_PATH).toBe('/sign-in');
+    expect(html).toMatch(/<a [^>]*href="\/sign-in"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
+    expect(html).not.toContain('/api/auth/lab');
+    expect(text(html)).not.toMatch(/lab/i);
     expect(html).toContain('>Check again</button>');
     expect(html).not.toContain('>Sign out<');
   });
@@ -48,7 +52,8 @@ describe('SessionBarView', () => {
     const html = render('ended');
     expect(text(html)).toContain('Your session ended');
     expect(text(html)).toContain('Anything you have not sent on this page is kept.');
-    expect(html).toContain('href="/api/auth/lab"');
+    expect(html).toContain(`href="${SIGN_IN_PATH}"`);
+    expect(html).toMatch(/<a [^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
     expect(html).toContain('>Check again</button>');
     expect(html).toContain('role="alert"');
     expect(render('signedOut')).not.toContain('role="alert"');

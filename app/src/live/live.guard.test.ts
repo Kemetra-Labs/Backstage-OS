@@ -169,6 +169,6 @@ describe('src/live request guard (BACK-51 P1)', () => {
   });
 
   it('the guard finds the files it protects', () => {
-    expect(files(LIVE_DIR).filter((p) => !isTest(p)).map(rel).sort()).toEqual(['live/decisions.ts', 'live/http.ts', 'live/reads.ts', 'live/session.ts', 'live/signIn.ts']);
+    expect(files(LIVE_DIR).filter((p) => !isTest(p)).map(rel).sort()).toEqual(['live/decisions.ts', 'live/http.ts', 'live/reads.ts', 'live/session.ts', 'live/signIn.ts', 'live/signInFlow.ts', 'live/signInPage.tsx']);
   });
 });

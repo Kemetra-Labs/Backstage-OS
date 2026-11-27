@@ -12,8 +12,11 @@
 // survive the session ending and the sign-in that follows. An explicit sign-out clears them: a shared machine keeps nothing.
 import { apiRequest, SESSION_CHECK_PATH, type Fetcher } from './http';
 
-/** The local owner-lab sign-in page, through the same-origin proxy. Off on the server unless KAWALYS_AUTH_LAB=1; never in production. */
-export const LAB_SIGN_IN_PATH = '/api/auth/lab';
+/**
+ * The sign-in page (D3(a)): a path of the app itself, not an /api/ path, so a reverse proxy must serve the app's index.html for it.
+ * Live mode only (src/live/signInFlow.ts isSignInRoute); the Descope magic link returns here with a token in the query.
+ */
+export const SIGN_IN_PATH = '/sign-in';
 const SIGN_OUT_PATH = '/api/auth/session';
 
 /**

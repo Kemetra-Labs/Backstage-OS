@@ -15,6 +15,7 @@
     "e2e:live": "playwright test -c playwright.live.config.ts"
   },
   "dependencies": {
+    "@descope/web-component": "4.6.3",
     "@xyflow/react": "13.0.2",
     "react": "19.3.1",
     "react-dom": "19.3.1"

@@ -1,6 +1,6 @@
 // BACK-51 P2: the session in the app. The fetcher is injected: nothing here touches the network.
 import { describe, expect, it, vi } from 'vitest';
-import { checkSession, LAB_SIGN_IN_PATH, liveReadKey, SessionStore, type SessionSnapshot } from './session';
+import { checkSession, SIGN_IN_PATH, liveReadKey, SessionStore, type SessionSnapshot } from './session';
 
 type Reply = readonly [number, string] | 'network';
 const OWNER = '{"user":{"id":"00000000-0000-4000-8000-00000000000a","role":"owner"}}';
@@ -58,8 +58,8 @@ describe('checkSession', () => {
     expect(await checkSession(c.signal, f)).toBeNull();
   });
 
-  it('links the lab sign-in through the same-origin proxy', () => {
-    expect(LAB_SIGN_IN_PATH).toBe('/api/auth/lab');
+  it('links the sign-in page, a path of the app itself (not an /api/ path)', () => {
+    expect(SIGN_IN_PATH).toBe('/sign-in');
   });
 });
 
