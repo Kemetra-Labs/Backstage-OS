@@ -139,3 +139,10 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 | Labels are not independent | R8: COG-08 relabel before any claim of quality. |
 
 **Stop and return to the owner if:** a slice needs a schema change, dependency, route or live data; a test shows a hidden row changing any output; or a consumer needs fuzzy, semantic or history search.
+
+## Revision after the COG-08 independent review (`retrieval-v3`, 2026-11-27)
+
+- **R3:** combining marks (`Mn`) are removed, and every Unicode dash (`Pd`) folds to `-`. The query bound counts every token occurrence, not distinct terms.
+- **R4:** identifier shapes accept letters of any script (a Cyrillic or Greek lookalike key is still key-shaped, so it can only match exactly and never resolves to the real key) and numbers up to 18 digits. Title tightness ranks the identifier tier too: the Codex blind relabel read R4 this way, and the corpus is relabelled (`cog03-corpus-v2`).
+- **R6:** traversal returns at most 50 unresolved mentions and sets `truncated` when it cuts. `#n` targets and adjacency are indexed, so building links is near-linear.
+- Regression tests: `test/retrieval/retrieval.findings.spec.ts`.

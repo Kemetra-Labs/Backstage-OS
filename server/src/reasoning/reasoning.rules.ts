@@ -3,7 +3,8 @@
 import type { ItemIdentity } from '../retrieval/retrieval.types';
 import type { FactValue, ReasoningInput, RequirementSpec } from './reasoning.types';
 
-export const REASONING_POLICY_VERSION = 'reasoning-v1';
+/** v2 (2026-11-27, COG-08 review): duplicate task identities refused; `open` needs explicit draft: false. */
+export const REASONING_POLICY_VERSION = 'reasoning-v2';
 export const MAX_TASKS = 50;
 export const MAX_REQUIREMENTS = 20;
 export const MAX_ID = 100;
@@ -21,7 +22,8 @@ export function valueOf(kind: string, payload: Readonly<Record<string, unknown>>
   if (kind === 'pull_request') {
     const s = payload['state'];
     if (s === 'closed') return 'closed';
-    if (s === 'open') return payload['draft'] === true ? 'draft' : 'open';
+    // A missing or non-boolean draft flag is no evidence of either: unknown is never "open".
+    if (s === 'open') return payload['draft'] === true ? 'draft' : payload['draft'] === false ? 'open' : null;
     return null;
   }
   if (kind === 'issue') {
@@ -43,7 +45,8 @@ function validRequirement(r: unknown): r is RequirementSpec {
   if (!isObject(r) || !isId(r['id'])) return false;
   const target = r['target'];
   if (r['kind'] === 'dependency') return isIdentity(target) && target.kind === 'jira_issue' && r['expected'] === 'complete';
-  if (r['kind'] === 'check') return isIdentity(target) && (CHECK_VALUES[target.kind] ?? []).includes(r['expected'] as FactValue);
+  // Own properties only: a kind such as `constructor` must be refused, not resolved through the prototype.
+  if (r['kind'] === 'check') return isIdentity(target) && Object.hasOwn(CHECK_VALUES, target.kind) && CHECK_VALUES[target.kind]!.includes(r['expected'] as FactValue);
   if (r['kind'] === 'approval') return target === undefined && r['expected'] === 'granted';
   return false;
 }
@@ -60,7 +63,13 @@ export function isValidInput(input: unknown): input is ReasoningInput {
     if (!Array.isArray(reqs) || reqs.length > MAX_REQUIREMENTS || !reqs.every(validRequirement)) return false;
     if (!unique(reqs.map((r: RequirementSpec) => r.id))) return false;
   }
-  return unique(tasks.map((t) => (t as { id: string }).id));
+  // One spec per task item: a second spec for the same issue could bypass its approval gate or hide a
+  // cycle (COG-08 review).
+  const identities = tasks.map((t) => {
+    const i = (t as { task: ItemIdentity }).task;
+    return JSON.stringify([i.sourceId, i.sourceRef, i.kind]);
+  });
+  return unique(tasks.map((t) => (t as { id: string }).id)) && unique(identities);
 }
 
 /** The spec version echoed in a result: only a valid one, else null. */

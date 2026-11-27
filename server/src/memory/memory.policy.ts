@@ -4,7 +4,8 @@
 // test/memory/memory.guard.spec.ts (D2, D3 in docs/planning/BACK-105/cog-02-design.md).
 import type { Provider } from './memory.types';
 
-export const MEMORY_POLICY_VERSION = 'memory-v1';
+/** v2 (2026-11-27, COG-08 review): the fingerprint covers every cited field of the current run. */
+export const MEMORY_POLICY_VERSION = 'memory-v2';
 export const HISTORY_CAP = 50;
 /** Freshness per provider (D3), from the existing 15-minute Atlassian default. */
 export const TTL_MS: Readonly<Record<Provider, number>> = { github: 15 * 60_000, jira: 15 * 60_000, confluence: 15 * 60_000 };

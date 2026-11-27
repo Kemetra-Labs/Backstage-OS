@@ -336,3 +336,9 @@ No controller, module registration or route in any slice: COG-07 owns exposure. 
 - S2 cannot prove the single-statement snapshot, or the SQL and projector disagree;
 - a consumer needs exact historical replay (that requires the D6 sequence column first);
 - BACK-48 changes the fields or refs D2 and D3 rely on.
+
+## Revision after the COG-08 independent review (2026-11-27)
+
+The Codex review of commit 96878ac showed that the D5 fingerprint hashed only the current run's content key and last evidence id. A late commit could therefore extend the current run backwards, outside the returned history, and change its first evidence id (which COG-04 cites) without changing the fingerprint. The fingerprint now covers every cited field of the current run, and the policy version is `memory-v2`. Regression test: `test/memory/memory.findings.spec.ts`.
+
+Still open from the review: the S2 statement processes all eligible history before the history cap applies (a work budget independent of the returned cap is a performance decision under DEC-1). There is also no DB case yet that holds the reader fixed while adding evidence to a second project on which the reader also has a grant.
