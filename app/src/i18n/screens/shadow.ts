@@ -34,6 +34,13 @@ export interface ShadowCopy {
   readonly kinds: Readonly<Record<ReasoningKind, string>>;
   readonly states: Readonly<Record<TaskState, string>>;
   readonly invalid: { readonly title: string; readonly body: string };
+  /** Live mode (owner decision 2026-11-27): search only, read from the server for the project in the address. */
+  readonly live: {
+    readonly lede: string;
+    readonly noProject: { readonly title: string; readonly body: string };
+    readonly noQuery: { readonly title: string; readonly body: string };
+    readonly reasoning: string;
+  };
 }
 
 type Pair = readonly [en: string, ar: string];
@@ -97,6 +104,24 @@ const PAIRS: Pairs<Omit<ShadowCopy, 'versions'>> = {
     ready: ['Ready', 'جاهزة'],
     blocked: ['Blocked', 'متوقفة'],
     unknown: ['Unknown', 'غير معروفة'],
+  },
+  live: {
+    lede: [
+      'What the search engine returns for this project, read from the Kawalys server for the queries in the address. Search only; it changes nothing.',
+      'ما يعيده محرك البحث لهذا المشروع، مقروءًا من الخادم للاستعلامات الواردة في العنوان. بحث فقط، ولا يغيّر شيئًا.',
+    ],
+    noProject: {
+      title: ['No project chosen', 'لم يُختر مشروع'],
+      body: ['Add {?project=<project id>} to the address to search a project you can see.', 'أضف {?project=<project id>} إلى العنوان للبحث في مشروع يمكنك رؤيته.'],
+    },
+    noQuery: {
+      title: ['No query given', 'لم يُحدَّد استعلام'],
+      body: ['Add one or more {?q=<words>} to the address, up to five.', 'أضف استعلامًا واحدًا أو أكثر بصيغة {?q=<words>} إلى العنوان، حتى خمسة.'],
+    },
+    reasoning: [
+      'Task reasoning is not available live: there is no live source of task plans. The synthetic example is not shown in live mode.',
+      'الاستدلال على المهام غير متاح في الوضع المباشر: لا يوجد مصدر حي لخطط المهام. ولا يُعرض المثال الاصطناعي في الوضع المباشر.',
+    ],
   },
   invalid: {
     title: ['Shadow output unavailable', 'المخرجات الظلّية غير متاحة'],

@@ -104,3 +104,40 @@ export function liveStateKind(s: LiveFailure | 'loading'): StateKind {
     case 'error': return 'error';
   }
 }
+
+/** COG-07 live shadow search: the project named in the address, `?project=<uuid>`. Anything but a UUID is no project. */
+export function projectIdFrom(search: string): string | null {
+  const v = new URLSearchParams(search).get('project');
+  return v !== null && UUID.test(v) ? v : null;
+}
+
+/** The shadow search queries from the address, `?q=...` (repeatable): up to five, each non-blank and within the server bound. */
+export const MAX_SHADOW_QUERIES = 5;
+export function searchQueriesFrom(search: string): string[] {
+  return new URLSearchParams(search)
+    .getAll('q')
+    .filter((q) => q.trim() !== '' && q.length <= 500)
+    .slice(0, MAX_SHADOW_QUERIES);
+}
+
+/**
+ * GET /cognition/projects/:id/search?q= for each query, in parallel and in order (owner decision 2026-11-27: search only). Any failed
+ * search fails the whole read with that failure, so a partial set is never shown as complete. null when aborted.
+ */
+export async function readCognitionSearches(
+  projectId: string,
+  queries: readonly string[],
+  signal?: AbortSignal,
+  fetcher?: Fetcher,
+): Promise<LiveRead<unknown[]> | null> {
+  if (!UUID.test(projectId)) return { status: 'failed', failure: 'not_found' };
+  const results = await Promise.all(
+    queries.map((q) => apiRequest(`/api/cognition/projects/${projectId}/search?q=${encodeURIComponent(q)}`, { signal, fetcher })),
+  );
+  const bodies: unknown[] = [];
+  for (const r of results) {
+    if (!r.ok) return r.aborted ? null : { status: 'failed', failure: r.failure };
+    bodies.push(r.body);
+  }
+  return { status: 'ok', body: bodies };
+}

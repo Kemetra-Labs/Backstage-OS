@@ -19,7 +19,7 @@ const FOREIGN_PROJECT = 'Foreign Project (synthetic)';
 // The signed-in owner holds an active grant on a synthetic source in the foreign workspace and the foreign investigation has
 // linked evidence. A grant is the only thing that would let the owner read a source's evidence, so the workspace boundary
 // (RLS plus the workspace filter), not a missing grant, is what hides this project, investigation and evidence.
-async function seedForeign(db: KawalysDb, ownerUserId: string): Promise<{ investigationId: string; projectName: string }> {
+async function seedForeign(db: KawalysDb, ownerUserId: string): Promise<{ investigationId: string; projectName: string; projectId: string }> {
   const user = randomUUID();
   const ws = randomUUID();
   await db.admin.query('INSERT INTO kawalys.users (id) VALUES ($1)', [user]);
@@ -46,7 +46,7 @@ async function seedForeign(db: KawalysDb, ownerUserId: string): Promise<{ invest
   await runWithWorkspaceContext(db.app, ws, (c) =>
     c.query('INSERT INTO source_grants (workspace_id, source_id, user_id) VALUES ($1, $2, $3)', [ws, sourceId, ownerUserId]),
   );
-  return { investigationId, projectName: FOREIGN_PROJECT };
+  return { investigationId, projectName: FOREIGN_PROJECT, projectId };
 }
 
 async function main(): Promise<void> {
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
   try {
     const seeded = await seedLocal({ app: pools.app, auth: pools.auth }, OWNER);
     const foreign = await seedForeign(pools, seeded.userId);
-    writeFileSync(seedFile, JSON.stringify({ investigationId: seeded.investigationId, projectName: SEED.projectName, foreign }));
+    writeFileSync(seedFile, JSON.stringify({ investigationId: seeded.investigationId, projectId: seeded.projectId, projectName: SEED.projectName, foreign }));
     app = await createApp([], { verifier: new FakeIdentityVerifier() }, { database: { appPool: pools.app, authPool: pools.auth } });
     await app.listen(PORT, HOST);
     process.stderr.write(`e2e server ready on http://${HOST}:${PORT}\n`);

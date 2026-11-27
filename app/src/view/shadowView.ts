@@ -60,7 +60,10 @@ const rec = (v: unknown): Rec => need(isRec(v), v as Rec);
 
 function hit(v: unknown): ShadowHit {
   const h = rec(v);
-  return { title: str(h['title']), kind: str(h['kind']), sourceRef: str(h['sourceRef']), status: need(oneOf(HIT_STATUSES, h['status']), h['status'] as HitStatus), tier: str(h['tier']) };
+  const sourceRef = str(h['sourceRef']);
+  // An item without a title is shown by its reference, never as a blank row.
+  const title = h['title'] === null ? sourceRef : str(h['title']);
+  return { title, kind: str(h['kind']), sourceRef, status: need(oneOf(HIT_STATUSES, h['status']), h['status'] as HitStatus), tier: str(h['tier']) };
 }
 
 function searchOf(v: unknown): ShadowSearch {
@@ -106,6 +109,22 @@ export function readShadow(raw: unknown): ShadowView {
         tasks: list(reasoning['tasks']).map(taskOf),
       },
     };
+  } catch (e) {
+    if (e instanceof Invalid) return { kind: 'invalid' };
+    throw e;
+  }
+}
+
+export type LiveSearchView =
+  | { readonly kind: 'ok'; readonly retrieval: string; readonly searches: readonly ShadowSearch[] }
+  | { readonly kind: 'invalid' };
+
+/** COG-07 live search: the server bodies, one per query, or `invalid` as a whole when any is malformed or there are none. */
+export function readLiveSearches(bodies: readonly unknown[]): LiveSearchView {
+  try {
+    need(bodies.length > 0, null);
+    const retrieval = str(rec(bodies[0])['retrievalPolicyVersion']);
+    return { kind: 'ok', retrieval, searches: bodies.map(searchOf) };
   } catch (e) {
     if (e instanceof Invalid) return { kind: 'invalid' };
     throw e;
