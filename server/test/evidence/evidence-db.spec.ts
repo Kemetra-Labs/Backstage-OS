@@ -4,6 +4,7 @@ import { EvidenceRepository, type ObservationInput } from '../../src/evidence/ev
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { sqlState } from '../db/pg-container';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
+import { approveAll } from './approve-all-policy';
 
 let db: KawalysDb | undefined;
 let repo: EvidenceRepository;
@@ -30,7 +31,7 @@ beforeAll(async () => {
     await c.query('INSERT INTO workspaces (id, owner_user_id) VALUES ($1, $2)', [ws, owner]);
     await c.query(`INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`, [ws, owner]);
   });
-  repo = new EvidenceRepository(db.app);
+  repo = new EvidenceRepository(db.app, approveAll());
   projectId = await repo.createProject(ws, owner, { key: 'backstage-os', name: 'Backstage OS' });
   sourceId = await repo.connectSource(ws, owner, { projectId, provider: 'github', externalRef: 'Kemetra-Labs/Backstage-OS' });
   investigationId = await repo.createInvestigation(ws, owner, { projectId, title: 'Build failures' });
@@ -165,7 +166,7 @@ describe('human decisions', () => {
   });
 
   it('rolls the decision back when the audit row cannot be written', async () => {
-    const failing = new EvidenceRepository(db!.app, async () => {
+    const failing = new EvidenceRepository(db!.app, approveAll(), async () => {
       throw new Error('audit unavailable');
     });
     const before = (await repo.list(ws, owner, { investigationId })).length;

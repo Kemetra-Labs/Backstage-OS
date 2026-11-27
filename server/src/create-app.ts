@@ -11,6 +11,7 @@ import { PostgresSessionStore } from "./auth/session/postgres-session-store";
 import { WorkspaceResolver } from "./auth/workspace-resolver";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { EvidenceRepository } from "./evidence/evidence.repository";
+import { configuredApprovalPolicy } from "./evidence/source-approval";
 import { DemoModule } from "./demo/demo.module";
 import { allowedOrigins } from "./config/allowed-origins";
 import { trustProxy } from "./config/trust-proxy";
@@ -40,6 +41,8 @@ export async function createApp(
   authOverrides: AuthOverrides = {},
   options: CreateAppOptions = {},
 ): Promise<INestApplication> {
+  // Fail-closed and checked first, with or without a database: a malformed KAWALYS_APPROVED_SOURCES stops startup (BACK-131).
+  const approval = configuredApprovalPolicy(process.env);
   const db = options.database;
   const workspaces = db ? new WorkspaceResolver(db.appPool, db.authPool) : undefined;
   const persistence: AuthPersistence | undefined =
@@ -52,7 +55,7 @@ export async function createApp(
   const imports: (Type<unknown> | DynamicModule)[] = [AppModule, AuthModule.register(auth), ReadinessModule.register(db)];
   // Evidence routes exist only with the database; the global AuthGuard protects them like every route.
   if (db && workspaces) {
-    const evidence = new EvidenceRepository(db.appPool);
+    const evidence = new EvidenceRepository(db.appPool, approval);
     imports.push(EvidenceModule.register(evidence, workspaces));
     imports.push(InvestigationModule.register(new InvestigationRepository(db.appPool), evidence, workspaces));
     imports.push(PortfolioModule.register(new PortfolioRepository(db.appPool), workspaces));

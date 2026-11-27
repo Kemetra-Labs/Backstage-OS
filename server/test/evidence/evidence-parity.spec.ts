@@ -18,6 +18,7 @@ import { generateLocalCredentials } from '../../src/ops/local-credentials';
 import { localRuntimeUrls, prepareLocalDatabase, seedLocal, type SeedSummary } from '../../src/ops/local-stack';
 import { MIGRATIONS_DIR } from '../db/kawalys-db';
 import { startPgContainer, stopPgContainer, type PgContainer } from '../db/pg-container';
+import { approveAll } from './approve-all-policy';
 
 const ROOT = existsSync(join(process.cwd(), '..', 'app')) ? join(process.cwd(), '..') : process.cwd();
 const fixture = (name: string) => join(ROOT, 'app', 'src', 'fixture', name);
@@ -97,7 +98,7 @@ function matchesFixture(name: string, body: unknown): void {
 
 /** The three bodies, built exactly as their controllers build them, then normalised with ONE id map. */
 async function bodies() {
-  const evidence = new EvidenceRepository(app);
+  const evidence = new EvidenceRepository(app, approveAll());
   const items = await evidence.list(seed.workspaceId, seed.userId, {}); // EvidenceController.list
   const investigation = await new InvestigationRepository(app).get(seed.workspaceId, seed.userId, seed.investigationId);
   const invEvidence = await evidence.list(seed.workspaceId, seed.userId, { investigationId: seed.investigationId });

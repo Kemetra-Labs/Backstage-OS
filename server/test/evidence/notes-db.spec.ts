@@ -8,6 +8,7 @@ import { EvidenceRepository, type NoteInput, type ObservationInput } from '../..
 import { NotVisibleError, RefusedError } from '../../src/evidence/evidence.types';
 import { PortfolioRepository } from '../../src/portfolio/portfolio.repository';
 import { evidenceCount, expectNotFound, startOwnerApp, type OwnerApp } from '../db/owner-app';
+import { approveAll } from './approve-all-policy';
 
 let t: OwnerApp | undefined;
 let db: OwnerApp['db'];
@@ -98,7 +99,7 @@ describe('recording a note', () => {
   });
 
   it('rolls the note back when the audit row cannot be written', async () => {
-    const failing = new EvidenceRepository(db!.app, async () => {
+    const failing = new EvidenceRepository(db!.app, approveAll(), async () => {
       throw new Error('audit unavailable');
     });
     const before = await rowsIn(investigationId);

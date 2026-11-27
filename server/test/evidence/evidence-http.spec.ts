@@ -9,6 +9,7 @@ import { createApp } from '../../src/create-app';
 import { EvidenceRepository } from '../../src/evidence/evidence.repository';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
 import { FakeIdentityVerifier, OWNER, TOKENS } from '../auth/_helpers';
+import { approveAll } from './approve-all-policy';
 
 const COOKIE = '__Host-kawalys_session';
 const ENV = { KAWALYS_DESCOPE_PROJECT_ID: 'PkawalysTest0001', KAWALYS_OWNER_SUBJECT: OWNER.subject };
@@ -29,7 +30,7 @@ async function boot(): Promise<Running> {
   const app = await createApp([], { verifier: new FakeIdentityVerifier() }, { database: { appPool, authPool } });
   return {
     app,
-    repo: new EvidenceRepository(appPool),
+    repo: new EvidenceRepository(appPool, approveAll()),
     stop: async () => {
       await app.close();
       await Promise.all([appPool.end(), authPool.end()]);

@@ -9,7 +9,7 @@ import { canonicalCollapsed, collapse } from '../../src/memory/memory.collapse';
 import { project } from '../../src/memory/memory.projector';
 import { MemoryRepository, type MemoryReadInput } from '../../src/memory/memory.repository';
 import type { MemoryRequest, MemoryRow } from '../../src/memory/memory.types';
-import { freshIds, startStore, stopStore, type StoreHarness } from '../db/store-harness';
+import { freshIds, reconnect, startStore, stopStore, type StoreHarness } from '../db/store-harness';
 import { at, CONF, confPage, GH, ghIssue, JIRA, jiraIssue, listPage, pr, repo, REPO, status } from './memory.fixture';
 
 let h: StoreHarness;
@@ -185,7 +185,7 @@ describe('grants, revocation and isolation (D4)', () => {
     const revoked = await memory.read(query());
     expect(revoked.items.some((i) => i.sourceId === src[JIRA])).toBe(false);
     expect(revoked.fingerprint).not.toBe(before.fingerprint);
-    await h.repo.connectSource(ids.ws, ids.owner, { projectId: h.projectId, provider: 'jira', externalRef: 'kemetra-synthetic.atlassian.net' });
+    await reconnect(h, ids.owner, src[JIRA]!);
     const regranted = await memory.read(query());
     expect(regranted.items.filter((i) => i.sourceId === src[JIRA]).length).toBeGreaterThan(0);
     expect(regranted.fingerprint).not.toBe(before.fingerprint);
@@ -202,7 +202,7 @@ describe('grants, revocation and isolation (D4)', () => {
     const hidden = await h.repo.connectSource(ids.ws, ids.owner, { projectId: h.projectId, provider: 'github', externalRef: 'kemetra-labs/hidden-repo' });
     await h.repo.disconnectSource(ids.ws, ids.owner, hidden);
     const before = await memory.read(q);
-    await h.repo.connectSource(ids.ws, ids.owner, { projectId: h.projectId, provider: 'github', externalRef: 'kemetra-labs/hidden-repo' });
+    await reconnect(h, ids.owner, hidden);
     const hiddenRows = [repo({}, { id: 'x1', observedAt: at('11:59') }), status(GH, REPO, 'error', 'timeout', { id: 'x2', observedAt: at('11:59') })];
     await h.repo.ingest(ids.ws, hiddenRows.map((r) => ({ ...toInput(r), sourceId: hidden, sourceRef: 'github:kemetra-labs/hidden-repo' })));
     await h.repo.disconnectSource(ids.ws, ids.owner, hidden);

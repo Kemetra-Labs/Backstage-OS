@@ -7,6 +7,7 @@ import { DECISION_CREATOR, EvidenceRepository } from '../../src/evidence/evidenc
 import { sqlState } from '../db/pg-container';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
 import { makeWorkspace } from '../db/store-harness';
+import { approveAll } from './approve-all-policy';
 
 let db: KawalysDb | undefined;
 let repo: EvidenceRepository;
@@ -24,7 +25,7 @@ beforeAll(async () => {
   await db.admin.query('INSERT INTO kawalys.users (id) VALUES ($1)', [owner]);
   await makeWorkspace(db, ws, owner);
   await makeWorkspace(db, otherWs, owner);
-  repo = new EvidenceRepository(db.app);
+  repo = new EvidenceRepository(db.app, approveAll());
   projectId = await repo.createProject(ws, owner, { key: 'backstage-os', name: 'Backstage OS' });
   const sourceId = await repo.connectSource(ws, owner, { projectId, provider: 'github', externalRef: 'kemetra-labs/backstage-os' });
   investigationId = await repo.createInvestigation(ws, owner, { projectId, title: 'Build failures' });

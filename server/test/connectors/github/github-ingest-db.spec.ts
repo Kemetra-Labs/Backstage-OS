@@ -7,6 +7,7 @@ import { EvidenceRepository } from '../../../src/evidence/evidence.repository';
 import { runWithWorkspaceContext } from '../../../src/db/workspace-context';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../../db/kawalys-db';
 import { happyScript, OWNER_REPO, ok, ScriptedTransport } from './github.fixture';
+import { approveAll } from '../../evidence/approve-all-policy';
 
 let db: KawalysDb | undefined;
 let repo: EvidenceRepository;
@@ -22,7 +23,7 @@ beforeAll(async () => {
     await c.query('INSERT INTO workspaces (id, owner_user_id) VALUES ($1, $2)', [ws, owner]);
     await c.query(`INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`, [ws, owner]);
   });
-  repo = new EvidenceRepository(db.app);
+  repo = new EvidenceRepository(db.app, approveAll());
   const projectId = await repo.createProject(ws, owner, { key: 'backstage-os', name: 'Backstage OS' });
   sourceId = await repo.connectSource(ws, owner, { projectId, provider: 'github', externalRef: OWNER_REPO });
 }, 180_000);
