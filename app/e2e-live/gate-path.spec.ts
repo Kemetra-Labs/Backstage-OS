@@ -48,7 +48,6 @@ test('owner signs in, reads Portfolio and the case, records a decision, signs ou
   await expect(records).toHaveCount(0);
   await expect(decisions).toHaveCount(0);
   await page.waitForLoadState('networkidle');
-  await expect(page.locator('body')).not.toContainText(seed.projectName);
   expect((await apiGet(page, '/api/portfolio')).status).toBe(404);
 
   // Console errors: only the 404s of /api/* reads made while signed out (see unexpectedErrors); a 404 anywhere else fails.

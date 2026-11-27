@@ -8,6 +8,16 @@ import { Public } from '../../src/auth/public.decorator';
 import { FakeIdentityVerifier, shape, startApp, type TestApp } from '../auth/_helpers';
 
 @Controller()
+class HostileController {
+  @Public()
+  @Get('hostile')
+  hostile(): never {
+    // An object whose constructor getter throws: the log helper must not fail inside the error handler.
+    throw Object.defineProperty({}, 'constructor', { get: () => { throw new Error('getter'); } });
+  }
+}
+
+@Controller()
 class BoomController {
   @Public()
   @Get('boom')
@@ -81,6 +91,18 @@ describe('5xx log line (L6)', () => {
     expect(errorLog).toHaveBeenCalledTimes(1);
     expect(errorLog.mock.calls[0]).toEqual(['kawalys-bff 5xx request_id=req-aaaaaaaa type=Error']);
     expect(JSON.stringify(errorLog.mock.calls)).not.toContain('secret-detail');
+    expect(headersOf(res)['cache-control']).toBe('no-store'); // a 5xx is never cached either
+  });
+
+  it('a hostile exception object still gets the generic 500 and a fixed log line', async () => {
+    const h = (await startApp([HostileController])).app;
+    try {
+      const res = await request(h.getHttpServer()).get('/hostile').set('x-request-id', 'req-bbbbbbbb');
+      expect(res.status).toBe(500);
+      expect(errorLog.mock.calls[0]).toEqual(['kawalys-bff 5xx request_id=req-bbbbbbbb type=object']);
+    } finally {
+      await h.close();
+    }
   });
 
   it('logs nothing for a 4xx', async () => {

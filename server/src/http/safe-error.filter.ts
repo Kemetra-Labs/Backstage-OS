@@ -33,8 +33,12 @@ function codeFor(exception: unknown): SafeErrorCode {
 // Constructor name only, never the message or stack. A thrown non-object (string, number) is reported by its typeof.
 function typeNameOf(exception: unknown): string {
   if (typeof exception === "object" && exception !== null) {
-    const name = (exception as { constructor?: { name?: unknown } }).constructor?.name;
-    return typeof name === "string" && /^[A-Za-z0-9_$]{1,64}$/.test(name) ? name : "object";
+    try {
+      const name = (exception as { constructor?: { name?: unknown } }).constructor?.name;
+      return typeof name === "string" && /^[A-Za-z0-9_$]{1,64}$/.test(name) ? name : "object";
+    } catch {
+      return "object"; // a hostile getter or proxy must not turn the error handler into a second error
+    }
   }
   return typeof exception;
 }
