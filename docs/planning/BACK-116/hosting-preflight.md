@@ -101,3 +101,24 @@ After approval, the execution goes to BACK-117 (the actual rollout). BACK-116's 
 - AWS APIs (read-only): `lightsail:GetBundles`, `GetBlueprints`, `GetRegions`, `GetInstances`, `GetStaticIps`; `budgets:DescribeBudgets`, `DescribeNotificationsForBudget`; `ce:GetCostAndUsage` grouped by record type; `ssm:GetServiceSetting`.
 - Depot, Container Builds overview: https://depot.dev/docs/container-builds/overview
 - AWS re:Post, How do I add a Lightsail instance to Systems Manager?: https://repost.aws/knowledge-center/add-lightsail-to-systems-manager
+
+## 10. Created resources, 27 Nov 2026 (owner: "Yes, create it")
+
+Created by the agent with the root identity, under the owner's explicit approval for these steps. Nothing else was created.
+
+| Resource | Value |
+| --- | --- |
+| Instance | `kawalys-pilot`, `small_3_0` ($12/month), Ubuntu 24.04 LTS, `eu-central-1a`, dual-stack. Tags: `project=kawalys`, `ticket=BACK-116`, `purpose=pilot`. |
+| Static IP | `kawalys-pilot-ip`, attached: **63.189.76.76**. IPv6 is assigned by Lightsail. |
+| Firewall | 22/tcp only from `lightsail-connect` (Lightsail browser SSH); 80/tcp and 443/tcp open, IPv4 and IPv6. Restrict 80/443 to Cloudflare's ranges once the DNS record is proxied. |
+| First-boot setup | Ubuntu packages only: `docker.io`, `docker-compose-v2`, `unattended-upgrades`; Docker enabled; the `ubuntu` user added to the `docker` group. It writes `/var/log/kawalys-bootstrap.log` when done. Not yet checked from inside the host. |
+| Not created | No snapshots (they would capture secrets), no DNS record, no SSM activation, no new budget (the existing $100 budget and its alerts cover it), no images, no secrets on the host. |
+
+**Next (BACK-117, each gated):**
+1. The owner opens browser SSH once and confirms `cat /var/log/kawalys-bootstrap.log`, `docker compose version` and `uname -m` (expect `x86_64`).
+2. The DNS name and the Cloudflare record, then narrow 80/443.
+3. The digest-pinned deploy override and the Cloudflare client-address change (section 3).
+4. `.env.pilot` (mode 0600) with the runtime URLs from Neon.
+5. Pull the images, `up`, and run the readiness gate.
+
+**Teardown:** detach and release `kawalys-pilot-ip` (an unattached IP is billed), then delete `kawalys-pilot`.
