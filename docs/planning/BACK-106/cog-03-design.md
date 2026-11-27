@@ -156,3 +156,9 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
   - A mention carries `basis`, the status of the title it comes from. A title with no established revision (conflict, or no current run) yields no mention and no unresolved marker.
   - Both `relationships()` and `related()` are budgeted while they work: 2000 edges and 50 unresolved mentions, with `truncated`. Containment is indexed by source and repository.
 - Regression tests: `test/retrieval/retrieval.findings2.spec.ts`.
+
+## Third revision after the COG-08 third review (`retrieval-v5`, 2026-11-27)
+
+- Identifier shapes have no digit-count ceiling. The query bound (500 characters) bounds the work, so a 65-digit number or key is still answered by exact match only.
+- Mention boundaries treat combining marks as word characters, so a key touching a mark is not a mention.
+- Regression tests: `test/retrieval/retrieval.findings3.spec.ts`.

@@ -97,3 +97,17 @@ All findings below are fixed on the branch that adds this section, each with a r
 - the validator's object-key enumeration is proportional to the candidate's own top-level keys (an in-process cost; any future HTTP boundary must bound request size).
 
 **Next:** a third independent review of the fixed commit.
+
+## 7. Third independent review: Codex, commit 000f603 (2026-11-27)
+
+**Incomplete:** the provider's content filter stopped the run after its probes, so it returned no verdict table and no GO or NO-GO. Before it stopped, it reported:
+- typecheck passing;
+- 383 tests passing across 17 non-PostgreSQL suites;
+- two remaining gaps, both fixed on the branch that adds this section (`retrieval-v5`), each with a regression test that failed on 000f603:
+
+| Severity (ours) | Finding | Fix |
+| --- | --- | --- |
+| Medium | A 65-digit identifier-shaped query reached the title tier (shapes capped digits at 64) | No digit-count ceiling; the 500-character query bound bounds the work |
+| Low | A key next to a combining mark was parsed as a mention | Marks count as word characters at mention boundaries |
+
+**Next:** rerun the third review on the fixed commit, worded so the content filter does not stop it. Until a complete review returns GO, the pre-COG-07 decision stays **NO-GO**.
