@@ -9,6 +9,7 @@ import { collapse, type CollapsedInput, type Marker, type RunRecord } from './me
 import {
   coveringFailureRefs,
   HISTORY_CAP,
+  isOrdered,
   isProvider,
   MEMORY_POLICY_VERSION,
   scopeReadOf,
@@ -17,7 +18,7 @@ import {
   TTL_MS,
   type ItemKind,
 } from './memory.policy';
-import { currentOf, iso, maxOf, ms, runInfoOrder, toInfo, toRun, type RunInfo } from './memory.runs';
+import { asKnownAt, currentOf, iso, maxOf, ms, runInfoOrder, toInfo, toRun, type RunInfo } from './memory.runs';
 import type { FactStatus, MemoryItem, MemoryProjection, MemoryRequest, MemoryRow, MemorySource, Run } from './memory.types';
 
 const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
@@ -152,8 +153,10 @@ function judge(ix: SourceIndex, kind: ItemKind, ref: string, runs: readonly RunI
   if (outcome.kind === 'conflict') return fixed('conflict', 'same-order-key-different-content');
   if (outcome.kind === 'ambiguous') return fixed('unknown', 'ambiguous_read');
   if (outcome.kind === 'unreadable') return fixed('unknown', 'unreadable-order-key');
-  const current = toRun(outcome.run);
-  const ttlExpired = c.evaluation >= outcome.run.lastObserved + TTL_MS[ix.source.provider];
+  // A repository read strictly inside a run is the run as known by E, never a later observation.
+  const asOf = !isOrdered(kind) && c.effective < outcome.run.lastObserved ? asKnownAt(outcome.run) : outcome.run;
+  const current = toRun(asOf);
+  const ttlExpired = c.evaluation >= asOf.lastObserved + TTL_MS[ix.source.provider];
   return decide(
     [
       ambiguity,

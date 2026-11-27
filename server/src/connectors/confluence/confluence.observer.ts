@@ -15,6 +15,7 @@
 import type { ObservationInput } from '../../evidence/evidence.repository';
 import {
   clip,
+  isClipped,
   DEFAULT_TTL_MS,
   isObject,
   isoDate,
@@ -77,6 +78,7 @@ function pagePayload(item: unknown, key: string, id: string, base: string | null
     kind: 'confluence_page',
     pageId,
     title: clip(title),
+    ...(isClipped(title) ? { textClipped: true } : {}),
     spaceKey: key,
     lastModified: isoDate(createdAt),
     version: number,

@@ -128,3 +128,20 @@ All findings below are fixed on the branch that adds this section, each with a r
 | Low | A zero-width joiner acted as a word boundary | Boundaries look through format characters |
 
 **Next:** a fourth review of the fixed commit. The pre-COG-07 decision stays **NO-GO** until a complete review returns GO.
+
+## 9. Fourth independent review: Codex, commit 827a210 (2026-11-27)
+
+**Verdict: NO-GO.**
+- **Confirmed fixed:** the shape fold's whitespace; the standard array prototype; `#n` as positive safe integers; boundaries computed in code (probed with astral characters, marks, format characters and string edges).
+- **Access scoping:** no defect found. Out-of-scope items and markers left the projection, fingerprint, search, counts, ranking, relationships, traversal and reasoning reasons byte-identical.
+- **Fixes:** all findings below are fixed on the branch that adds this section, each with a regression test that failed on 827a210.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| Medium | A full edge budget stopped unresolved collection and flagged unrelated traversals | Scan continues; omitted-edge endpoints recorded; traversal flagged only when a cut edge touches it |
+| Medium | A title clipped mid-number linked the wrong PR | Observers flag clipped text; mentions touching the cut are skipped |
+| Medium | A historical repository read inside a run reported a later observation as `verified` | The run as known by E: first observation, worst state seen |
+| Low | The per-title cap kept the first 50 by position, not canonical order | Canonical first 50 per title |
+| Low | Validator lookups scanned the projection each time | One index per validation |
+
+**Next:** a fifth review of the fixed commit. The pre-COG-07 decision stays **NO-GO** until a complete review returns GO.

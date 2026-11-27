@@ -124,3 +124,8 @@ Return to the owner if a rule needs evidence that does not exist (for example "m
 
 - **T6:** the validator requires the standard array prototype, so an inherited `toJSON` cannot change what a validated result serializes to.
 - Regression test: `test/reasoning/reasoning.findings3.spec.ts`.
+
+## Fourth revision after the COG-08 fourth review (2026-11-27)
+
+- **T6, T7:** the validator builds one index of visible identities and reads it per lookup, instead of scanning the projection for each one. Its work stays additive at the T1 bounds; classification and Kahn cycle checks stay independent of the evaluator.
+- Regression test: `test/reasoning/reasoning.findings4.spec.ts`, which counts item reads rather than timing them.

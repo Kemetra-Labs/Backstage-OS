@@ -2,6 +2,7 @@
 // (memory.collapse.ts). Pure functions.
 import { contentKeyOf, type RunRecord } from './memory.collapse';
 import { EFFECTIVE_FIELD, isOrdered, ORDER_FIELD, type ItemKind } from './memory.policy';
+import type { EvidenceState } from '../evidence/evidence.types';
 import type { Run } from './memory.types';
 
 /** Milliseconds of an ISO instant; an unreadable time is refused, never guessed. */
@@ -71,6 +72,28 @@ export const runInfoOrder = (a: RunInfo, b: RunInfo): number =>
 /** Latest confirmation order: the last row's (observed, received, id), as S1's row order. */
 const latestOrder = (a: RunInfo, b: RunInfo): number =>
   a.lastObserved - b.lastObserved || a.lastRowReceived - b.lastRowReceived || byCodeUnit(a.rec.lastId, b.rec.lastId);
+
+/** Worst first: any failure state outranks stale, which outranks ok. */
+const STATE_ORDER: readonly EvidenceState[] = ['error', 'denied', 'unknown', 'stale', 'ok'];
+
+/**
+ * A repository run (no provider order) read at an effective time E strictly inside it (COG-08 review 4).
+ * The run record keeps only its first and last observations, so the run as known by E is its first
+ * observation: cited as both first and last evidence, fresh from that instant, and carrying the worst
+ * state seen anywhere in the run, because which states came before E is not recorded. It can therefore
+ * be `verified` only when every observation in the run was `ok`. Never a state observed after E.
+ */
+export function asKnownAt(info: RunInfo): RunInfo {
+  const rec = info.rec;
+  const worst = STATE_ORDER.find((s) => rec.states.includes(s)) ?? rec.lastState;
+  return {
+    ...info,
+    rec: { ...rec, lastId: rec.firstId, lastObservedAt: rec.firstObservedAt, lastReceivedAt: rec.firstReceivedAt, lastRowReceivedAt: rec.firstRowReceivedAt, lastState: worst },
+    lastObserved: info.firstObserved,
+    lastReceived: info.firstReceived,
+    lastRowReceived: info.firstRowReceived,
+  };
+}
 
 export function toRun(info: RunInfo): Run {
   const rec = info.rec;

@@ -15,6 +15,7 @@
 import type { ObservationInput } from '../../evidence/evidence.repository';
 import {
   clip,
+  isClipped,
   DEFAULT_TTL_MS,
   isObject,
   isoDate,
@@ -70,6 +71,7 @@ function issuePayload(item: unknown, projectKey: string, base: string | null): R
     kind: 'jira_issue',
     key,
     summary: clip(summary),
+    ...(isClipped(summary) ? { textClipped: true } : {}),
     statusCategory: category,
     updatedAt: isoDate(updated),
     url: base === null ? null : `${base}/browse/${key}`,
