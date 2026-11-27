@@ -10,12 +10,17 @@
 // plus EXPLAIN (ANALYZE, BUFFERS) of the same statement once (server-side time, buffers, temp spill),
 // the number and size of the returned rows, and the table size. Seeded through the superuser pool with
 // generate_series (the app role cannot set received_at); rows satisfy every constraint and trigger.
+//
+// Experiments (never used by the product): MEASURE_VARIANT=single-pass (a rewrite of the run pieces) and
+// MEASURE_VARIANT=runs-table (the option A prototype of docs/planning/BACK-105/cog-02-cache-proposal.md:
+// runs and markers materialized per source in throwaway tables of the measurement database).
 import { writeFileSync } from 'node:fs';
 import type pg from 'pg';
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { HISTORY_CAP } from '../../src/memory/memory.policy';
 import { projectCollapsed } from '../../src/memory/memory.projector';
-import { MemoryRepository } from '../../src/memory/memory.repository';
+import { MemoryRepository, type MemoryRead } from '../../src/memory/memory.repository';
+import type { MemoryProjection } from '../../src/memory/memory.types';
 import { ITEM_KIND_LIST, MEMORY_READ_SQL } from '../../src/memory/memory.sql';
 import { freshIds, startStore, stopStore, type StoreHarness } from '../db/store-harness';
 
@@ -257,6 +262,206 @@ async function runVariant(h: StoreHarness, s: Seeded, userId: string): Promise<R
   };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Experiment (MEASURE_VARIANT=runs-table): the cheap prototype of option A in
+// docs/planning/BACK-105/cog-02-cache-proposal.md, section 4. The runs per source (and, for the `cached`
+// read, the latest marker rows per key in `kawalys.measure_markers`) are materialized into `kawalys.measure_runs` through the superuser pool, from the production statement's own CTEs
+// (no grant join: runs are reader-independent), with forced RLS and SELECT for the app role like every
+// workspace table. The read joins the reader's active grants to that table at read time (D4), so a
+// revoke needs no invalidation. The table exists only in this disposable measurement database: no
+// migration, and src/ is untouched (the variant statement is swapped in through a proxy pool).
+// What it does NOT model: maintenance in ingest(), concurrency, knownAt in the past, purge horizons.
+const RUN_COLUMNS = 'last_id, source_id, source_ref, kind, last_state, last_obs, last_payload, first_id, first_obs, first_rcv, last_rcv, n, states, retained, first_row_rcv, last_row_rcv';
+
+function cut(base: string, from: string, to: string, what: string): [string, string] {
+  const a = base.indexOf(from);
+  const b = base.indexOf(to, a);
+  if (a < 0 || b < a) throw new Error(`variant: production statement changed shape (${what})`);
+  return [base.slice(0, a), base.slice(b)];
+}
+
+/** The statement that fills measure_runs for one project ($2), from the production CTEs. */
+export function materializeRunsSql(base: string = MEMORY_READ_SQL): string {
+  const grantJoin = '\n    JOIN granted gr ON gr.source_id = e.source_id';
+  if (!base.includes(grantJoin)) throw new Error('variant: production statement changed shape (v grant join)');
+  const ctes = base.replace(grantJoin, '').slice(0, base.replace(grantJoin, '').indexOf("SELECT 'grant'"));
+  if (!ctes.includes('run_last AS (')) throw new Error('variant: production statement changed shape (ctes)');
+  return `${ctes}SELECT s.workspace_id, s.project_id, a.run_no, l.last_id, a.source_id, a.source_ref, a.kind, l.last_state, l.last_obs, l.last_payload,
+       f.first_id, f.first_obs, a.first_rcv, a.last_rcv, a.n, a.states, a.retained, f.first_row_rcv, l.last_row_rcv
+  FROM run_agg a
+  JOIN run_first f USING (${IDENT}, run_no)
+  JOIN run_last l USING (${IDENT}, run_no)
+  JOIN sources s ON s.id = a.source_id`;
+}
+
+const MARKER_SELECT = `SELECT role, m.id, m.source_id, m.source_ref, m.kind, m.state, m.obs, m.rcv, m.payload, s.workspace_id, s.project_id FROM (
+  SELECT 'failure'::text AS role, id, source_id, source_ref, kind, state, obs, rcv, payload FROM failures
+  UNION ALL SELECT 'list_page', id, source_id, source_ref, kind, state, obs, rcv, payload FROM pages
+  UNION ALL SELECT 'scope_item', id, source_id, source_ref, kind, state, obs, rcv, payload FROM scope_items
+  UNION ALL SELECT 'ambiguous', id, source_id, source_ref, kind, state, obs, rcv, payload FROM ambiguous
+) m JOIN sources s ON s.id = m.source_id`;
+
+/** The statement that fills measure_markers for one project ($2): the latest marker rows per key, reader-independent like the runs. */
+export function materializeMarkersSql(base: string = MEMORY_READ_SQL): string {
+  const runs = materializeRunsSql(base);
+  // `heads` joins granted only to read the provider; take it from sources instead (no reader).
+  const headsJoin = 'FROM v JOIN granted gr ON gr.source_id = v.source_id\n   WHERE gr.provider';
+  if (!runs.includes(headsJoin)) throw new Error('variant: production statement changed shape (heads)');
+  const replaced = runs.replace(headsJoin, 'FROM v JOIN sources gr ON gr.id = v.source_id\n   WHERE gr.provider');
+  const ctes = replaced.slice(0, replaced.indexOf('SELECT s.workspace_id'));
+  return ctes + MARKER_SELECT;
+}
+
+/** The read over measure_runs: the production statement with the run pipeline replaced; `cap` keeps the newest runs per item. */
+export function runsTableSql(cap: number | null, markersCached = false, base: string = MEMORY_READ_SQL): string {
+  const [head, tail] = cut(base, 'items AS (', 'failures AS (', 'items..failures');
+  const runsCte = `runs_c AS (
+  SELECT r.*, row_number() OVER (PARTITION BY r.source_id, r.source_ref, r.kind ORDER BY r.run_no DESC) AS rn
+    FROM measure_runs r
+    JOIN granted gr ON gr.source_id = r.source_id
+   WHERE r.project_id = $2 AND r.kind = ANY($4::text[])
+     -- purge horizons ($5, $6) are not modelled by the prototype; referenced so the parameter list stays the production one
+     AND cardinality($5::uuid[]) = cardinality($6::timestamptz[])
+),
+`;
+  const withRuns = head + runsCte + tail;
+  const [h2, t2] = cut(withRuns, "SELECT 'run'", "UNION ALL\nSELECT 'failure'", 'run select');
+  const select = `SELECT 'run', last_id, source_id, source_ref, kind, last_state, last_obs, NULL, last_payload,
+       first_id, first_obs, first_rcv, last_rcv, n, states, retained, first_row_rcv, last_row_rcv
+  FROM runs_c${cap === null ? '' : ` WHERE rn <= ${Math.trunc(cap)}`}
+`;
+  if (!markersCached) return h2 + select + t2;
+  const [h3] = cut(h2, 'failures AS (', "SELECT 'grant'", 'marker ctes');
+  const markersCte = `markers_c AS (
+  SELECT m.* FROM measure_markers m JOIN granted gr ON gr.source_id = m.source_id
+   WHERE m.project_id = $2
+)
+`;
+  const lastComma = h3.lastIndexOf('),');
+  const ctes = h3.slice(0, lastComma) + '),\n' + markersCte;
+  const grantSelect = h2.slice(h2.indexOf("SELECT 'grant'"));
+  return `${ctes}${grantSelect}${select}UNION ALL
+SELECT role, id, source_id, source_ref, kind, state, obs, rcv, payload, ${'NULL, '.repeat(8)}NULL FROM markers_c
+`;
+}
+
+/** A pool whose clients run `swap` instead of the production statement; everything else passes through. */
+function swappingPool(pool: pg.Pool, swap: string): pg.Pool {
+  return new Proxy(pool, {
+    get(target, prop, receiver) {
+      if (prop !== 'connect') return Reflect.get(target, prop, receiver);
+      return async () => {
+        const client = await target.connect();
+        return new Proxy(client, {
+          get(c, p, r) {
+            if (p !== 'query') return Reflect.get(c, p, r);
+            return (text: unknown, ...rest: unknown[]) => (c.query as (...a: unknown[]) => unknown)(text === MEMORY_READ_SQL ? swap : text, ...rest);
+          },
+        });
+      };
+    },
+  });
+}
+
+async function materializeRuns(h: StoreHarness): Promise<{ seconds: number; runs: number; markers: number; tableMb: number }> {
+  const t0 = performance.now();
+  const c = await h.db.admin.connect();
+  try {
+    await c.query('SET search_path = kawalys, public');
+    await c.query(`CREATE TABLE measure_runs (
+      workspace_id uuid NOT NULL, project_id uuid NOT NULL, run_no bigint NOT NULL,
+      last_id uuid NOT NULL, source_id uuid NOT NULL, source_ref text NOT NULL, kind text NOT NULL,
+      last_state text NOT NULL, last_obs timestamptz NOT NULL, last_payload jsonb NOT NULL,
+      first_id uuid NOT NULL, first_obs timestamptz NOT NULL, first_rcv timestamptz NOT NULL, last_rcv timestamptz NOT NULL,
+      n int NOT NULL, states text[] NOT NULL, retained boolean NOT NULL, first_row_rcv timestamptz NOT NULL, last_row_rcv timestamptz NOT NULL)`);
+    const { rows: projects } = await c.query<{ id: string }>('SELECT id FROM projects');
+    for (const p of projects) {
+      await c.query(`INSERT INTO measure_runs ${materializeRunsSql()}`, [null, p.id, null, ITEM_KIND_LIST, [], []]);
+    }
+    await c.query(`CREATE TABLE measure_markers (
+      role text NOT NULL, id uuid NOT NULL, source_id uuid NOT NULL, source_ref text NOT NULL, kind text, state text NOT NULL,
+      obs timestamptz NOT NULL, rcv timestamptz NOT NULL, payload jsonb NOT NULL, workspace_id uuid NOT NULL, project_id uuid NOT NULL)`);
+    for (const p of projects) {
+      await c.query(`INSERT INTO measure_markers ${materializeMarkersSql()}`, [null, p.id, null, ITEM_KIND_LIST, [], []]);
+    }
+    await c.query('CREATE INDEX measure_markers_read ON measure_markers (project_id, source_id)');
+    await c.query('ALTER TABLE measure_markers ENABLE ROW LEVEL SECURITY');
+    await c.query('ALTER TABLE measure_markers FORCE ROW LEVEL SECURITY');
+    await c.query('CREATE POLICY measure_markers_scope ON measure_markers USING (workspace_id = current_workspace_id())');
+    await c.query('GRANT SELECT ON measure_markers TO kawalys_app');
+    await c.query('ANALYZE measure_markers');
+    await c.query('CREATE INDEX measure_runs_read ON measure_runs (project_id, source_id, source_ref, kind, run_no DESC)');
+    await c.query('ALTER TABLE measure_runs ENABLE ROW LEVEL SECURITY');
+    await c.query('ALTER TABLE measure_runs FORCE ROW LEVEL SECURITY');
+    await c.query('CREATE POLICY measure_runs_scope ON measure_runs USING (workspace_id = current_workspace_id())');
+    await c.query('GRANT SELECT ON measure_runs TO kawalys_app');
+    await c.query('ANALYZE measure_runs');
+    const { rows } = await c.query<{ n: string; m: string; t: string }>(`SELECT (SELECT count(*) FROM measure_runs)::text AS n, (SELECT count(*) FROM measure_markers)::text AS m, (pg_total_relation_size('measure_runs') + pg_total_relation_size('measure_markers'))::text AS t`);
+    return { seconds: round((performance.now() - t0) / 1000), runs: Number(rows[0]!.n), markers: Number(rows[0]!.m), tableMb: Math.round(Number(rows[0]!.t) / 1048576) };
+  } finally {
+    c.release();
+  }
+}
+
+/** The projection minus what a cap is allowed to change (historyInfo, and the fingerprint that covers the run ids). */
+const comparable = (p: MemoryProjection, dropHistoryInfo: boolean): string =>
+  JSON.stringify(dropHistoryInfo ? { ...p, fingerprint: undefined, items: p.items.map((i) => ({ ...i, historyInfo: undefined })) } : p);
+
+async function runRunsTable(h: StoreHarness, s: Seeded, userId: string): Promise<Record<string, unknown>> {
+  const build = await materializeRuns(h);
+  const q = { workspaceId: s.workspaceId, userId, projectId: s.projectId };
+  const repos = {
+    production: new MemoryRepository(h.db.app),
+    uncapped: new MemoryRepository(swappingPool(h.db.app, runsTableSql(null))),
+    capped: new MemoryRepository(swappingPool(h.db.app, runsTableSql(HISTORY_CAP))),
+    cached: new MemoryRepository(swappingPool(h.db.app, runsTableSql(HISTORY_CAP, true))),
+  } as const;
+  // One request for every projection, so clocks cannot differ between the compared reads.
+  const base = await repos.production.readCollapsed(q);
+  const req = { effectiveAt: base.now, knownAt: base.knownAt, evaluationAt: base.now, now: base.now, activeGrantIds: base.activeGrantIds, sources: base.sources };
+  const reads = { production: base, uncapped: await repos.uncapped.readCollapsed(q), capped: await repos.capped.readCollapsed(q), cached: await repos.cached.readCollapsed(q) };
+  const proj = { production: projectCollapsed(reads.production.input, req), uncapped: projectCollapsed(reads.uncapped.input, req), capped: projectCollapsed(reads.capped.input, req), cached: projectCollapsed(reads.cached.input, req) };
+  const canon = (r: MemoryRead) => [...r.input.runs, ...r.input.markers].map((x) => JSON.stringify(x)).sort(byCodeUnit);
+  const [cp, cu] = [canon(reads.production), canon(reads.uncapped)];
+  const canonM = (r: MemoryRead) => r.input.markers.map((x) => JSON.stringify(x)).sort(byCodeUnit).join('\n');
+  const checks = {
+    uncappedRowsIdentical: cp.length === cu.length && cp.every((x, i) => x === cu[i]),
+    uncappedProjectionIdentical: comparable(proj.production, false) === comparable(proj.uncapped, false),
+    cappedProjectionIdenticalExceptHistoryInfo: comparable(proj.production, true) === comparable(proj.capped, true),
+    cachedMarkersIdentical: canonM(reads.production) === canonM(reads.cached),
+    cachedProjectionIdenticalExceptHistoryInfo: comparable(proj.production, true) === comparable(proj.cached, true),
+    cappedRunsTotalMatches: proj.capped.items.every((it, i) => it.historyInfo.runsTotal === proj.production.items[i]!.historyInfo.runsTotal),
+  };
+  const timeRead = async (repo: MemoryRepository) => {
+    const a = performance.now();
+    const r = await repo.readCollapsed(q);
+    const b = performance.now();
+    projectCollapsed(r.input, req);
+    return { sql: b - a, total: performance.now() - a, runs: r.input.runs.length };
+  };
+  const ms: Record<'uncapped' | 'capped' | 'cached', { sql: number[]; total: number[] }> = { uncapped: { sql: [], total: [] }, capped: { sql: [], total: [] }, cached: { sql: [], total: [] } };
+  const runsReturned: Record<string, number> = { production: reads.production.input.runs.length };
+  // Production timing is the scenario's own loop (ms.total); alternate the two variants so drift hits both.
+  for (let i = 0; i < ITERATIONS; i += 1) {
+    for (const name of ['uncapped', 'capped', 'cached'] as const) {
+      const t = await timeRead(repos[name]);
+      ms[name].sql.push(t.sql);
+      ms[name].total.push(t.total);
+      runsReturned[name] = t.runs;
+    }
+  }
+  return {
+    name: 'runs-table',
+    build,
+    checks,
+    runsReturned,
+    ms: { uncapped: { sql: stats(ms.uncapped.sql), total: stats(ms.uncapped.total) }, capped: { sql: stats(ms.capped.sql), total: stats(ms.capped.total) }, cached: { sql: stats(ms.cached.sql), total: stats(ms.cached.total) } },
+    uncappedPlan: await explain(h, s, userId, undefined, runsTableSql(null)),
+    cappedPlan: await explain(h, s, userId, undefined, runsTableSql(HISTORY_CAP)),
+    cachedPlan: await explain(h, s, userId, undefined, runsTableSql(HISTORY_CAP, true)),
+  };
+}
+
 async function runScenario(s: Scenario): Promise<Record<string, unknown>> {
   const ids = freshIds();
   const h = await startStore(ids, { provider: 'github', externalRef: 'kemetra-labs/backstage-os' });
@@ -322,7 +527,10 @@ async function runScenario(s: Scenario): Promise<Record<string, unknown>> {
     }
     const plan = await explain(h, reader, ids.owner);
     const planWorkMem256 = await explain(h, reader, ids.owner, '256MB');
-    const variant = process.env.MEASURE_VARIANT === 'single-pass' ? await runVariant(h, reader, ids.owner) : undefined;
+    const variant =
+      process.env.MEASURE_VARIANT === 'single-pass' ? await runVariant(h, reader, ids.owner)
+      : process.env.MEASURE_VARIANT === 'runs-table' ? await runRunsTable(h, reader, ids.owner)
+      : undefined;
     if (Number(shape.items ?? 0) === 0) throw new Error(`${s.name}: the read returned no items; the seed is wrong`);
     return { scenario: s.name, description: s.description, readerRows: reader.rows, noiseRows, seedSeconds, table, shape, iterations: ITERATIONS, ms: { sql: stats(sql), project: stats(project), total: stats(total) }, plan, planWorkMem256, ...(variant ? { variant } : {}) };
   } finally {

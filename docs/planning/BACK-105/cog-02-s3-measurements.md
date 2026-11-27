@@ -92,3 +92,53 @@ The trigger is met, so the choice goes to the owner. What the numbers add:
 - **Not an option from these numbers:** serving this read on a request path (COG-07) as it is. At the pilot scale alone it is 2.8 times over the trigger.
 
 Nothing here changes the S1/S2 behavior: the read is correct and bounded in its response, and the differential tests are unchanged. This is a cost finding, and the stop condition for a slice is a returned owner decision, not a silent change.
+
+## Option A prototype (`MEASURE_VARIANT=runs-table`), 2026-11-27
+
+The cheap measurement that [cog-02-cache-proposal.md](cog-02-cache-proposal.md) section 4 asked for before any migration. **No migration and no product change:** the tables exist only in the disposable measurement database, built through the superuser pool, and `src/` is untouched (the script swaps the statement in through a proxy pool).
+
+- `measure_runs`: one row per run per source, filled from the production statement's own CTEs without the grant join (runs are reader-independent).
+- `measure_markers`: the latest marker rows per key (`failure`, `list_page`, `scope_item`, `ambiguous`), filled the same way.
+- Both have forced RLS on `workspace_id` and SELECT for `kawalys_app`, like every workspace table. The read still joins the reader's **active grants** at read time (D4), so a revoke needs no invalidation.
+
+Three reads were measured against the S2 statement in the same scenario:
+
+| read | what comes from the cache |
+| --- | --- |
+| `uncapped` | runs, every run |
+| `capped` | runs, the 50 newest per item (`HISTORY_CAP`) |
+| `cached` | runs (50 newest per item) **and** markers |
+
+### Result
+
+| scenario | iterations | S2 total p95 | `uncapped` p95 | `capped` p95 | `cached` p50 | `cached` p95 | `cached` server exec | runs returned (S2 / `cached`) | build of both tables |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `pilot-7d` | 8 | 1.42 s | 0.49 s | 0.48 s | 40 ms | **69 ms** | 2.9 ms | 961 / 961 | 1.7 s |
+| `retention-180d` | 3 | 36.9 s | 11.9 s | 11.3 s | 312 ms | **321 ms** | 69 ms | 21,721 / 6,001 | 76 s (43,442 runs, both workspaces) |
+| `retention-180d-hot` | 3 | 40.4 s | 15.1 s | 12.0 s | 532 ms | **572 ms** | 431 ms | 129,715 / 6,001 | 79 s (259,430 runs) |
+
+Totals include the projector; "server exec" is `EXPLAIN (ANALYZE)`. With 3 iterations p95 is the maximum.
+
+### Equality checks (same request clocks for every projection)
+
+| check | pilot | 180d | 180d hot |
+| --- | --- | --- | --- |
+| `uncapped` rows equal the S2 rows (runs and markers, both directions) | yes | yes | yes |
+| `uncapped` projection equals the S2 projection, fingerprint included | yes | yes | yes |
+| `cached` markers equal the S2 markers | yes | yes | yes |
+| `capped` and `cached` projections equal S2 except `historyInfo` and the fingerprint | yes | yes | yes |
+| `capped` `runsTotal` equals S2 | yes | **no** | **no** |
+
+### What the numbers say
+
+1. **Caching runs alone is not enough.** `capped` still costs 11 to 12 s at 180 days: the marker CTEs (`scope_items`, `failures`, `pages`, `heads`) still read and sort every row (`Sort` of 2,090,880 rows, 7 to 8 s exclusive). The proposal's option A cached only runs. **It must cache the markers too.** They are tiny (5 rows on the pilot, 10 at 180 days for two workspaces).
+2. **With both cached, the daily-edit 180-day case meets the 500 ms bar** (321 ms p95, about 115 times faster), and the pilot is at 69 ms (about 20 times).
+3. **The hot case does not yet** (572 ms p95). The server still reads every run of the reader and sorts them (129,715 rows, 280 ms exclusive) to pick the 50 newest per item with `row_number()`. The index on `(project_id, source_id, source_ref, kind, run_no DESC)` is not used for that. Likely fix, **not measured**: a per-identity `LATERAL ... ORDER BY run_no DESC LIMIT 50` over an identity list, so the read touches 50 runs per item instead of all of them.
+4. **The cap breaks `runsTotal`**, as D3a predicted: the projector counts the runs it receives. A real cache must store the full-set aggregates per identity (`runsTotal`, and the current revision as of an effective time) and return them with the capped runs. The prototype does not, which is why that one check fails; every other part of the projection is equal.
+5. **A full rebuild is cheap enough for a backfill or a repair command**: 76 to 79 s for 4.25 million evidence rows (both workspaces).
+
+### What the prototype does not model
+
+Maintenance in `ingest()` (option A's real cost, and its concurrency), out-of-order rows, `knownAt` in the past (the cache holds the latest state only), purge horizons, revocation tests against the cache tables, and the aggregates from result 4. These stay in the tests the proposal lists in its section 5, before any migration.
+
+Command: `MEASURE_VARIANT=runs-table npm run measure:memory` (same environment variables as above). Host and seed as in the method table.
