@@ -175,20 +175,54 @@ The `pki` rotation commands for the certificate and the CA were run locally on a
   ```
 - **Descope ids** (owner): change `KAWALYS_DESCOPE_PROJECT_ID` or `KAWALYS_OWNER_SUBJECT` in `.env.pilot`, then `dc up -d --force-recreate bff`. The owner binding in the database is fixed at first sign-in; a different owner is refused until an operator moves the binding (`server/README.md`, "Database owner directory").
 
-## 11. Using a managed Postgres instead `[owner decision, not built, NOT RUN]`
+## 11. Managed Postgres (Neon) profile `[built and measured locally (BACK-115); NOT RUN on a host]`
 
-For Neon, read `docs/planning/BACK-114/neon-pg18-readiness.md` first. A Neon project cannot change major version, so 18.x needs a new project, and the current 3-second health check would keep Neon's compute from ever suspending (BACK-115). **For Neon, these points override the generic bullets below:**
+The managed database exists: Neon project `kawalys-pg18`, PostgreSQL 18.7, Frankfurt, provisioned, migrated and verified (BACK-114, `docs/planning/BACK-114/neon-pg18-readiness.md`, section 9). Use `deploy/pilot/compose.managed.yml` instead of `compose.yml`: it runs `web`, `bff` and the on-demand `ops` only. There is no `postgres`, `pki` or database volume, and only `web` publishes ports (80/443). In the commands below, `dcm` means `docker compose -p kawalys-pilot -f deploy/pilot/compose.managed.yml --env-file /path/to/.env.pilot`.
 
-- The two runtime URLs (`bff`) may use Neon's **pooled** endpoint; BACK-55 proved RLS isolation through it. `KAWALYS_ADMIN_DATABASE_URL` (`ops`) must stay on the **direct** endpoint (`db-admin` refuses `-pooler` hosts).
-- Allowlisting the host's address needs Neon IP Allow, which is Scale-only. On Launch there is no allowlist step. Protection rests on `sslmode=verify-full`, strong role passwords and role isolation. That trade-off is the owner's to accept (readiness doc, section 3).
-- Provision with `--plaintext-passwords` (Neon refuses pre-hashed ones), then rotate the role passwords.
+**Env file.** Start from `deploy/pilot/env.managed.example`.
+- `KAWALYS_DATABASE_URL_APP` and `KAWALYS_DATABASE_URL_AUTH`: the whole URLs, with `sslmode=verify-full&channel_binding=require`. Neon's **pooled** host is fine here; BACK-55 and BACK-114 proved RLS isolation through it.
+- The BFF refuses any non-loopback URL without `verify-full`. Neon's certificate chains to public roots, so no extra CA is needed. A provider with a private CA needs an override file that mounts its CA and sets `NODE_EXTRA_CA_CERTS`.
+- Copy the passwords from the Neon console (they are stored there), never from chat or the repo.
 
-Remove `pki` and `postgres` from `compose.yml`, with their volumes `pg-data`, `pg-tls` and `pki-ca`, and the `depends_on: postgres` entries. Then:
+**Provision and migrate** (only when the schema changes; `kawalys-pg18` is already done):
+- Add `KAWALYS_ADMIN_DATABASE_URL` (Neon's **direct** host; `db-admin` refuses `-pooler`) and the three `KAWALYS_ROLE_PASSWORD_*` to the env file.
+- Run `dcm --profile ops run --rm ops migrate --apply`. A brand-new project also needs `provision --apply --plaintext-passwords` first; Neon refuses pre-hashed passwords.
+- Then **remove those four lines** from the env file. The running stack must not hold the owner-level credential; `bff` and `web` start without them.
 
-- Create the database and an admin login at the provider. Point `KAWALYS_ADMIN_DATABASE_URL` (`ops`) and the two runtime URLs (`bff`) at the provider's **direct** endpoint, with `sslmode=verify-full`. In `compose.yml` those URLs are built for host `postgres`, so they must be edited or turned into variables.
-- Trust the provider's CA: mount its root certificate and point `NODE_EXTRA_CA_CERTS` at it for `bff` and `ops`. A provider with a public CA may need nothing.
-- `provision` and `migrate` run the same way. Allow only the host's address at the provider.
-- Backups and rotation of the database and its certificate move to the provider; sections 8 and 10 (database parts) no longer apply.
+**Deploy:** `dcm build`, then `dcm up -d bff web`.
+
+**Readiness gate (required before calling a deploy or upgrade done):**
+
+```bash
+for i in $(seq 1 10); do curl -fsS https://<site>/api/health && break; sleep 3; done
+```
+
+It must print `"ready":true`. Retry because a sleeping Neon compute wakes on the first query (measured below). A first answer of 503 right after a wake is expected; ten 503s are not. If it never turns ready, roll back (section 9).
+
+**Liveness versus readiness.**
+- The `bff` container healthcheck polls `/process` every 3 s. That is process liveness and never touches the database (BACK-115). So `docker compose ps` showing `healthy` means the process is up, **not** that the database is reachable. Readiness is `/api/health` only.
+- Database pools close idle connections after 10 s, so nothing holds the compute awake between requests.
+
+**Measured** (27 Nov 2026, the BFF built from this branch run locally against `kawalys-pg18` over the pooled host, verify-full):
+
+| Measurement | Result |
+| --- | --- |
+| BFF boot, including waking the compute and the role checks | 4.4 s |
+| `/health`, warm | about 70 ms |
+| Idle: only `/process` polled every 3 s for 5.5 min | 107 of 107 polls OK; the compute **suspended** 5 min 13 s after the last query (Neon's 300 s timeout) |
+| First `/health` after the suspend (wake-up) | 1.78 s, `ready:true`; then about 70 ms |
+
+The wake-up is close to the readiness probe's 2 s bound. A slower wake gives one 503, which is why the gate retries. **Cost:** with idle suspend working, compute is billed only while the pilot is used. That is the readiness doc's scale-to-zero case (about $4 a month), not the always-on case (about $20).
+
+**Backup and restore.** Neon keeps 7 days of history; point-in-time restore was drilled in BACK-114. To restore: create a branch from `main` at a timestamp before the incident, check it with SQL, then either point the runtime URLs at that branch's host, or ask the owner to make it the default branch. `pg_dump` over the direct host (section 8 commands, with the managed URL) remains a portable extra copy.
+
+**Rotation.**
+- Reset a role's password in the Neon console or API. Update the matching URL in the env file, then `dcm up -d bff`. The old password stops working at once, so expect a few seconds of 503 on `/api/health`.
+- Rotate after anyone has seen a password.
+
+**Rollback.** Code: section 9 with `dcm`. Database: migrations are forward only; restore a branch as above.
+
+**Network.** IP Allow (an allowlist of host addresses) is a Neon Scale feature. On Launch there is no allowlist; protection is TLS verify-full, strong role passwords and role isolation (readiness doc, section 3).
 
 ## 12. Teardown
 
