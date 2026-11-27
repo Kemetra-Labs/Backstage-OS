@@ -131,7 +131,8 @@ describe('memory module is pure and not exposed', () => {
   it('nothing else in src imports the memory module (no route, controller or module wiring)', () => {
     // COG-03 retrieval (BACK-106) and COG-04 reasoning (BACK-107) are the pure consumers; their own
     // guards keep them pure and unexposed.
-    const consumers = [join(SRC, 'retrieval'), join(SRC, 'reasoning')];
+    // COG-05 learning (BACK-108) imports canonical hashing only; its guard keeps it pure and unwired.
+    const consumers = [join(SRC, 'retrieval'), join(SRC, 'reasoning'), join(SRC, 'learning')];
     const outside = files(SRC).filter((f) => !f.startsWith(MEMORY) && !consumers.some((c) => f.startsWith(c)));
     const offenders = outside.filter((f) => /(?:from\s*|import\s*\(\s*|^\s*import\s*)['"`][^'"`]*\/memory\//m.test(readFileSync(f, 'utf8')));
     expect(offenders).toEqual([]);
