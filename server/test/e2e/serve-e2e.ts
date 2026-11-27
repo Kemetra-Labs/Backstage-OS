@@ -11,6 +11,7 @@ import { SEED, seedLocal } from '../../src/ops/local-stack';
 import { FakeIdentityVerifier, OWNER } from '../auth/_helpers';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
 import { effectiveE2eEnv } from './e2e-env';
+import { approveAll } from '../evidence/approve-all-policy';
 
 const HOST = '127.0.0.1';
 const PORT = 8787;
@@ -27,7 +28,7 @@ async function seedForeign(db: KawalysDb, ownerUserId: string): Promise<{ invest
     await c.query('INSERT INTO workspaces (id, owner_user_id) VALUES ($1, $2)', [ws, user]);
     await c.query(`INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`, [ws, user]);
   });
-  const repo = new EvidenceRepository(db.app);
+  const repo = new EvidenceRepository(db.app, approveAll());
   const projectId = await repo.createProject(ws, user, { key: 'foreign-project', name: FOREIGN_PROJECT });
   const investigationId = await repo.createInvestigation(ws, user, { projectId, title: 'Foreign investigation (synthetic)' });
   const sourceId = await repo.connectSource(ws, user, { projectId, provider: 'github', externalRef: 'foreign-org/foreign-repo' });

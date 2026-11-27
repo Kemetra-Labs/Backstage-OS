@@ -8,7 +8,7 @@ import type { MemoryRow } from '../../src/memory/memory.types';
 import { evaluate } from '../../src/reasoning/reasoning.evaluator';
 import type { ReasoningInput } from '../../src/reasoning/reasoning.types';
 import { validateResult } from '../../src/reasoning/reasoning.validator';
-import { freshIds, startStore, stopStore, type StoreHarness } from '../db/store-harness';
+import { freshIds, reconnect, startStore, stopStore, type StoreHarness } from '../db/store-harness';
 import { at, jiraIssue, pr, REPO } from '../memory/memory.fixture';
 
 let h: StoreHarness;
@@ -67,7 +67,7 @@ async function withOpsRevoked<T>(f: () => Promise<T>): Promise<T> {
   try {
     return await f();
   } finally {
-    await h.repo.connectSource(ids.ws, ids.owner, { projectId: h.projectId, provider: 'jira', externalRef: OPS_REF });
+    await reconnect(h, ids.owner, opsJira);
   }
 }
 

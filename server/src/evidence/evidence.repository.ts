@@ -22,6 +22,7 @@ import {
   type SourceProvider,
 } from './evidence.types';
 import { decodeDecisionCursor, encodeDecisionCursor, InvalidCursorError, type DecisionCursorScope, type DecisionPosition } from './decision-cursor';
+import { Reauthorization, type SourceApprovalPolicy, type SourceIdentity } from './source-approval';
 import { PROJECT_VISIBLE } from './visibility';
 
 export interface ObservationInput {
@@ -134,9 +135,62 @@ function assertObservation(o: ObservationInput): void {
   if (typeof o.payload !== 'object' || o.payload === null || Array.isArray(o.payload)) throw new TypeError('payload must be an object');
 }
 
+/**
+ * Membership in an approved set. Always `.some`: this is the only way the repository reads a set, so a test policy
+ * can answer for every identity (test/evidence/approve-all-policy.ts) while the configured policy is a plain list.
+ */
+const isApproved = (set: readonly SourceIdentity[], id: SourceIdentity): boolean =>
+  set.some((s) => s.provider === id.provider && s.externalRef === id.externalRef);
+
+/** Serialises every identity decision for one project. Needs no table privilege (the app role cannot UPDATE projects). */
+const lockProjectIdentity = (c: pg.PoolClient, workspaceId: string, projectId: string) =>
+  c.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`source-identity:${workspaceId}:${projectId}`]);
+
+/** Every source the project already holds, active or revoked, is in the approved set. */
+async function historyApproved(c: pg.PoolClient, projectId: string, approvedSet: readonly SourceIdentity[]): Promise<boolean> {
+  const { rows } = await c.query<{ provider: SourceProvider; external_ref: string }>('SELECT provider, external_ref FROM sources WHERE project_id = $1', [projectId]);
+  return rows.every((r) => isApproved(approvedSet, { provider: r.provider, externalRef: r.external_ref }));
+}
+
+/**
+ * Inserts the source. Two first connects of one identity in different projects hold different advisory locks, so the
+ * loser meets the unique (workspace, provider, external_ref) index: that is the same refusal as "bound elsewhere".
+ */
+async function insertSource(c: pg.PoolClient, workspaceId: string, projectId: string, id: SourceIdentity): Promise<string> {
+  try {
+    const { rows } = await c.query<{ id: string }>(
+      'INSERT INTO sources (workspace_id, project_id, provider, external_ref) VALUES ($1, $2, $3, $4) RETURNING id',
+      [workspaceId, projectId, id.provider, id.externalRef],
+    );
+    return rows[0]!.id;
+  } catch (err) {
+    if ((err as { code?: string }).code === '23505') throw new NotVisibleError('source not visible');
+    throw err;
+  }
+}
+
+async function hasActiveGrantIn(c: pg.PoolClient, sourceId: string, user: string): Promise<boolean> {
+  const { rowCount } = await c.query('SELECT 1 FROM source_grants WHERE source_id = $1 AND user_id = $2 AND revoked_at IS NULL', [sourceId, user]);
+  return (rowCount ?? 0) > 0;
+}
+
+async function projectOfSource(c: pg.PoolClient, sourceId: string): Promise<string> {
+  return (await sourceIdentityOf(c, sourceId)).projectId;
+}
+
+async function sourceIdentityOf(c: pg.PoolClient, sourceId: string): Promise<{ projectId: string; identity: SourceIdentity }> {
+  const { rows } = await c.query<{ project_id: string; provider: SourceProvider; external_ref: string }>(
+    'SELECT project_id, provider, external_ref FROM sources WHERE id = $1',
+    [sourceId],
+  );
+  if (!rows[0]) throw new NotVisibleError('source not visible');
+  return { projectId: rows[0].project_id, identity: { provider: rows[0].provider, externalRef: rows[0].external_ref } };
+}
+
 export class EvidenceRepository {
   constructor(
     private readonly pool: pg.Pool,
+    private readonly policy: SourceApprovalPolicy,
     private readonly audit: AuditWriter = insertAuditRowInTransaction,
   ) {}
 
@@ -172,40 +226,70 @@ export class EvidenceRepository {
   }
 
   /**
-   * Connect a source for `actor` and grant `actor` read access to its evidence.
-   * An existing source is reused only in the same project and only by a user who held a grant
-   * on it before (reconnecting after their own disconnect); nobody can attach themselves to a
-   * source someone else connected. An active grant makes this a no-op.
+   * FIRST connect of a source for `actor`, with a grant for `actor` (BACK-131). Everything runs in one transaction
+   * under a per-project advisory lock, and every refusal is a NotVisibleError before any write:
+   * the project must be visible to this workspace; the requested identity must be in the approved set for the
+   * project's key; every source the project already holds (active or revoked) must also be in that set, so a
+   * second identity, a replacement after revoke and a conflicting history are all refused. An identity bound in
+   * another project, or a source the actor never held, is refused. An active grant makes this a no-op. A source
+   * whose grants were all revoked is NOT reconnected here: that is reconnectSource, and only with a Reauthorization.
    */
   async connectSource(workspaceId: string, actor: string, input: { projectId: string; provider: SourceProvider; externalRef: string }): Promise<string> {
-    const externalRef = input.externalRef.trim().toLowerCase();
+    if (!UUID.test(input.projectId)) throw new NotVisibleError('source not visible');
+    const requested: SourceIdentity = { provider: input.provider, externalRef: input.externalRef.trim().toLowerCase() };
     return this.inWorkspace(workspaceId, async (c) => {
-      const existing = await c.query<{ id: string; project_id: string }>(
-        'SELECT id, project_id FROM sources WHERE provider = $1 AND external_ref = $2',
-        [input.provider, externalRef],
-      );
+      await lockProjectIdentity(c, workspaceId, input.projectId);
+      const approvedSet = await this.approvedSetOf(c, input.projectId);
+      if (!isApproved(approvedSet, requested) || !(await historyApproved(c, input.projectId, approvedSet))) throw new NotVisibleError('source not visible');
+      const existing = await c.query<{ id: string; project_id: string }>('SELECT id, project_id FROM sources WHERE provider = $1 AND external_ref = $2', [
+        requested.provider,
+        requested.externalRef,
+      ]);
       const found = existing.rows[0];
-      if (!found) {
-        const { rows } = await c.query<{ id: string }>(
-          'INSERT INTO sources (workspace_id, project_id, provider, external_ref) VALUES ($1, $2, $3, $4) RETURNING id',
-          [workspaceId, input.projectId, input.provider, externalRef],
-        );
-        const sourceId = rows[0]!.id;
-        await c.query('INSERT INTO source_grants (workspace_id, source_id, user_id) VALUES ($1, $2, $3)', [workspaceId, sourceId, actor]);
-        await this.audit(c, auditRow(workspaceId, actor, 'source.connected', 'source', sourceId));
-        return sourceId;
+      if (found) {
+        if (found.project_id !== input.projectId || !(await hasActiveGrantIn(c, found.id, actor))) throw new NotVisibleError('source not visible');
+        return found.id;
       }
-      if (found.project_id !== input.projectId) throw new NotVisibleError('source not visible');
+      const sourceId = await insertSource(c, workspaceId, input.projectId, requested);
+      await c.query('INSERT INTO source_grants (workspace_id, source_id, user_id) VALUES ($1, $2, $3)', [workspaceId, sourceId, actor]);
+      await this.audit(c, auditRow(workspaceId, actor, 'source.connected', 'source', sourceId));
+      return sourceId;
+    });
+  }
+
+  /**
+   * The only way back after the actor revoked their own grant (BACK-131). `reauth` is built from the sign-in time
+   * of the actor's current session and must be at most REAUTH_MAX_AGE_MS old (never from the future); there is no
+   * flag that skips it. The source must still be in the approved set of its project, no other identity of the
+   * project may be unapproved, and the actor must have held a grant before. A new grant row is appended (history is
+   * never updated or deleted) with a `source.reconnected` audit row. An active grant makes this a no-op.
+   */
+  async reconnectSource(workspaceId: string, actor: string, sourceId: string, reauth: Reauthorization): Promise<string> {
+    // The clock is read here, never taken from the caller; only a Reauthorization made by fromSessionIssuedAt counts.
+    if (!UUID.test(sourceId) || !Reauthorization.isGenuine(reauth) || !reauth.isFreshAt(Date.now())) throw new NotVisibleError('source not visible');
+    return this.inWorkspace(workspaceId, async (c) => {
+      await lockProjectIdentity(c, workspaceId, await projectOfSource(c, sourceId));
+      // Re-verified under the lock: nothing read before it is trusted.
+      const source = await sourceIdentityOf(c, sourceId);
+      const approvedSet = await this.approvedSetOf(c, source.projectId);
+      if (!isApproved(approvedSet, source.identity) || !(await historyApproved(c, source.projectId, approvedSet))) throw new NotVisibleError('source not visible');
       const grants = await c.query<{ active: boolean }>('SELECT revoked_at IS NULL AS active FROM source_grants WHERE source_id = $1 AND user_id = $2', [
-        found.id,
+        sourceId,
         actor,
       ]);
-      if (grants.rows.some((g) => g.active)) return found.id;
       if (grants.rows.length === 0) throw new NotVisibleError('source not visible');
-      await c.query('INSERT INTO source_grants (workspace_id, source_id, user_id) VALUES ($1, $2, $3)', [workspaceId, found.id, actor]);
-      await this.audit(c, auditRow(workspaceId, actor, 'source.reconnected', 'source', found.id));
-      return found.id;
+      if (grants.rows.some((g) => g.active)) return sourceId;
+      await c.query('INSERT INTO source_grants (workspace_id, source_id, user_id) VALUES ($1, $2, $3)', [workspaceId, sourceId, actor]);
+      await this.audit(c, auditRow(workspaceId, actor, 'source.reconnected', 'source', sourceId));
+      return sourceId;
     });
+  }
+
+  /** The approved identities for the key of project `projectId`; a project this workspace cannot see is NotVisible. */
+  private async approvedSetOf(c: pg.PoolClient, projectId: string): Promise<readonly SourceIdentity[]> {
+    const { rows } = await c.query<{ key: string }>('SELECT key FROM projects WHERE id = $1', [projectId]);
+    if (!rows[0]) throw new NotVisibleError('source not visible');
+    return this.policy.approvedIdentities(rows[0].key);
   }
 
   /** Revoke `actor`'s grant; effective on the next read. Others' grants are unaffected. */

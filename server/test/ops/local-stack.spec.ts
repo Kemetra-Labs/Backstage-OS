@@ -15,6 +15,7 @@ import {
 } from '../../src/ops/local-stack';
 import { MIGRATIONS_DIR } from '../db/kawalys-db';
 import { startPgContainer, stopPgContainer, type PgContainer } from '../db/pg-container';
+import { approveAll } from '../evidence/approve-all-policy';
 
 let base: PgContainer | undefined;
 let app: pg.Pool;
@@ -60,7 +61,7 @@ describe('local seed (synthetic data, repository layer)', () => {
   });
 
   it('is visible through the repository read functions for the owner only (grants and RLS still apply)', async () => {
-    const repo = new EvidenceRepository(app);
+    const repo = new EvidenceRepository(app, approveAll());
     expect(await repo.list(first.workspaceId, first.userId, { sourceId: first.sourceId })).toHaveLength(5);
     expect(await repo.list(first.workspaceId, first.userId, { investigationId: first.investigationId })).toHaveLength(3);
     // Another user id in the same workspace has no grant: nothing, not even the decision.

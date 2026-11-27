@@ -6,6 +6,8 @@ import { EvidenceRepository, type ObservationInput } from '../../src/evidence/ev
 import type { SourceProvider } from '../../src/evidence/evidence.types';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from './kawalys-db';
 import { sqlState } from './pg-container';
+import { Reauthorization } from '../../src/evidence/source-approval';
+import { approveAll } from '../evidence/approve-all-policy';
 
 export interface StoreIds {
   readonly owner: string;
@@ -37,7 +39,7 @@ export async function startStore(ids: StoreIds, source?: { provider: SourceProvi
   await db.admin.query('INSERT INTO kawalys.users (id) VALUES ($1), ($2)', [ids.owner, ids.stranger]);
   await makeWorkspace(db, ids.ws, ids.owner);
   await makeWorkspace(db, ids.otherWs, ids.owner);
-  const repo = new EvidenceRepository(db.app);
+  const repo = new EvidenceRepository(db.app, approveAll());
   let projectId = '';
   let sourceId = '';
   if (source) {
@@ -46,6 +48,10 @@ export async function startStore(ids: StoreIds, source?: { provider: SourceProvi
   }
   return { ...ids, db, repo, projectId, sourceId };
 }
+
+/** Re-grants `actor` a source they revoked, with a fresh reauthorization (BACK-131: connectSource no longer reconnects). */
+export const reconnect = (h: StoreHarness, actor: string, sourceId: string): Promise<string> =>
+  h.repo.reconnectSource(h.ws, actor, sourceId, Reauthorization.fromSessionIssuedAt(Date.now()));
 
 export const stopStore = (h: StoreHarness | undefined): Promise<void> => stopKawalysDb(h?.db);
 

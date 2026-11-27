@@ -12,6 +12,7 @@ import { happyScript as confluenceScript, ScriptedTransport as ConfluenceTranspo
 import { happyScript as githubScript, OWNER_REPO, ScriptedTransport as GitHubTransport } from '../connectors/github/github.fixture';
 import { happyScript as jiraScript, NOW, ScriptedTransport as JiraTransport, SITE } from '../connectors/jira/jira.fixture';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
+import { approveAll } from '../evidence/approve-all-policy';
 
 let db: KawalysDb | undefined;
 let evidence: EvidenceRepository;
@@ -30,7 +31,7 @@ beforeAll(async () => {
     await c.query('INSERT INTO workspaces (id, owner_user_id) VALUES ($1, $2)', [ws, owner]);
     await c.query(`INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`, [ws, owner]);
   });
-  evidence = new EvidenceRepository(db.app);
+  evidence = new EvidenceRepository(db.app, approveAll());
   portfolio = new PortfolioRepository(db.app);
 
   mixed = await evidence.createProject(ws, owner, { key: 'a-mixed', name: 'GitHub and Jira' });

@@ -8,7 +8,7 @@ import { MemoryRepository, type MemoryReadInput } from '../../src/memory/memory.
 import type { MemoryProjection, MemoryRow } from '../../src/memory/memory.types';
 import { related, relationships } from '../../src/retrieval/retrieval.relations';
 import { search } from '../../src/retrieval/retrieval.search';
-import { freshIds, startStore, stopStore, type StoreHarness } from '../db/store-harness';
+import { freshIds, reconnect, startStore, stopStore, type StoreHarness } from '../db/store-harness';
 import { at, GH, JIRA, pr, repo, REPO } from '../memory/memory.fixture';
 import { jira } from './retrieval.fixture';
 
@@ -93,7 +93,7 @@ describe('retrieval follows the reader\'s grants (R1, R6)', () => {
       ]);
       expect(related(p, { sourceId: jiraSource, sourceRef: BACK7_REF, kind: 'jira_issue' }).outcome).toBe('not-found');
     } finally {
-      await h.repo.connectSource(ids.ws, ids.owner, { projectId: h.projectId, provider: 'jira', externalRef: JIRA_REF });
+      await reconnect(h, ids.owner, jiraSource);
     }
   });
 
@@ -101,13 +101,13 @@ describe('retrieval follows the reader\'s grants (R1, R6)', () => {
     await h.repo.disconnectSource(ids.ws, ids.owner, jiraSource);
     const before = outputs(await memory.read(query()));
     // Make BACK-404 exist and change BACK-7, while the source stays hidden from the reader.
-    await h.repo.connectSource(ids.ws, ids.owner, { projectId: h.projectId, provider: 'jira', externalRef: JIRA_REF });
+    await reconnect(h, ids.owner, jiraSource);
     await ingest(jiraSource, [jira('BACK-404', 'Rollout checklist', 'j404'), jira('BACK-7', 'Session timeout policy v2', 'j7b', at('11:30'))]);
     await h.repo.disconnectSource(ids.ws, ids.owner, jiraSource);
     try {
       expect(outputs(await memory.read(query()))).toBe(before);
     } finally {
-      await h.repo.connectSource(ids.ws, ids.owner, { projectId: h.projectId, provider: 'jira', externalRef: JIRA_REF });
+      await reconnect(h, ids.owner, jiraSource);
     }
   });
 

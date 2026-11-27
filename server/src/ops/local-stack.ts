@@ -20,6 +20,7 @@ import type { OwnerIdentity } from '../auth/identity/identity-directory';
 import { WorkspaceResolver } from '../auth/workspace-resolver';
 import { EvidenceRepository, type ObservationInput } from '../evidence/evidence.repository';
 import type { EvidenceRecord } from '../evidence/evidence.types';
+import type { SourceApprovalPolicy } from '../evidence/source-approval';
 import { roleConnectionString } from './db-admin-config';
 
 /** Role passwords for the local stack; generated per machine by local-credentials.ts, never hard-coded. */
@@ -45,6 +46,11 @@ export const SEED = {
   repository: 'example-org/demo-storefront',
   investigationTitle: 'Checkout build failures on main (synthetic)',
 } as const;
+
+/** Approves only the synthetic seed repository, for the seed project key. Nothing else can be connected here. */
+const seedApprovalPolicy = (): SourceApprovalPolicy => ({
+  approvedIdentities: (projectKey) => (projectKey === SEED.projectKey ? [{ provider: 'github', externalRef: SEED.repository }] : []),
+});
 
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
 
@@ -179,7 +185,7 @@ export async function seedLocal(pools: LocalPools, owner: OwnerIdentity = LOCAL_
   if (!principal) throw new Error('local seed: no owner workspace');
   const ws = principal.workspaceId;
   const actor = user.userId;
-  const repo = new EvidenceRepository(pools.app);
+  const repo = new EvidenceRepository(pools.app, seedApprovalPolicy());
   const lookup = <T extends pg.QueryResultRow>(sql: string, params: unknown[]) =>
     runWithWorkspaceContext(pools.app, ws, async (c) => (await c.query<T>(sql, params)).rows);
 
