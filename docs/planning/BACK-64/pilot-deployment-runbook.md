@@ -76,7 +76,7 @@ dc ps
 ```
 
 - `[local, verified]` by `smoke.sh`: build, pki, postgres, provision, migrate, `up -d`, health, deny-all, hardening, database outage (with a generated env and `localhost`).
-- `provision` is **not repeatable**: it uses `CREATE ROLE`, so a second run on the same database fails. Run it once. Without `--apply` the ops commands print a dry run only.
+- `provision` is **not repeatable**: it uses `CREATE ROLE`, so a second run on the same database fails. Run it **exactly once**. It creates the roles one at a time, so a failure part-way leaves some roles behind and a re-run then fails on the first one. Recovery: on a fresh install with no data, `dc down -v` and start again from `dc build`. Otherwise, as `kawalys_admin` in `psql`, drop the partially created roles (`DROP ROLE kawalys_migrator, kawalys_app, kawalys_auth` as far as they exist, after dropping anything they own) and re-run. Not tested. Without `--apply` the ops commands print a dry run only.
 - `NODE_ENV` defaults to production in the image. Production refuses to start without both `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` (fail closed). So until the owner has the Descope project, `bff` will not start on a real host. That is by design; only `smoke.sh` sets development, to prove the rest.
 - The web image is built with `npx vite build` and `VITE_KAWALYS_LIVE=1`: the app calls `/api` on its own origin.
 - The BFF requires `sslmode=verify-full` for any non-loopback database host. `pki` creates a CA in volume `pki-ca` (mounted only by `pki`) and a Postgres server certificate in volume `pg-tls` (`ca.crt`, `server.crt`, `server.key`). `bff` and `ops` trust it through `NODE_EXTRA_CA_CERTS=/pki/ca.crt`.
@@ -91,7 +91,7 @@ dc ps
 
 ```bash
 curl -fsS https://<name>/api/health                                       # 200 when the database and both roles answer
-curl -sS -o /dev/null -w '%{http_code}\n' https://<name>/api/evidence     # 404: deny-all without a session
+curl -sS -o /dev/null -w '%{http_code}\n' https://<name>/api/portfolio    # 404: deny-all without a session
 curl -fsS https://<name>/api/process                                      # liveness only
 dc logs --tail 50 bff web
 ```
@@ -118,12 +118,12 @@ Then check `/api/health`. Migrations apply forward only.
 Backup, as the admin role:
 
 ```bash
-dc exec -T postgres pg_dump -U kawalys_admin -d kawalys -Fc > kawalys-$(date +%F).dump
+(umask 077; dc exec -T postgres pg_dump -U kawalys_admin -d kawalys -Fc > /path/outside/repo/kawalys-$(date +%F).dump)
 ```
 
-Keep the file off the host and treat it as sensitive (it holds evidence rows). Back up the `pki-ca` volume only if you want to keep the same CA across a rebuild; the archive holds the CA private key, so store it like a secret.
+The `umask 077` makes the file readable by its owner only (the default would usually be world-readable, and the dump holds evidence rows). Store dumps outside the repository checkout, encrypted at rest, and keep a copy off the host. Back up the `pki-ca` volume only if you want to keep the same CA across a rebuild; the archive holds the CA private key, so store it like a secret.
 
-Restore into an empty database on a fresh stack (run provision first so the roles exist):
+Restore into the freshly provisioned database of a new stack, **before** any `migrate`: run `provision --apply` only, do not run `migrate` (the dump already contains the schema and the migration history, and a prior migrate makes the restore collide):
 
 ```bash
 dc stop bff web
@@ -131,7 +131,7 @@ dc exec -T postgres pg_restore -U kawalys_admin -d kawalys --clean --if-exists <
 dc up -d bff web
 ```
 
-Try a restore on a scratch host before relying on it.
+After the restore, `migrate --apply` is safe (it applies only what the dump lacks). Try a restore on a scratch host first, before relying on it.
 
 **Warning: `dc down -v` deletes the volumes `pg-data` and `pg-tls` (all database data and the Postgres certificate), and also `pki-ca` and the Caddy volumes. Never use `-v` on a stack whose data you need. `dc down` without `-v` is safe.**
 
