@@ -13,3 +13,9 @@ Status: **decided 2026-11-27.** The owner delegated the COG-05 and COG-07 decisi
 | D7 | The `episodes` and `lessons` tables (forced RLS, citation rows) go in their own migration PR, after the pure logic, with negative RLS tests and an independent database or security review. | Schema and RLS are security-sensitive; the reuse policy does not authorize schema changes. |
 
 Order: this record, then the pure logic (test-first), then the migration PR.
+
+## Built: pure machinery (2026-11-27, D5)
+
+- `server/src/learning/learning.core.ts`: `candidatesOf` (O2: deterministic; abstains below N = 5 visible, observation-labelled episodes with both decision and outcome cited; contested when episodes disagree), `approve` (O3, O5: owner-only, non-contested, expiry after approval, append-only hash chain), `rollback` (restores an earlier version byte for byte as a new row), `readLesson` (O4, O6: suspended when any cited evidence is not visible, expired at expiry, invalid on a tampered chain, otherwise an advisory note with no state, gate, recommendation or rule).
+- Tests: `test/learning/learning.spec.ts` (synthetic episodes only) and `learning.guard.spec.ts` (pure; nothing in `src` imports it, so it is not activated).
+- **Not built:** the `episodes` and `lessons` tables (D7, own migration PR) and any activation (D6).
