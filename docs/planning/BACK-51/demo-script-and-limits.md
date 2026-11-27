@@ -1,8 +1,9 @@
 # BACK-51 (MVP-05): demo script and known limitations
 
 Status: **draft for owner review. The pilot readiness gate is NOT PASSED.** This document is the "demo script" and
-"known limitations" half of BACK-51. Owner sign-off and the end-to-end login flow are not done (see the gate table).
-Missing evidence counts as NOT RUN/BLOCKED, never PASS.
+"known limitations" half of BACK-51. The pilot is deployed and the owner has signed in for real; owner sign-off and the
+live Portfolio-to-decision walk are not done (see the gate table and the
+[evidence bundle](pilot-gate-evidence-bundle.md)). Missing evidence counts as NOT RUN/BLOCKED, never PASS.
 
 ## What can be demonstrated today (synthetic data only)
 
@@ -57,10 +58,11 @@ Descope, every protected route is deny-all and the app only shows "not found, or
 
 ## Known limitations
 
-1. **No customer login, and no product sign-in provider yet.** Customers never sign in. The app has a session bar
-   (`GET /api/auth/me`), a link to the owner-only lab sign-in (`/api/auth/lab`) and a sign-out (BACK-51 P2). The lab and
-   every protected route stay off or deny-all until `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set. No
-   Descope project is provisioned, and a real Descope sign-in has never been run (P5).
+1. **No customer login; owner sign-in is Descope magic link.** Customers never sign in. The app has a session bar
+   (`GET /api/auth/me`) and a sign-out (BACK-51 P2). In the deployed pilot the owner signs in at `/sign-in` (Descope web
+   component, magic link; BACK-117 D3(a)); the owner-only lab page (`/api/auth/lab`) is loopback-only and refused in
+   production. A real Descope sign-in was run on the deployed pilot on 27 Nov 2026 (P5 PASS, evidence bundle). Every
+   protected route stays deny-all until `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set.
 2. **The app calls the server only in live mode** (`VITE_KAWALYS_LIVE=1`, same origin `/api`, proxied; BACK-51 P1; owner
    decisions D1 (a) and D2 (a)). The default build reads committed synthetic fixtures and makes no request. Parity tests
    keep those fixtures equal to real server responses. A draft decision is kept in memory only and cleared on sign-out.
@@ -76,7 +78,7 @@ Descope, every protected route is deny-all and the app only shows "not found, or
    its own audit row. A server key is a logged follow-up (D5 (b)).
 6. **The live suite runs in Chromium only.** The session cookie is `__Host-` and `Secure`; whether WebKit accepts it over
    plain `http://127.0.0.1` is not verified. The default app suite still runs in Chromium and WebKit.
-7. **No hosting.** Nothing is deployed (BACK-64). Deploy artifacts exist in `deploy/pilot/`, proven locally only; no host, database, Descope project or secrets are provisioned.
+7. **One pilot host, empty database.** The pilot is deployed at `https://kawalys.kemetralabs.com` (BACK-64/117: Lightsail behind Cloudflare, Neon PostgreSQL 18, Descope). The Neon database holds the schema and no seeded cases, so the live Portfolio, Investigation and record-a-decision screens have nothing to show until data is seeded (owner decision O1 in the evidence bundle).
 8. **One role.** Only `owner` exists server-side. Personas in the app are a display switch, never authorization.
 9. **Synthetic data only.** No customer data, and no live telemetry is shown anywhere.
 
@@ -86,11 +88,11 @@ The gate is NOT PASSED. A row is PASS only with evidence; missing evidence stays
 
 | Requirement | State |
 | --- | --- |
-| Login → Portfolio → Investigation → record decision, end to end | Passes in CI (`live-e2e`, 9 tests, Chromium) with the fake identity verifier only. Real Descope sign-in is P5: **NOT RUN** |
+| Login → Portfolio → Investigation → record decision, end to end | Passes in CI (`live-e2e`, 9 tests, Chromium) with the fake identity verifier. Real Descope sign-in on the deployed pilot: **PASS** (P5, 27 Nov 2026). Portfolio, Investigation and decision on the live pilot: **NOT RUN** (database not seeded; evidence bundle O1) |
 | Demo script (5–10 min) | Written above: fixture script plus live-mode variant. Not yet rehearsed with the owner |
 | Known limitations listed | Above |
 | X02/X04 + BACK-30 restricted-existence security sign-off | Evidence pack ready ([link](x02-x04-back30-evidence.md)); owner rulings (M2 and others) and sign-off NOT RUN |
-| BACK-55/56/57/59/60/61/62 readiness | Code slices merged; BACK-56 real sign-in not run |
-| BACK-64 deployment | Deploy-ready, proven locally by `deploy/pilot/smoke.sh`; non-local run NOT RUN (owner: host, DNS, secrets; production sign-in needs D3 (a)). Runbook: `docs/planning/BACK-64/pilot-deployment-runbook.md` |
+| BACK-55/56/57/59/60/61/62 readiness | Code slices merged; BACK-56 real sign-in run on the pilot (P5 PASS) |
+| BACK-64 deployment | **PASS**: deployed 27 Nov 2026 and probed; rollback proven. Evidence: [pilot-gate-evidence-bundle.md](pilot-gate-evidence-bundle.md). Runbook: `docs/planning/BACK-64/pilot-deployment-runbook.md` |
 | Negative / privacy / EN-AR / RTL / a11y checks documented | In CI (app e2e: `a11y`, `leaks`, `nondisclosure`, `arabic-copy`; live e2e: negative, Arabic and leak cases) |
 | Owner signs off | **NOT RUN (owner only)** |
