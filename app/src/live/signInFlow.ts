@@ -4,7 +4,7 @@
 //
 // The JWT is a parameter only: never stored, put in a URL, logged or included in an error. Unknown is never signed in.
 import { SIGN_IN_PATH } from './session';
-import { isProjectId, type DescopeSdkLike, type SignInOutcome } from './signIn';
+import { completeSignIn, isProjectId, type DescopeSdkLike, type SignInOutcome } from './signIn';
 
 export type SignInViewKind = { readonly kind: 'unconfigured' } | { readonly kind: 'flow'; readonly projectId: string };
 
@@ -80,5 +80,67 @@ export function boundedLogout(sdk: DescopeSdkLike, ms: number = SIGN_IN_LOGOUT_M
           done();
         }
       }),
+  };
+}
+
+/**
+ * The keys the Descope web component and its SDK persist in the browser, read from the vendored 4.6.3 packages (not from memory):
+ *   app/node_modules/@descope/web-js-sdk/dist/index.esm.js: DS (session JWT), DSR (refresh JWT), DSI (ID token), DSRCN (refresh cookie
+ *     name), DTD (trusted device token), DKD (known device token), DSLI (session expiry), DSLI_DISABLED, dls_last_user_login_id,
+ *     dls_last_user_display_name. Each is stored as `${storagePrefix}${key}`; the prefix is the component's `storage-prefix` attribute,
+ *     which this page never sets, so it is "".
+ *   app/node_modules/@descope/web-component/dist/esm/constants/general.js: dls_last_auth, dls_last_submitted_login_id (sessionStorage).
+ * Deliberately not listed (not credentials or identity): dls_ab_testing_id, the fingerprint ids (fp, vsid, vrid), flow nonces and
+ * dls_last_auth_in_flight / dls_sso_query_params (transient flow state that a magic-link return may still need).
+ */
+export const DESCOPE_STORAGE_KEYS: readonly string[] = [
+  'DS', 'DSR', 'DSI', 'DSRCN', 'DTD', 'DKD', 'DSLI', 'DSLI_DISABLED',
+  'dls_last_user_login_id', 'dls_last_user_display_name', 'dls_last_auth', 'dls_last_submitted_login_id',
+];
+
+/** The part of Storage this module uses. */
+export interface StorageLike {
+  removeItem(key: string): void;
+}
+
+/**
+ * Remove Descope's own persisted keys (DESCOPE_STORAGE_KEYS, exact names only) from every storage given, and nothing else. It never
+ * throws: a missing storage, one that throws on access (blocked site data) or on a single key is skipped, and the rest are still cleared.
+ */
+export function clearDescopeStorage(storages: readonly (StorageLike | null | undefined)[]): void {
+  for (const storage of storages) {
+    if (!storage) continue;
+    for (const key of DESCOPE_STORAGE_KEYS) {
+      try {
+        storage.removeItem(key);
+      } catch {
+        // Blocked or broken storage: nothing more to do for this key.
+      }
+    }
+  }
+}
+
+export interface ExchangeOptions {
+  /** The component's SDK, read when the exchange starts (the element holds it). */
+  readonly getSdk: () => DescopeSdkLike;
+  readonly storages: readonly (StorageLike | null | undefined)[];
+  /** The exchange (completeSignIn); injected in tests. */
+  readonly complete?: (jwt: string, sdk: DescopeSdkLike) => Promise<SignInOutcome>;
+  readonly logoutMs?: number;
+}
+
+/**
+ * The page's one exchange: completeSignIn with a bounded SDK logout, then Descope's persisted keys are removed in every outcome (ok,
+ * refused, unreachable, and a logout that never settled and was cut off), whatever the SDK did or did not clear itself. The outcome is
+ * never changed by the clearing.
+ */
+export function makeExchange(options: ExchangeOptions): (jwt: string) => Promise<SignInOutcome> {
+  const complete = options.complete ?? ((jwt, sdk) => completeSignIn(jwt, sdk));
+  return async (jwt) => {
+    try {
+      return await complete(jwt, boundedLogout(options.getSdk(), options.logoutMs));
+    } finally {
+      clearDescopeStorage(options.storages);
+    }
   };
 }

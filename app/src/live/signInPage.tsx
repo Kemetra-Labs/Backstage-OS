@@ -5,13 +5,13 @@
 // to "/". The Kawalys session cookie is the only session. The rules are in src/live/signInFlow.ts; this file only wires them to React.
 //
 // The magic link returns here with a token in the query (?t=...): this page never rewrites the URL, so the component can read it.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type Ref } from 'react';
 import { Text } from '../components/Text';
 import type { Lang } from '../contract/types';
 import { hostCopy } from '../i18n/host';
 import { SIGN_IN_PATH } from './session';
-import { completeSignIn, type DescopeSdkLike } from './signIn';
-import { boundedLogout, makeSuccessHandler, signInView } from './signInFlow';
+import type { DescopeSdkLike } from './signIn';
+import { clearDescopeStorage, makeExchange, makeSuccessHandler, signInView, type StorageLike } from './signInFlow';
 
 type Phase = 'flow' | 'working' | 'refused' | 'unavailable';
 
@@ -26,9 +26,32 @@ function sdkOf(el: HTMLElement | null): DescopeSdkLike {
   return typeof sdk?.logout === 'function' ? (sdk as DescopeSdkLike) : { logout: () => undefined };
 }
 
-function Notice({ kind, title, body, role }: { readonly kind: string; readonly title: string; readonly body?: string; readonly role?: 'alert' | 'status' }) {
+/** The browser's two storages; one that throws on access (blocked site data) is left out. */
+function browserStorages(): StorageLike[] {
+  const found: StorageLike[] = [];
+  for (const name of ['localStorage', 'sessionStorage'] as const) {
+    try {
+      found.push(window[name]);
+    } catch {
+      // Blocked storage: nothing persisted there to clear.
+    }
+  }
+  return found;
+}
+
+interface NoticeProps {
+  readonly kind: string;
+  readonly title: string;
+  readonly body?: string;
+  readonly role?: 'alert' | 'status';
+  /** Set on the failure message so focus can move to it when the flow it replaces disappears. */
+  readonly regionRef?: Ref<HTMLDivElement>;
+}
+
+function Notice({ kind, title, body, role, regionRef }: NoticeProps) {
+  // No aria-busy here: it would never flip back to false, and the status region is replaced, not updated.
   return (
-    <div role={role} aria-busy={role === 'status' ? true : undefined}>
+    <div role={role} ref={regionRef} tabIndex={regionRef ? -1 : undefined}>
       <div className={`state-block state-${kind}`} data-state={kind}>
         <p className="state-title"><Text s={title} /></p>
         {body !== undefined && <p className="note"><Text s={body} /></p>}
@@ -57,6 +80,8 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
   // Load the component only for a valid project id. A failed load (offline, a blocked chunk) is the neutral "unreachable" message.
   useEffect(() => {
     if (flowProject === null) return;
+    // A session the SDK persisted earlier (another visit, a failed logout) must not be there when the component starts.
+    clearDescopeStorage(browserStorages());
     let cancelled = false;
     import('@descope/web-component').then(
       () => { if (!cancelled) setLoaded(true); },
@@ -70,14 +95,19 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
   if (handler.current === null) {
     handler.current = makeSuccessHandler({
       exchange: (jwt) => {
-        const sdk = boundedLogout(sdkOf(elRef.current));
         setPhase('working');
-        return completeSignIn(jwt, sdk);
+        return makeExchange({ getSdk: () => sdkOf(elRef.current), storages: browserStorages() })(jwt);
       },
       onOutcome: (outcome) => { if (outcome !== 'signedIn') setPhase(outcome); },
       goHome: () => window.location.replace('/'),
     });
   }
+
+  // The flow (where focus was) is hidden when the failure replaces it: move focus to the message, so it is read and "Start again" is next.
+  const failure = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (phase === 'refused' || phase === 'unavailable') failure.current?.focus();
+  }, [phase]);
 
   useEffect(() => {
     if (el === null) return;
@@ -95,7 +125,7 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
       const m = c[phase];
       return (
         <>
-          <Notice kind={phase === 'unavailable' ? 'unavailable' : 'error'} title={m.title} body={m.body} role="alert" />
+          <Notice kind={phase === 'unavailable' ? 'unavailable' : 'error'} title={m.title} body={m.body} role="alert" regionRef={failure} />
           <p className="session-actions"><button type="button" className="btn btn-quiet" onClick={restart}>{c.retry}</button></p>
         </>
       );

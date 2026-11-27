@@ -1,9 +1,9 @@
 // D3(a): the pure parts of the sign-in page (src/live/signInFlow.ts): which view, the once-guarded success handler, the bounded logout
 // and the live-only path. No DOM: the component (signInPage.tsx) is a thin shell over these.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { boundedLogout, isSignInRoute, makeSuccessHandler, signInView, SIGN_IN_LOGOUT_MS } from './signInFlow';
+import { boundedLogout, clearDescopeStorage, DESCOPE_STORAGE_KEYS, isSignInRoute, makeExchange, makeSuccessHandler, signInView, SIGN_IN_LOGOUT_MS } from './signInFlow';
 import { SIGN_IN_PATH } from './session';
-import type { SignInOutcome } from './signIn';
+import { completeSignIn, type SignInOutcome } from './signIn';
 
 const PROJECT = 'P' + 'a1B2c3D4e5F6g7H8i9J0k1L2m3';
 const JWT = 'header.payload.signature';
@@ -124,5 +124,88 @@ describe('boundedLogout', () => {
 
   it('is a short bound, well under a user losing patience', () => {
     expect(SIGN_IN_LOGOUT_MS).toBe(5000);
+  });
+});
+
+/** A Map-backed Storage stand-in; `throwOnRemove` makes removeItem throw, as a blocked or broken storage can. */
+function fakeStorage(initial: Record<string, string>, throwOnRemove = false) {
+  const data = new Map(Object.entries(initial));
+  return {
+    data,
+    removeItem: (k: string) => {
+      if (throwOnRemove) throw new Error('blocked');
+      data.delete(k);
+    },
+  };
+}
+const DESCOPE_KEYS = ['DS', 'DSR', 'DSI', 'DSRCN', 'DTD', 'DKD', 'DSLI', 'DSLI_DISABLED', 'dls_last_user_login_id', 'dls_last_user_display_name', 'dls_last_auth', 'dls_last_submitted_login_id'];
+const UNRELATED = { theme: 'dark', 'kawalys.draft': 'x', DSX: '1', ds: '1', xDS: '1', dls_ab_testing_id: 'a' };
+
+describe('clearDescopeStorage', () => {
+  it('names the persisted keys read from the vendored SDK (web-js-sdk DS, DSR, DSI, DSRCN, DTD, DKD, DSLI; web-component dls_*)', () => {
+    expect([...DESCOPE_STORAGE_KEYS].sort()).toEqual([...DESCOPE_KEYS].sort());
+  });
+
+  it('removes the Descope keys from both storages and keeps every unrelated key', () => {
+    const all = Object.fromEntries(DESCOPE_KEYS.map((k) => [k, 'secret']));
+    const local = fakeStorage({ ...all, ...UNRELATED });
+    const session = fakeStorage({ DS: 'jwt', DSR: 'jwt', ...UNRELATED });
+    clearDescopeStorage([local, session]);
+    expect([...local.data.keys()].sort()).toEqual(Object.keys(UNRELATED).sort());
+    expect([...session.data.keys()].sort()).toEqual(Object.keys(UNRELATED).sort());
+  });
+
+  it('never throws: a storage whose removeItem throws, a missing storage and a hostile one are skipped, and the others are still cleared', () => {
+    const broken = fakeStorage({ DS: 'jwt' }, true);
+    const ok = fakeStorage({ DS: 'jwt', DSR: 'jwt', theme: 'dark' });
+    const hostile = { removeItem: () => { throw new DOMException('denied', 'SecurityError'); } };
+    expect(() => clearDescopeStorage([undefined, null, broken, hostile, ok])).not.toThrow();
+    expect([...ok.data.keys()]).toEqual(['theme']);
+  });
+
+  it('keeps going past a throwing key (one failed removal does not stop the others)', () => {
+    const data = new Map([['DS', 'a'], ['DSR', 'b']]);
+    const first = { removeItem: (k: string) => { if (k === DESCOPE_STORAGE_KEYS[0]) throw new Error('x'); data.delete(k); } };
+    clearDescopeStorage([first]);
+    expect(data.has('DSR')).toBe(false);
+  });
+});
+
+describe('makeExchange (exchange, bounded logout, then clear Descope storage)', () => {
+  const ok = () => vi.fn(async (_p: string, _i?: RequestInit) => new Response('{}', { status: 200 }));
+  const refused = () => vi.fn(async (_p: string, _i?: RequestInit) => new Response('{}', { status: 401 }));
+  const complete = (f: ReturnType<typeof ok>) => (jwt: string, sdk: Parameters<typeof completeSignIn>[1]) => completeSignIn(jwt, sdk, f);
+
+  it.each([['signedIn', ok], ['refused', refused]] as const)('clears after a logout that never settles, on %s (after the bound, not before)', async (outcome, mk) => {
+    vi.useFakeTimers();
+    const store = fakeStorage({ DS: 'jwt', DSR: 'jwt', theme: 'dark' });
+    const sdk = { logout: vi.fn(() => new Promise<never>(() => undefined)) };
+    const run = makeExchange({ getSdk: () => sdk, storages: [store], complete: complete(mk()) });
+    let result: SignInOutcome | null = null;
+    void run(JWT).then((o) => { result = o; });
+    await vi.advanceTimersByTimeAsync(SIGN_IN_LOGOUT_MS - 1);
+    expect(result).toBeNull();
+    expect(store.data.has('DS')).toBe(true);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(result).toBe(outcome);
+    expect([...store.data.keys()]).toEqual(['theme']);
+    expect(sdk.logout).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears after a quick logout and after an exchange that fails to reach the server', async () => {
+    const store = fakeStorage({ DS: 'jwt', DSR: 'jwt', theme: 'dark' });
+    const net = vi.fn(async (_p: string, _i?: RequestInit): Promise<Response> => { throw new TypeError('Failed to fetch'); });
+    const sdk = { logout: vi.fn(async () => undefined) };
+    const outcome = await makeExchange({ getSdk: () => sdk, storages: [store], complete: (j, s) => completeSignIn(j, s, net) })(JWT);
+    expect(outcome).toBe('unavailable');
+    expect([...store.data.keys()]).toEqual(['theme']);
+  });
+
+  it('a storage that throws on removal changes neither the outcome nor the other storage', async () => {
+    const broken = fakeStorage({ DS: 'jwt' }, true);
+    const store = fakeStorage({ DS: 'jwt' });
+    const sdk = { logout: vi.fn(async () => undefined) };
+    await expect(makeExchange({ getSdk: () => sdk, storages: [broken, store], complete: complete(ok()) })(JWT)).resolves.toBe('signedIn');
+    expect(store.data.size).toBe(0);
   });
 });
