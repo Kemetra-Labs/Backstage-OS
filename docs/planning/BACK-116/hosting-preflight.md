@@ -19,6 +19,7 @@ Status: **preflight and plan only. Nothing was created, changed or bought on AWS
 - **Host:** one Lightsail `small_3_0` instance in Frankfurt, Ubuntu 24.04 LTS, with a static IP (free while attached). It runs **only** `deploy/pilot/compose.managed.yml` (`web` = Caddy + the app build, and `bff`); `ops` runs only when needed. The database is Neon `kawalys-pg18`, the same region, outside the host.
 - **CPU architecture:** Lightsail instances are x86_64, so images are built for `linux/amd64`. Confirm with `uname -m` on the host before the first image pull.
 - **No builds on the host.** Images are built once in GitHub Actions (section 4), pushed by digest, and pulled on the host. A 2 GB host should not run `docker build` for the Vite app and the BFF.
+- **Prerequisite (not built yet):** `compose.managed.yml` still names `:local` images for `web`, `bff` and `ops`. Pulling a digest does not satisfy those names: on a fresh host Compose would try to build or fail, and on an existing host it could start stale images. BACK-117 needs a deploy override that pins all three services by digest, with `ops` on the same digest as `bff`, and a smoke check that the override resolves.
 - **Expected headroom (to be measured, BACK-116 criterion):** Caddy plus one Node BFF should fit well within 2 GB. Measure `docker stats` and `free -m` under the pilot's real use. Report any move to `medium_3_0` ($24) before buying it.
 
 ## 3. Network, DNS and access
@@ -38,7 +39,7 @@ Status: **preflight and plan only. Nothing was created, changed or bought on AWS
 
 | Option | For | Against |
 | --- | --- | --- |
-| **GHCR** (recommended) | Already GitHub; pushed with the workflow's own `GITHUB_TOKEN` (`packages: write`), so no new secret in CI. The host pulls with one read-only token (fine-grained, `read:packages`). | Private package storage counts against the org's GitHub Packages quota. |
+| **GHCR** (recommended) | Already GitHub; pushed with the workflow's own `GITHUB_TOKEN` (`packages: write`), so no new secret in CI. For a private package the host must pull with a **classic** personal access token with `read:packages` only, from an account with read access to the package; GitHub Packages does not accept fine-grained tokens for this. Confirm the organization allows that token before choosing GHCR. If the images can be public (they hold no secrets), the host needs no token at all. | Private package storage counts against the org's GitHub Packages quota. |
 | Amazon ECR | Same cloud as the host. | Needs an IAM user with long-lived keys on the Lightsail host (no instance profile on Lightsail), plus ECR storage cost. More moving parts for one host. |
 | Depot Registry | Built into Depot builds. | Would make the host depend on Depot for pulls; the ticket says not to make it mandatory. |
 
@@ -63,7 +64,7 @@ Status: **preflight and plan only. Nothing was created, changed or bought on AWS
 
 ## 5. Secrets on the host (BACK-58 input)
 
-- The runtime needs only `KAWALYS_DATABASE_URL_APP` and `KAWALYS_DATABASE_URL_AUTH`, plus the Descope identifiers, which are not secrets. The admin URL is added only while running `ops`, then removed (runbook section 11).
+- The runtime needs only `KAWALYS_DATABASE_URL_APP` and `KAWALYS_DATABASE_URL_AUTH`, plus the Descope identifiers, which are not secrets. Migrations need **four** operator-only values: `KAWALYS_ADMIN_DATABASE_URL` and the three `KAWALYS_ROLE_PASSWORD_*`, since `db-admin` refuses to start without all of them. Add them only while running `ops`, then remove all four (runbook section 11, provision and migrate).
 - **Simplest option:** `.env.pilot` owned by the deploy user, mode `0600`, outside the repository checkout, and never in an image.
 - **Stronger option:** AWS SSM Parameter Store `SecureString`, fetched at deploy. On Lightsail this needs either a hybrid activation or an IAM user's keys on the host, which defeats much of the point for one host.
 - **Recommendation:** start with the `0600` file plus the rotation procedure in runbook section 11. Revisit before any customer data.
@@ -81,7 +82,7 @@ Status: **preflight and plan only. Nothing was created, changed or bought on AWS
 
 ## 7. Backup and teardown
 
-- **Host:** the host holds no data; the database is Neon with 7-day point-in-time restore, drilled in BACK-114. A host rebuild is: create the instance, install Docker, write `.env.pilot`, pull by digest, `up`, readiness gate. An optional weekly Lightsail snapshot speeds up a rebuild but is not a backup of data.
+- **Host:** the host holds no data; the database is Neon with 7-day point-in-time restore, drilled in BACK-114. A host rebuild is: create the instance, install Docker, write `.env.pilot`, pull by digest, `up`, readiness gate. An optional weekly Lightsail snapshot speeds up a rebuild but is not a backup of data. A snapshot also captures `.env.pilot` and Caddy's TLS keys, so treat any snapshot as a secret-bearing artifact: restricted access, short retention. The default is no snapshots, and rebuilding from pinned images.
 - **Teardown:** detach and release the static IP (an unattached IP is billed), delete the instance and snapshots, remove the Cloudflare record, revoke the GHCR read token.
 
 ## 8. Owner approvals needed (each separately)
