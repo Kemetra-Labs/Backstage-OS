@@ -342,3 +342,14 @@ No controller, module registration or route in any slice: COG-07 owns exposure. 
 The Codex review of commit 96878ac showed that the D5 fingerprint hashed only the current run's content key and last evidence id. A late commit could therefore extend the current run backwards, outside the returned history, and change its first evidence id (which COG-04 cites) without changing the fingerprint. The fingerprint now covers every cited field of the current run, and the policy version is `memory-v2`. Regression test: `test/memory/memory.findings.spec.ts`.
 
 Still open from the review: the S2 statement processes all eligible history before the history cap applies (a work budget independent of the returned cap is a performance decision under DEC-1). There is also no DB case yet that holds the reader fixed while adding evidence to a second project on which the reader also has a grant.
+
+## Revision after the COG-08 fourth review (2026-11-27)
+
+**Repository record read inside a run (D2).** The repository record has no provider order, so its effective time is its observation time. When the effective time E falls strictly inside the chosen run, the run record (which keeps only first and last observations) cannot say which observations came before E.
+
+The current value is therefore the run *as known by E*:
+- its first observation, cited as both first and last evidence;
+- freshness counted from that observation;
+- the worst state seen anywhere in the run.
+
+It is `verified` only when every observation in the run was `ok`, and it never reports a state or evidence id observed after E. Ordered kinds are unaffected: their effective time is provider time. Regression test: `test/memory/memory.findings2.spec.ts`.

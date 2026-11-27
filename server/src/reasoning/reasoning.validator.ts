@@ -60,8 +60,11 @@ function expected(projection: MemoryProjection, input: ReasoningInput): unknown 
   };
   if (!isValidInput(input)) return { ...head, kind: 'invalid-input', refusal: 'invalid-spec', selected: null, tasks: [] };
 
-  const lookup = (sourceId: string, sourceRef: string, kind: string) =>
-    projection.items.find((i) => i.sourceId === sourceId && i.sourceRef === sourceRef && i.kind === kind);
+  // One pass over the projection: every lookup below is a map read, not a scan (COG-08 review 4).
+  const keyOf = (sourceId: string, sourceRef: string, kind: string) => JSON.stringify([sourceId, sourceRef, kind]);
+  const index = new Map<string, (typeof projection.items)[number]>();
+  for (const i of projection.items) index.set(keyOf(i.sourceId, i.sourceRef, i.kind), i);
+  const lookup = (sourceId: string, sourceRef: string, kind: string) => index.get(keyOf(sourceId, sourceRef, kind));
   const seen = (t: { sourceId: string; sourceRef: string; kind: string }) => lookup(t.sourceId, t.sourceRef, t.kind) !== undefined;
 
   // Kahn: repeatedly remove visible tasks whose visible task dependencies are all removed.

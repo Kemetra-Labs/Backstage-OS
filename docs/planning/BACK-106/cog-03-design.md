@@ -170,3 +170,10 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 - **R6, allowances:** each title has its own allowance of 50 unresolved mentions during construction. `relationships()` returns at most 50 in total; `related()` counts only the visited titles' mentions. Edge truncation and unresolved truncation are tracked separately, so one noisy title cannot cut or flag an unrelated traversal.
 - Regression tests: `test/retrieval/retrieval.findings4.spec.ts`.
 - Mention boundaries are checked in code (`isMentionBoundary`), not by regex lookarounds. The lookaround version backtracked super-linearly over runs of format characters (SonarCloud S8786); a regression test parses about 2 million characters of joiner runs well under a second.
+
+## Fifth revision after the COG-08 fourth review (2026-11-27)
+
+- **R6, edge budget:** a full edge budget no longer stops the scan. Unresolved mentions are still collected, and the endpoints of every omitted edge are recorded. `related()` reports `truncated` only when a cut edge touches a node it visited; `relationships()` reports any cut.
+- **R6, per-title cap:** each title keeps its canonical first 50 unresolved mentions (sorted by text), whatever their order in the title.
+- **R6, clipped text:** the observers mark text cut to 300 characters (`textClipped: true`: GitHub titles, Jira summaries, Confluence titles). A mention touching the cut is skipped, because `#1234` cut to `#123` would name another item.
+- Regression tests: `test/retrieval/retrieval.findings5.spec.ts`, `test/connectors/github/github-clip.spec.ts`.

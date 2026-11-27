@@ -7,7 +7,7 @@ import type { ObservationInput } from '../../evidence/evidence.repository';
 import type { EvidenceState } from '../../evidence/evidence.types';
 import { AtlassianTransportFailure, type AtlassianReadTransport, type AtlassianResponse } from './atlassian.transport';
 
-export { clip } from '../github/github.observer';
+export { clip, isClipped } from '../github/github.observer';
 
 export const PAGE_SIZE = 20;
 /** At most this many project or space keys per source: every key costs at least one read. */
