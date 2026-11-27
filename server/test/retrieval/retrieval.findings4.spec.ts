@@ -72,3 +72,17 @@ describe('format characters do not make a word boundary', () => {
     expect(rel.edges.filter((e) => e.type === 'mentions')).toHaveLength(1);
   });
 });
+
+describe('mention boundaries stay linear (Sonar S8786 on the lookaround version)', () => {
+  it('long runs of format characters around many keys parse quickly and correctly', () => {
+    const run = '\u200D'.repeat(5_000); // about 2 million characters in all: linear work, not a backtracking blow-up
+    const title = Array.from({ length: 200 }, (_, i) => `${run}BACK-${i + 1}${run} `).join('') + `x${run}BACK-9999`;
+    const p = projectionOf([titled(6, title), jira('BACK-1', 'target', 'j1')]);
+    const start = performance.now();
+    const rel = relationships(p);
+    expect(performance.now() - start).toBeLessThan(1000);
+    // Space-separated keys are mentions (joiners are looked through); the one glued to `x` is not.
+    expect(rel.edges.filter((e) => e.type === 'mentions').map((e) => e.text)).toEqual(['BACK-1']);
+    expect(rel.unresolved.some((u) => u.text === 'BACK-9999')).toBe(false);
+  });
+});

@@ -6,7 +6,7 @@
 // at most MAX_EDGES edges and MAX_UNRESOLVED unresolved mentions, with `truncated` (COG-08 reviews).
 import type { MemoryProjection } from '../memory/memory.types';
 import { cmp, docsOf, identityKey, repoScope, sortedUnique, type Doc } from './retrieval.documents';
-import { DEFAULT_DEPTH, DEFAULT_MAX_NODES, GITHUB_NUMBER_IN_TEXT, JIRA_KEY_IN_TEXT, MAX_DEPTH, MAX_EDGES, MAX_NODES, MAX_UNRESOLVED } from './retrieval.policy';
+import { DEFAULT_DEPTH, DEFAULT_MAX_NODES, GITHUB_NUMBER_IN_TEXT, isMentionBoundary, JIRA_KEY_IN_TEXT, MAX_DEPTH, MAX_EDGES, MAX_NODES, MAX_UNRESOLVED } from './retrieval.policy';
 import type { Edge, ItemIdentity, Relationships, Traversal, TraversalNode, TraversalOptions, UnresolvedMention } from './retrieval.types';
 
 const isGithubItem = (d: Doc): boolean => d.identity.kind === 'pull_request' || d.identity.kind === 'issue';
@@ -70,10 +70,16 @@ function containsEdges(docs: readonly Doc[], budget: Budget): void {
   }
 }
 
-/** Distinct matches of a global pattern in first-seen order (group 0, or group 1 when present). */
-function matchesOf(text: string, pattern: RegExp, prefix = ''): string[] {
+/**
+ * Distinct whole-word matches of a global pattern in first-seen order (group 0, or group 1 when present).
+ * `extraBefore` is a character that also may not precede the match (`#` for `##12`).
+ */
+function matchesOf(text: string, pattern: RegExp, prefix = '', extraBefore = ''): string[] {
   const seen = new Set<string>();
-  for (const m of text.matchAll(pattern)) seen.add(prefix + (m[1] ?? m[0]));
+  for (const m of text.matchAll(pattern)) {
+    if (!isMentionBoundary(text, m.index, m.index + m[0].length, extraBefore)) continue;
+    seen.add(prefix + (m[1] ?? m[0]));
+  }
   return [...seen];
 }
 
@@ -104,7 +110,7 @@ function mentionsOf(docs: readonly Doc[], budget: Budget): void {
     if (!d.title || d.revision === null) continue;
     for (const key of matchesOf(d.title, JIRA_KEY_IN_TEXT)) if (!record(d, key, jiraByKey.get(key) ?? [])) return;
     if (!isGithubItem(d)) continue;
-    for (const ref of matchesOf(d.title, GITHUB_NUMBER_IN_TEXT, '#')) {
+    for (const ref of matchesOf(d.title, GITHUB_NUMBER_IN_TEXT, '#', '#')) {
       const n = Number(ref.slice(1));
       // The observer only stores positive safe integers: anything else is no GitHub reference at all.
       if (!Number.isSafeInteger(n) || n < 1) continue;

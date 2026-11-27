@@ -43,11 +43,45 @@ export const TITLE_FIELD: Readonly<Record<string, string>> = {
 /** A Jira key as it appears in text. Bounded quantifiers only (no catastrophic backtracking). */
 // Jira project keys allow digits and underscores; a key glued to a letter, mark or digit (any script)
 // is not one.
-// Boundaries look through invisible format characters, so a zero-width joiner is not a word break.
-export const JIRA_KEY_IN_TEXT = /(?<![\p{L}\p{M}\p{N}_]\p{Cf}*)[A-Z][A-Z0-9_]{1,63}-\d{1,18}(?!\p{Cf}*[\p{L}\p{M}\p{N}_])/gu;
+// Plain, linear patterns: the word-boundary test (which looks through invisible format characters) is
+// done in code by `isMentionBoundary`, not by lookarounds, which backtrack super-linearly (Sonar S8786).
+export const JIRA_KEY_IN_TEXT = /[A-Z][A-Z0-9_]{1,63}-\d{1,18}/gu;
 /** A same-repository GitHub reference as it appears in a GitHub item's text. */
 // Up to 16 digits (the safe-integer range); the parser then keeps positive safe integers only, as the observer does.
-export const GITHUB_NUMBER_IN_TEXT = /(?<![\p{L}\p{M}\p{N}_#]\p{Cf}*)#(\d{1,16})(?!\p{Cf}*[\p{L}\p{M}\p{N}_])/gu;
+export const GITHUB_NUMBER_IN_TEXT = /#(\d{1,16})/gu;
+
+const WORD = /^[\p{L}\p{M}\p{N}_]$/u;
+const FORMAT_CHAR = /^\p{Cf}$/u;
+
+/** The nearest code point before the index (step -1) or at or after it (step 1), skipping format characters. */
+function neighbour(text: string, from: number, step: -1 | 1): string {
+  let i = from;
+  for (;;) {
+    let ch: string;
+    if (step === -1) {
+      if (i <= 0) return '';
+      const low = text.charCodeAt(i - 1);
+      const astral = low >= 0xdc00 && low <= 0xdfff && i >= 2;
+      ch = text.slice(astral ? i - 2 : i - 1, i);
+      i -= ch.length;
+    } else {
+      if (i >= text.length) return '';
+      ch = String.fromCodePoint(text.codePointAt(i)!);
+      i += ch.length;
+    }
+    if (!FORMAT_CHAR.test(ch)) return ch;
+  }
+}
+
+/**
+ * True when the match `[start, end)` is a whole word: the nearest visible characters on both sides are
+ * not letters, marks, digits or `_` (nor `extraBefore` before it). Linear in the format characters it skips.
+ */
+export function isMentionBoundary(text: string, start: number, end: number, extraBefore = ''): boolean {
+  const before = neighbour(text, start, -1);
+  const after = neighbour(text, end, 1);
+  return !WORD.test(before) && !(extraBefore !== '' && before === extraBefore) && !WORD.test(after);
+}
 
 /**
  * Queries shaped like a native identifier are answered by exact match only, never fuzzily (R4):
