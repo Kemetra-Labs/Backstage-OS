@@ -26,6 +26,9 @@ export type HttpResult =
 /** The session check to run after a not_found: GET /auth/me on the server, through the same-origin proxy. */
 export const SESSION_CHECK_PATH = '/api/auth/me';
 
+/** The token exchange: POST /auth/session on the server (through the same-origin proxy) turns a Descope JWT into the session cookie. */
+export const SESSION_EXCHANGE_PATH = '/api/auth/session';
+
 /** The request function: the global one, or a fake injected by tests. */
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -36,6 +39,8 @@ export interface ApiRequestInit {
   readonly signal?: AbortSignal;
   /** Injected in tests; the global fetch otherwise. */
   readonly fetcher?: Fetcher;
+  /** Sent as `Authorization: Bearer <token>`. Header only, for the one token exchange (exchangeSessionToken): never in a URL. */
+  readonly bearer?: string;
 }
 
 /**
@@ -65,6 +70,7 @@ export async function apiRequest(path: string, init: ApiRequestInit = {}): Promi
   if (url === null) return { ok: false, failure: 'invalid', status: null };
   const hasBody = init.body !== undefined;
   const headers: Record<string, string> = hasBody ? { Accept: 'application/json', 'Content-Type': 'application/json' } : { Accept: 'application/json' };
+  if (init.bearer !== undefined) headers.Authorization = `Bearer ${init.bearer}`;
   const doFetch = init.fetcher ?? globalThis.fetch;
   let status: number;
   let text: string;
@@ -91,4 +97,17 @@ export async function apiRequest(path: string, init: ApiRequestInit = {}): Promi
   } catch {
     return { ok: false, failure: 'error', status };
   }
+}
+
+/** Printable ASCII, no whitespace: a JWT is base64url and dots. Anything else could not be a token and must never reach a header. */
+const TOKEN_RE = /^[\x21-\x7e]+$/;
+
+/**
+ * POST /api/auth/session with the Descope session JWT as a Bearer header (D3(a)). No body, and the token is never in the URL,
+ * the result or a log. Failures map as in apiRequest: 401 and 404 are the same not_found, 429 rate_limited, a gateway or network
+ * failure unavailable. A token that cannot be a header value makes no request.
+ */
+export async function exchangeSessionToken(jwt: string, opts: { signal?: AbortSignal; fetcher?: Fetcher } = {}): Promise<HttpResult> {
+  if (!TOKEN_RE.test(jwt)) return { ok: false, failure: 'invalid', status: null };
+  return apiRequest(SESSION_EXCHANGE_PATH, { method: 'POST', bearer: jwt, signal: opts.signal, fetcher: opts.fetcher });
 }

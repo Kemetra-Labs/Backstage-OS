@@ -1,6 +1,6 @@
 // BACK-51 P1: the one request module (src/live/http.ts). Every case injects the fetcher, so nothing here touches the network.
 import { describe, expect, it, vi } from 'vitest';
-import { apiPath, apiRequest, failureOf, SESSION_CHECK_PATH } from './http';
+import { apiPath, apiRequest, exchangeSessionToken, failureOf, SESSION_CHECK_PATH, SESSION_EXCHANGE_PATH } from './http';
 
 type Init = RequestInit & { headers: Record<string, string> };
 
@@ -130,5 +130,67 @@ describe('apiRequest', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe('exchangeSessionToken', () => {
+  const JWT = 'header.payload.signature';
+
+  it('the path is a valid relative /api path', () => {
+    expect(SESSION_EXCHANGE_PATH).toBe('/api/auth/session');
+    expect(apiPath(SESSION_EXCHANGE_PATH)).toBe(SESSION_EXCHANGE_PATH);
+  });
+
+  it('sends POST with a Bearer header and no body', async () => {
+    const f = fake(200, '{}');
+    const r = await exchangeSessionToken(JWT, { fetcher: f });
+    expect(r).toEqual({ ok: true, status: 200, body: {} });
+    const [path, init] = f.mock.calls[0]! as [string, Init];
+    expect(path).toBe('/api/auth/session');
+    expect(path).not.toContain(JWT);
+    expect(init.method).toBe('POST');
+    expect(init.credentials).toBe('same-origin');
+    expect(init.headers).toEqual({ Accept: 'application/json', Authorization: `Bearer ${JWT}` });
+    expect(init.body).toBeUndefined();
+  });
+
+  it('passes the abort signal through', async () => {
+    const f = fake(200, '{}');
+    const c = new AbortController();
+    await exchangeSessionToken(JWT, { fetcher: f, signal: c.signal });
+    expect((f.mock.calls[0]![1] as Init).signal).toBe(c.signal);
+  });
+
+  it('maps 401 and 404 to the same not_found failure', async () => {
+    const a = await exchangeSessionToken(JWT, { fetcher: fake(401) });
+    const b = await exchangeSessionToken(JWT, { fetcher: fake(404) });
+    expect(a).toMatchObject({ ok: false, failure: 'not_found' });
+    expect(b).toMatchObject({ ok: false, failure: 'not_found' });
+    expect({ ...a, status: 0 }).toEqual({ ...b, status: 0 });
+  });
+
+  it('maps 429 to rate_limited and a gateway failure to unavailable', async () => {
+    expect(await exchangeSessionToken(JWT, { fetcher: fake(429) })).toEqual({ ok: false, failure: 'rate_limited', status: 429 });
+    expect(await exchangeSessionToken(JWT, { fetcher: fake(503) })).toEqual({ ok: false, failure: 'unavailable', status: 503 });
+  });
+
+  it('maps a thrown fetch to unavailable, without the token in the result', async () => {
+    const f = vi.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    const r = await exchangeSessionToken(JWT, { fetcher: f });
+    expect(r).toEqual({ ok: false, failure: 'unavailable', status: null });
+    expect(JSON.stringify(r)).not.toContain(JWT);
+  });
+
+  it('a failure never carries the server body', async () => {
+    const r = await exchangeSessionToken(JWT, { fetcher: fake(401, '{"error":{"code":"unauthorized","message":"bad token"}}') });
+    expect(JSON.stringify(r)).not.toContain('bad token');
+  });
+
+  it('an empty token makes no request', async () => {
+    const f = fake(200, '{}');
+    expect(await exchangeSessionToken('', { fetcher: f })).toEqual({ ok: false, failure: 'invalid', status: null });
+    expect(f).not.toHaveBeenCalled();
   });
 });
