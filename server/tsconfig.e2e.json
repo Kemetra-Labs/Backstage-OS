@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "dist-e2e" },
+  "include": [
+    "src/**/*.ts",
+    "test/e2e/serve-e2e.ts",
+    "test/e2e/e2e-env.ts",
+    "test/auth/_helpers.ts",
+    "test/db/kawalys-db.ts",
+    "test/db/pg-container.ts"
+  ]
+}
