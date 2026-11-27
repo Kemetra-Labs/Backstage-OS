@@ -1,7 +1,7 @@
 // Memory read (BACK-105 S2): runs the single S2 statement (memory.sql.ts) inside the reader's
 // workspace context (forced RLS) and projects the result. The statement applies the project filter,
 // PROJECT_VISIBLE and the reader's active grants before any row is returned, so hidden rows never
-// reach the projector (D4). Read-only: it writes nothing. Not wired to any route (COG-07 owns that).
+// reach the projector (D4). Read-only: it writes nothing. Its one route is the COG-07 live search (src/cognition).
 import type pg from 'pg';
 import { runWithWorkspaceContext } from '../db/workspace-context';
 import { UUID, type EvidenceState } from '../evidence/evidence.types';
@@ -141,7 +141,19 @@ export class MemoryRepository {
 
   /** The memory projection for one reader and project, from one statement (D1, D3, D4). */
   async read(q: MemoryReadInput): Promise<MemoryProjection> {
+    return this.projectionOf(q, await this.readCollapsed(q));
+  }
+
+  /**
+   * Like read(), but null when the reader has no active grant on any source of the project (COG-07 live read).
+   * A project that does not exist, one in another workspace and one with no visible source are the same null.
+   */
+  async readVisible(q: MemoryReadInput): Promise<MemoryProjection | null> {
     const r = await this.readCollapsed(q);
+    return r.sources.length === 0 ? null : this.projectionOf(q, r);
+  }
+
+  private projectionOf(q: MemoryReadInput, r: MemoryRead): MemoryProjection {
     return projectCollapsed(r.input, {
       effectiveAt: q.effectiveAt?.toISOString() ?? r.now,
       knownAt: r.knownAt,

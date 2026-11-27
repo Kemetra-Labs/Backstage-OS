@@ -48,7 +48,9 @@ describe('retrieval module is pure and not exposed', () => {
   it('nothing else in src imports the retrieval module (no route, controller or module wiring)', () => {
     // COG-04 reasoning (BACK-107) may use the identity type only; its own guard pins that.
     const REASONING = join(SRC, 'reasoning');
-    const outside = files(SRC).filter((f) => !f.startsWith(RETRIEVAL) && !f.startsWith(REASONING));
+    // COG-07 live search (owner decision 2026-11-27): src/cognition is the one route consumer; its guard pins it.
+    const COGNITION = join(SRC, 'cognition');
+    const outside = files(SRC).filter((f) => !f.startsWith(RETRIEVAL) && !f.startsWith(REASONING) && !f.startsWith(COGNITION));
     const offenders = outside.filter((f) => /(?:from\s*|import\s*\(\s*|^\s*import\s*)['"`][^'"`]*\/retrieval\//m.test(readFileSync(f, 'utf8')));
     expect(offenders).toEqual([]);
   });

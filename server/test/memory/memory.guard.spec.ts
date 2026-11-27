@@ -132,7 +132,9 @@ describe('memory module is pure and not exposed', () => {
     // COG-03 retrieval (BACK-106) and COG-04 reasoning (BACK-107) are the pure consumers; their own
     // guards keep them pure and unexposed.
     // COG-05 learning (BACK-108) imports canonical hashing only; its guard keeps it pure and unwired.
-    const consumers = [join(SRC, 'retrieval'), join(SRC, 'reasoning'), join(SRC, 'learning')];
+    // COG-07 live search (owner decision 2026-11-27): src/cognition is the one route consumer, and the composition
+    // root constructs its repository; test/cognition/cognition.guard.spec.ts pins both.
+    const consumers = [join(SRC, 'retrieval'), join(SRC, 'reasoning'), join(SRC, 'learning'), join(SRC, 'cognition'), join(SRC, 'create-app.ts')];
     const outside = files(SRC).filter((f) => !f.startsWith(MEMORY) && !consumers.some((c) => f.startsWith(c)));
     const offenders = outside.filter((f) => /(?:from\s*|import\s*\(\s*|^\s*import\s*)['"`][^'"`]*\/memory\//m.test(readFileSync(f, 'utf8')));
     expect(offenders).toEqual([]);
