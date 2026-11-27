@@ -116,8 +116,9 @@ describe('startup wiring (create-app.ts)', () => {
 
   it('createApp starts with a valid value', async () => {
     process.env[NAME] = 'retail-tower=github:kemetra-labs/backstage-os';
-    const app = await createApp();
-    await app.close();
+    const started = createApp();
+    await expect(started).resolves.toBeDefined();
+    await (await started).close();
   });
 });
 
