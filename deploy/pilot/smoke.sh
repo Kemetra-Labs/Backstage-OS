@@ -119,6 +119,8 @@ check "GET / serves the app (HTML with the app root)" bash -c "curl -sk --max-ti
 check "GET /some/spa/route falls back to index.html" bash -c "curl -sk --max-time 10 '$BASE/investigations/x' | grep -q 'id=\"root\"'"
 check "GET /api/portfolio -> 404 (deny-all, Descope unset)" is_code 404 "$BASE/api/portfolio"
 check "GET /api/portfolio body is not_found" grep -q 'not_found' "$TMP/body"
+check "bff container healthcheck uses liveness (/process), not the database probe" grep -q "8787/process" "$HERE/compose.yml"
+check "bff container healthcheck does not call /health" bash -c '! grep -q "8787/health" "$0"' "$HERE/compose.yml"
 check_headers() { # $1 label, $2 url
   local h; h="$(curl -skI --max-time 10 "$2")"
   check "security header on $1: Strict-Transport-Security" bash -c 'echo "$0" | grep -qi "^strict-transport-security:"' "$h"

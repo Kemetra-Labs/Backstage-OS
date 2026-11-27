@@ -10,8 +10,11 @@ export interface OpenDatabase {
   close(): Promise<void>;
 }
 
+// Close idle connections after 10 s so a serverless Postgres (Neon) can suspend between requests (BACK-115).
+export const POOL_IDLE_TIMEOUT_MS = 10_000;
+
 function pool(connectionString: string, max: number): pg.Pool {
-  const p = new pg.Pool({ connectionString, max });
+  const p = new pg.Pool({ connectionString, max, idleTimeoutMillis: POOL_IDLE_TIMEOUT_MS });
   // node-postgres emits 'error' when an idle client's backend goes away (for example a serverless database
   // scaling to zero). Without a listener Node crashes and prints the raw error. The pool already discards
   // that client; a fixed line is enough.

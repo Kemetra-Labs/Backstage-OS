@@ -137,3 +137,48 @@ describe('GET /health (hung database)', () => {
     expect(hungAuth.query).toHaveBeenCalledTimes(1);
   }, 20_000);
 });
+
+describe('GET /health (wrong runtime password)', () => {
+  const saved: Record<string, string | undefined> = {};
+  let db: KawalysDb;
+  let badApp: pg.Pool;
+  let goodAuth: pg.Pool;
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    for (const [k, v] of Object.entries(ENV)) {
+      saved[k] = process.env[k];
+      process.env[k] = v;
+    }
+    db = await startKawalysDb();
+    const wrong = new URL(db.appUrl);
+    wrong.password = 'not-the-real-password';
+    badApp = new pg.Pool({ connectionString: wrong.toString(), max: 2 });
+    badApp.on('error', () => undefined);
+    goodAuth = new pg.Pool({ connectionString: db.authUrl, max: 2 });
+    goodAuth.on('error', () => undefined);
+    app = await createApp([], {}, { database: { appPool: badApp, authPool: goodAuth } });
+  }, 120_000);
+  afterAll(async () => {
+    await app?.close().catch(() => undefined);
+    await Promise.all([badApp, goodAuth].map((p) => p?.end().catch(() => undefined)));
+    await stopKawalysDb(db);
+    for (const [k, v] of Object.entries(saved)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }, 60_000);
+
+  it('answers 503 ready:false with only service and ready', async () => {
+    const res = await request(app.getHttpServer()).get('/health');
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({ service: 'kawalys-bff', ready: false });
+  });
+
+  it('openDatabase refuses to start with a wrong runtime password', async () => {
+    const { openDatabase } = await import('../../src/db/open-database');
+    const wrong = new URL(db.appUrl);
+    wrong.password = 'not-the-real-password';
+    await expect(openDatabase({ appUrl: wrong.toString(), authUrl: db.authUrl })).rejects.toThrow();
+  });
+});

@@ -98,7 +98,9 @@ services:
     volumes:
       - pg-tls:/pki:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8787/health"]
+      # Liveness only, so a background check never queries the database (BACK-115). Readiness is /health,
+      # checked at deploy.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8787/process"]
       interval: 3s
       timeout: 4s
       retries: 20
