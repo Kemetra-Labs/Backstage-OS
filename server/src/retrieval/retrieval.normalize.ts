@@ -3,6 +3,9 @@
 // It is used only to compare. Stored and returned text and native identifiers are never changed.
 
 const DIACRITICS = /[ً-ٰٟـ]/gu; // harakat, superscript alef, tatweel
+// Invisible format characters (zero-width space/joiners, word joiner, bidi controls, BOM). Without this,
+// `BACK​-8` escapes the identifier-shape check and is fuzzy-matched (COG-08 adversarial finding).
+const FORMAT = /\p{Cf}/gu;
 const ALEF = /[أإآٱ]/gu; // أ إ آ ٱ
 const ARABIC_INDIC = /[٠-٩]/gu;
 const PERSIAN = /[۰-۹]/gu;
@@ -10,6 +13,7 @@ const PERSIAN = /[۰-۹]/gu;
 export function normalizeText(s: string): string {
   return s
     .normalize('NFKC')
+    .replace(FORMAT, '')
     .toLowerCase()
     .replace(DIACRITICS, '')
     .replace(ALEF, 'ا')

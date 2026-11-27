@@ -53,7 +53,7 @@ Text comes from the current revision. When there is none (conflict or unknown cu
 
 ### R3 — Lexical normalization (search only)
 
-NFKC, lower case, remove Arabic diacritics and tatweel, unify alef forms (`أ إ آ ٱ` → `ا`), `ى` → `ي`, `ة` → `ه`, Arabic-Indic and Persian digits → ASCII. Tokens are maximal runs of letters or digits. Normalization is used only to compare; it never changes stored or returned text (research port rule). Queries are bounded: at most 500 characters and 32 tokens, otherwise `invalid-query`.
+NFKC, remove invisible format characters (Unicode `Cf`: zero-width, joiners, bidi controls; added in `retrieval-v2` after the COG-08 adversarial test showed `BACK​-8` escaping the identifier rule), lower case, remove Arabic diacritics and tatweel, unify alef forms (`أ إ آ ٱ` → `ا`), `ى` → `ي`, `ة` → `ه`, Arabic-Indic and Persian digits → ASCII. Tokens are maximal runs of letters or digits. Normalization is used only to compare; it never changes stored or returned text (research port rule). Queries are bounded: at most 500 characters and 32 tokens, otherwise `invalid-query`.
 
 ### R4 — Matching, ranking, ambiguity and abstention
 
@@ -92,7 +92,7 @@ No edge is stored. Edges are recomputed from the visible documents on each call:
 
 ### R7 — Determinism and policy version
 
-The same projection and query give byte-identical output. `RETRIEVAL_POLICY_VERSION` (`retrieval-v1`) is bumped whenever R2 to R6 change. A guard test pins the module as pure: no route, no Nest module registration, no database import, no import from `test/`, and no dependency outside Node's standard library and `src/memory`.
+The same projection and query give byte-identical output. `RETRIEVAL_POLICY_VERSION` (`retrieval-v2`) is bumped whenever R2 to R6 change. A guard test pins the module as pure: no route, no Nest module registration, no database import, no import from `test/`, and no dependency outside Node's standard library and `src/memory`.
 
 ### R8 — Evaluation protocol
 
