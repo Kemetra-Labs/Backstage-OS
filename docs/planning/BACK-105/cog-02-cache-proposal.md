@@ -1,6 +1,6 @@
 # BACK-105 (COG-02): proposal for the D6 memory cache, for owner review
 
-Status: **proposal only. Nothing is built, no migration is written, and no decision is taken here.** The owner delegated the choice of the next step to the implementation session on 2026-11-26. That delegation does **not** cover a schema change, the retention policy (BACK-47 item 6) or accepting COG-02. Each stays an owner decision, as D6 and BACK-105 require.
+Status: **proposal only, plus a prototype measurement of option A (2026-11-27, section 4). Nothing is built, no migration is written, and no decision is taken here.** The owner delegated the choice of the next step to the implementation session on 2026-11-26. That delegation does **not** cover a schema change, the retention policy (BACK-47 item 6) or accepting COG-02. Each stays an owner decision, as D6 and BACK-105 require.
 
 Inputs: [cog-02-design.md](cog-02-design.md) (D1, D3, D3a, D5, D6) and [cog-02-s3-measurements.md](cog-02-s3-measurements.md). Facts about the schema are from `server/migrations/0003`/`0005` and `server/src/evidence/evidence.repository.ts` on `main` at 1d0d677.
 
@@ -53,7 +53,13 @@ A table of runs per source (name illustrative: `memory_runs`), one row per run, 
 
 ### What each option would measure as
 
-Not measured. For A and B the read would scale with runs (21,721 at daily edits, 129,715 hot) rather than with rows (2.1 million), and with the 50-run cap per item with the number of items (121 in the S3 workload). That is a reason to expect a large gain, not a measurement of one. A prototype measurement is cheap to add to the S3 script (materialize the runs into a table through the superuser pool and time the read) and does not need a migration.
+**Measured for A on 2026-11-27, prototype only** ([cog-02-s3-measurements.md](cog-02-s3-measurements.md), "Option A prototype"): with runs **and markers** materialized per source and the reader's grants joined at read time, the read is 69 ms p95 on the 7-day pilot, 321 ms at 180 days with daily edits, and 572 ms at 180 days with every item edited every 4 hours (against 1.4 s, 37 s and 40 s today). Every output equals the S2 statement except `runsTotal` under the cap. Three corrections to option A as written above follow from it:
+
+1. **Markers must be cached too.** Runs alone leave 11 to 12 s at 180 days, because the marker CTEs still sort every row.
+2. **The read must take the newest 50 runs per item through the index** (for example a per-identity `LATERAL ... LIMIT 50`), not by ranking every run; this is what keeps the hot case over 500 ms. Not measured yet.
+3. **The full-set aggregates per identity are required, not optional** (D3a): without them `runsTotal` is wrong under the cap.
+
+B was not measured; it reads the same tables, so its read cost would be the same, and it differs in how the tables are kept current.
 
 ## 5. Tests any cache option must have before it merges
 
@@ -68,7 +74,7 @@ Not measured. For A and B the read would scale with runs (21,721 at daily edits,
 
 1. **Choose D for now.** No consumer needs interactive latency today: COG-03 to COG-07 are gated on "COG-02 accepted", COG-07 is a read-only shadow integration, and the whole cognitive core is off the MVP critical path. A schema change should wait for a consumer and a latency target. The S2 read is correct and bounded in its response; it is only slow, and it can run as a background computation.
 2. **Decide retention (BACK-47 item 6) first.** It fixes the purge horizon the cache must honor and changes the data volume: the 180-day recommendation is the 38 s case, a 7-day window is the 1.3 s case.
-3. **If an interactive consumer appears, choose A** (runs per source, maintained in the ingest transaction, the S2 statement kept as the oracle), with the sequence column (B) only if exact historical replay is also needed. Add the cheap prototype measurement from section 4 first, so the migration is justified by a number.
+3. **If an interactive consumer appears, choose A** (runs **and markers** per source, maintained in the ingest transaction, with the full-set aggregates per identity and an index-bounded read, the S2 statement kept as the oracle), with the sequence column (B) only if exact historical replay is also needed. The prototype measurement is done (section 4): it meets 500 ms at 180 days with daily edits and misses it in the hot case by 72 ms, with a likely fix identified but not measured.
 4. **State the bar.** 500 ms was D6's guard value. Whether it is the right bar for a shadow, non-request path is an owner question.
 
 ## 7. Questions for the owner
