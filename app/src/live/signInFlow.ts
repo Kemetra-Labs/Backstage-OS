@@ -89,7 +89,7 @@ export function boundedLogout(sdk: DescopeSdkLike, ms: number = SIGN_IN_LOGOUT_M
  *     name), DTD (trusted device token), DKD (known device token), DSLI (session expiry), DSLI_DISABLED, dls_last_user_login_id,
  *     dls_last_user_display_name. Each is stored as `${storagePrefix}${key}`; the prefix is the component's `storage-prefix` attribute,
  *     which this page never sets, so it is "".
- *   app/node_modules/@descope/web-component/dist/esm/constants/general.js: dls_last_auth, dls_last_submitted_login_id (sessionStorage).
+ *   app/node_modules/@descope/web-component/dist/esm/constants/index.js: dls_last_auth (DESCOPE_LAST_AUTH_LOCAL_STORAGE_KEY, localStorage), dls_last_submitted_login_id.
  * Deliberately not listed (not credentials or identity): dls_ab_testing_id, the fingerprint ids (fp, vsid, vrid), flow nonces and
  * dls_last_auth_in_flight / dls_sso_query_params (transient flow state that a magic-link return may still need).
  */

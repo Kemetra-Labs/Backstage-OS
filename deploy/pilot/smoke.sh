@@ -274,6 +274,9 @@ has_directive() { # $1 policy, $2 whole directive text, exact
 }
 SIGNIN_CSP="$(hdr "$SIGNIN_H" content-security-policy-report-only)"
 ROOT_CSP="$(hdr "$ROOT_H" content-security-policy-report-only)"
+check "/sign-in: Content-Security-Policy-Report-Only appears exactly once" test "$(echo "$SIGNIN_H" | grep -ic '^content-security-policy-report-only:')" = 1
+check "/: Content-Security-Policy-Report-Only appears exactly once" test "$(echo "$ROOT_H" | grep -ic '^content-security-policy-report-only:')" = 1
+check "images.yml passes VITE_KAWALYS_DESCOPE_PROJECT_ID as a build-arg to the web image build" bash -c 'awk "/file: deploy\/pilot\/web.Dockerfile/{f=1} f&&/build-args:/{b=1} b&&/VITE_KAWALYS_DESCOPE_PROJECT_ID=/{ok=1} f&&/tags:/{exit} END{exit !ok}" "$0"' "$HERE/../../.github/workflows/images.yml"
 SIGNIN_SCRIPT_SRC="$(directive "$SIGNIN_CSP" script-src)"
 check "/sign-in: Cache-Control no-store" bash -c 'echo "$0" | grep -qi "^cache-control: .*no-store"' "$SIGNIN_H"
 check "/: Cache-Control no-store is scoped to /sign-in only" bash -c '! echo "$0" | grep -qi "^cache-control: .*no-store"' "$ROOT_H"

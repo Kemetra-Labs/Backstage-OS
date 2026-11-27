@@ -8,7 +8,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build } from 'vite';
-import type { RollupOutput } from 'rollup';
+import type { Rollup } from 'vite';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const APP_ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -52,7 +52,7 @@ describe('fixture bundle guard (D3(a))', () => {
         envDir: scratch, // an empty directory: no .env file can switch live mode on
         build: { write: false, outDir: join(scratch, 'out'), emptyOutDir: false, reportCompressedSize: false },
       });
-      const outputs = (Array.isArray(result) ? result : [result]) as RollupOutput[];
+      const outputs = (Array.isArray(result) ? result : [result]) as Rollup.RollupOutput[];
       const files = outputs.flatMap((o) => o.output) as unknown as Emitted[];
       // The build really ran: the app's own code is there.
       expect(files.some((f) => f.type === 'chunk' && /Kawalys/.test(f.code ?? ''))).toBe(true);
