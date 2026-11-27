@@ -119,3 +119,8 @@ Return to the owner if a rule needs evidence that does not exist (for example "m
 - **T2, end to end:** the GitHub observer now stores `draft` only when the provider sent a boolean, and `null` otherwise (a BACK-48 connector change, made at the owner's instruction to fix every review finding). An omitted or malformed flag is therefore `no-value` from ingestion to reasoning. No real observations exist yet (no connector is provisioned), so no stored `false` without provenance needs migrating.
 - **T6:** the validator accepts plain data only: own data properties (accessors are refused and never run), exact key sets, and dense arrays with nothing but their indexes, so no extra property or `toJSON` hook.
 - Regression tests: `test/reasoning/reasoning.findings2.spec.ts`, `test/connectors/github/github-draft.spec.ts`.
+
+## Third revision after the complete third review (2026-11-27)
+
+- **T6:** the validator requires the standard array prototype, so an inherited `toJSON` cannot change what a validated result serializes to.
+- Regression test: `test/reasoning/reasoning.findings3.spec.ts`.

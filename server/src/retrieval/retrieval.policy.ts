@@ -12,8 +12,11 @@
  * are suppressed without an established revision; edge and unresolved budgets on both entry points.
  * v5 (2026-11-27, third COG-08 review): no digit-count ceiling on identifier shapes; combining marks
  * count as word characters at mention boundaries.
+ * v6 (2026-11-27, third review rerun): whitespace collapses after marks in the shape fold; mention
+ * boundaries look through format characters; `#n` follows the observer's positive safe integers; each
+ * title has its own unresolved allowance, and traversal caps only what it visits.
  */
-export const RETRIEVAL_POLICY_VERSION = 'retrieval-v5';
+export const RETRIEVAL_POLICY_VERSION = 'retrieval-v6';
 
 export const MAX_QUERY_CHARS = 500;
 export const MAX_QUERY_TOKENS = 32;
@@ -40,9 +43,11 @@ export const TITLE_FIELD: Readonly<Record<string, string>> = {
 /** A Jira key as it appears in text. Bounded quantifiers only (no catastrophic backtracking). */
 // Jira project keys allow digits and underscores; a key glued to a letter, mark or digit (any script)
 // is not one.
-export const JIRA_KEY_IN_TEXT = /(?<![\p{L}\p{M}\p{N}_])[A-Z][A-Z0-9_]{1,63}-\d{1,18}(?![\p{L}\p{M}\p{N}_])/gu;
+// Boundaries look through invisible format characters, so a zero-width joiner is not a word break.
+export const JIRA_KEY_IN_TEXT = /(?<![\p{L}\p{M}\p{N}_]\p{Cf}*)[A-Z][A-Z0-9_]{1,63}-\d{1,18}(?!\p{Cf}*[\p{L}\p{M}\p{N}_])/gu;
 /** A same-repository GitHub reference as it appears in a GitHub item's text. */
-export const GITHUB_NUMBER_IN_TEXT = /(?<![\p{L}\p{M}\p{N}_#])#(\d{1,15})(?![\p{L}\p{M}\p{N}_])/gu;
+// Up to 16 digits (the safe-integer range); the parser then keeps positive safe integers only, as the observer does.
+export const GITHUB_NUMBER_IN_TEXT = /(?<![\p{L}\p{M}\p{N}_#]\p{Cf}*)#(\d{1,16})(?!\p{Cf}*[\p{L}\p{M}\p{N}_])/gu;
 
 /**
  * Queries shaped like a native identifier are answered by exact match only, never fuzzily (R4):

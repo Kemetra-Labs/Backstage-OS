@@ -18,15 +18,20 @@ function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   else map.set(key, [value]);
 }
 
-/** Collects edges and unresolved mentions under the budgets; records when it had to stop. */
+/**
+ * Collects edges under one graph budget, and unresolved mentions under an allowance per mentioning title,
+ * so one noisy title can never use up another item's allowance (COG-08 review 3). Records where it cut.
+ */
 class Budget {
   readonly edges: Edge[] = [];
-  readonly unresolved: UnresolvedMention[] = [];
-  truncated = false;
+  readonly unresolved = new Map<string, UnresolvedMention[]>();
+  /** Titles whose own unresolved mentions were cut. */
+  readonly cutTitles = new Set<string>();
+  edgesTruncated = false;
 
   edge(e: Edge): boolean {
     if (this.edges.length >= MAX_EDGES) {
-      this.truncated = true;
+      this.edgesTruncated = true;
       return false;
     }
     this.edges.push(e);
@@ -34,9 +39,23 @@ class Budget {
   }
 
   miss(u: UnresolvedMention): void {
-    if (this.unresolved.length >= MAX_UNRESOLVED) this.truncated = true;
-    else this.unresolved.push(u);
+    const key = identityKey(u.from);
+    const list = this.unresolved.get(key) ?? [];
+    if (list.length >= MAX_UNRESOLVED) {
+      this.cutTitles.add(key);
+      return;
+    }
+    list.push(u);
+    this.unresolved.set(key, list);
   }
+}
+
+const byFromThenText = (a: UnresolvedMention, b: UnresolvedMention): number => cmp(identityKey(a.from), identityKey(b.from)) || cmp(a.text, b.text);
+
+/** The first MAX_UNRESOLVED in canonical order, and whether anything was left out. */
+function capUnresolved(lists: readonly UnresolvedMention[][], cut: boolean): { unresolved: UnresolvedMention[]; truncated: boolean } {
+  const all = lists.flat().sort(byFromThenText);
+  return { unresolved: all.slice(0, MAX_UNRESOLVED), truncated: cut || all.length > MAX_UNRESOLVED };
 }
 
 function containsEdges(docs: readonly Doc[], budget: Budget): void {
@@ -86,21 +105,27 @@ function mentionsOf(docs: readonly Doc[], budget: Budget): void {
     for (const key of matchesOf(d.title, JIRA_KEY_IN_TEXT)) if (!record(d, key, jiraByKey.get(key) ?? [])) return;
     if (!isGithubItem(d)) continue;
     for (const ref of matchesOf(d.title, GITHUB_NUMBER_IN_TEXT, '#')) {
-      if (!record(d, ref, githubByNumber.get(githubKey(d.identity.sourceId, repoScope(d), Number(ref.slice(1)))) ?? [])) return;
+      const n = Number(ref.slice(1));
+      // The observer only stores positive safe integers: anything else is no GitHub reference at all.
+      if (!Number.isSafeInteger(n) || n < 1) continue;
+      if (!record(d, ref, githubByNumber.get(githubKey(d.identity.sourceId, repoScope(d), n)) ?? [])) return;
     }
   }
 }
 
-function relationshipsOf(docs: readonly Doc[]): Relationships {
+function build(docs: readonly Doc[]): Budget {
   const budget = new Budget();
   containsEdges(docs, budget);
-  if (!budget.truncated) mentionsOf(docs, budget);
-  const edges = [...budget.edges].sort((a, b) => cmp(edgeOrder(a), edgeOrder(b)));
-  const unresolved = [...budget.unresolved].sort((a, b) => cmp(identityKey(a.from), identityKey(b.from)) || cmp(a.text, b.text));
-  return { edges, unresolved, truncated: budget.truncated };
+  if (!budget.edgesTruncated) mentionsOf(docs, budget);
+  budget.edges.sort((a, b) => cmp(edgeOrder(a), edgeOrder(b)));
+  return budget;
 }
 
-export const relationships = (projection: MemoryProjection): Relationships => relationshipsOf(docsOf(projection));
+export function relationships(projection: MemoryProjection): Relationships {
+  const b = build(docsOf(projection));
+  const capped = capUnresolved([...b.unresolved.values()], b.cutTitles.size > 0);
+  return { edges: b.edges, unresolved: capped.unresolved, truncated: b.edgesTruncated || capped.truncated };
+}
 
 const validBound = (v: number, max: number): boolean => Number.isInteger(v) && v >= 1 && v <= max;
 
@@ -115,7 +140,7 @@ export function related(projection: MemoryProjection, start: ItemIdentity, optio
   const byKey = new Map(docs.map((d) => [d.key, d]));
   if (!byKey.has(startKey)) return none('not-found');
 
-  const rel = relationshipsOf(docs);
+  const rel = build(docs);
   const adjacent = new Map<string, { key: string; edge: Edge }[]>();
   for (const e of rel.edges) {
     push(adjacent, identityKey(e.from), { key: identityKey(e.to), edge: e });
@@ -126,7 +151,7 @@ export function related(projection: MemoryProjection, start: ItemIdentity, optio
   const nodes: TraversalNode[] = [{ identity: byKey.get(startKey)!.identity, depth: 0, via: null }];
   const visited = new Set([startKey]);
   // A budget-cut graph may lack edges this walk would have followed: say so.
-  let truncated = rel.truncated;
+  let truncated = rel.edgesTruncated;
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]!;
     if (node.depth >= depth) continue;
@@ -140,5 +165,8 @@ export function related(projection: MemoryProjection, start: ItemIdentity, optio
       nodes.push({ identity: byKey.get(next.key)!.identity, depth: node.depth + 1, via: next.edge });
     }
   }
-  return { outcome: 'found', nodes, unresolved: rel.unresolved.filter((u) => visited.has(identityKey(u.from))), truncated };
+  // Only the visited titles' own mentions count against this traversal's allowance.
+  const visitedLists = [...visited].map((k) => rel.unresolved.get(k) ?? []);
+  const capped = capUnresolved(visitedLists, [...visited].some((k) => rel.cutTitles.has(k)));
+  return { outcome: 'found', nodes, unresolved: capped.unresolved, truncated: truncated || capped.truncated };
 }

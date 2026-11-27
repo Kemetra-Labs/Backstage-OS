@@ -28,7 +28,8 @@ function sameData(got: unknown, want: unknown): boolean {
   if (want === null || typeof want !== 'object') return got === want;
   if (got === null || typeof got !== 'object') return false;
   if (Array.isArray(want)) {
-    if (!Array.isArray(got) || got.length !== want.length) return false;
+    // The standard prototype only: an inherited `toJSON` would change what the result serializes to.
+    if (!Array.isArray(got) || Object.getPrototypeOf(got) !== Array.prototype || got.length !== want.length) return false;
     if (Reflect.ownKeys(got).length !== want.length + 1) return false; // indexes + length, nothing else
     for (let i = 0; i < want.length; i++) if (!sameValue(got, i, want[i])) return false;
     return true;

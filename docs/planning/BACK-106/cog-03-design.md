@@ -162,3 +162,10 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 - Identifier shapes have no digit-count ceiling. The query bound (500 characters) bounds the work, so a 65-digit number or key is still answered by exact match only.
 - Mention boundaries treat combining marks as word characters, so a key touching a mark is not a mention.
 - Regression tests: `test/retrieval/retrieval.findings3.spec.ts`.
+
+## Fourth revision after the complete third review (`retrieval-v6`, 2026-11-27)
+
+- **R3:** whitespace collapses again after the shape fold removes marks, so `PR <mark> 99` is shaped like `pr 99`.
+- **R6, boundaries:** mention boundaries look through invisible format characters, so a zero-width joiner is not a word break. `#n` follows the observer's range (positive safe integers, up to 16 digits); `#0` and out-of-range numbers are not references at all.
+- **R6, allowances:** each title has its own allowance of 50 unresolved mentions during construction. `relationships()` returns at most 50 in total; `related()` counts only the visited titles' mentions. Edge truncation and unresolved truncation are tracked separately, so one noisy title cannot cut or flag an unrelated traversal.
+- Regression tests: `test/retrieval/retrieval.findings4.spec.ts`.
