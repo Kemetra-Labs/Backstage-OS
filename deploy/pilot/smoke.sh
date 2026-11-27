@@ -58,13 +58,13 @@ fail() { echo "FAIL  $1"; FAILS=$((FAILS + 1)); }
 check() { local name="$1"; shift; if "$@"; then pass "$name"; else fail "$name"; fi; }
 
 code() { curl -sk -o "$TMP_NATIVE/body" -w '%{http_code}' --max-time 10 "$@" 2>/dev/null; }
-is_code() { [ "$(code "$2")" = "$1" ]; }
+is_code() { [[ "$(code "$2")" = "$1" ]]; }
 
 log() { echo "-- $*"; }
 quiet() { "$@" >"$TMP/step.log" 2>&1 || { echo "step failed: $*"; tail -n 40 "$TMP/step.log"; return 1; }; }
 
 command -v docker >/dev/null && command -v curl >/dev/null || { echo "FAIL  docker and curl are required"; exit 1; }
-[ -f "$HERE/compose.yml" ] || { echo "FAIL  deploy/pilot/compose.yml is missing"; exit 1; }
+[[ -f "$HERE/compose.yml" ]] || { echo "FAIL  deploy/pilot/compose.yml is missing"; exit 1; }
 
 log "isolation: every resource of this run belongs to $PROJECT, none to the deployment project kawalys-pilot"
 log "build images and start postgres"
@@ -86,7 +86,7 @@ run_bounded() { # $1 seconds, then the command; output in $TMP/bounded.out, stat
     timeout "$secs" "$@" >"$TMP/bounded.out" 2>&1; BOUNDED_RC=$?
   else
     "$@" >"$TMP/bounded.out" 2>&1 & local pid=$! waited=0
-    while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt "$secs" ]; do sleep 1; waited=$((waited + 1)); done
+    while kill -0 "$pid" 2>/dev/null && [[ "$waited" -lt "$secs" ]]; do sleep 1; waited=$((waited + 1)); done
     if kill -0 "$pid" 2>/dev/null; then kill -9 "$pid" 2>/dev/null; BOUNDED_RC=124; else wait "$pid"; BOUNDED_RC=$?; fi
   fi
 }
@@ -99,7 +99,7 @@ log "start bff and web"
 quiet dc up -d --wait bff web && pass "bff healthy, web started" || { fail "bff healthy, web started"; dc logs --tail 30 bff web; exit 1; }
 
 # Caddy needs a moment to issue its internal certificate.
-for _ in $(seq 1 20); do [ "$(code "$BASE/api/process")" = 200 ] && break; sleep 1; done
+for _ in $(seq 1 20); do [[ "$(code "$BASE/api/process")" = 200 ]] && break; sleep 1; done
 
 check "GET /api/process -> 200 (liveness through Caddy)" is_code 200 "$BASE/api/process"
 check "GET /api/health -> 200 after migrate" is_code 200 "$BASE/api/health"
@@ -162,19 +162,19 @@ check "bff sees ca.crt, server.crt, server.key only" test "$(docker exec "$BFF_I
 log "sign-in limit is per client behind Caddy (forged X-Forwarded-For does not bypass it)"
 LIMITED=no
 for i in $(seq 1 14); do
-  [ "$(code -X POST -H "X-Forwarded-For: 203.0.113.$i" "$BASE/api/auth/session")" = 429 ] && { LIMITED=yes; break; }
+  [[ "$(code -X POST -H "X-Forwarded-For: 203.0.113.$i" "$BASE/api/auth/session")" = 429 ]] && { LIMITED=yes; break; }
 done
 check "14 sign-in attempts with 14 forged X-Forwarded-For values hit 429" test "$LIMITED" = yes
 
 log "database outage: unknown is never healthy"
 dc stop postgres >/dev/null 2>&1
 saw503=no
-for _ in $(seq 1 10); do [ "$(code "$BASE/api/health")" = 503 ] && { saw503=yes; break; }; sleep 1; done
+for _ in $(seq 1 10); do [[ "$(code "$BASE/api/health")" = 503 ]] && { saw503=yes; break; }; sleep 1; done
 check "postgres stopped -> /api/health 503 within 10 s" test "$saw503" = yes
 check "liveness stays 200 while the database is down" is_code 200 "$BASE/api/process"
 dc start postgres >/dev/null 2>&1
 back=no
-for _ in $(seq 1 30); do [ "$(code "$BASE/api/health")" = 200 ] && { back=yes; break; }; sleep 1; done
+for _ in $(seq 1 30); do [[ "$(code "$BASE/api/health")" = 200 ]] && { back=yes; break; }; sleep 1; done
 check "postgres restarted -> /api/health 200 again" test "$back" = yes
 
 log "isolation check"
@@ -184,5 +184,5 @@ check "smoke images are tagged with the smoke prefix, not kawalys-pilot-*:local"
 check "no volume of the smoke project is named like a deployment volume" bash -c '! docker volume ls -q --filter "label=com.docker.compose.project=$0" | grep -q "^kawalys-pilot_"' "$PROJECT"
 
 echo
-if [ "$FAILS" -eq 0 ]; then echo "SMOKE RESULT: ALL PASS"; else echo "SMOKE RESULT: $FAILS FAILED"; fi
-[ "$FAILS" -eq 0 ]
+if [[ "$FAILS" -eq 0 ]]; then echo "SMOKE RESULT: ALL PASS"; else echo "SMOKE RESULT: $FAILS FAILED"; fi
+[[ "$FAILS" -eq 0 ]]

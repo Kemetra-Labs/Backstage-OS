@@ -7,7 +7,7 @@ COPY app/tsconfig.json app/vite.config.ts app/index.html ./
 COPY app/src ./src
 ENV VITE_KAWALYS_LIVE=1
 # Typecheck runs in the app suite; the image only bundles (tests import e2e/ files that are not in this context).
-RUN npx vite build
+RUN ./node_modules/.bin/vite build
 
 FROM caddy:2.11.9-alpine
 COPY --from=build /build/dist /srv
