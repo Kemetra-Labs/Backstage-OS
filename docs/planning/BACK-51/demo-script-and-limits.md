@@ -26,34 +26,71 @@ Every screen shows a demo marker. The default build calls nothing: the app calls
 Backend half (Technical only, optional): `cd server && npm run local:up` (BACK-61) brings up a loopback Postgres with
 synthetic evidence, then prints what was seeded. The HTTP routes stay deny-all without a configured Descope owner.
 
+### Live-mode variant (about 8 minutes, Owner)
+
+Use this to show the real gate path: the app reading the Kawalys server and recording a decision. It is a variant, not the
+default. The synthetic-fixture script above stays the default path. Data is still synthetic.
+
+**Run it, option 1: the automated suite (no Descope, no secrets).** From the repo root:
+`(cd server && npm ci) && cd app && npm ci`, then `npx playwright install chromium` once, then `npm run e2e:live` in `app/`
+(needs Docker running; Chromium only). It starts a test-only BFF with a fake identity verifier on disposable Postgres and a
+live-mode build behind `vite preview` (`app/README.md`, "Live end-to-end suite"). It runs the whole path below as a test
+(`app/e2e-live/gate-path.spec.ts`). It is the same job CI runs as `live-e2e`. There is no browser to watch; show the passing run.
+
+**Run it, option 2: by hand (owner's machine, needs a Descope project).** No Descope project exists yet (P5), so this
+cannot run today. Once the owner has one, follow `docs/planning/BACK-56/K-ID-1b-lab-runbook.md` section 2: set
+`KAWALYS_DESCOPE_PROJECT_ID`, `KAWALYS_OWNER_SUBJECT` and `KAWALYS_AUTH_LAB=1`, then `npm run build && npm start` in
+`server/` (BFF on `127.0.0.1:8787`). To read the seeded data, run `npm run local:up` first and keep the two
+`KAWALYS_DATABASE_URL_*` lines it prints, with the same Descope variables set so the seed binds the real owner
+(`server/README.md`, local stack). Then `cd app && VITE_KAWALYS_LIVE=1 npx vite` (`app/README.md`, "Live mode"). Without
+Descope, every protected route is deny-all and the app only shows "not found, or not signed in".
+
+| Min | Step | What to point out |
+| --- | --- | --- |
+| 0–1 | Open the app. The session bar says signed out | Every live read says "not found, or not signed in" in words, never an empty list, never healthy. |
+| 1–2 | Sign in (the session bar's link opens the lab page `/api/auth/lab`; the app then re-checks `GET /api/auth/me`) | The bar shows the owner role. Customers never sign in. |
+| 2–4 | Portfolio | Panels say "Live: read from the Kawalys server". The GitHub sources come from the seed; stale or unread ones still say so. |
+| 4–6 | Investigation Room (the newest case, or `?investigation=<uuid>` from `local:up`) | Evidence rows keep their type badges and Unknown customer impact. |
+| 6–7 | **Record a decision** (Owner or Technical; Nontechnical sees no form) | Pick records, write the decision, submit once. A double click sends one request (client-side guard only). |
+| 7–8 | The new decision in the list | It appears as Proposed, with its creator and time. Technical also sees source references. |
+| 8 | Sign out | The page drops what it held; the in-memory draft is cleared. Reads answer "not found" again. |
+
 ## Known limitations
 
-1. **No login in the app.** Customers never sign in; staff sign-in exists only as the owner-only BFF lab (BACK-56) and is
-   off until `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set.
-2. **The app calls the server only in live mode** (BACK-51 P1; owner decisions D1 (a) and D2 (a), 2026-11-26). By
-   default, Portfolio and the Investigation Room's server-shaped records panel use committed synthetic fixtures, which
-   parity tests keep equal to real server responses. With `VITE_KAWALYS_LIVE=1` they read `GET /portfolio`,
-   `GET /investigations/:id` and `GET /decisions` same origin (`/api`, proxied), through `app/src/live/http.ts` only. The
-   Investigation Room opens the case named by `?investigation=<uuid>`, or with none the newest case the session can see. There
-   is no sign-in in the app yet (P2), so live reads answer "not found, or not signed in" until a session exists.
-3. **No live connector.** GitHub, Jira and Confluence exist as mappers behind read-only ports with canned answers; there
-   is no transport and no token. Jira and Confluence records can be stored since BACK-99 (migration 0005), but the
-   portfolio reads GitHub sources only.
-4. **Decisions are recorded through the API only** (`POST /investigations/:id/decisions`); the UI has no "record
-   decision" control. `GET /decisions` (BACK-59) lists them with creator and time. Since BACK-100 (migration 0004) a
-   decision cannot be stored without its audit row, so its creator is always recorded. `GET /decisions` has no cursor
-   pagination (`limit` up to 100, optional `investigationId` filter).
-5. **No hosting.** Nothing is deployed (BACK-64); no database, Descope project or secrets are provisioned.
-6. **One role.** Only `owner` exists server-side; personas in the app are a display switch, never authorization.
+1. **No customer login, and no product sign-in provider yet.** Customers never sign in. The app has a session bar
+   (`GET /api/auth/me`), a link to the owner-only lab sign-in (`/api/auth/lab`) and a sign-out (BACK-51 P2). The lab and
+   every protected route stay off or deny-all until `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT` are set. No
+   Descope project is provisioned, and a real Descope sign-in has never been run (P5).
+2. **The app calls the server only in live mode** (`VITE_KAWALYS_LIVE=1`, same origin `/api`, proxied; BACK-51 P1; owner
+   decisions D1 (a) and D2 (a)). The default build reads committed synthetic fixtures and makes no request. Parity tests
+   keep those fixtures equal to real server responses. A draft decision is kept in memory only and cleared on sign-out.
+3. **No real connector, no transport.** GitHub, Jira and Confluence exist as mappers behind read-only ports with canned
+   answers; there is no network transport and no token (BACK-52 has not run). Jira and Confluence records can be stored
+   since BACK-99 (migration 0005), but the portfolio reads GitHub sources only.
+4. **Decisions are recorded in the app** (P3: "Record a decision" in the Investigation Room, Owner and Technical only) and
+   through `POST /investigations/:id/decisions`. `GET /decisions` lists them with creator and time, with an opaque cursor
+   (`limit` up to 100, optional `investigationId` filter). A decision cannot be stored without its audit row (BACK-100,
+   migration 0004), so the creator is always recorded. Nothing is approved or run by Kawalys: a new decision is Proposed.
+5. **Duplicate guard is client-only (D5 (a)).** The form allows one submit at a time and keeps the draft on failure. The
+   server has no `Idempotency-Key`. A retry after a timeout could record a second decision, visible in `GET /decisions` with
+   its own audit row. A server key is a logged follow-up (D5 (b)).
+6. **The live suite runs in Chromium only.** The session cookie is `__Host-` and `Secure`; whether WebKit accepts it over
+   plain `http://127.0.0.1` is not verified. The default app suite still runs in Chromium and WebKit.
+7. **No hosting.** Nothing is deployed (BACK-64); no database, Descope project or secrets are provisioned.
+8. **One role.** Only `owner` exists server-side. Personas in the app are a display switch, never authorization.
+9. **Synthetic data only.** No customer data, and no live telemetry is shown anywhere.
 
 ## Pilot readiness gate (from the 22 Nov reconciliation)
 
+The gate is NOT PASSED. A row is PASS only with evidence; missing evidence stays NOT RUN or BLOCKED.
+
 | Requirement | State |
 | --- | --- |
-| Login → Portfolio → Investigation → record decision, end to end | Passes in CI (`live-e2e`) with the fake identity verifier; real Descope sign-in is P5 |
-| Demo script (5–10 min) | Draft above |
+| Login → Portfolio → Investigation → record decision, end to end | Passes in CI (`live-e2e`, 9 tests, Chromium) with the fake identity verifier only. Real Descope sign-in is P5: **NOT RUN** |
+| Demo script (5–10 min) | Written above: fixture script plus live-mode variant. Not yet rehearsed with the owner |
 | Known limitations listed | Above |
-| X02/X04 + BACK-30 restricted-existence security sign-off | NOT RUN |
-| BACK-55/56/57/59/60/61/62 readiness | Code slices merged or in review; BACK-64 deployment NOT RUN |
-| Negative / privacy / EN-AR / RTL / a11y checks documented | In CI (app e2e: `a11y`, `leaks`, `nondisclosure`, `arabic-copy`) |
-| Owner signs off | **NOT RUN** (owner only, no auto-close) |
+| X02/X04 + BACK-30 restricted-existence security sign-off | NOT RUN (separate workstream preparing evidence) |
+| BACK-55/56/57/59/60/61/62 readiness | Code slices merged; BACK-56 real sign-in not run |
+| BACK-64 deployment | NOT RUN |
+| Negative / privacy / EN-AR / RTL / a11y checks documented | In CI (app e2e: `a11y`, `leaks`, `nondisclosure`, `arabic-copy`; live e2e: negative, Arabic and leak cases) |
+| Owner signs off | **NOT RUN (owner only)** |
