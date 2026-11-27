@@ -353,3 +353,12 @@ The current value is therefore the run *as known by E*:
 - the worst state seen anywhere in the run.
 
 It is `verified` only when every observation in the run was `ok`, and it never reports a state or evidence id observed after E. Ordered kinds are unaffected: their effective time is provider time. Regression test: `test/memory/memory.findings2.spec.ts`.
+
+## Revision after the COG-08 fifth review (2026-11-27)
+
+- The as-of-E view also decides which reads are newer. Failure and ambiguity markers are compared with the as-of observation, so a failed read before E is no longer hidden by an observation after E.
+- A marker after E still counts (unknown, never verified): conservative, because markers are reduced to the newest per ref before the projector sees them.
+- The view uses the first row's own receipt time.
+- The worst state follows the shared `worstState` precedence.
+- **Known limit:** the run record does not keep the first row's own state, so a read exactly at a run's first observation reports the worst state seen in the run. That can be stale where the first row was ok, never the reverse.
+- Regression test: `test/memory/memory.findings3.spec.ts`.

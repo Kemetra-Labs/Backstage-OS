@@ -78,7 +78,7 @@ function pagePayload(item: unknown, key: string, id: string, base: string | null
     kind: 'confluence_page',
     pageId,
     title: clip(title),
-    ...(isClipped(title) ? { textClipped: true } : {}),
+    textClipped: isClipped(title),
     spaceKey: key,
     lastModified: isoDate(createdAt),
     version: number,

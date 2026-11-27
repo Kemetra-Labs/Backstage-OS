@@ -84,12 +84,19 @@ function optionalIsoDate(v: unknown): string | null {
  * Text safe for PostgreSQL jsonb: no NUL, no unpaired surrogate (replaced by U+FFFD), cut on whole
  * code points so a cut can never split an emoji. jsonb rejects either, and ingest() is all-or-nothing.
  */
-/** True when `clip` would cut `s`: a parser must not read an identifier across the cut (COG-08 review 4). */
-export const isClipped = (s: string, max = TITLE_MAX): boolean => Array.from(s).length > max;
+/** The code points that `clip` keeps from: NUL removed, unpaired surrogates replaced. */
+function sanitized(s: string): string[] {
+  return Array.from((s.replaceAll(String.fromCharCode(0), '') as unknown as { toWellFormed(): string }).toWellFormed());
+}
+
+/**
+ * True when `clip` cuts `s`, computed from the same sanitized code points as the stored text (COG-08
+ * reviews 4 and 5): a parser must not read an identifier across the cut.
+ */
+export const isClipped = (s: string, max = TITLE_MAX): boolean => sanitized(s).length > max;
 
 export function clip(s: string, max = TITLE_MAX): string {
-  const wellFormed = (s.replaceAll(String.fromCharCode(0), '') as unknown as { toWellFormed(): string }).toWellFormed();
-  return Array.from(wellFormed).slice(0, max).join('');
+  return sanitized(s).slice(0, max).join('');
 }
 
 /**
@@ -137,7 +144,8 @@ function itemPayload(kind: 'pull_request' | 'issue', item: unknown, ref: string)
   const { number, title, state, updated_at, html_url, draft } = item;
   if (typeof number !== 'number' || !Number.isSafeInteger(number) || number < 1) throw new Malformed();
   if (typeof title !== 'string' || typeof state !== 'string' || !ITEM_STATES.has(state)) throw new Malformed();
-  const base = { kind, number, title: clip(title), ...(isClipped(title) ? { textClipped: true } : {}), state };
+  // `textClipped` is always stated, so a row with no flag is recognisably older than the flag (COG-08 review 5).
+  const base = { kind, number, title: clip(title), textClipped: isClipped(title), state };
   const tail = { updatedAt: isoDate(updated_at), url: ownUrl(html_url, ref) };
   // Only a boolean from the provider is evidence; anything else stays unknown (null), never "not a draft"
   // (COG-08 second review: a missing flag made a task that needed an open PR look ready).

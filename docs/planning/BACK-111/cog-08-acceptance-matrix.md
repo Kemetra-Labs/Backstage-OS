@@ -145,3 +145,25 @@ All findings below are fixed on the branch that adds this section, each with a r
 | Low | Validator lookups scanned the projection each time | One index per validation |
 
 **Next:** a fifth review of the fixed commit. The pre-COG-07 decision stays **NO-GO** until a complete review returns GO.
+
+## 10. Fifth independent review: Codex, commit 43ab9f0 (2026-11-27)
+
+The first attempt was stopped by the provider's content filter. A narrower rerun (correctness of the round-four changes only) returned **NO-GO**.
+- **Fixed:** the validator index.
+- **Partially fixed:** the edge-budget, clip and as-of changes.
+- **Blockers named:** the false-relationship cases and the misleading historical `verified`. Everything below is fixed on the branch that adds this section, each with a regression test that failed on 43ab9f0.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| Medium (blocker) | A format character before the clip cut hid the cut | A clipped mention needs a visible character after it |
+| Medium (blocker) | Legacy rows without `textClipped` still linked across the cut | Explicit `textClipped` on every new row; flag-less titles at the limit count as possibly clipped |
+| Medium (blocker) | A historical repository read ignored a failed read before E | Markers compared with the as-of observation |
+| Medium | Candidate pairs still visited after the edge budget filled | Targets recorded once per bucket |
+| Low | NUL removal made the clip flag disagree with the stored text | Flag and text from the same sanitized code points |
+| Low | Exact-first reads reported the run-wide earliest receipt | The first row's receipt |
+| Low | Worst-state precedence differed from `worstState` | `worstState` reused |
+| Low | Duplicate identities in a hand-built projection | Contract stated: the last one wins, on both evaluator and validator |
+
+**Known limit added:** a read exactly at a run's first observation reports the run's worst state (conservative), until the run record keeps the first row's state, which would be an S2 SQL change.
+
+**Next:** a sixth review of the fixed commit.

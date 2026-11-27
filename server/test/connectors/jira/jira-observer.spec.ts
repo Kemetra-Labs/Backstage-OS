@@ -29,6 +29,7 @@ describe('reachable Jira projects', () => {
       kind: 'jira_issue',
       key: 'BACK-53',
       summary: 'Synthetic summary for BACK-53',
+      textClipped: false,
       statusCategory: 'indeterminate',
       updatedAt: '2026-11-24T08:00:00.000Z',
       url: `${SITE}/browse/BACK-53`,

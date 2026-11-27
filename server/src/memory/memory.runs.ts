@@ -2,7 +2,7 @@
 // (memory.collapse.ts). Pure functions.
 import { contentKeyOf, type RunRecord } from './memory.collapse';
 import { EFFECTIVE_FIELD, isOrdered, ORDER_FIELD, type ItemKind } from './memory.policy';
-import type { EvidenceState } from '../evidence/evidence.types';
+import { worstState } from '../evidence/evidence.types';
 import type { Run } from './memory.types';
 
 /** Milliseconds of an ISO instant; an unreadable time is refused, never guessed. */
@@ -73,9 +73,6 @@ export const runInfoOrder = (a: RunInfo, b: RunInfo): number =>
 const latestOrder = (a: RunInfo, b: RunInfo): number =>
   a.lastObserved - b.lastObserved || a.lastRowReceived - b.lastRowReceived || byCodeUnit(a.rec.lastId, b.rec.lastId);
 
-/** Worst first: any failure state outranks stale, which outranks ok. */
-const STATE_ORDER: readonly EvidenceState[] = ['error', 'denied', 'unknown', 'stale', 'ok'];
-
 /**
  * A repository run (no provider order) read at an effective time E strictly inside it (COG-08 review 4).
  * The run record keeps only its first and last observations, so the run as known by E is its first
@@ -85,12 +82,14 @@ const STATE_ORDER: readonly EvidenceState[] = ['error', 'denied', 'unknown', 'st
  */
 export function asKnownAt(info: RunInfo): RunInfo {
   const rec = info.rec;
-  const worst = STATE_ORDER.find((s) => rec.states.includes(s)) ?? rec.lastState;
+  // The shared evidence precedence (worstState), so memory and the evidence API agree.
+  const worst = rec.states.length ? worstState(rec.states) : rec.lastState;
   return {
     ...info,
-    rec: { ...rec, lastId: rec.firstId, lastObservedAt: rec.firstObservedAt, lastReceivedAt: rec.firstReceivedAt, lastRowReceivedAt: rec.firstRowReceivedAt, lastState: worst },
+    // The first row's own receipt time, not the run-wide earliest receipt.
+    rec: { ...rec, lastId: rec.firstId, lastObservedAt: rec.firstObservedAt, lastReceivedAt: rec.firstRowReceivedAt, lastRowReceivedAt: rec.firstRowReceivedAt, lastState: worst },
     lastObserved: info.firstObserved,
-    lastReceived: info.firstReceived,
+    lastReceived: info.firstRowReceived,
     lastRowReceived: info.firstRowReceived,
   };
 }

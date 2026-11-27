@@ -15,8 +15,11 @@
  * v6 (2026-11-27, third review rerun): whitespace collapses after marks in the shape fold; mention
  * boundaries look through format characters; `#n` follows the observer's positive safe integers; each
  * title has its own unresolved allowance, and traversal caps only what it visits.
+ * v7 (2026-11-27, fifth review): a clipped title needs a visible character after a mention; legacy
+ * titles at the clip limit with no flag count as possibly clipped; fan-out past the edge budget is
+ * recorded per target bucket, not per pair.
  */
-export const RETRIEVAL_POLICY_VERSION = 'retrieval-v6';
+export const RETRIEVAL_POLICY_VERSION = 'retrieval-v7';
 
 export const MAX_QUERY_CHARS = 500;
 export const MAX_QUERY_TOKENS = 32;
@@ -30,6 +33,11 @@ export const MAX_NODES = 50;
 export const MAX_UNRESOLVED = 50;
 /** Edges built by one relationships() call; work stops there and the result says `truncated` (R6). */
 export const MAX_EDGES = 2000;
+/**
+ * The observers' clip length in code points (github.observer TITLE_MAX; pinned by github-clip2.spec).
+ * A title with no `textClipped` flag predates the flag; at this length it may have been clipped.
+ */
+export const CLIP_LIMIT = 300;
 
 /** The payload field that holds an item's original text, per kind. */
 export const TITLE_FIELD: Readonly<Record<string, string>> = {
@@ -77,6 +85,9 @@ function neighbour(text: string, from: number, step: -1 | 1): string {
  * True when the match `[start, end)` is a whole word: the nearest visible characters on both sides are
  * not letters, marks, digits or `_` (nor `extraBefore` before it). Linear in the format characters it skips.
  */
+/** True when a visible character follows `end`, after skipping format characters. */
+export const hasVisibleAfter = (text: string, end: number): boolean => neighbour(text, end, 1) !== '';
+
 export function isMentionBoundary(text: string, start: number, end: number, extraBefore = ''): boolean {
   const before = neighbour(text, start, -1);
   const after = neighbour(text, end, 1);
