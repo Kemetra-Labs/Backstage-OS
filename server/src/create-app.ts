@@ -11,6 +11,7 @@ import { PostgresSessionStore } from "./auth/session/postgres-session-store";
 import { WorkspaceResolver } from "./auth/workspace-resolver";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { EvidenceRepository } from "./evidence/evidence.repository";
+import { allowedOrigins } from "./config/allowed-origins";
 import { trustProxy } from "./config/trust-proxy";
 import { ReadinessModule } from "./health/readiness.module";
 import { InvestigationModule } from "./investigations/investigation.module";
@@ -18,6 +19,7 @@ import { InvestigationRepository } from "./investigations/investigation.reposito
 import { PortfolioModule } from "./portfolio/portfolio.module";
 import { PortfolioRepository } from "./portfolio/portfolio.repository";
 import { SafeErrorFilter } from "./http/safe-error.filter";
+import { originCheck } from "./http/origin-check";
 import { requestIdMiddleware } from "./http/request-id";
 
 /** The two checked database logins (BACK-55). Without them: in-memory sessions and no evidence routes. */
@@ -61,12 +63,17 @@ export async function createApp(
   // cookie is sent) could then post to a state-changing route. A form body now never parses (400).
   // Validate before the app exists: a malformed KAWALYS_TRUST_PROXY must never leave a created app behind (BACK-64).
   const trusted = trustProxy(process.env);
+  // Same rule for KAWALYS_ALLOWED_ORIGINS (audit M1): a malformed value stops startup before the app exists.
+  const origins = allowedOrigins(process.env);
   const app = await NestFactory.create<NestExpressApplication>(RootModule, { logger: ["error"], bodyParser: false });
-  app.useBodyParser("json");
   app.getHttpAdapter().getInstance().disable("x-powered-by");
   // Behind the pilot proxy: trust X-Forwarded-For only from the listed proxy addresses (BACK-64). Unset: ignored.
   if (trusted !== null) app.getHttpAdapter().getInstance().set("trust proxy", [...trusted]);
   app.use(requestIdMiddleware);
+  // State-changing requests must be same-origin or from an allowlisted Origin (audit M1); registered before any route.
+  app.use(originCheck({ allowed: origins, production: process.env.NODE_ENV === "production" }));
+  // After the origin check, so a refused request is never parsed.
+  app.useBodyParser("json");
   app.useGlobalFilters(new SafeErrorFilter());
   await app.init();
   return app;

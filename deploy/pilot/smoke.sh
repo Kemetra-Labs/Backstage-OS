@@ -32,6 +32,7 @@ umask 077
 cat > "$TMP/.env.pilot" <<ENV
 KAWALYS_SITE_ADDRESS=localhost
 KAWALYS_NODE_ENV=development
+KAWALYS_ALLOWED_ORIGINS=${BASE}
 KAWALYS_HTTP_PORT=${HTTP_PORT}
 KAWALYS_HTTPS_PORT=${HTTPS_PORT}
 KAWALYS_IMAGE_PREFIX=${IMAGE_PREFIX}
@@ -166,6 +167,18 @@ for i in $(seq 1 14); do
   [[ "$(code -X POST -H "X-Forwarded-For: 203.0.113.$i" "$BASE/api/auth/session")" = 429 ]] && { LIMITED=yes; break; }
 done
 check "14 sign-in attempts with 14 forged X-Forwarded-For values hit 429" test "$LIMITED" = yes
+
+log "origin check on state-changing routes (audit M1)"
+# NODE_ENV=development here, so a request with no Origin is allowed (the sign-in limit test above relies on it).
+# POST /api/auth/session with no Authorization header is 401->404 for auth reasons only if the origin check lets it
+# through, so a foreign Origin cannot be told apart by status alone. Use a malformed JSON body instead: the body
+# parser answers 400 validation_error, which only happens when the origin check passed.
+EVIL_CODE="$(code -X POST -H "Origin: https://evil.example" -H "Content-Type: application/json" --data '{bad' "$BASE/api/auth/session")"
+check "foreign Origin status is 404" test "$EVIL_CODE" = 404
+OK_CODE="$(code -X POST -H "Origin: $BASE" -H "Content-Type: application/json" --data '{bad' "$BASE/api/auth/session")"
+check "the site's own Origin passes the check (malformed body -> 400, not 404)" test "$OK_CODE" = 400
+SF_CODE="$(code -X POST -H "Sec-Fetch-Site: cross-site" -H "Content-Type: application/json" --data '{bad' "$BASE/api/auth/session")"
+check "Sec-Fetch-Site cross-site -> 404" test "$SF_CODE" = 404
 
 log "database outage: unknown is never healthy"
 dc stop postgres >/dev/null 2>&1

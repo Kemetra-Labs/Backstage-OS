@@ -79,6 +79,9 @@ services:
       KAWALYS_BFF_HOST: 0.0.0.0
       # Trust X-Forwarded-For only from the proxy network, so the sign-in limit is per client, not per proxy.
       KAWALYS_TRUST_PROXY: ${KAWALYS_NETWORK_SUBNET:-172.30.42.0/24}
+      # State-changing requests are accepted only from this exact origin (audit M1). Caddy serves https on 443 by default;
+      # for another host port set KAWALYS_ALLOWED_ORIGINS explicitly (the smoke does).
+      KAWALYS_ALLOWED_ORIGINS: ${KAWALYS_ALLOWED_ORIGINS:-https://${KAWALYS_SITE_ADDRESS:?set KAWALYS_SITE_ADDRESS in .env.pilot}}
       # Production (the image default) refuses to start without Descope settings: fail closed. Local smoke only sets development.
       NODE_ENV: ${KAWALYS_NODE_ENV:-production}
       NODE_EXTRA_CA_CERTS: /pki/ca.crt
