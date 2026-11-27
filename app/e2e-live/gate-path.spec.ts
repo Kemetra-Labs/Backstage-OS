@@ -1,6 +1,6 @@
 // BACK-51 P4 happy path: the owner's whole gate path through the live build and the real BFF.
 import { expect, test } from '@playwright/test';
-import { apiGet, decisionCount, openLive, readSeed, signIn } from './helpers';
+import { apiGet, decisionCount, openLive, readSeed, signIn, unexpectedErrors } from './helpers';
 
 test('owner signs in, reads Portfolio and the case, records a decision, signs out', async ({ page }) => {
   const seed = readSeed();
@@ -9,7 +9,7 @@ test('owner signs in, reads Portfolio and the case, records a decision, signs ou
   const decisions = page.getByTestId('server-decision');
 
   // Signed out: the server answers 401/404 for the reads, and no project name reaches the page.
-  const errors = await openLive(page, '/portfolio');
+  await openLive(page, '/portfolio');
   await expect(bar).toHaveAttribute('data-session', 'signedOut');
   await expect(page.locator('body')).not.toContainText(seed.projectName);
 
@@ -26,6 +26,8 @@ test('owner signs in, reads Portfolio and the case, records a decision, signs ou
   await expect(records.first()).toBeVisible();
   const before = await decisionCount(page, seed.investigationId);
   await expect(decisions).toHaveCount(before);
+  const recorded = page.locator('[data-testid="server-decision"] .srv-creator[data-creator="recorded"]');
+  const recordedBefore = await recorded.count();
 
   // Record a decision citing the first record.
   const form = page.getByTestId('record-decision');
@@ -38,7 +40,7 @@ test('owner signs in, reads Portfolio and the case, records a decision, signs ou
   expect(await decisionCount(page, seed.investigationId)).toBe(before + 1);
   await expect(decisions).toHaveCount(before + 1);
   await expect(page.locator('[data-testid="server-decision"][data-label="approved"]')).toHaveCount(0);
-  await expect(page.locator('.srv-creator[data-creator="recorded"]')).not.toHaveCount(0);
+  await expect(recorded).toHaveCount(recordedBefore + 1);
 
   // Sign out: the records leave the screen and the server stops answering for this browser.
   await bar.getByRole('button', { name: 'Sign out' }).click();
@@ -46,7 +48,6 @@ test('owner signs in, reads Portfolio and the case, records a decision, signs ou
   await expect(records).toHaveCount(0);
   expect((await apiGet(page, '/api/portfolio')).status).toBe(404);
 
-  // Console errors: only the expected resource-load 404s for /api/* while signed out.
-  const unexpected = errors.filter((e) => !(e.includes('404') && e.includes('/api/')) && !(e.includes('Failed to load resource') && e.includes('404')));
-  expect(unexpected).toEqual([]);
+  // Console errors: only the 404s of /api/* reads made while signed out (see unexpectedErrors); a 404 anywhere else fails.
+  expect(unexpectedErrors(page)).toEqual([]);
 });
