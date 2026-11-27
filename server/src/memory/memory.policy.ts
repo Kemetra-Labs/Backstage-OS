@@ -5,7 +5,9 @@
 import type { Provider } from './memory.types';
 
 /** v2 (2026-11-27, COG-08 review): the fingerprint covers every cited field of the current run. */
-export const MEMORY_POLICY_VERSION = 'memory-v3'; // v3 (COG-08 review 7): the fingerprint covers the current run's known times
+// v3 (COG-08 review 7): the fingerprint covers the current run's known times.
+// v4 (COG-08 review 8): and the returned history runs' known times.
+export const MEMORY_POLICY_VERSION = 'memory-v4';
 export const HISTORY_CAP = 50;
 /** Freshness per provider (D3), from the existing 15-minute Atlassian default. */
 export const TTL_MS: Readonly<Record<Provider, number>> = { github: 15 * 60_000, jira: 15 * 60_000, confluence: 15 * 60_000 };

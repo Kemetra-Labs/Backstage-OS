@@ -198,3 +198,10 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 - U+0085 NEXT LINE separates like a newline.
 - A hand-built projection with duplicate identities resolves to the last item, as the reasoning evaluator and validator do. The projector never duplicates.
 - Regression tests: `test/retrieval/retrieval.findings8.spec.ts`.
+
+## Ninth revision after the COG-08 eighth review (`retrieval-v10`, 2026-11-27)
+
+- **One classification for queries and mentions:** control characters other than whitespace are invisible, and U+0085 NEXT LINE separates. So `BACK<U+0001>-8` and `PR<U+0085>99` stay identifier-shaped and exact-only.
+- **Normalization strips** format characters and the default-ignorable code points that are **not** combining marks. Default-ignorable marks (the variation selectors, U+034F) stay in ordinary words, where they change meaning, so `<U+845B>` and `<U+845B><VS17>` are different titles. The shape fold still drops every mark, so these cannot hide an identifier.
+- **Known consequence:** U+034F blocks canonical composition, so `cafe<U+034F><U+0301>` does not match `cafe` written with a precomposed accent. That follows from keeping U+034F meaningful in words, and is recorded rather than changed.
+- Regression tests: `test/retrieval/retrieval.findings9.spec.ts`.

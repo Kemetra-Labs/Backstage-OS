@@ -201,3 +201,19 @@ The first attempt was stopped by the provider's content filter. A narrower rerun
 | Low | Duplicate identities in a hand-built projection reported a false cut | Documents deduplicated to the last item |
 
 **Next:** an eighth review of the fixed commit.
+
+## 13. Eighth independent review: Codex, commit d8f8a02 (2026-11-27)
+
+**Verdict: NO-GO, with two blockers.**
+- **Confirmed fixed:** the clip-cut blocker (U+2065 and astral variation selectors); `docsOf` deduplication; current-run known times and `memory-v3`.
+- **Reasoning:** an approval-gated task stays `unknown`, and a result selecting it is rejected.
+- **Fixes:** all findings below are fixed on the branch that adds this section, each with a regression test that failed on d8f8a02, except the U+034F composition case, which is recorded.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| Medium (blocker) | Controls in a query (U+0001 in a key, U+0085 between words) reached the title tier | Queries share the boundary classification (`retrieval-v10`) |
+| Medium (blocker) | Stripping all default-ignorables merged titles differing by a variation selector | Only non-mark default-ignorables are stripped |
+| Low | `cafe<U+034F><U+0301>` misses the precomposed form | Recorded: U+034F is kept meaningful |
+| Low | History known times were not in the fingerprint | Covered (`memory-v4`) |
+
+**Next:** a ninth review of the fixed commit.

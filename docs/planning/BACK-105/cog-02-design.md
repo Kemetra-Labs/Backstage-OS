@@ -378,3 +378,8 @@ It is `verified` only when every observation in the run was `ok`, and it never r
 - The fingerprint covers the current run's known times (first and last), so `validateAtRead` notices a change in the receipt the as-of view cites.
 - **Recorded, not changed: which clock bounds repository markers.** A failure observed after E but before evaluation time makes a historical read `unknown`. That is conservative (unknown is never healthy), and it follows the D3 rule that a newer failed read covering the item wins. Bounding markers by E instead would need the S2 statement to select markers as of E before reducing them to the newest per ref. That is a design decision for the owner, not a defect: no read can turn `verified` because of it.
 - Regression test: `test/memory/memory.findings5.spec.ts`.
+
+## Revision after the COG-08 eighth review (`memory-v4`, 2026-11-27)
+
+- The fingerprint also covers the returned history runs' known times. Retrieval picks the fallback text by them when an item has no current run.
+- Regression test: `test/memory/memory.findings6.spec.ts`.
