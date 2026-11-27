@@ -11,7 +11,7 @@ import type { Lang } from '../contract/types';
 import { hostCopy } from '../i18n/host';
 import { SIGN_IN_PATH } from './session';
 import type { DescopeSdkLike } from './signIn';
-import { clearDescopeStorage, makeExchange, makeSignInEvents, pathWithLang, signInView, type StorageLike } from './signInFlow';
+import { clearDescopeStorage, descopeLocale, loadDescopeComponent, makeExchange, makeSignInEvents, pathWithLang, signInView, type StorageLike } from './signInFlow';
 
 type Phase = 'flow' | 'working' | 'refused' | 'unavailable';
 
@@ -83,7 +83,8 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
     // A session the SDK persisted earlier (another visit, a failed logout) must not be there when the component starts.
     clearDescopeStorage(browserStorages());
     let cancelled = false;
-    import('@descope/web-component').then(
+    // loadDescopeComponent switches off the SDK's token persistence before the element exists (and fails closed if it cannot).
+    loadDescopeComponent(() => import('@descope/web-component')).then(
       () => { if (!cancelled) setLoaded(true); },
       () => { if (!cancelled) setPhase('unavailable'); },
     );
@@ -116,11 +117,18 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
     if (el === null) return;
     const onSuccess = (e: Event) => { void handler.current?.onSuccess(e as CustomEvent); };
     const onError = (e: Event) => { void handler.current?.onError(e as CustomEvent); };
+    // `ready` is the component's "first screen shown" event (web-component README "ready"; dispatched in DescopeWc.js). Without it
+    // (or success/error) within SIGN_IN_READY_MS the page shows the neutral unavailable state: the component can stay blank silently.
+    const onReady = () => { handler.current?.onReady(); };
     el.addEventListener('success', onSuccess);
     el.addEventListener('error', onError);
+    el.addEventListener('ready', onReady);
+    const disarm = handler.current?.arm();
     return () => {
+      disarm?.();
       el.removeEventListener('success', onSuccess);
       el.removeEventListener('error', onError);
+      el.removeEventListener('ready', onReady);
     };
   }, [el]);
 
@@ -143,7 +151,8 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
         {phase === 'working' && <Notice kind="loading" title={c.working} role="status" />}
         {loaded && (
           <div hidden={phase === 'working'}>
-            <descope-wc ref={setEl} project-id={view.projectId} flow-id="sign-in" store-last-authenticated-user="false" />
+            {/* locale: BaseDescopeWc.js observes it; an unpublished one falls back to the flow's default screens (getHtmlFilenameWithLocale). Changing it later restarts the flow. */}
+            <descope-wc ref={setEl} project-id={view.projectId} flow-id="sign-in" store-last-authenticated-user="false" locale={descopeLocale(lang)} />
           </div>
         )}
       </>

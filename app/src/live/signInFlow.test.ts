@@ -1,7 +1,7 @@
 // D3(a): the pure parts of the sign-in page (src/live/signInFlow.ts): which view, the once-guarded success handler, the bounded logout
 // and the live-only path. No DOM: the component (signInPage.tsx) is a thin shell over these.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { boundedLogout, clearDescopeStorage, DESCOPE_STORAGE_KEYS, isSignInRoute, makeExchange, makeSignInEvents, pathWithLang, signInView, SIGN_IN_LOGOUT_MS } from './signInFlow';
+import { boundedLogout, clearDescopeStorage, DESCOPE_STORAGE_KEYS, descopeLocale, isSignInRoute, loadDescopeComponent, makeExchange, makeSignInEvents, pathWithLang, signInView, SIGN_IN_LOGOUT_MS, SIGN_IN_READY_MS } from './signInFlow';
 import { SIGN_IN_PATH } from './session';
 import { completeSignIn, type SignInOutcome } from './signIn';
 
@@ -267,5 +267,151 @@ describe('makeExchange (exchange, bounded logout, then clear Descope storage)', 
     const sdk = { logout: vi.fn(async () => undefined) };
     await expect(makeExchange({ getSdk: () => sdk, storages: [broken, store], complete: complete(ok()) })(JWT)).resolves.toBe('signedIn');
     expect(store.data.size).toBe(0);
+  });
+});
+
+describe('descopeLocale', () => {
+  it('maps the page language to the component locale attribute: "en" or "ar" only', () => {
+    expect(descopeLocale('en')).toBe('en');
+    expect(descopeLocale('ar')).toBe('ar');
+  });
+
+  it('never passes anything else, even from an untyped caller', () => {
+    for (const bad of ['ar-EG', 'fr', '', undefined, null, 'AR', '<x>']) expect(descopeLocale(bad as never)).toBe('en');
+  });
+});
+
+describe('loadDescopeComponent: no token persistence', () => {
+  /** A stand-in for the component class: the static accessor of the vendored DescopeWc (sdkConfigOverrides). */
+  function fakeClass() {
+    let overrides: Record<string, unknown> = { baseHeaders: { 'x-descope-sdk-name': 'web-component' } };
+    return {
+      get sdkConfigOverrides() { return overrides; },
+      set sdkConfigOverrides(v: Record<string, unknown>) { overrides = v; },
+    };
+  }
+
+  it('sets persistTokens false (keeping the SDK headers) before the load resolves, i.e. before any element is created', async () => {
+    const cls = fakeClass();
+    const log: string[] = [];
+    await loadDescopeComponent(async () => { log.push('imported'); return { default: cls }; }).then(() => log.push('resolved'));
+    expect(cls.sdkConfigOverrides.persistTokens).toBe(false);
+    expect(cls.sdkConfigOverrides.baseHeaders).toEqual({ 'x-descope-sdk-name': 'web-component' });
+    expect(log).toEqual(['imported', 'resolved']);
+  });
+
+  it('does not resolve while the module is still loading (the page cannot create the element yet)', async () => {
+    const cls = fakeClass();
+    let release: (m: { default: typeof cls }) => void = () => undefined;
+    let done = false;
+    const p = loadDescopeComponent(() => new Promise((r) => { release = r as typeof release; })).then(() => { done = true; });
+    await Promise.resolve();
+    expect(done).toBe(false);
+    expect(cls.sdkConfigOverrides.persistTokens).toBeUndefined();
+    release({ default: cls });
+    await p;
+    expect(cls.sdkConfigOverrides.persistTokens).toBe(false);
+  });
+
+  it.each([[{}], [{ default: null }], [{ default: {} }], [{ default: { sdkConfigOverrides: 'x' } }]])('fails closed (rejects) when the class cannot take the override: %j', async (mod) => {
+    await expect(loadDescopeComponent(async () => mod as never)).rejects.toThrow();
+  });
+
+  it('fails closed when the override does not stick (a setter that ignores the value)', async () => {
+    const cls = { get sdkConfigOverrides() { return { baseHeaders: {} }; }, set sdkConfigOverrides(_v: unknown) { /* ignored */ } };
+    await expect(loadDescopeComponent(async () => ({ default: cls }))).rejects.toThrow();
+  });
+
+  it('a failed import rejects (the page shows the neutral unavailable message)', async () => {
+    await expect(loadDescopeComponent(async () => { throw new Error('chunk'); })).rejects.toThrow();
+  });
+});
+
+describe('readiness timeout', () => {
+  function watched() {
+    vi.useFakeTimers();
+    const exchange = vi.fn(async (_jwt: string): Promise<SignInOutcome> => 'signedIn');
+    const onOutcome = vi.fn((_o: SignInOutcome) => undefined);
+    const goHome = vi.fn(() => undefined);
+    const events = makeSignInEvents({ exchange, onOutcome, goHome });
+    return { exchange, onOutcome, goHome, events, cancel: events.arm() };
+  }
+
+  it('is 15 seconds: three times the component own 5 s script-load wait', () => {
+    expect(SIGN_IN_READY_MS).toBe(15000);
+  });
+
+  it('fires unavailable at 15 s and not at 14.999 s', () => {
+    const w = watched();
+    vi.advanceTimersByTime(SIGN_IN_READY_MS - 1);
+    expect(w.onOutcome).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(w.onOutcome).toHaveBeenCalledTimes(1);
+    expect(w.onOutcome).toHaveBeenCalledWith('unavailable');
+    expect(w.goHome).not.toHaveBeenCalled();
+  });
+
+  it('a ready event cancels it', () => {
+    const w = watched();
+    vi.advanceTimersByTime(5000);
+    w.events.onReady();
+    vi.advanceTimersByTime(60000);
+    expect(w.onOutcome).not.toHaveBeenCalled();
+  });
+
+  it('a success event cancels it, even one without a usable JWT (that is the refused outcome, once)', async () => {
+    const w = watched();
+    await w.events.onSuccess({ detail: { sessionJwt: JWT } });
+    vi.advanceTimersByTime(60000);
+    expect(w.onOutcome).toHaveBeenCalledTimes(1);
+    expect(w.onOutcome).toHaveBeenCalledWith('signedIn');
+    const x = watched();
+    await x.events.onSuccess({});
+    vi.advanceTimersByTime(60000);
+    expect(x.onOutcome).toHaveBeenCalledTimes(1);
+    expect(x.onOutcome).toHaveBeenCalledWith('refused');
+  });
+
+  it('an error event cancels it (one unavailable, not two)', async () => {
+    const w = watched();
+    await w.events.onError({});
+    vi.advanceTimersByTime(60000);
+    expect(w.onOutcome).toHaveBeenCalledTimes(1);
+  });
+
+  it('unmount (the returned cancel) cancels it', () => {
+    const w = watched();
+    w.cancel();
+    vi.advanceTimersByTime(60000);
+    expect(w.onOutcome).not.toHaveBeenCalled();
+  });
+
+  it('arming again (StrictMode re-run) restarts one timer, never two', () => {
+    const w = watched();
+    vi.advanceTimersByTime(10000);
+    w.events.arm();
+    vi.advanceTimersByTime(14999);
+    expect(w.onOutcome).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(w.onOutcome).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(60000);
+    expect(w.onOutcome).toHaveBeenCalledTimes(1);
+  });
+
+  it('never overrides an exchange in flight or done', async () => {
+    vi.useFakeTimers();
+    let finish: (o: SignInOutcome) => void = () => undefined;
+    const exchange = vi.fn((_jwt: string) => new Promise<SignInOutcome>((r) => { finish = r; }));
+    const onOutcome = vi.fn((_o: SignInOutcome) => undefined);
+    const events = makeSignInEvents({ exchange, onOutcome, goHome: () => undefined });
+    events.arm();
+    const pending = events.onSuccess({ detail: { sessionJwt: JWT } });
+    vi.advanceTimersByTime(SIGN_IN_READY_MS * 2);
+    expect(onOutcome).not.toHaveBeenCalled();
+    finish('signedIn');
+    await pending;
+    vi.advanceTimersByTime(SIGN_IN_READY_MS * 2);
+    expect(onOutcome).toHaveBeenCalledTimes(1);
+    expect(onOutcome).toHaveBeenCalledWith('signedIn');
   });
 });
