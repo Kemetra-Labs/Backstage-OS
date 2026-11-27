@@ -6,3 +6,6 @@ dist/
 
 # BACK-61 local stack credentials (generated per machine)
 .local-stack/
+
+# BACK-51 P4 e2e server build
+dist-e2e/

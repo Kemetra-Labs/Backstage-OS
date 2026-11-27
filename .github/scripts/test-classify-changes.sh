@@ -38,7 +38,7 @@ seed_repo() {
 # Prints the selected suites in a fixed order, e.g. "root app" or "none".
 selected() {
   local out="$1" s=""
-  for k in root app app_e2e server g1; do
+  for k in root app app_e2e live_e2e server g1; do
     grep -qx "$k=true" <<<"$out" && s="$s $k"
   done
   s="${s# }"
@@ -63,14 +63,15 @@ check() {
 commit_change() { git add -A && git commit -qm change; }
 case_with() { seed_repo "$WORK/r"; "$@"; commit_change; }
 
-ALL="root app app_e2e server g1"
+ALL="root app app_e2e live_e2e server g1"
+# Any app/ or server/ code change also runs the live end-to-end suite (`live_e2e`, BACK-51 P4: app/e2e-live against the real BFF).
 # Any app/ change runs the app typecheck and unit tests (`app`) and the one app browser suite (`app_e2e`, app/e2e). The standalone
 # lens suite and its flag (app_v2) retired with its entry (BACK-92 R4).
-APP_ALL="app app_e2e"
+APP_ALL="app app_e2e live_e2e"
 
 # Backend-only, like PR #79 (server plus documentation).
 case_with bash -c 'echo x >> server/src/main.ts; echo x >> server/migrations/0001.sql; echo x >> docs/qa/report.md'
-check "backend-only (PR #79 shape)" "server" selective pull_request "$BASE_SHA"
+check "backend-only (PR #79 shape)" "live_e2e server" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'echo x >> js/app.js'
 check "root prototype only" "root" selective pull_request "$BASE_SHA"
@@ -139,7 +140,7 @@ case_with bash -c 'git mv app/src/main.tsx server/src/moved.tsx'
 check "rename across areas counts both paths" "$APP_ALL server" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'git rm -q server/migrations/0001.sql'
-check "deleted file" "server" selective pull_request "$BASE_SHA"
+check "deleted file" "live_e2e server" selective pull_request "$BASE_SHA"
 
 case_with bash -c 'git rm -q js/app.js'
 check "deleted root file" "root" selective pull_request "$BASE_SHA"
@@ -174,7 +175,7 @@ case_with bash -c 'mkdir -p newdir && echo x > newdir/thing.ts'
 check "new unknown directory" "$ALL" full pull_request "$BASE_SHA"
 
 case_with bash -c 'echo x >> server/src/main.ts'
-check "push event diffs against before" "server" selective push "$BASE_SHA"
+check "push event diffs against before" "live_e2e server" selective push "$BASE_SHA"
 check "invalid base sha" "$ALL" full pull_request "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
 check "missing base" "$ALL" full pull_request ""
 check "all-zero base (new branch push)" "$ALL" full push "0000000000000000000000000000000000000000"

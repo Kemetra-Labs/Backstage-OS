@@ -1,7 +1,8 @@
 # BACK-51 gate path: staff login → Portfolio → Investigation → record a decision
 
-Status: **D1–D5 approved by the owner as recommended (2026-11-26). Nothing is built yet; each phase still merges only
-on owner approval.** It covers the one gate row that
+Status: **D1–D5 approved by the owner as recommended (2026-11-26). P4 built (2026-11-27): the live end-to-end suite
+`app/e2e-live` and the CI job `live-e2e`, which run the whole path with the fake identity verifier. P5 (real Descope
+sign-in) is not built; each phase still merges only on owner approval.** It covers the one gate row that
 is BLOCKED in [demo-script-and-limits.md](demo-script-and-limits.md): "Login → Portfolio → Investigation → record
 decision, end to end". Deployment (BACK-64) and the security sign-offs (X02/X04, BACK-30) stay separate gates. This
 plan only says where they plug in.
