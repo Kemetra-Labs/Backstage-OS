@@ -1,3 +1,13 @@
+{
+	# Real client address behind Cloudflare (BACK-117), off by default. Only a peer listed in trusted_proxies may supply
+	# CF-Connecting-IP; the default (loopback) trusts nobody on the Compose network, so local runs see the TCP peer.
+	# Set KAWALYS_TRUSTED_PROXIES in .env.pilot to the space-separated Cloudflare ranges once the site is proxied.
+	servers {
+		trusted_proxies static {$KAWALYS_TRUSTED_PROXIES:127.0.0.1/32}
+		client_ip_headers CF-Connecting-IP
+	}
+}
+
 # Kawalys pilot edge (BACK-64). KAWALYS_SITE_ADDRESS is a host name (Caddy obtains a certificate for it)
 # or "localhost" (Caddy's internal CA, local smoke only).
 {$KAWALYS_SITE_ADDRESS} {
@@ -12,11 +22,12 @@
 	}
 
 	# /api/... goes to the BFF with the prefix stripped; the Host header is passed through.
-	# X-Forwarded-For is overwritten with the address Caddy sees, never appended to a client-sent value, so the
-	# BFF (which trusts only this proxy) cannot be given a forged client address.
+	# X-Forwarded-For is overwritten, never appended to a client-sent value, so the BFF (which trusts only this proxy)
+	# cannot be given a forged client address. {client_ip} equals the TCP peer unless the peer is a trusted proxy
+	# (Cloudflare ranges via KAWALYS_TRUSTED_PROXIES), in which case it is CF-Connecting-IP; a client cannot forge it.
 	handle_path /api/* {
 		reverse_proxy bff:8787 {
-			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-For {client_ip}
 		}
 	}
 

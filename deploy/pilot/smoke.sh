@@ -112,10 +112,47 @@ grep -v '^KAWALYS_DATABASE_URL_APP=' "$TMP/managed.env" > "$TMP/managed-missing.
 MANAGED_ENV_MISSING="$TMP_NATIVE/managed-missing.env"
 check "managed: config fails and names KAWALYS_DATABASE_URL_APP when it is unset" bash -c '! docker compose -f "$0" --env-file "$1" config >"$2" 2>&1 && grep -q KAWALYS_DATABASE_URL_APP "$2"' "$MANAGED_FILE" "$MANAGED_ENV_MISSING" "$TMP_NATIVE/managed-missing.out"
 
+# Digest-pinned deploy override (BACK-117): config-only, dummy digests, nothing is pulled or built.
+DEPLOY_FILE="$(cygpath -m "$HERE/compose.deploy.yml" 2>/dev/null || echo "$HERE/compose.deploy.yml")"
+DIGEST_A="$(printf 'a%.0s' $(seq 64))"; DIGEST_B="$(printf 'b%.0s' $(seq 64))"
+{ cat "$TMP/managed.env"
+  echo "KAWALYS_BFF_IMAGE=ghcr.io/example/bff@sha256:${DIGEST_A}"
+  echo "KAWALYS_WEB_IMAGE=ghcr.io/example/web@sha256:${DIGEST_B}"; } > "$TMP/deploy.env"
+DEPLOY_ENV="$TMP_NATIVE/deploy.env"
+ddc_json() { docker compose -f "$MANAGED_FILE" -f "$DEPLOY_FILE" --env-file "$DEPLOY_ENV" --profile ops config --format json; }
+deploy_json_check() {
+  ddc_json 2>"$TMP/deploy.err" | docker run --rm -i --network none node:24.22.3-alpine node -e 'let d="";process.stdin.on("data",x=>d+=x).on("end",()=>{const c=JSON.parse(d);process.exit(eval(process.argv[1])?0:1)})' "$1"
+}
+check "deploy: config succeeds with dummy digest refs" quiet docker compose -f "$MANAGED_FILE" -f "$DEPLOY_FILE" --env-file "$DEPLOY_ENV" config
+check "deploy: bff and ops resolve to the identical digest-pinned image" deploy_json_check 'c.services.bff.image===c.services.ops.image&&c.services.bff.image.includes("@sha256:")'
+check "deploy: web resolves to a digest-pinned image" deploy_json_check 'c.services.web.image.includes("@sha256:")'
+check "deploy: no service has a build key (the host never builds)" deploy_json_check '!Object.values(c.services).some(s=>"build" in s)'
+check "deploy: pull_policy is missing for every service" deploy_json_check 'Object.values(c.services).every(s=>s.pull_policy==="missing")'
+grep -v '^KAWALYS_BFF_IMAGE=' "$TMP/deploy.env" > "$TMP/deploy-missing.env"
+check "deploy: config fails and names KAWALYS_BFF_IMAGE when it is unset" bash -c '! docker compose -f "$0" -f "$1" --env-file "$2" config >"$3" 2>&1 && grep -q KAWALYS_BFF_IMAGE "$3"' "$MANAGED_FILE" "$DEPLOY_FILE" "$TMP_NATIVE/deploy-missing.env" "$TMP_NATIVE/deploy-missing.out"
+
+# Deploy preflight (BACK-117 review): rejects mutable tags and missing refs; prints no value from the file.
+PF="$HERE/preflight-deploy.sh"
+printf 'KAWALYS_BFF_IMAGE=ghcr.io/kemetra-labs/kawalys-bff@sha256:%s
+KAWALYS_WEB_IMAGE=ghcr.io/kemetra-labs/kawalys-web@sha256:%s
+SECRET_X=hunter2
+' "$DIGEST_A" "$DIGEST_B" > "$TMP/pf-ok.env"
+printf 'KAWALYS_BFF_IMAGE=ghcr.io/kemetra-labs/kawalys-bff:abc123
+KAWALYS_WEB_IMAGE=ghcr.io/kemetra-labs/kawalys-web@sha256:%s
+SECRET_X=hunter2
+' "$DIGEST_B" > "$TMP/pf-tag.env"
+printf 'KAWALYS_WEB_IMAGE=ghcr.io/kemetra-labs/kawalys-web@sha256:%s
+SECRET_X=hunter2
+' "$DIGEST_B" > "$TMP/pf-missing.env"
+check "preflight: accepts two valid digest refs" bash "$PF" "$TMP/pf-ok.env"
+check "preflight: rejects a tag-only ref, names the variable, leaks no value" bash -c 'out="$(bash "$0" "$1" 2>&1)"; rc=$?; [ $rc -ne 0 ] && echo "$out" | grep -q KAWALYS_BFF_IMAGE && ! echo "$out" | grep -q "hunter2\|abc123"' "$PF" "$TMP/pf-tag.env"
+check "preflight: rejects a missing variable" bash -c '! bash "$0" "$1" >/dev/null 2>&1' "$PF" "$TMP/pf-missing.env"
+
 log "isolation: every resource of this run belongs to $PROJECT, none to the deployment project kawalys-pilot"
 log "build images and start postgres"
 quiet dc build || { fail "images build"; exit 1; }
 pass "images build"
+check "caddy validate accepts the Caddyfile with KAWALYS_TRUSTED_PROXIES set to two CIDRs (BACK-117)" quiet docker run --rm --network none -e KAWALYS_SITE_ADDRESS=localhost -e "KAWALYS_TRUSTED_PROXIES=173.245.48.0/20 2400:cb00::/32" "${IMAGE_PREFIX}-web:local" caddy validate --config /etc/caddy/Caddyfile
 quiet dc up -d --wait postgres || { fail "postgres healthy"; exit 1; }
 pass "postgres healthy"
 pgver="$(dc exec -T postgres psql -U kawalys_admin -d kawalys -tAc 'SHOW server_version' 2>/dev/null | tr -d '[:space:]')"

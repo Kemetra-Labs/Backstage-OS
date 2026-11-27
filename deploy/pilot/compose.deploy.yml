@@ -1,0 +1,20 @@
+# Digest-pinned deploy override (BACK-117). Use together with the managed profile:
+#   docker compose -p kawalys-pilot -f deploy/pilot/compose.managed.yml -f deploy/pilot/compose.deploy.yml --env-file <.env.pilot> ...
+# Images are built in CI (.github/workflows/images.yml) and referenced by digest only: the host never builds and never
+# pulls a mutable tag. KAWALYS_BFF_IMAGE and KAWALYS_WEB_IMAGE are ghcr.io/kemetra-labs/...@sha256:<64 hex>, set in .env.pilot.
+# `${VAR:?}` below only rejects empty values: run `bash deploy/pilot/preflight-deploy.sh <.env.pilot>` first; it must pass
+# (digest references only, no tags) before `pull` or `up`.
+# `ops` runs the same image as `bff`. Requires Docker Compose 2.24 or newer (`!reset`).
+services:
+  bff:
+    image: ${KAWALYS_BFF_IMAGE:?set KAWALYS_BFF_IMAGE (image@sha256:...) in .env.pilot}
+    build: !reset null
+    pull_policy: missing
+  ops:
+    image: ${KAWALYS_BFF_IMAGE:?set KAWALYS_BFF_IMAGE (image@sha256:...) in .env.pilot}
+    build: !reset null
+    pull_policy: missing
+  web:
+    image: ${KAWALYS_WEB_IMAGE:?set KAWALYS_WEB_IMAGE (image@sha256:...) in .env.pilot}
+    build: !reset null
+    pull_policy: missing
