@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fixture from '../fixture/shadow-cognition.json';
-import { readShadow } from './shadowView';
+import { readLiveSearches, readShadow } from './shadowView';
 
 const clone = (): Record<string, unknown> => JSON.parse(JSON.stringify(fixture)) as Record<string, unknown>;
 
@@ -46,3 +46,28 @@ describe('readShadow (COG-07 shadow view model)', () => {
     expect(readShadow(raw)).toEqual({ kind: 'invalid' });
   });
 });
+
+describe('readLiveSearches (COG-07 live search bodies)', () => {
+  const body = { query: 'login', outcome: 'match', totalMatches: 1, truncated: false, retrievalPolicyVersion: 'retrieval-v13', hits: [{ title: 'Login', kind: 'pull_request', sourceRef: 'github:o/r#pull/1', status: 'stale', tier: 'title' }] };
+
+  it('reads the server bodies, keeping a not-verified status as it is', () => {
+    expect(readLiveSearches([body])).toEqual({
+      kind: 'ok',
+      retrieval: 'retrieval-v13',
+      searches: [{ query: 'login', outcome: 'match', totalMatches: 1, hits: [{ title: 'Login', kind: 'pull_request', sourceRef: 'github:o/r#pull/1', status: 'stale', tier: 'title' }] }],
+    });
+  });
+
+  it('a hit without a title is shown by its reference', () => {
+    const v = readLiveSearches([{ ...body, hits: [{ ...body.hits[0], title: null }] }]);
+    if (v.kind !== 'ok') throw new Error('expected ok');
+    expect(v.searches[0]!.hits[0]!.title).toBe('github:o/r#pull/1');
+  });
+
+  it('refuses the whole set when any body is malformed', () => {
+    expect(readLiveSearches([body, { ...body, outcome: 'maybe' }])).toEqual({ kind: 'invalid' });
+    expect(readLiveSearches([body, null])).toEqual({ kind: 'invalid' });
+    expect(readLiveSearches([])).toEqual({ kind: 'invalid' });
+  });
+});
+

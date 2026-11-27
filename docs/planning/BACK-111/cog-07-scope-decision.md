@@ -38,3 +38,7 @@ The owner chose to build a live read for the shadow view. The design was checked
 - **Process:** two PRs (server route, then app wiring). The server PR gets an independent read-only security review before it merges.
 
 **Server route built (2026-11-27).** `server/src/cognition/` and `MemoryRepository.readVisible`. An independent security review returned **GO** with no critical, high or medium findings; it was done by reading the code. Fixed from its low findings: an empty, blank, oversized or non-string query is refused before the database read; a fake-repository spec pins that a refused request (rate limit or query) never reaches the read; the object-shaped `q` case is tested. Accepted: the fixed window allows a burst at a window boundary (single-owner process).
+
+**App wiring built (2026-11-27).**
+- **Live build:** in a live build (`VITE_KAWALYS_LIVE=1`), `#/shadow` reads `GET /api/cognition/projects/:id/search` for `?project=<uuid>` and up to five `?q=` in the address, through `src/live/reads.ts` only. It shows the live marker; any failed search fails the whole read, said in words; the reasoning panel says it is not available live. The default build is unchanged and requests nothing.
+- **Tests:** `app/e2e-live/shadow-live.spec.ts` runs against the real BFF. It checks the signed-in search and its live label, that a foreign-workspace project reads as not found, and that a missing project or query is said in words with no request.

@@ -1,6 +1,6 @@
 // BACK-51 P1: the live-mode switch and the two live reads. The fetcher is injected: nothing here touches the network.
 import { describe, expect, it, vi } from 'vitest';
-import { investigationIdFrom, LIVE, liveMode, liveStateKind, readInvestigation, readPortfolio } from './reads';
+import { investigationIdFrom, LIVE, liveMode, liveStateKind, projectIdFrom, readCognitionSearches, readInvestigation, readPortfolio, searchQueriesFrom } from './reads';
 
 const ID = '00000000-0000-4000-8000-000000000004';
 
@@ -137,3 +137,31 @@ describe('readInvestigation with no id: the newest visible investigation (BACK-5
     expect(await readInvestigation(null, new AbortController().signal, f)).toBeNull();
   });
 });
+
+describe('COG-07 live shadow search', () => {
+  it('takes the project from ?project= only as a UUID', () => {
+    expect(projectIdFrom(`?project=${ID}`)).toBe(ID);
+    for (const s of ['', '?project=', '?project=abc', `?project=${ID}/x`, '?project=../auth/me']) expect(projectIdFrom(s), s).toBeNull();
+  });
+
+  it('takes up to five non-empty ?q= queries of at most 500 characters, in order', () => {
+    expect(searchQueriesFrom('?q=login&q=%2312')).toEqual(['login', '#12']);
+    expect(searchQueriesFrom('?q=&q=%20%20&q=ok')).toEqual(['ok']);
+    expect(searchQueriesFrom(`?q=${'a'.repeat(501)}&q=ok`)).toEqual(['ok']);
+    expect(searchQueriesFrom('?q=1&q=2&q=3&q=4&q=5&q=6')).toEqual(['1', '2', '3', '4', '5']);
+    expect(searchQueriesFrom('')).toEqual([]);
+  });
+
+  it('reads one encoded search per query, in order', async () => {
+    const base = `/api/cognition/projects/${ID}/search?q=`;
+    const f = routes({ [`${base}login`]: [200, '{"n":1}'], [`${base}%2312`]: [200, '{"n":2}'] });
+    expect(await readCognitionSearches(ID, ['login', '#12'], undefined, f)).toEqual({ status: 'ok', body: [{ n: 1 }, { n: 2 }] });
+  });
+
+  it('any failed search fails the whole read with that failure', async () => {
+    const base = `/api/cognition/projects/${ID}/search?q=`;
+    const f = routes({ [`${base}a`]: [200, '{}'], [`${base}b`]: [429, '{}'] });
+    expect(await readCognitionSearches(ID, ['a', 'b'], undefined, f)).toEqual({ status: 'failed', failure: 'rate_limited' });
+  });
+});
+

@@ -10,8 +10,9 @@ export const SEED_FILE: string = path.resolve(process.cwd(), 'test-results', 'e2
 
 export interface LiveSeed {
   investigationId: string;
+  projectId: string;
   projectName: string;
-  foreign: { investigationId: string; projectName: string };
+  foreign: { investigationId: string; projectName: string; projectId: string };
 }
 
 export function readSeed(): LiveSeed {
@@ -21,7 +22,10 @@ export function readSeed(): LiveSeed {
 /** The fake owner token the test-only BFF entry accepts (server/test/e2e). */
 export const OWNER_TOKEN = 'owner.valid.token';
 
-export interface LiveQuery { lang?: string; persona?: string; /** `?investigation=<uuid>`, which the live Investigation Room reads. */ investigation?: string }
+export interface LiveQuery {
+  lang?: string; persona?: string; /** `?investigation=<uuid>`, which the live Investigation Room reads. */ investigation?: string;
+  /** COG-07 live shadow search: `?project=<uuid>` and repeatable `?q=`. */ project?: string; q?: readonly string[];
+}
 
 /**
  * Opens a hash route in the live build and waits until the session bar has left `checking`. Returns the console and page
@@ -45,6 +49,8 @@ export async function openLive(page: Page, route: string, q: LiveQuery = {}): Pr
   if (q.lang) params.set('lang', q.lang);
   if (q.persona) params.set('persona', q.persona);
   if (q.investigation) params.set('investigation', q.investigation);
+  if (q.project) params.set('project', q.project);
+  for (const query of q.q ?? []) params.append('q', query);
   await page.goto(`/?${params.toString()}#${route}`);
   await expect(page.locator('h1')).toBeVisible();
   await expect(page.getByTestId('session-bar')).not.toHaveAttribute('data-session', 'checking');
