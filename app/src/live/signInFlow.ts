@@ -3,6 +3,7 @@
 // these; src/live/signIn.ts does the exchange), so every rule is testable in vitest's node environment.
 //
 // The JWT is a parameter only: never stored, put in a URL, logged or included in an error. Unknown is never signed in.
+import type { Lang } from '../contract/types';
 import { SIGN_IN_PATH } from './session';
 import { completeSignIn, isProjectId, type DescopeSdkLike, type SignInOutcome } from './signIn';
 
@@ -35,26 +36,49 @@ function sessionJwtOf(event: { readonly detail?: unknown }): string | null {
   return typeof jwt === 'string' && jwt !== '' ? jwt : null;
 }
 
+export interface SignInEvents {
+  readonly onSuccess: (event: { readonly detail?: unknown }) => Promise<void>;
+  readonly onError: (event: { readonly detail?: unknown }) => Promise<void>;
+}
+
 /**
- * The listener for the component's `success` event. The event can fire twice (a re-render, a double event), so the JWT is exchanged
- * exactly once, whatever the outcome: the first valid event latches (synchronously, before any await), later events do nothing.
- * An event without a usable JWT is ignored and does not latch. An exchange that throws reads as refused, never as signed in.
+ * The listeners for the component's `success` and `error` events, sharing one latch. The event can fire twice (a re-render, a double
+ * event), so the JWT is exchanged exactly once, whatever the outcome: the first `success` latches (synchronously, before any await),
+ * later ones do nothing. A `success` without a usable JWT (for example the project returns tokens by cookie) latches too and is the
+ * neutral 'refused': it is terminal for this page (Start again), so a later event cannot turn a shown refusal into a sign-in.
+ * An `error` event is the neutral 'unavailable' (no cause, no detail), but only before any success: once an exchange has started or
+ * finished, it never overrides that outcome. An exchange that throws reads as refused, never as signed in.
  */
-export function makeSuccessHandler(deps: SuccessDeps): (event: { readonly detail?: unknown }) => Promise<void> {
+export function makeSignInEvents(deps: SuccessDeps): SignInEvents {
   let taken = false;
-  return async (event) => {
-    const jwt = sessionJwtOf(event);
-    if (jwt === null || taken) return;
-    taken = true;
-    let outcome: SignInOutcome;
-    try {
-      outcome = await deps.exchange(jwt);
-    } catch {
-      outcome = 'refused';
-    }
-    deps.onOutcome(outcome);
-    if (outcome === 'signedIn') deps.goHome();
+  return {
+    onSuccess: async (event) => {
+      if (taken) return;
+      taken = true;
+      const jwt = sessionJwtOf(event);
+      if (jwt === null) {
+        deps.onOutcome('refused');
+        return;
+      }
+      let outcome: SignInOutcome;
+      try {
+        outcome = await deps.exchange(jwt);
+      } catch {
+        outcome = 'refused';
+      }
+      deps.onOutcome(outcome);
+      if (outcome === 'signedIn') deps.goHome();
+    },
+    onError: async () => {
+      if (taken) return;
+      deps.onOutcome('unavailable');
+    },
   };
+}
+
+/** A fixed same-origin path with the language in the app's `?lang=ar` convention (English is the default and adds nothing). Only the typed Lang is read: never a caller string. */
+export function pathWithLang(path: '/' | typeof SIGN_IN_PATH, lang: Lang): string {
+  return lang === 'ar' ? `${path}?lang=ar` : path;
 }
 
 /** How long the page waits for the Descope SDK logout before it shows its result anyway. */

@@ -36,6 +36,18 @@ describe('failureOf', () => {
     expect(failureOf(504)).toBe('unavailable');
   });
 
+  it.each([520, 521, 522, 523, 524])('Cloudflare origin error %i is unavailable like a gateway failure', (status) => {
+    expect(failureOf(status)).toBe('unavailable');
+  });
+
+  it('Cloudflare origin errors never read as signed in or as a refusal: the exchange and a session check say unavailable', async () => {
+    for (const status of [520, 521, 522, 523, 524]) {
+      const fetcher = async () => new Response('', { status });
+      expect(await exchangeSessionToken('a.b.c', { fetcher })).toEqual({ ok: false, failure: 'unavailable', status });
+      expect(await apiRequest(SESSION_CHECK_PATH, { fetcher })).toEqual({ ok: false, failure: 'unavailable', status });
+    }
+  });
+
   it('any other refusal is an error', () => {
     expect(failureOf(403)).toBe('error');
     expect(failureOf(409)).toBe('error');

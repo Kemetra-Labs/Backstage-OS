@@ -48,6 +48,12 @@ describe('SessionBarView', () => {
     expect(html).not.toContain('>Sign out<');
   });
 
+  it('the sign-in link carries the current language: lang=ar for Arabic, none for English; still a new tab with noopener', () => {
+    const ar = render('signedOut', 'ar');
+    expect(ar).toMatch(/<a [^>]*href="\/sign-in\?lang=ar"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
+    expect(render('signedOut', 'en')).toMatch(/<a [^>]*href="\/sign-in"[^>]*target="_blank"/);
+  });
+
   it('ended says the session ended and that unsent work is kept, with the same way back', () => {
     const html = render('ended');
     expect(text(html)).toContain('Your session ended');

@@ -1,7 +1,7 @@
 // D3(a): the pure parts of the sign-in page (src/live/signInFlow.ts): which view, the once-guarded success handler, the bounded logout
 // and the live-only path. No DOM: the component (signInPage.tsx) is a thin shell over these.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { boundedLogout, clearDescopeStorage, DESCOPE_STORAGE_KEYS, isSignInRoute, makeExchange, makeSuccessHandler, signInView, SIGN_IN_LOGOUT_MS } from './signInFlow';
+import { boundedLogout, clearDescopeStorage, DESCOPE_STORAGE_KEYS, isSignInRoute, makeExchange, makeSignInEvents, pathWithLang, signInView, SIGN_IN_LOGOUT_MS } from './signInFlow';
 import { SIGN_IN_PATH } from './session';
 import { completeSignIn, type SignInOutcome } from './signIn';
 
@@ -44,11 +44,12 @@ function harness(outcome: SignInOutcome | Error = 'signedIn') {
   });
   const onOutcome = vi.fn((_o: SignInOutcome) => undefined);
   const goHome = vi.fn(() => undefined);
-  return { exchange, onOutcome, goHome, handle: makeSuccessHandler({ exchange, onOutcome, goHome }) };
+  const events = makeSignInEvents({ exchange, onOutcome, goHome });
+  return { exchange, onOutcome, goHome, handle: events.onSuccess, fail: events.onError };
 }
 const event = (detail: unknown) => ({ detail });
 
-describe('makeSuccessHandler', () => {
+describe('makeSignInEvents: success', () => {
   it('exchanges the JWT once, reports the outcome, and goes home only on signedIn', async () => {
     const h = harness('signedIn');
     await h.handle(event({ sessionJwt: JWT }));
@@ -85,15 +86,74 @@ describe('makeSuccessHandler', () => {
     expect(h.goHome).not.toHaveBeenCalled();
   });
 
-  it.each([[undefined], [null], [{}], [{ sessionJwt: 42 }], [{ sessionJwt: '' }], [{ sessionJwt: null }], ['text'], [{ refreshJwt: JWT }]])('ignores an event with detail %j, and does not use up the one exchange', async (detail) => {
+  it.each([[undefined], [null], [{}], [{ sessionJwt: 42 }], [{ sessionJwt: '' }], [{ sessionJwt: null }], ['text'], [{ refreshJwt: JWT }]])('a success with detail %j has no usable JWT: neutral refused, no exchange, never navigates', async (detail) => {
     const h = harness('signedIn');
     await h.handle(event(detail));
-    await h.handle({});
     expect(h.exchange).not.toHaveBeenCalled();
-    expect(h.onOutcome).not.toHaveBeenCalled();
+    expect(h.onOutcome).toHaveBeenCalledTimes(1);
+    expect(h.onOutcome).toHaveBeenCalledWith('refused');
+    expect(h.goHome).not.toHaveBeenCalled();
+  });
+
+  it('a success without a JWT consumes the latch (the page is terminal: refused with Start again), so a later success cannot flip it', async () => {
+    const h = harness('signedIn');
+    await h.handle({});
     await h.handle(event({ sessionJwt: JWT }));
+    expect(h.exchange).not.toHaveBeenCalled();
+    expect(h.goHome).not.toHaveBeenCalled();
+    expect(h.onOutcome).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('makeSignInEvents: error', () => {
+  it('an error event before any success is unavailable, with no exchange and no navigation', async () => {
+    const h = harness('signedIn');
+    await h.fail({ detail: { errorCode: 'X', errorDescription: 'secret cause' } });
+    expect(h.onOutcome).toHaveBeenCalledTimes(1);
+    expect(h.onOutcome).toHaveBeenCalledWith('unavailable');
+    expect(h.exchange).not.toHaveBeenCalled();
+    expect(h.goHome).not.toHaveBeenCalled();
+  });
+
+  it('an error after a successful exchange does not override signedIn', async () => {
+    const h = harness('signedIn');
+    await h.handle(event({ sessionJwt: JWT }));
+    await h.fail({});
+    expect(h.onOutcome).toHaveBeenCalledTimes(1);
+    expect(h.onOutcome).toHaveBeenCalledWith('signedIn');
+    expect(h.goHome).toHaveBeenCalledTimes(1);
+  });
+
+  it('an error while the exchange is running does not override its outcome', async () => {
+    const h = harness('signedIn');
+    const pending = h.handle(event({ sessionJwt: JWT }));
+    await h.fail({});
+    await pending;
+    expect(h.onOutcome).toHaveBeenCalledTimes(1);
+    expect(h.onOutcome).toHaveBeenCalledWith('signedIn');
+  });
+
+  it('a success after an error still exchanges exactly once', async () => {
+    const h = harness('signedIn');
+    await h.fail({});
+    await Promise.all([h.handle(event({ sessionJwt: JWT })), h.handle(event({ sessionJwt: JWT }))]);
     expect(h.exchange).toHaveBeenCalledTimes(1);
     expect(h.goHome).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('pathWithLang', () => {
+  it('omits the param for English (the default) and adds lang=ar for Arabic', () => {
+    expect(pathWithLang('/', 'en')).toBe('/');
+    expect(pathWithLang('/', 'ar')).toBe('/?lang=ar');
+    expect(pathWithLang('/sign-in', 'en')).toBe('/sign-in');
+    expect(pathWithLang('/sign-in', 'ar')).toBe('/sign-in?lang=ar');
+  });
+
+  it('only the typed Lang is interpolated: anything else gives the plain fixed path (no open redirect)', () => {
+    expect(pathWithLang('/', 'ar&next=//evil.example' as never)).toBe('/');
+    expect(pathWithLang('/', '//evil.example' as never)).toBe('/');
+    expect(pathWithLang('/', undefined as never)).toBe('/');
   });
 });
 

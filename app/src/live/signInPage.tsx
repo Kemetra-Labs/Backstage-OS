@@ -11,7 +11,7 @@ import type { Lang } from '../contract/types';
 import { hostCopy } from '../i18n/host';
 import { SIGN_IN_PATH } from './session';
 import type { DescopeSdkLike } from './signIn';
-import { clearDescopeStorage, makeExchange, makeSuccessHandler, signInView, type StorageLike } from './signInFlow';
+import { clearDescopeStorage, makeExchange, makeSignInEvents, pathWithLang, signInView, type StorageLike } from './signInFlow';
 
 type Phase = 'flow' | 'working' | 'refused' | 'unavailable';
 
@@ -90,16 +90,19 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
     return () => { cancelled = true; };
   }, [flowProject]);
 
-  // One handler for the page's life (StrictMode re-runs effects, not this), so a second `success` can never exchange again.
-  const handler = useRef<ReturnType<typeof makeSuccessHandler> | null>(null);
+  // One handler pair for the page's life (StrictMode re-runs effects, not this), so a second `success` can never exchange again.
+  const handler = useRef<ReturnType<typeof makeSignInEvents> | null>(null);
+  // goHome reads the language at call time (the page can be switched to Arabic while the flow runs).
+  const langRef = useRef<Lang>(lang);
+  langRef.current = lang;
   if (handler.current === null) {
-    handler.current = makeSuccessHandler({
+    handler.current = makeSignInEvents({
       exchange: (jwt) => {
         setPhase('working');
         return makeExchange({ getSdk: () => sdkOf(elRef.current), storages: browserStorages() })(jwt);
       },
       onOutcome: (outcome) => { if (outcome !== 'signedIn') setPhase(outcome); },
-      goHome: () => window.location.replace('/'),
+      goHome: () => window.location.replace(pathWithLang('/', langRef.current)),
     });
   }
 
@@ -111,13 +114,18 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
 
   useEffect(() => {
     if (el === null) return;
-    const on = (e: Event) => { void handler.current?.(e as CustomEvent); };
-    el.addEventListener('success', on);
-    return () => el.removeEventListener('success', on);
+    const onSuccess = (e: Event) => { void handler.current?.onSuccess(e as CustomEvent); };
+    const onError = (e: Event) => { void handler.current?.onError(e as CustomEvent); };
+    el.addEventListener('success', onSuccess);
+    el.addEventListener('error', onError);
+    return () => {
+      el.removeEventListener('success', onSuccess);
+      el.removeEventListener('error', onError);
+    };
   }, [el]);
 
   // The restart and the way back keep the language, but never the magic-link token: a spent token must not be reused.
-  const restart = () => window.location.assign(`${SIGN_IN_PATH}?lang=${lang}`);
+  const restart = () => window.location.assign(pathWithLang(SIGN_IN_PATH, lang));
   const other: Lang = lang === 'ar' ? 'en' : 'ar';
   const body = (() => {
     if (view.kind === 'unconfigured') return <Notice kind="not_configured" title={c.unconfigured.title} body={c.unconfigured.body} />;
@@ -149,7 +157,7 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
         <button type="button" className="btn btn-quiet" lang={other} onClick={() => setLang(other)}>{other === 'ar' ? 'العربية' : 'English'}</button>
       </header>
       {body}
-      <p className="note"><a className="btn btn-quiet btn-link" href={`/?lang=${lang}`}><Text s={c.back} /></a></p>
+      <p className="note"><a className="btn btn-quiet btn-link" href={pathWithLang('/', lang)}><Text s={c.back} /></a></p>
     </main>
   );
 }

@@ -59,7 +59,8 @@ export function failureOf(status: number): HttpFailure {
   if (status === 401 || status === 404) return 'not_found';
   if (status === 400) return 'invalid';
   if (status === 429) return 'rate_limited';
-  if (status === 502 || status === 503 || status === 504) return 'unavailable';
+  // Gateway failures, and Cloudflare's origin errors (520 unknown, 521 down, 522 connect timeout, 523 unreachable, 524 timeout).
+  if (status === 502 || status === 503 || status === 504 || (status >= 520 && status <= 524)) return 'unavailable';
   return 'error';
 }
 

@@ -4,6 +4,7 @@ import { useSession, useSessionStore } from '../app/SessionContext';
 import { StateBlock } from '../components/StateBlock';
 import { Text } from '../components/Text';
 import { SIGN_IN_PATH, type SessionSnapshot } from '../live/session';
+import { pathWithLang } from '../live/signInFlow';
 
 interface ViewProps {
   readonly snapshot: SessionSnapshot;
@@ -19,11 +20,11 @@ interface ViewProps {
  * unsent draft stay loaded; the owner comes back and chooses Check again.
  */
 export function SessionBarView({ snapshot, onRecheck, onSignOut, barRef }: ViewProps) {
-  const { shell } = useApp();
+  const { shell, lang } = useApp();
   const c = shell.live.session;
   const checkAgain = <button type="button" className="btn btn-quiet" onClick={onRecheck}>{c.checkAgain}</button>;
   const signIn = (
-    <a className="btn btn-link" href={SIGN_IN_PATH} target="_blank" rel="noopener noreferrer">{c.signIn}</a>
+    <a className="btn btn-link" href={pathWithLang(SIGN_IN_PATH, lang)} target="_blank" rel="noopener noreferrer">{c.signIn}</a>
   );
   const body = (() => {
     switch (snapshot.status) {
