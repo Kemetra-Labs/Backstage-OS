@@ -112,3 +112,10 @@ Return to the owner if a rule needs evidence that does not exist (for example "m
 - **T2:** a PR is `open` only with an explicit `draft: false`. A missing or non-boolean flag gives `no-value`. The GitHub observer still writes `draft: false` when the provider omits the field; changing that is a BACK-48 connector decision.
 - **T6:** the validator compares by walking the expected result, with own keys, exact key sets and array lengths checked first. A huge or hostile candidate costs no more than the answer itself.
 - Regression tests: `test/reasoning/reasoning.findings.spec.ts`.
+
+## Second revision after the COG-08 re-review (`reasoning-v3`, 2026-11-27)
+
+- **T1:** sparse arrays (holes) in `tasks` or `requirements` are refused, never thrown on.
+- **T2, end to end:** the GitHub observer now stores `draft` only when the provider sent a boolean, and `null` otherwise (a BACK-48 connector change, made at the owner's instruction to fix every review finding). An omitted or malformed flag is therefore `no-value` from ingestion to reasoning. No real observations exist yet (no connector is provisioned), so no stored `false` without provenance needs migrating.
+- **T6:** the validator accepts plain data only: own data properties (accessors are refused and never run), exact key sets, and dense arrays with nothing but their indexes, so no extra property or `toJSON` hook.
+- Regression tests: `test/reasoning/reasoning.findings2.spec.ts`, `test/connectors/github/github-draft.spec.ts`.

@@ -68,3 +68,32 @@ Owner approval is still required for any merge, deployment or release.
 
 **Next:** a second independent review of the fixed commit decides GO or NO-GO for the pre-COG-07 gate.
 
+## 6. Second independent review: Codex, commit b980034 (2026-11-27)
+
+**Verdict: NO-GO.** It confirmed as fixed:
+- duplicate task identities;
+- the fingerprint's cited fields;
+- inherited property names;
+- the token count;
+- the identifier-tier ranking.
+
+All findings below are fixed on the branch that adds this section, each with a regression test that failed on b980034.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| High (was known-open) | The observer stored a missing or malformed `draft` as `false`; reproduced end to end as a wrong recommendation | Observer stores only a provider boolean, else `null`; end-to-end test |
+| Medium | Spoofs still reached lexical tiers (underscore keys, U+2212, overlong numbers, non-ASCII digits, the combining dot from lowercasing U+0130) | `shapeFold` for the shape test; digit and dash folding; wider shapes (`retrieval-v4`) |
+| Medium | Relationship caps applied after construction; fan-out and containment scans | Budgets applied during construction on both entry points, with `truncated`; indexed containment |
+| Medium | Mention parsing dropped long and underscore references, and matched keys glued inside words | Provider grammars with Unicode word boundaries |
+| Medium | Links from conflicting or stale titles carried no status | `basis` on every mention; no links without an established revision |
+| Medium | The validator accepted arrays with extra properties or `toJSON`, and accessors | Plain-data comparison (own data properties, dense arrays, exact keys) |
+| Low | Global mark stripping merged different words; `CJK-2` abstained | Marks kept in ordinary words; key shapes limited to Latin, Greek and Cyrillic |
+| Low | A sparse requirements array threw | Sparse arrays refused (`reasoning-v3`) |
+
+**Still known-open:**
+- a work budget for the memory read;
+- a second-project DB case;
+- SQL timing noninterference;
+- the validator's object-key enumeration is proportional to the candidate's own top-level keys (an in-process cost; any future HTTP boundary must bound request size).
+
+**Next:** a third independent review of the fixed commit.

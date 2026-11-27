@@ -53,6 +53,8 @@ export interface Edge {
   readonly to: ItemIdentity;
   /** For `mentions`: the identifier text as it appears in the mentioning title. */
   readonly text?: string;
+  /** For `mentions`: the status of the item whose title holds the text (COG-02, never upgraded). */
+  readonly basis?: FactStatus;
   readonly evidence: readonly string[];
 }
 
@@ -63,12 +65,16 @@ export interface UnresolvedMention {
   readonly text: string;
   readonly target: null;
   readonly status: 'unresolved';
+  /** The status of the item whose title holds the text. */
+  readonly basis: FactStatus;
   readonly evidence: readonly string[];
 }
 
 export interface Relationships {
   readonly edges: readonly Edge[];
   readonly unresolved: readonly UnresolvedMention[];
+  /** True when the edge or unresolved budget stopped the work (R6). */
+  readonly truncated: boolean;
 }
 
 export interface TraversalNode {

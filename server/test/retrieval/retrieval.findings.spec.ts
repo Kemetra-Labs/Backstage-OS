@@ -59,12 +59,13 @@ describe('Codex Medium: relationship work and output are bounded', () => {
   });
 
   it('many #n mentions across many PRs build in near-linear time', () => {
-    const n = 3000;
+    const n = 900; // 1800 mentions: under the 2000-edge budget, so nothing is cut
     const rows = Array.from({ length: n }, (_, i) => titled(i + 10, `follows #${((i + 1) % n) + 10} and #${((i + 7) % n) + 10}`));
     const p = projectionOf(rows);
     const start = performance.now();
     const rel = relationships(p);
     expect(performance.now() - start).toBeLessThan(1000);
     expect(rel.edges.filter((e) => e.type === 'mentions')).toHaveLength(2 * n);
+    expect(rel.truncated).toBe(false);
   });
 });

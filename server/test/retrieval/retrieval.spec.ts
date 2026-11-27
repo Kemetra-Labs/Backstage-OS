@@ -191,8 +191,8 @@ describe('typed relationships (R6)', () => {
   it('a key with no visible item is an unresolved mention, with no target and only the mentioning item\'s evidence', () => {
     const { unresolved } = relationships(world());
     expect(unresolved).toEqual([
-      { type: 'mentions', from: PR(20), text: 'BACK-404', target: null, status: 'unresolved', evidence: ['p20'] },
-      { type: 'mentions', from: PR(20), text: 'ISO-9001', target: null, status: 'unresolved', evidence: ['p20'] },
+      { type: 'mentions', from: PR(20), text: 'BACK-404', target: null, status: 'unresolved', basis: 'verified', evidence: ['p20'] },
+      { type: 'mentions', from: PR(20), text: 'ISO-9001', target: null, status: 'unresolved', basis: 'verified', evidence: ['p20'] },
     ]);
   });
 
@@ -222,7 +222,7 @@ describe('typed relationships (R6)', () => {
 
   it('a self-mention is dropped', () => {
     const rows = [jira('BACK-5', 'BACK-5 follow-up', 'j5')];
-    expect(relationships(projectionOf(rows))).toEqual({ edges: [], unresolved: [] });
+    expect(relationships(projectionOf(rows))).toEqual({ edges: [], unresolved: [], truncated: false });
   });
 });
 
