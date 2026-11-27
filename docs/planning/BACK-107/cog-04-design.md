@@ -129,3 +129,9 @@ Return to the owner if a rule needs evidence that does not exist (for example "m
 
 - **T6, T7:** the validator builds one index of visible identities and reads it per lookup, instead of scanning the projection for each one. Its work stays additive at the T1 bounds; classification and Kahn cycle checks stay independent of the evaluator.
 - Regression test: `test/reasoning/reasoning.findings4.spec.ts`, which counts item reads rather than timing them.
+
+## Revision after the COG-08 eleventh review (2026-11-27)
+
+- The validator refuses a Proxy candidate at every level (`util.types.isProxy`, the one non-contract import, allowed by the guard). A Proxy can answer the validator's checks honestly and read differently afterwards.
+- Known and not changed: a candidate built in another realm is refused (its prototype is not this realm's `Object.prototype`); candidates must be same-realm plain data.
+- Regression test: `test/reasoning/reasoning.findings5.spec.ts`.

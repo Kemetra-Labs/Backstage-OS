@@ -19,7 +19,7 @@ const FORMAT = /(?:\p{Cf}|(?!\p{M})\p{DI})/gu;
 const CONTROLS = /[\x00-\x08\x0e-\x1f\x7f-\x84\x86-\x9f]/gu;
 const NEXT_LINE = /\x85/gu;
 // Every dash, the minus sign and the small and fullwidth hyphen-minus fold to `-` (COG-08 reviews).
-const DASHES = /[\p{Pd}\u2212\ufe63\uff0d]/gu;
+const DASHES = /[\p{Pd}\u2212\u2043\ufe63\uff0d]/gu;
 const MARKS = /\p{M}/gu;
 const ALEF = /[\u0623\u0625\u0622\u0671]/gu; // alef with hamza above, below, madda, wasla
 const DIGIT = /\p{Nd}/gu;

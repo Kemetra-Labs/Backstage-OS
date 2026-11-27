@@ -4,6 +4,7 @@
 // It shares only the contract with the evaluator: the input types, input validation and the value table.
 // The comparison walks the expected result, never the candidate, so a huge or hostile candidate costs
 // no more than the answer itself (COG-08 review).
+import { types } from 'node:util';
 import type { MemoryProjection } from '../memory/memory.types';
 import { APPROVAL_DETAIL, isValidInput, REASONING_POLICY_VERSION, specVersionOf, valueOf } from './reasoning.rules';
 import type { ReasoningInput, Reason, TaskResult } from './reasoning.types';
@@ -27,6 +28,8 @@ export function validateResult(projection: MemoryProjection, input: ReasoningInp
 function sameData(got: unknown, want: unknown): boolean {
   if (want === null || typeof want !== 'object') return got === want;
   if (got === null || typeof got !== 'object') return false;
+  // A Proxy can answer these checks honestly and read differently afterwards (COG-08 review 11).
+  if (types.isProxy(got)) return false;
   if (Array.isArray(want)) {
     // The standard prototype only: an inherited `toJSON` would change what the result serializes to.
     if (!Array.isArray(got) || Object.getPrototypeOf(got) !== Array.prototype || got.length !== want.length) return false;

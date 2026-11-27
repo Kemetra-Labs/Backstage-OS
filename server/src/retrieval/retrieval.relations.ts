@@ -194,9 +194,10 @@ export function relationships(projection: MemoryProjection): Relationships {
 const validBound = (v: number, max: number): boolean => Number.isInteger(v) && v >= 1 && v <= max;
 
 export function related(projection: MemoryProjection, start: ItemIdentity, options: TraversalOptions = {}): Traversal {
+  const none = (outcome: Traversal['outcome']): Traversal => ({ outcome, nodes: [], unresolved: [], truncated: false });
+  if (options === null || typeof options !== 'object' || start === null || typeof start !== 'object') return none('invalid-request');
   const depth = options.depth ?? DEFAULT_DEPTH;
   const maxNodes = options.maxNodes ?? DEFAULT_MAX_NODES;
-  const none = (outcome: Traversal['outcome']): Traversal => ({ outcome, nodes: [], unresolved: [], truncated: false });
   if (!validBound(depth, MAX_DEPTH) || !validBound(maxNodes, MAX_NODES)) return none('invalid-request');
 
   const docs = docsOf(projection);

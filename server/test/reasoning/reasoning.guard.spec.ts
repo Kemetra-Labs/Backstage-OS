@@ -14,7 +14,7 @@ const specifiersOf = (text: string): string[] =>
     (m) => m[1] ?? m[2] ?? m[3] ?? 'require',
   );
 
-const ALLOWED = /^(?:\.\/reasoning\.[a-z]+|\.\.\/memory\/memory\.(?:types|canonical)|\.\.\/retrieval\/retrieval\.types)$/;
+const ALLOWED = /^(?:\.\/reasoning\.[a-z]+|\.\.\/memory\/memory\.(?:types|canonical)|\.\.\/retrieval\/retrieval\.types|node:util)$/; // node:util for types.isProxy only (COG-08 review 11)
 const IMPURE = /\bfetch\b|\bprocess\b|\bglobalThis\b|\bMath\.random\b|\bDate\b|\bset(?:Timeout|Interval|Immediate)\b|\bcrypto\b|anthropic|openai|\bllm\b/i;
 
 describe('reasoning module is pure, independent and not exposed', () => {

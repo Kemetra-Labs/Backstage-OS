@@ -258,3 +258,16 @@ The first attempt was stopped by the provider's content filter. A narrower rerun
 - **Gate:** the pre-COG-07 gate stays **open** until an independent review of the current commit returns GO.
 - **Known-open, tracked (not blockers so far):** memory read work budget; a second-project DB test; SQL timing; validator top-level key enumeration.
 - **Owner decisions still needed:** COG-05 schema and review authority; COG-07 UI scope. COG-06 is deferred.
+
+## 17. Eleventh independent review: Claude code-reviewer, commit 2c93de4 (2026-11-27)
+
+**Verdict: GO for the pre-COG-07 gate, conditional on finding 1 (fixed on the branch that adds this section).** Gates 1, 2, 5 and 6 were attacked and no violation was confirmed; the SQL specs were read, not run, by the reviewer.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| Medium | A Proxy candidate passed the validator, then could read as another result | Proxies are refused at every level |
+| Medium | `#12.`, `PR#12`, `PR: 12`, `issue#4` and a key with U+2043 reached fuzzy tiers | Number references with separators or punctuation are identifier-shaped; U+2043 folds to a hyphen (`retrieval-v13`) |
+| Low | A cross-realm correct result is refused | Documented: candidates must be same-realm plain data |
+| Low | `related(p, null)` and `search(p, 'x', null)` threw | Both refuse with `invalid-request` / `invalid-query` |
+
+Independence note: this reviewer was a Claude agent without the author's conclusions, not an external model. The owner delegated the decisions on 2026-11-27 and the previous ten rounds used Codex.

@@ -30,7 +30,7 @@
  * v12 (2026-11-27, tenth review): the shape fold recomposes after removing marks; the source-ref shape
  * has no length cap of its own.
  */
-export const RETRIEVAL_POLICY_VERSION = 'retrieval-v12';
+export const RETRIEVAL_POLICY_VERSION = 'retrieval-v13';
 
 export const MAX_QUERY_CHARS = 500;
 export const MAX_QUERY_TOKENS = 32;
@@ -117,6 +117,8 @@ const IDENTIFIER_SHAPES: readonly RegExp[] = [
   // No digit-count ceiling: the query bound (500 characters) already bounds the work.
   /^#?\d+$/u,
   /^(?:pr|issue) #?\d+$/u,
+  // A number reference with any separator or trailing punctuation (`PR#12`, `pull/12`, `#12.`) is still one.
+  /^(?:(?:pr|pull request|pull|issue)[\s#:/_.-]*|#)?\d+[\s.,;:!?]*$/u,
   // Latin, Greek and Cyrillic (the scripts that impersonate each other): a lookalike key is still
   // key-shaped, so it can only match exactly. Other scripts (CJK, Arabic) stay ordinary text.
   /^[\p{sc=Latin}\p{sc=Greek}\p{sc=Cyrillic}][\p{sc=Latin}\p{sc=Greek}\p{sc=Cyrillic}\p{N}_]+-\d+$/u,

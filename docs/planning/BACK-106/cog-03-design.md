@@ -219,3 +219,10 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 - **Source-ref shape:** it has no length cap of its own; the 500-character query bound already bounds the work.
 - **Decided, pinned by a test:** accent-decorated `owner/repo` text (`résumé/guide`) is identifier-shaped and answered by exact match only, as R4 reserves every identifier shape. The same words without the slash are ordinary text. An explicit text-search mode would be a later product decision.
 - Regression tests: `test/retrieval/retrieval.findings11.spec.ts`.
+
+## Twelfth revision after the COG-08 eleventh review (`retrieval-v13`, 2026-11-27)
+
+- **Number references:** a number with any separator or trailing punctuation (`PR#12`, `pull/12`, `#12.`, `12!`) is identifier-shaped, so it is answered by exact match only and never reaches a title or fuzzy tier.
+- **Key separators:** U+2043 (hyphen bullet) folds to a hyphen, so `BACK`, U+2043, `8` is the key `BACK-8`.
+- **Boundaries:** `search` and `related` refuse a null or non-object `options`, and `related` refuses a null `start`, instead of throwing.
+- Regression tests: `test/retrieval/retrieval.findings12.spec.ts`.

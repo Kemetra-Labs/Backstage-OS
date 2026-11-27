@@ -44,6 +44,7 @@ export function search(projection: MemoryProjection, query: string, options: Sea
   const meta = { fingerprint: projection.fingerprint, policyVersion: projection.policyVersion, retrievalPolicyVersion: RETRIEVAL_POLICY_VERSION };
   const empty = (outcome: SearchOutcome): SearchResult => ({ outcome, selected: null, hits: [], totalMatches: 0, truncated: false, ...meta });
 
+  if (options === null || typeof options !== 'object') return empty('invalid-query');
   const limit = options.limit ?? DEFAULT_LIMIT;
   if (typeof query !== 'string' || query.length > MAX_QUERY_CHARS || !Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) return empty('invalid-query');
   const folded = normalizeText(query);
