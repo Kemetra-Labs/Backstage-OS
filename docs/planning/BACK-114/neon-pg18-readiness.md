@@ -28,11 +28,11 @@ So the acceptance criterion "existing Neon project upgraded to approved version"
 
 | | Option | What it means | Data and rollback | Cost (section 4) |
 | --- | --- | --- | --- | --- |
-| **A** | **New Neon project on PostgreSQL 18 (Frankfurt, Launch), old `kawalys` kept untouched** | Create `kawalys-pg18` explicitly on 18 (not 19). Provision with `db-admin provision --apply --plaintext-passwords`, then `migrate --apply`, then rotate the three role passwords. | If `main` is still empty (recheck), there is nothing to move. Rollback: the old project is still there, unchanged. Retiring the old project is a separate, later owner decision; this slice deletes nothing. | One more project; no per-project fee on Launch. |
+| **A** | **New Neon project on PostgreSQL 18 (Frankfurt, Launch), old `kawalys` kept untouched** | Create `kawalys-pg18` explicitly on 18 (not 19). Provision with `db-admin provision --apply --plaintext-passwords`, then `migrate --apply`, then rotate the three role passwords. | If `main` is still empty (recheck), there is nothing to move. The old project is **preserved, not a ready fallback**: it has no Kawalys roles or schema, so switching back means provisioning it with the same commands. That is cheap only while there is no pilot data. Once the 18 project takes writes, those writes exist nowhere else, and recovery is Neon's restore history on the new project. Retiring the old project is a separate, later owner decision; this slice deletes nothing. | One more project; no per-project fee on Launch. |
 | **B** | Stay on Neon PostgreSQL 17 (existing project) | Use `kawalys` as it is. | No move now. Any later major upgrade needs the same new-project move as A, but with pilot data in it. | Same as today. |
 | **C** | Bundled PostgreSQL 18.7 on the app host (`deploy/pilot` as it is) | No managed database. Proven by `smoke.sh`. | Backups, restore drills and upgrades are the operator's job (runbook sections 7a and 8). The ticket's goal was to avoid this. | No Neon cost; uses host disk and memory. |
 
-**Recommendation (labelled, not a decision):** A, provided the recheck shows `main` is still empty. It is the only option that gives 18.x on Neon. While the database is empty it costs one extra project and no data move, and the old project stays as a fallback. B leaves a 17-versus-18 gap between production and every test run. C runs against the ticket's goal.
+**Recommendation (labelled, not a decision):** A, provided the recheck shows `main` is still empty. It is the only option that gives 18.x on Neon. While the database is empty it costs one extra project and no data move, and nothing is deleted. B leaves a 17-versus-18 gap between production and every test run. C runs against the ticket's goal.
 
 Open plan question for A or B: **IP Allow (a network allowlist) is a Scale-plan feature.** On Launch, anyone who has a connection string and password can reach the endpoint. Protection then rests on TLS `verify-full` (enforced by the BFF for remote hosts), strong random role passwords, role isolation and forced RLS. Scale adds IP Allow and Private Networking at about twice the compute price. Recommendation: Launch for the first pilot with one owner, and revisit before any customer data.
 
@@ -78,9 +78,9 @@ Do not paste connection strings or passwords into Jira or the repo.
 
 ## 7. Execution plan (each step needs its own owner approval)
 
-1. **Owner rules** on option A, B or C, the plan (Launch or Scale), and amends the BACK-114 acceptance criterion: from "existing project upgraded" to "new 18.x project replaces it; old project kept until retired".
+1. **Owner rules** on option A, B or C and on the plan (Launch or Scale), and amends the BACK-114 acceptance criterion to match. For A: "a new 18.x project replaces the existing one; the old project is kept until retired". For B: "stay on 17, deviation from 18.7 accepted". For C: "no managed database for the pilot; BACK-114 closed as not pursued". Steps 3 to 7 apply to option A only. For B, run steps 4 to 6 on the existing project.
 2. Owner recheck (section 5) is recorded in a Jira comment, without secrets.
-3. **Approval to create** the new project (option A). The agent needs either a scoped Neon API key in the agent's environment (never in chat or the repo), or the owner runs the steps.
+3. **Approval to create** the new project (option A only). The agent needs either a scoped Neon API key in the agent's environment (never in chat or the repo), or the owner runs the steps.
 4. Provision, migrate and rotate on the new project. Confirm `SHOW server_version` reports 18.x and record the actual minor.
 5. Run the BACK-55 isolation checks against the new project on both endpoints, then the restore drill.
 6. Only then point the pilot (`deploy/pilot`, BACK-115 profile) at it.
