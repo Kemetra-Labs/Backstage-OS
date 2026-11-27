@@ -11,6 +11,7 @@ import { PostgresSessionStore } from "./auth/session/postgres-session-store";
 import { WorkspaceResolver } from "./auth/workspace-resolver";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { EvidenceRepository } from "./evidence/evidence.repository";
+import { DemoModule } from "./demo/demo.module";
 import { allowedOrigins } from "./config/allowed-origins";
 import { trustProxy } from "./config/trust-proxy";
 import { ReadinessModule } from "./health/readiness.module";
@@ -53,6 +54,9 @@ export async function createApp(
     imports.push(EvidenceModule.register(evidence, workspaces));
     imports.push(InvestigationModule.register(new InvestigationRepository(db.appPool), evidence, workspaces));
     imports.push(PortfolioModule.register(new PortfolioRepository(db.appPool), workspaces));
+  } else {
+    // The fixture demo route (it reads the display persona header) exists only without a database (audit L3).
+    imports.push(DemoModule);
   }
 
   @Module({ imports, controllers: extraControllers })

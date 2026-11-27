@@ -2,7 +2,7 @@
 // origin on loopback. Set, it is a comma-separated list of exact origins `scheme://host[:port]` and nothing else:
 // never `*` or `null`, no path, no trailing slash, no credentials. The error names the variable, never the value.
 // Origin serialisation idea adapted from Retail-Tower-Erp services/backend-core/apps/api/src/auth/origin-check.ts
-// (blob e173468, repo HEAD 032877b); the rule itself differs (exact-match allowlist, no Host-derived origin).
+// (last commit touching the file e173468; repository HEAD 032877b); the rule itself differs (exact-match allowlist, no Host-derived origin).
 import { ConfigError } from './database-config';
 
 const NAME = 'KAWALYS_ALLOWED_ORIGINS';

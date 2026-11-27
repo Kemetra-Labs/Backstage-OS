@@ -16,8 +16,11 @@ interface CheckedRequest extends RequestWithId {
   method?: string;
 }
 
+// A repeated header arrives as string[] only for some names; it counts as present-but-invalid (''), never as absent,
+// so it can neither match an allowlist entry nor take the "no header" path.
 function first(value: string | string[] | undefined): string | undefined {
-  return typeof value === 'string' ? value : undefined;
+  if (value === undefined) return undefined;
+  return typeof value === 'string' ? value : '';
 }
 
 export function originCheck(options: OriginCheckOptions) {

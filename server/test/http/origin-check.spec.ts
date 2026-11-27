@@ -1,5 +1,7 @@
+import { jest } from '@jest/globals';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { createApp } from '../../src/create-app';
 import { originCheck } from '../../src/http/origin-check';
 import { shape, startApp, type TestApp } from '../auth/_helpers';
 
@@ -12,6 +14,7 @@ describe('origin check on the app (development/test: no header = allowed)', () =
   let cookie: string;
 
   beforeAll(async () => {
+    process.env['KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE'] = '100'; // every test signs in again
     t = await startApp();
     app = t.app;
   });
@@ -19,6 +22,7 @@ describe('origin check on the app (development/test: no header = allowed)', () =
     cookie = await t.signIn();
   });
   afterAll(async () => {
+    delete process.env['KAWALYS_AUTH_SIGN_IN_LIMIT_PER_MINUTE'];
     await app.close();
   });
 
@@ -61,6 +65,19 @@ describe('origin check on the app (development/test: no header = allowed)', () =
     expect(res.status).toBe(204);
   });
 
+  it.each([
+    ['Sec-Fetch-Site mixed case', { 'Sec-Fetch-Site': 'Same-Origin' }],
+    ['Sec-Fetch-Site empty', { 'Sec-Fetch-Site': '' }],
+    ['Sec-Fetch-Site comma-joined', { 'Sec-Fetch-Site': 'same-origin, cross-site' }],
+    ['Origin null', { Origin: 'null' }],
+    ['Origin upper case', { Origin: 'HTTP://LOCALHOST:4178' }],
+  ])('refuses odd values (%s) even in development, so only the no-header path passes', async (_label, headers) => {
+    const res = await del().set('Cookie', cookie).set(headers);
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('not_found');
+    expect(await stillSignedIn()).toBe(true);
+  });
+
   it('does not touch GET', async () => {
     const res = await t.get('/auth/me', cookie).set('Origin', EVIL).set('Sec-Fetch-Site', 'cross-site');
     expect(res.status).toBe(200);
@@ -100,5 +117,48 @@ describe('originCheck middleware, production', () => {
   });
   it('outside production allows a request with neither header', () => {
     expect(run(false, 'POST', {}).passed).toBe(true);
+  });
+});
+
+describe('originCheck middleware, repeated headers', () => {
+  function run(headers: Record<string, string | string[]>, production = false): boolean {
+    let passed = false;
+    const res = { setHeader: () => undefined, status: () => ({ json: () => undefined }) };
+    originCheck({ allowed: [ALLOWED], production })({ method: 'POST', headers }, res, () => void (passed = true));
+    return passed;
+  }
+  it('treats a string[] header as present but invalid, never as absent', () => {
+    expect(run({ origin: [ALLOWED, ALLOWED] })).toBe(false);
+    expect(run({ 'sec-fetch-site': ['same-origin', 'same-origin'] })).toBe(false);
+    expect(run({ 'sec-fetch-site': ['same-origin'], origin: ALLOWED })).toBe(true); // a valid Origin still passes on its own
+  });
+});
+
+describe('createApp in production', () => {
+  const saved = { ...process.env };
+  afterEach(() => {
+    jest.restoreAllMocks();
+    for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
+    Object.assign(process.env, saved);
+  });
+
+  it('refuses a POST with neither Sec-Fetch-Site nor Origin with the 404 envelope', async () => {
+    Object.assign(process.env, {
+      NODE_ENV: 'production',
+      KAWALYS_DESCOPE_PROJECT_ID: 'PkawalysTest0001',
+      KAWALYS_OWNER_SUBJECT: 'UkawalysOwner0001',
+    });
+    // Production forbids test doubles, so this boots the real wiring; the refusal happens before any handler or network call.
+    const app = await createApp();
+    try {
+      const res = await request(app.getHttpServer()).post('/auth/session').set('Authorization', 'Bearer a.b.c');
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('not_found');
+      expect(res.headers['cache-control']).toBe('no-store');
+      const delRes = await request(app.getHttpServer()).delete('/auth/session');
+      expect(delRes.status).toBe(404);
+    } finally {
+      await app.close();
+    }
   });
 });
