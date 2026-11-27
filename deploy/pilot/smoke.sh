@@ -131,6 +131,23 @@ check "deploy: pull_policy is missing for every service" deploy_json_check 'Obje
 grep -v '^KAWALYS_BFF_IMAGE=' "$TMP/deploy.env" > "$TMP/deploy-missing.env"
 check "deploy: config fails and names KAWALYS_BFF_IMAGE when it is unset" bash -c '! docker compose -f "$0" -f "$1" --env-file "$2" config >"$3" 2>&1 && grep -q KAWALYS_BFF_IMAGE "$3"' "$MANAGED_FILE" "$DEPLOY_FILE" "$TMP_NATIVE/deploy-missing.env" "$TMP_NATIVE/deploy-missing.out"
 
+# Deploy preflight (BACK-117 review): rejects mutable tags and missing refs; prints no value from the file.
+PF="$HERE/preflight-deploy.sh"
+printf 'KAWALYS_BFF_IMAGE=ghcr.io/kemetra-labs/kawalys-bff@sha256:%s
+KAWALYS_WEB_IMAGE=ghcr.io/kemetra-labs/kawalys-web@sha256:%s
+SECRET_X=hunter2
+' "$DIGEST_A" "$DIGEST_B" > "$TMP/pf-ok.env"
+printf 'KAWALYS_BFF_IMAGE=ghcr.io/kemetra-labs/kawalys-bff:abc123
+KAWALYS_WEB_IMAGE=ghcr.io/kemetra-labs/kawalys-web@sha256:%s
+SECRET_X=hunter2
+' "$DIGEST_B" > "$TMP/pf-tag.env"
+printf 'KAWALYS_WEB_IMAGE=ghcr.io/kemetra-labs/kawalys-web@sha256:%s
+SECRET_X=hunter2
+' "$DIGEST_B" > "$TMP/pf-missing.env"
+check "preflight: accepts two valid digest refs" bash "$PF" "$TMP/pf-ok.env"
+check "preflight: rejects a tag-only ref, names the variable, leaks no value" bash -c 'out="$(bash "$0" "$1" 2>&1)"; rc=$?; [ $rc -ne 0 ] && echo "$out" | grep -q KAWALYS_BFF_IMAGE && ! echo "$out" | grep -q "hunter2\|abc123"' "$PF" "$TMP/pf-tag.env"
+check "preflight: rejects a missing variable" bash -c '! bash "$0" "$1" >/dev/null 2>&1' "$PF" "$TMP/pf-missing.env"
+
 log "isolation: every resource of this run belongs to $PROJECT, none to the deployment project kawalys-pilot"
 log "build images and start postgres"
 quiet dc build || { fail "images build"; exit 1; }
