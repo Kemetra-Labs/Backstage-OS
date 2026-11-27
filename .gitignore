@@ -27,3 +27,6 @@ log/
 browserstack.err
 local.log
 .browserstack/
+
+# Local agent working files
+.superpowers/

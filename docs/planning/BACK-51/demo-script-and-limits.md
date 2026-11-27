@@ -89,7 +89,7 @@ The gate is NOT PASSED. A row is PASS only with evidence; missing evidence stays
 | Login → Portfolio → Investigation → record decision, end to end | Passes in CI (`live-e2e`, 9 tests, Chromium) with the fake identity verifier only. Real Descope sign-in is P5: **NOT RUN** |
 | Demo script (5–10 min) | Written above: fixture script plus live-mode variant. Not yet rehearsed with the owner |
 | Known limitations listed | Above |
-| X02/X04 + BACK-30 restricted-existence security sign-off | NOT RUN (separate workstream preparing evidence) |
+| X02/X04 + BACK-30 restricted-existence security sign-off | Evidence pack ready ([link](x02-x04-back30-evidence.md)); owner rulings (M2 and others) and sign-off NOT RUN |
 | BACK-55/56/57/59/60/61/62 readiness | Code slices merged; BACK-56 real sign-in not run |
 | BACK-64 deployment | Deploy-ready, proven locally by `deploy/pilot/smoke.sh`; non-local run NOT RUN (owner: host, DNS, secrets; production sign-in needs D3 (a)). Runbook: `docs/planning/BACK-64/pilot-deployment-runbook.md` |
 | Negative / privacy / EN-AR / RTL / a11y checks documented | In CI (app e2e: `a11y`, `leaks`, `nondisclosure`, `arabic-copy`; live e2e: negative, Arabic and leak cases) |
