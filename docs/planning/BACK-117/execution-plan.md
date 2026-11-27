@@ -61,3 +61,30 @@ Steps 1 to 8 give a real, HTTPS, database-ready, deny-all pilot. Step 9 is what 
 - **Origin certificate:** with the record proxied from the start, Caddy's HTTP challenge still works through Cloudflare, but a Cloudflare redirect rule could block it. Starting DNS-only avoids the question.
 - **Memory:** 1.4 GiB available before the stack starts. Measure after step 5 and report before any tier change.
 - **Cost:** about $16–19/month, currently covered by credits. The AWS budget is already about 63% used in November from other usage.
+
+## 11. Execution record, 27 Nov 2026 (Origin CA, host measurements, rollback drill)
+
+**Origin CA (owner-approved).** Release 2 (`05ad01b`) `web` is deployed. A Cloudflare Origin CA certificate for `kawalys.kemetralabs.com` is mounted through `compose.origin-cert.yml`. The private key was created on the host and never left it. Certificate id `369951370120849616063248932064496707687717040930`; **expires 2029-11-26; nothing renews it.** Verified: certificate matches key; the served issuer is the Cloudflare Origin CA; Caddy logs `skipping automatic certificate management`; through Cloudflare `/api/health` is `ready:true` with a verified certificate, a protected route is 404, port 80 redirects. This closes the January 2027 Let's Encrypt renewal risk.
+
+**Access used.** The host was reached by temporary SSH from the agent's machine: port 22 opened to one `/32` with `OpenInstancePublicPorts`, a short-lived key from `GetInstanceAccessDetails`, then the exact original rules restored with `PutInstancePublicPorts` (22 from `lightsail-connect` only; 80 and 443 from the Cloudflare ranges only) and the key deleted. Done twice (certificate step, then measurements and drill). Firewall verified after each.
+
+**Compose files.** Every host command uses **three** `-f` files. With only `compose.managed.yml` and `compose.deploy.yml`, `web` loses the certificate mount and Caddy returns to automatic certificates.
+
+**Host measurements (18:47 UTC, stack up, idle).**
+
+| Item | Value |
+| --- | --- |
+| Memory | 1905 MB total, 592 used, 1313 available |
+| Swap | 1 GiB swapfile, 52 KB used |
+| Disk | 4.1 GB of 58 GB (8%) |
+| Load | 0.01 |
+| `web` container | 10 MiB |
+| `bff` container | 41 MiB |
+
+Headroom is large for a deny-all pilot. Not measured: memory under real use (nothing signs in until D3(a)). No tier change is needed.
+
+**Neon idle (agent, Neon API).** With the full stack live (BFF container healthcheck polling `/process`), the last compute activity was 18:47:57 UTC, after the drill's readiness checks. The compute for `ep-spring-wind-bgn9u8ez` went `idle` and was suspended at **18:53:30 UTC**, about 5 minutes later (`suspend_timeout_seconds` 300). So the liveness-only healthcheck does let Neon suspend in the deployed pilot; only readiness calls (`/api/health`) and real traffic keep it awake. The wake cost was measured earlier (1.78 s, BACK-115).
+
+**Rollback drill (BFF only).** Baseline release 1 BFF `sha256:2aa5d074…`; moved to release 2 BFF `sha256:2e46b2a4…` (preflight passed, `ready:true`), then back to release 1 from the env backup: ready again 16 s after the command, origin certificate unchanged. The drill ended on release 1, the pre-drill state. `web` is deliberately not rolled back: release 1 `web` has no `tls.d` import and would switch Caddy back to Let's Encrypt. **Rollback floors: bff release 1, web release 2.** Database restore was drilled earlier (BACK-114).
+
+**Still open after this record:** D3(a) sign-in (owner decision), P5 real Descope run, rulings R1 to R4, X02/X04/BACK-30 reconciliation, evidence bundle and the owner's BACK-51 sign-off; BACK-58 secret custody (0600 env file today); rotation of the two database passwords that appeared in chat; the AWS connection is still root.
