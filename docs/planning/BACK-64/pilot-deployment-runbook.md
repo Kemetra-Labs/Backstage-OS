@@ -184,20 +184,27 @@ The managed database exists: Neon project `kawalys-pg18`, PostgreSQL 18.7, Frank
 - The BFF refuses any non-loopback URL without `verify-full`. Neon's certificate chains to public roots, so no extra CA is needed. A provider with a private CA needs an override file that mounts its CA and sets `NODE_EXTRA_CA_CERTS`.
 - Copy the passwords from the Neon console (they are stored there), never from chat or the repo.
 
+**Build first.** Run `dcm build` before any `ops` command. `ops` runs the BFF's `:local` image and has no build of its own, so without a build it fails on a fresh host, or migrates with the previous release's files on an upgrade.
+
 **Provision and migrate** (only when the schema changes; `kawalys-pg18` is already done):
 - Add `KAWALYS_ADMIN_DATABASE_URL` (Neon's **direct** host; `db-admin` refuses `-pooler`) and the three `KAWALYS_ROLE_PASSWORD_*` to the env file.
 - Run `dcm --profile ops run --rm ops migrate --apply`. A brand-new project also needs `provision --apply --plaintext-passwords` first; Neon refuses pre-hashed passwords.
 - Then **remove those four lines** from the env file. The running stack must not hold the owner-level credential; `bff` and `web` start without them.
 
-**Deploy:** `dcm build`, then `dcm up -d bff web`.
+**Deploy:** `dcm build` (if not already done above), then `dcm up -d bff web`.
 
 **Readiness gate (required before calling a deploy or upgrade done):**
 
 ```bash
-for i in $(seq 1 10); do curl -fsS https://<site>/api/health && break; sleep 3; done
+ready=no
+for i in $(seq 1 10); do
+  curl -fsS --max-time 5 https://<site>/api/health | grep -q '"ready":true' && { ready=yes; break; }
+  sleep 3
+done
+[ "$ready" = yes ] || { echo "NOT READY: roll back"; false; }
 ```
 
-It must print `"ready":true`. Retry because a sleeping Neon compute wakes on the first query (measured below). A first answer of 503 right after a wake is expected; ten 503s are not. If it never turns ready, roll back (section 9).
+It exits non-zero unless an answer is 200 with `"ready":true`, so a deploy script can rely on it. Retry because a sleeping Neon compute wakes on the first query (measured below). A first answer of 503 right after a wake is expected; ten 503s are not. If it never turns ready, roll back (section 9).
 
 **Liveness versus readiness.**
 - The `bff` container healthcheck polls `/process` every 3 s. That is process liveness and never touches the database (BACK-115). So `docker compose ps` showing `healthy` means the process is up, **not** that the database is reachable. Readiness is `/api/health` only.
@@ -214,7 +221,7 @@ It must print `"ready":true`. Retry because a sleeping Neon compute wakes on the
 
 The wake-up is close to the readiness probe's 2 s bound. A slower wake gives one 503, which is why the gate retries. **Cost:** with idle suspend working, compute is billed only while the pilot is used. That is the readiness doc's scale-to-zero case (about $4 a month), not the always-on case (about $20).
 
-**Backup and restore.** Neon keeps 7 days of history; point-in-time restore was drilled in BACK-114. To restore: create a branch from `main` at a timestamp before the incident, check it with SQL, then either point the runtime URLs at that branch's host, or ask the owner to make it the default branch. `pg_dump` over the direct host (section 8 commands, with the managed URL) remains a portable extra copy.
+**Backup and restore.** Neon keeps 7 days of history; point-in-time restore was drilled in BACK-114. To restore: create a branch from `main` at a timestamp before the incident, check it with SQL, then point **both** runtime URLs at that branch's own endpoint host and recreate the BFF (`dcm up -d bff`), then run the readiness gate and check the restored data. Making the branch the default in Neon does not change the endpoint host already in the env file: without updating the URLs the BFF keeps using the old branch, and readiness would pass against it. `pg_dump` over the direct host (section 8 commands, with the managed URL) remains a portable extra copy.
 
 **Rotation.**
 - Reset a role's password in the Neon console or API. Update the matching URL in the env file, then `dcm up -d bff`. The old password stops working at once, so expect a few seconds of 503 on `/api/health`.

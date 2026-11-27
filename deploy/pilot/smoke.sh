@@ -89,10 +89,11 @@ KAWALYS_ROLE_PASSWORD_AUTH=dummy-auth
 ENV
 mdc() { docker compose -f "$MANAGED_FILE" --env-file "$MANAGED_ENV" "$@"; }
 mdc_json() { mdc "$@" config --format json; }
-# $1 = node expression over the parsed config `c`; exits 0 when it is true.
+# $1 = JavaScript expression over the parsed config `c` (evaluated in a node container); exits 0 when it is true.
 managed_json_check() { # $1 expression, rest: extra compose args (for example --profile ops)
   local expr="$1"; shift
-  mdc_json "$@" 2>"$TMP/managed.err" | node -e 'let d="";process.stdin.on("data",x=>d+=x).on("end",()=>{const c=JSON.parse(d);process.exit(eval(process.argv[1])?0:1)})' "$expr"
+  # Node runs in the same pinned image the BFF is built from, so the smoke needs only docker and curl on the host.
+  mdc_json "$@" 2>"$TMP/managed.err" | docker run --rm -i --network none node:24.22.3-alpine node -e 'let d="";process.stdin.on("data",x=>d+=x).on("end",()=>{const c=JSON.parse(d);process.exit(eval(process.argv[1])?0:1)})' "$expr"
 }
 check "managed: config succeeds with dummy env" quiet mdc config
 check "managed: services are exactly bff and web" managed_json_check 'Object.keys(c.services).sort().join()==="bff,web"'
