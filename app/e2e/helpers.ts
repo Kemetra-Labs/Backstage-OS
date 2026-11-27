@@ -34,3 +34,12 @@ export async function openRoute(page: Page, route: string, q: LoadQuery = {}) {
   await expect(page.locator('h1')).toBeVisible();
   return errors;
 }
+
+/** The common layout contract of a screen: text direction, no horizontal overflow, one h1 and headings that never skip a level. */
+export async function expectSoundLayout(page: Page, lang: string) {
+  await expect(page.locator('html')).toHaveAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  await expect(page.locator('h1')).toHaveCount(1);
+  const levels = await page.evaluate(() => [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map((h) => Number(h.tagName[1])));
+  levels.reduce((prev, cur) => { expect(cur).toBeLessThanOrEqual(prev + 1); return cur; }, 1);
+}

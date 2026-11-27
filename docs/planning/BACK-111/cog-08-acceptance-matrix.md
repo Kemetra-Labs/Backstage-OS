@@ -278,3 +278,9 @@ Independence note: this reviewer was a Claude agent without the author's conclus
 - **Decision: GO for the pre-COG-07 gate at `3c675da`.** COG-07 may start within the scope in [cog-07-scope-decision.md](cog-07-scope-decision.md): read-only, fixtures by default, shadow-labelled, no actions.
 - **Still tracked, not blockers:** memory read work budget; a second-project DB test; SQL timing; validator top-level key enumeration.
 - **COG-05:** decisions recorded ([cog-05-decisions.md](../BACK-108/cog-05-decisions.md)); activation stays blocked until BACK-45 approval evidence and real outcomes exist. **COG-06:** deferred.
+
+## 19. COG-05 and COG-07 delivered within their decided scope (2026-11-27)
+
+- **COG-05:** the pure machinery (#152) and the storage tables (#153, independent database review GO) are merged. Activation stays blocked until BACK-45 approval evidence and real outcomes exist (D6).
+- **COG-07:** the read-only shadow view `#/shadow` is on the branch that adds this section ([cog-07-scope-decision.md](cog-07-scope-decision.md)). Its data is committed engine output that a server test keeps equal to the real output; it makes no request and has no controls.
+- **COG-06:** deferred (BACK-109 verdict).

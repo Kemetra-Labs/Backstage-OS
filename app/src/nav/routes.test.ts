@@ -22,6 +22,7 @@ describe('parseHash', () => {
     ['#/agents/deck', { name: 'agents', view: 'deck' }],
     ['#/agents/deck/MSN-DEMO-2', { name: 'agents', view: 'deck', msn: 'MSN-DEMO-2' }],
     ['#/sources/observatory', { name: 'sources', view: 'observatory' }],
+    ['#/shadow', { name: 'shadow' }],
     ['#/sources/observatory/sentry', { name: 'sources', view: 'observatory', src: 'sentry' }],
     ['#/map', { name: 'map' }],
     ['#/map/all', { name: 'map', scope: 'all' }],
@@ -68,5 +69,13 @@ describe('sectionOf', () => {
     expect(sectionOf({ name: 'project', projectId: 'RT' })).toBe('project');
     expect(sectionOf({ name: 'map', scope: 'all' })).toBe('map');
     expect(sectionOf({ name: 'notFound', path: '/' })).toBeNull();
+  });
+});
+
+describe('shadow route (COG-07)', () => {
+  it('links to itself, has no sidebar section, and takes no sub-path', () => {
+    expect(hrefFor({ name: 'shadow' })).toBe('#/shadow');
+    expect(sectionOf({ name: 'shadow' })).toBeNull();
+    expect(parseHash('#/shadow/x').name).toBe('notFound');
   });
 });

@@ -12,6 +12,7 @@ export type Route =
   | { readonly name: 'decision'; readonly id: string }
   | { readonly name: 'agents'; readonly view?: 'deck'; readonly msn?: string }
   | { readonly name: 'sources'; readonly view?: 'observatory'; readonly src?: Provider }
+  | { readonly name: 'shadow' }
   | { readonly name: 'notFound'; readonly path: string };
 
 export type RouteName = Route['name'];
@@ -88,6 +89,9 @@ export function parseHash(hash: string): Route {
       if (n === 2 && b === 'observatory') return { name: 'sources', view: 'observatory' };
       if (n === 3 && b === 'observatory' && isProvider(c)) return { name: 'sources', view: 'observatory', src: c };
       return notFound;
+    case 'shadow':
+      // COG-07: the read-only shadow view of the cognitive core (committed fixture, no request).
+      return n === 1 ? { name: 'shadow' } : notFound;
     default:
       return notFound;
   }
@@ -108,6 +112,7 @@ export function hrefFor(r: Route): string {
     case 'decision': return `#/decisions/${enc(r.id)}`;
     case 'agents': return r.view ? (r.msn ? `#/agents/deck/${enc(r.msn)}` : '#/agents/deck') : '#/agents';
     case 'sources': return r.view ? (r.src ? `#/sources/observatory/${enc(r.src)}` : '#/sources/observatory') : '#/sources';
+    case 'shadow': return '#/shadow';
     case 'notFound': return '#/';
   }
 }
@@ -118,6 +123,6 @@ export function sectionOf(r: Route): 'home' | 'portfolio' | 'map' | 'project' | 
     case 'home': case 'portfolio': case 'map': case 'project': case 'investigation': case 'agents': case 'sources': return r.name;
     case 'evidence': return 'investigation';
     case 'decisions': case 'decision': return 'decisions';
-    case 'notFound': return null;
+    case 'shadow': case 'notFound': return null;
   }
 }
