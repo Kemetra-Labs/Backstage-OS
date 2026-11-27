@@ -1,0 +1,28 @@
+# Kawalys pilot edge (BACK-64). KAWALYS_SITE_ADDRESS is a host name (Caddy obtains a certificate for it)
+# or "localhost" (Caddy's internal CA, local smoke only).
+{$KAWALYS_SITE_ADDRESS} {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		X-Frame-Options DENY
+		-Server
+	}
+
+	# /api/... goes to the BFF with the prefix stripped; the Host header is passed through.
+	# X-Forwarded-For is overwritten with the address Caddy sees, never appended to a client-sent value, so the
+	# BFF (which trusts only this proxy) cannot be given a forged client address.
+	handle_path /api/* {
+		reverse_proxy bff:8787 {
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

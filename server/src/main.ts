@@ -1,15 +1,17 @@
 import { AuthConfigError } from "./auth/auth.config";
+import { bindHost } from "./config/bind-host";
 import { ConfigError, loadDatabaseConfig } from "./config/database-config";
 import { createApp } from "./create-app";
 import { openDatabase } from "./db/open-database";
 
 async function main(): Promise<void> {
+  const host = bindHost(process.env);
   // No KAWALYS_DATABASE_URL_*: in-memory sessions and no evidence routes. Set: both logins are checked first.
   const dbConfig = loadDatabaseConfig(process.env);
   const database = dbConfig ? await openDatabase(dbConfig) : undefined;
   const app = await createApp([], {}, { database });
-  // Loopback only: never exposed on other interfaces until a host is approved (gate D).
-  await app.listen(Number(process.env.KAWALYS_BFF_PORT ?? 8787), "127.0.0.1");
+  // Loopback unless KAWALYS_BFF_HOST says otherwise (0.0.0.0 only inside the pilot container, behind the private proxy network).
+  await app.listen(Number(process.env.KAWALYS_BFF_PORT ?? 8787), host);
 }
 
 main().catch((e: unknown) => {

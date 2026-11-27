@@ -14,6 +14,8 @@ const TOO_MANY_REQUESTS = 429;
 const BEARER_RE = /^Bearer ([A-Za-z0-9_.-]{1,8192})$/;
 
 interface RemoteRequest {
+  /** Express: the socket address, or the client address from X-Forwarded-For when KAWALYS_TRUST_PROXY trusts the peer. */
+  ip?: string;
   socket?: { remoteAddress?: string };
 }
 
@@ -58,8 +60,9 @@ export class AuthController {
     @Res({ passthrough: true }) res: CookieResponse,
   ) {
     res.setHeader("cache-control", "no-store");
-    // Behind a loopback BFF every caller shares one address, so this is effectively a global limit (intended).
-    if (!this.limiter.tryAcquire(req.socket?.remoteAddress ?? "unknown")) throw new HttpException("", TOO_MANY_REQUESTS);
+    // Without KAWALYS_TRUST_PROXY, req.ip is the socket address and every caller behind a proxy shares one bucket.
+    // With it (the pilot's Caddy network), req.ip is the client address, so one client cannot lock the owner out.
+    if (!this.limiter.tryAcquire(req.ip ?? req.socket?.remoteAddress ?? "unknown")) throw new HttpException("", TOO_MANY_REQUESTS);
     const jwt = bearerFrom(authorization);
     if (jwt === null) throw new UnauthorizedException();
 

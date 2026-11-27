@@ -11,6 +11,8 @@ import { PostgresSessionStore } from "./auth/session/postgres-session-store";
 import { WorkspaceResolver } from "./auth/workspace-resolver";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { EvidenceRepository } from "./evidence/evidence.repository";
+import { trustProxy } from "./config/trust-proxy";
+import { ReadinessModule } from "./health/readiness.module";
 import { InvestigationModule } from "./investigations/investigation.module";
 import { InvestigationRepository } from "./investigations/investigation.repository";
 import { PortfolioModule } from "./portfolio/portfolio.module";
@@ -42,7 +44,7 @@ export async function createApp(
   // Throws (AuthConfigError) before anything listens if the auth configuration is malformed, or incomplete in production.
   const auth = buildAuth(process.env, authOverrides, persistence);
 
-  const imports: (Type<unknown> | DynamicModule)[] = [AppModule, AuthModule.register(auth)];
+  const imports: (Type<unknown> | DynamicModule)[] = [AppModule, AuthModule.register(auth), ReadinessModule.register(db)];
   // Evidence routes exist only with the database; the global AuthGuard protects them like every route.
   if (db && workspaces) {
     const evidence = new EvidenceRepository(db.appPool);
@@ -57,9 +59,13 @@ export async function createApp(
   // Error-only logger: the filter never logs exception messages. JSON bodies only: Nest's default also
   // parses urlencoded forms, and a plain HTML form on another localhost port (same site, so the SameSite
   // cookie is sent) could then post to a state-changing route. A form body now never parses (400).
+  // Validate before the app exists: a malformed KAWALYS_TRUST_PROXY must never leave a created app behind (BACK-64).
+  const trusted = trustProxy(process.env);
   const app = await NestFactory.create<NestExpressApplication>(RootModule, { logger: ["error"], bodyParser: false });
   app.useBodyParser("json");
   app.getHttpAdapter().getInstance().disable("x-powered-by");
+  // Behind the pilot proxy: trust X-Forwarded-For only from the listed proxy addresses (BACK-64). Unset: ignored.
+  if (trusted !== null) app.getHttpAdapter().getInstance().set("trust proxy", [...trusted]);
   app.use(requestIdMiddleware);
   app.useGlobalFilters(new SafeErrorFilter());
   await app.init();
