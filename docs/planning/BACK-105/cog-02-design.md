@@ -235,7 +235,7 @@ In both cases, freshness uses the **current revision's latest confirmation** (`l
 
 ### D6 — Retention, citations, erasure, correction, rebuild, migration
 
-**Retention (correction §6, reconciled with BACK-47 item 6, still OPEN).** The recommended policy, not accepted and not implemented here:
+**Retention (correction §6, reconciled with BACK-47 item 6).** Accepted on 2026-11-27 under the owner's delegation ([cog-02-decisions.md](cog-02-decisions.md) DEC-4); not implemented, and the purge mechanism stays open:
 - Observations and Correlations: 180 days;
 - Human decisions and audit: until workspace deletion;
 - evidence a retained decision cites is preserved as long as that decision.
@@ -257,7 +257,7 @@ In both cases, freshness uses the **current revision's latest confirmation** (`l
 - erasure inside the append-only `audit_events`;
 - whether cited evidence older than the horizon stays fully visible or becomes "retained for citation only".
 
-Nothing is implemented, changed or recorded as accepted here.
+Nothing is implemented or changed here. The values above were accepted on 2026-11-27 (DEC-4); the other unresolved items remain open.
 
 **Correction:** a provider correction is a new evidence row and wins by D2. **Rebuild:** recompute. **Migration and rollback:** S1 to S3 have none; rollback is reverting the PR.
 
