@@ -10,6 +10,7 @@ import { Text } from '../components/Text';
 import type { Lang } from '../contract/types';
 import { hostCopy } from '../i18n/host';
 import { SIGN_IN_PATH } from './session';
+import { createDescopeElement } from './descopeElement';
 import type { DescopeSdkLike } from './signIn';
 import { clearDescopeStorage, descopeLocale, loadDescopeComponent, makeExchange, makeSignInEvents, pathWithLang, signInView, type StorageLike } from './signInFlow';
 
@@ -67,6 +68,7 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
   const [el, setEl] = useState<HTMLElement | null>(null);
   const elRef = useRef<HTMLElement | null>(null);
   elRef.current = el;
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
   const c = hostCopy('SHELL', lang).live.signIn;
   const view = signInView(projectId);
   const flowProject = view.kind === 'flow' ? view.projectId : null;
@@ -90,6 +92,21 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
     );
     return () => { cancelled = true; };
   }, [flowProject]);
+
+  // The element is created here, not in JSX: React 19 assigns a JSX prop as a DOM property when the element has one, and
+  // <descope-wc> defines `locale` as a getter only, so `locale={...}` threw and blanked the page (live incident 2026-11-27).
+  // Every attribute is set before the element is connected; BaseDescopeWc.js observes `locale` (an unpublished locale falls back
+  // to the flow's default screens, getHtmlFilenameWithLocale).
+  useEffect(() => {
+    if (host === null || flowProject === null) return;
+    const node = createDescopeElement(document, flowProject, descopeLocale(langRef.current));
+    host.appendChild(node);
+    setEl(node);
+    return () => { node.remove(); setEl(null); };
+  }, [host, flowProject]);
+
+  // A later language switch updates the attribute (the component restarts the flow, as before).
+  useEffect(() => { el?.setAttribute('locale', descopeLocale(lang)); }, [el, lang]);
 
   // One handler pair for the page's life (StrictMode re-runs effects, not this), so a second `success` can never exchange again.
   const handler = useRef<ReturnType<typeof makeSignInEvents> | null>(null);
@@ -151,8 +168,7 @@ export function SignInPage({ projectId }: { readonly projectId: string | undefin
         {phase === 'working' && <Notice kind="loading" title={c.working} role="status" />}
         {loaded && (
           <div hidden={phase === 'working'}>
-            {/* locale: BaseDescopeWc.js observes it; an unpublished one falls back to the flow's default screens (getHtmlFilenameWithLocale). Changing it later restarts the flow. */}
-            <descope-wc ref={setEl} project-id={view.projectId} flow-id="sign-in" store-last-authenticated-user="false" locale={descopeLocale(lang)} />
+            <div ref={setHost} />
           </div>
         )}
       </>
