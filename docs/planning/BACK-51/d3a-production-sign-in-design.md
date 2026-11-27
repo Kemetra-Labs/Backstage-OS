@@ -2,6 +2,8 @@
 
 Status: **proposal. Nothing is built.** It adds a dependency and changes authentication, so it needs the owner's approval of the approach and of the Descope project changes before any code.
 
+> **Note, 2026-11-27 (accuracy correction; the text below is kept as written).** The recommendation says the third-party code is "pinned by the lockfile and served from our origin". That is only true of the component loader and the SDK. The bundled component injects its UI-components bundle and lazy chunks from Descope's CDN at runtime (`descopecdn.com`, second host `static.descope.com`), so that code is **not** pinned by our lockfile and is **not** served from our origin; the `/sign-in` CSP therefore allows those two hosts (see `deploy/pilot/Caddyfile`). The "one new runtime hole" is also more than `https://api.descope.com`. **Open option, owner decision, not implemented:** self-host the pinned UI bundle on our origin and point the component at it. Also: the component persists tokens by default; the page now disables that (`persistTokens: false`), and the "`logout()` clears stored tokens" reliance in section 6 no longer carries weight.
+
 ## 1. What exists and what is missing
 
 | Part | State |
