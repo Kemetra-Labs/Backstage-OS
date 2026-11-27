@@ -362,3 +362,13 @@ It is `verified` only when every observation in the run was `ok`, and it never r
 - The worst state follows the shared `worstState` precedence.
 - **Known limit:** the run record does not keep the first row's own state, so a read exactly at a run's first observation reports the worst state seen in the run. That can be stale where the first row was ok, never the reverse.
 - Regression test: `test/memory/memory.findings3.spec.ts`.
+
+## Revision after the COG-08 sixth review (2026-11-27)
+
+- For the repository record, failure and ambiguity markers are compared with the observation the answer rests on.
+  - If E falls inside a run, that is the as-of view.
+  - If E falls after the chosen run, before a later run of different content, that is the chosen run's last observation.
+  - It is never a later run observed after E.
+- Ordered kinds keep the latest confirmation of any run (D3).
+- The as-of view takes both known times (first and last) from the first row's own receipt.
+- Regression test: `test/memory/memory.findings4.spec.ts`.

@@ -87,8 +87,10 @@ export function asKnownAt(info: RunInfo): RunInfo {
   return {
     ...info,
     // The first row's own receipt time, not the run-wide earliest receipt.
-    rec: { ...rec, lastId: rec.firstId, lastObservedAt: rec.firstObservedAt, lastReceivedAt: rec.firstRowReceivedAt, lastRowReceivedAt: rec.firstRowReceivedAt, lastState: worst },
+    // Both known times are the first row's own receipt (COG-08 review 6), not run-wide aggregates.
+    rec: { ...rec, lastId: rec.firstId, lastObservedAt: rec.firstObservedAt, firstReceivedAt: rec.firstRowReceivedAt, lastReceivedAt: rec.firstRowReceivedAt, lastRowReceivedAt: rec.firstRowReceivedAt, lastState: worst },
     lastObserved: info.firstObserved,
+    firstReceived: info.firstRowReceived,
     lastReceived: info.firstRowReceived,
     lastRowReceived: info.firstRowReceived,
   };

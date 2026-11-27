@@ -167,3 +167,20 @@ The first attempt was stopped by the provider's content filter. A narrower rerun
 **Known limit added:** a read exactly at a run's first observation reports the run's worst state (conservative), until the run record keeps the first row's state, which would be an S2 SQL change.
 
 **Next:** a sixth review of the fixed commit.
+
+## 11. Sixth independent review: Codex, commit f005f59 (2026-11-27)
+
+**Verdict: NO-GO**, with two named blockers.
+- **Fixed:** the observers' clip flag, and the validator index and duplicate contract.
+- **Partially fixed:** retrieval and memory.
+- **Fixes:** all findings below are fixed on the branch that adds this section. Each has a regression test that failed on f005f59; for the fan-out test, failure on the old code was confirmed by running it against that code.
+
+| Severity | Finding | Fix |
+| --- | --- | --- |
+| Medium (blocker) | A repository read between runs compared markers with a later run, so a failure before E read as verified | Markers compared with the selected run's observation |
+| Medium (blocker) | Past the edge budget, each mention still scanned its target bucket | Constant-time self check; a bucket is walked once; O(1) per later mention |
+| Medium | A partly cut bucket flagged walks that reach no cut edge | Only the cut suffix is recorded |
+| Low | A control character at a clip cut counted as a separator | Non-whitespace control characters are invisible at boundaries |
+| Low | The as-of view kept a run-wide `firstKnownAt` | Both known times from the first row |
+
+**Next:** a seventh review of the fixed commit.

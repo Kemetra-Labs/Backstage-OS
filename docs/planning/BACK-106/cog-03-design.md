@@ -184,3 +184,10 @@ No controller, module registration or route: COG-07 owns exposure. Each slice's 
 - **Legacy rows:** observers now always state `textClipped` (`true` or `false`). A title with no flag predates it and counts as possibly clipped when it reaches the observers' limit (`CLIP_LIMIT`, 300 code points, pinned against `clip()`).
 - **Fan-out:** past the edge budget, a mention's targets are recorded once per target bucket instead of pair by pair.
 - Regression tests: `test/retrieval/retrieval.findings6.spec.ts`, `test/connectors/github/github-clip2.spec.ts`.
+
+## Seventh revision after the COG-08 sixth review (`retrieval-v8`, 2026-11-27)
+
+- **Boundaries:** control characters other than whitespace are invisible at boundaries, like format characters, for both the clip check and the mention boundary. Tab, newline, CR, VT and FF separate.
+- **Work past the edge budget:** no mention scans its target bucket any more. The self-mention test is constant-time, a bucket cut in full is walked once, and every later cut mention costs O(1). Measured on 1,000 to 4,000 mentions and targets: about 3x for the fix, against about 7x for the scan it replaced. The regression test asserts under 5x, using a median of three.
+- **Partial cuts:** a bucket cut partway records only its cut suffix, so a walk that reaches a kept target but neither endpoint of a cut edge is not flagged.
+- Regression tests: `test/retrieval/retrieval.findings7.spec.ts`.
