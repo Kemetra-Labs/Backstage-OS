@@ -249,3 +249,12 @@ The first attempt was stopped by the provider's content filter. A narrower rerun
 | Low | `textClipped` on the current run was outside the fingerprint | The current run's whole payload is covered (`memory-v6`) |
 
 **Next:** an eleventh review of the fixed commit.
+
+## 16. Status after the tenth-review fixes (commit 2d588cb, 2026-11-27)
+
+- **Merged:** every finding from reviews one to ten is fixed or decided, with regression tests (last: #147, `2d588cb`; CI and SonarCloud green, 0 open Sonar issues).
+- **Permission scoping:** no review found a defect in it.
+- **Eleventh review:** Codex is no longer used for this gate. An independent Claude review of `2d588cb` was started and then stopped before it reported, so there is no verdict on this commit.
+- **Gate:** the pre-COG-07 gate stays **open** until an independent review of the current commit returns GO.
+- **Known-open, tracked (not blockers so far):** memory read work budget; a second-project DB test; SQL timing; validator top-level key enumeration.
+- **Owner decisions still needed:** COG-05 schema and review authority; COG-07 UI scope. COG-06 is deferred.
