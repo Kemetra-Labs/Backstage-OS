@@ -21,8 +21,10 @@
  * v8 (2026-11-27, sixth review): control characters are invisible at boundaries; work past the edge
  * budget is constant per mention after a bucket's first cut; a partly cut bucket records only its cut
  * suffix.
+ * v9 (2026-11-27, seventh review): default-ignorable code points are invisible in normalization and at
+ * boundaries; U+0085 separates; duplicate identities in a hand-built projection collapse to the last.
  */
-export const RETRIEVAL_POLICY_VERSION = 'retrieval-v8';
+export const RETRIEVAL_POLICY_VERSION = 'retrieval-v9';
 
 export const MAX_QUERY_CHARS = 500;
 export const MAX_QUERY_TOKENS = 32;
@@ -64,7 +66,9 @@ export const GITHUB_NUMBER_IN_TEXT = /#(\d{1,16})/gu;
 const WORD = /^[\p{L}\p{M}\p{N}_]$/u;
 // Invisible, not a separator: format characters and control characters other than whitespace (one rule
 // for the clip check and the mention boundary; COG-08 review 6). Tab, newline, CR, VT and FF separate.
-const FORMAT_CHAR = /^(?:\p{Cf}|[\x00-\x08\x0e-\x1f\x7f-\x9f])$/u;
+// Default-ignorable code points (U+2065 and others outside Cf) are invisible too (COG-08 review 7);
+// U+0085 NEXT LINE separates like a newline.
+const FORMAT_CHAR = /^(?:\p{Cf}|\p{DI}|[\x00-\x08\x0e-\x1f\x7f-\x84\x86-\x9f])$/u;
 
 /** The nearest code point before the index (step -1) or at or after it (step 1), skipping format characters. */
 function neighbour(text: string, from: number, step: -1 | 1): string {

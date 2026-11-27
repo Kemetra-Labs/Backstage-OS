@@ -9,7 +9,8 @@
 const DIACRITICS = /[\u064b-\u065f\u0670\u0640]/gu; // Arabic harakat, superscript alef, tatweel
 // Invisible format characters (zero-width space/joiners, word joiner, bidi controls, BOM). Without this,
 // `BACK\u200B-8` escapes the identifier-shape check and is fuzzy-matched (COG-08 adversarial finding).
-const FORMAT = /\p{Cf}/gu;
+// Default-ignorable code points too (e.g. U+2065, U+034F): invisible, though not all are Cf (COG-08 review 7).
+const FORMAT = /[\p{Cf}\p{DI}]/gu;
 // Every dash, the minus sign and the small and fullwidth hyphen-minus fold to `-` (COG-08 reviews).
 const DASHES = /[\p{Pd}\u2212\ufe63\uff0d]/gu;
 const MARKS = /\p{M}/gu;

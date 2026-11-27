@@ -281,7 +281,7 @@ function fingerprintOf(items: readonly MemoryItem[], req: MemoryRequest, cap: nu
       // Every field of the current run a consumer cites or shows, even when that run is outside the
       // returned history: a late commit can extend it backwards (COG-08 review, D5).
       current: i.current
-        ? [i.current.contentKey, i.current.firstEvidenceId, i.current.lastEvidenceId, i.current.observationCount, i.current.firstObservedAt, i.current.lastObservedAt, i.current.lastState]
+        ? [i.current.contentKey, i.current.firstEvidenceId, i.current.lastEvidenceId, i.current.observationCount, i.current.firstObservedAt, i.current.lastObservedAt, i.current.firstKnownAt, i.current.lastKnownAt, i.current.lastState]
         : null,
       runs: i.history.map((r) => [r.contentKey, r.firstEvidenceId, r.lastEvidenceId, r.observationCount]),
     })),
