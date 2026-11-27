@@ -1,7 +1,8 @@
 // Versioned retrieval policy (BACK-106 R2, R4, R6). Changing any rule here is a policy change:
 // bump RETRIEVAL_POLICY_VERSION.
 
-export const RETRIEVAL_POLICY_VERSION = 'retrieval-v1';
+/** v2 (2026-11-27): normalization strips Unicode format characters (R3). */
+export const RETRIEVAL_POLICY_VERSION = 'retrieval-v2';
 
 export const MAX_QUERY_CHARS = 500;
 export const MAX_QUERY_TOKENS = 32;
