@@ -46,8 +46,6 @@ describe('the serialized candidate boundary (BACK-155 Q2)', () => {
   const { projection, input } = largest();
   const json = JSON.stringify(evaluate(projection, input));
 
-  it('prints the largest length (measure)', () => console.log('LARGEST', json.length));
-
   it('the largest legitimate result fits the cap, with room to spare, and is accepted', () => {
     // Measured on 2026-11-28 with UUID evidence ids and two observations per item: 343,707 characters. Twice the largest legitimate result fits.
     expect(json.length * 2).toBeLessThanOrEqual(MAX_CANDIDATE_CHARS);
