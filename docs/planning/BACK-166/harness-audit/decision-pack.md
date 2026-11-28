@@ -4,7 +4,7 @@
 - **Date:** 2026-11-28.
 - **Direction:** B+ (BACK-184 comment 19204). Standing principle "own the experience, reuse the engine" (19206).
 - **Accountable ticket:** BACK-166 (D02 runtime/source, D04 limits and cancellation). Related: BACK-14, 103, 118, 126, 167–169, 184.
-- **File state:** uncommitted, in worktree `back-97-7de124` (branch `claude/deepseek-harness-audit-a479b6`).
+- **File state:** committed on branch `claude/deepseek-harness-audit-a479b6` for a docs PR; not merged.
 
 ## 0. Evidence baseline and disclosures
 
@@ -59,13 +59,14 @@ Detailed evidence with per-line permalinks is in `evidence/01–07*.md`, next to
   - BYOK keys are stored in plaintext YAML.
   - A subscription-OAuth LLM path exists.
   - SAFETY.md says the project is "not been security audited".
-- **Maturity.** Alpha or rc only: 45 tags since 17 Aug 2026. 5,085 commits and 18 `!:` breaking commits between `dsh-v0.2.2-rc.1` and the pinned tag. The README says compatibility-breaking changes will happen.
+- **Maturity.** Alpha or rc only: 45 tags since 17 Aug 2026. 5,085 commits between `dsh-v0.2.2-rc.1` and the pinned tag. Of these, 11 have a breaking `!:` subject and 4 more carry `BREAKING CHANGE` footers (`git log --format=%s dsh-v0.2.2-rc.1..dsh-v0.2.3-alpha.3 | grep -cE '!:'`). The README says compatibility-breaking changes will happen.
 
 **Recommendation.**
 
 - **Primary posture:** Option **A (native-first)**, with **E-lite**: REFERENCE DSH designs and ADAPT a few small MIT files with attribution.
-- **NO-GO:** Harness-first (D) and Harness as a dependency (B as npm packages, C as a runtime) for now.
-- **Expected net saving from DSH:** small, a hypothesis of about 2–6.5 person-days across the next two slices (§5, unmeasured). The big avoided cost, not building an agent engine, comes from native agents, not from DSH.
+- **NO-GO:** Harness-first (D), and DSH packages as npm dependencies (B).
+- **C, optional runtime:** NO-GO for BACK-167; DEFER for BACK-169 (§11).
+- **Expected net saving from DSH:** small, a hypothesis of about 2–8 person-days across the next two slices (§5, unmeasured). The big avoided cost, not building an agent engine, comes from native agents, not from DSH.
 - **Smallest next step (§8, P0):** a read-only, no-model-call **event-mapping contract** from native Codex and Claude event schemas to Kawalys evidence, plus one synthetic fixture. This reduces the most uncertainty for the least cost.
 
 ---
@@ -108,7 +109,7 @@ Full detail with line permalinks is in `evidence/01–04`.
 | Agent teams | `packages/team/agent-team`, `subagent/tool-subagent-control` | Single-process durable task board with compare-and-set ownership; shared checkout, advisory scopes; native agents are leaf children only | REFERENCE only (no duplicate queue or roster) |
 | SDK and ACP | `packages/sdk/client`, `packages/acp/acp` (`@agentclientprotocol/sdk` 1.4.0, ACP v1) | SDK = subprocess client to a full `dsh`. ACP: DSH is an agent (server); `subagent-acp` client auto-answers permissions. Neither observes a user-initiated native run. | DEFER |
 | Authentication | `packages/credentials/credentials-local`, `packages/llm/llm-pi-ai` | Native paths use the CLI's own login; DSH does not read `~/.claude` or `~/.codex` (SOURCE). BYOK: plaintext `~/.dsh/.credentials.yaml`; POSIX owner-only, check skipped on Windows (DOC). pi-ai OAuth: `openai-codex` → `chatgpt.com/backend-api`; provider env includes `ANTHROPIC_OAUTH_TOKEN` (SOURCE `provider-data.generated.ts#L12,#L34`); DSH stores and refreshes grants (DOC). | REJECT the subscription-OAuth pattern; REFERENCE masked-key UX |
-| Worktrees | `experimental/worktree/src/index.ts#L363`, `name.ts` | `git worktree add --no-checkout -b` from a pinned commit. Hooks disabled (`core.hooksPath=/dev/null`; Windows effect unverified). Clean-only non-force removal; branches kept. Windows linked-worktree write grant registers nothing (SOURCE `sandbox-policy-git/src/index.ts#L35`). About 14 Cordis peers. | ADAPT rules and helpers (later, BACK-169) |
+| Worktrees | `experimental/worktree/src/index.ts#L363`, `name.ts` | `git worktree add --no-checkout -b` from a pinned commit. Hooks disabled (`core.hooksPath=/dev/null`; Windows effect unverified). Clean-only non-force removal; branches kept. Windows linked-worktree write grant registers nothing (SOURCE `B/packages/experimental/sandbox-policy-git/src/index.ts#L35`). About 14 Cordis peers. | ADAPT rules and helpers (later, BACK-169) |
 | Timeline and projections | `experimental/timeline`, `docs/subsystems/session-projection.md#L48-L120` | Timeline = agent task-tree/report plugin with `plugin:timeline/*` records, not a replay engine. Projection pattern: `init` plus pure `apply(state, event)`, checkpoint with `asOfSeq`, checkpoint-plus-tail = full replay. | REFERENCE/ADAPT the projection pattern for Replay; REJECT Timeline UI |
 | Memory | (none); AGENTS.md loader, compaction | No long-term memory store. Compaction records shadowed seqs and summarizer usage. No overlap with K.Brain (evidence citations, provenance, authorization). | K.Brain stays BUILD (already built core); REFERENCE shadowed-seq provenance |
 | Permissions and cancellation | `interaction/user-approval`, `bundle/base/cordis.patch.yml#L249-L286`, `subprocess/subprocess-local/src/windows-job.ts`, `core/tools/src/pipeline.ts#L356,#L413` | One-shot approvals (`allowed-once`/`rejected`/`cancelled`/`unavailable`), fail-closed. `approval/asked` and `approval/decided` events. Default workspace-write plus ask; a danger preset exists. Windows kill-on-close Job Object via koffi FFI; macOS descendants can escape. Truthful states: `ABORTED_BEFORE_DISPATCH`, `TOOL_OUTCOME_UNKNOWN`, forge ok/failed/unknown, "missing settle = incomplete". Windows sandbox restricts writes only. | REFERENCE semantics; ADAPT Job-Object pattern later; REJECT DSH sandbox or auto-review as controls |
@@ -199,8 +200,10 @@ Assumptions:
 | Truthful outcome vocabulary (ok/failed/unknown, aborted-before-dispatch, incomplete) | 1–2 pd | REFERENCE | 0.5–1 pd |
 | Worktree create/cleanup rules (BACK-169) | 3–6 pd | ADAPT rules and `name.ts`; Windows gaps remain | 0.5–1.5 pd |
 | Windows process-tree kill (BACK-169) | 2–4 pd | ADAPT Job-Object pattern (adds koffi native dep, or use `taskkill /T` fallback) | 0–1.5 pd |
-| Approval audit events | 1 pd | REFERENCE asked/decided pair (Kawalys already has decisions/audit) | ~0.5 pd |
-| **Total over two slices** | **17–33 pd** | | **about 2–6.5 pd, hypothesis** (net of attribution/review about 0.5 pd). Split: BACK-167 about 1–2.5 pd (patterns only: projection fold, outcome vocabulary, approval pair, Claude references); BACK-169 about 1–4.5 pd (app-server client, worktree, Job kill, snapshot diff). |
+| Approval audit events (BACK-167) | 1 pd | REFERENCE asked/decided pair (Kawalys already has decisions/audit) | ~0.5 pd |
+| Event vocabulary for the contract (BACK-167) | included above | REFERENCE `core/session` event types | 0–0.5 pd |
+| Outcome snapshot diff approach (BACK-169) | included above | REFERENCE `deliverables/workspace-changes` | 0–0.5 pd |
+| **Total over two slices** | **17–33 pd** | | **gross 2.5–8.5 pd; about 2–8 pd net of about 0.5 pd attribution/review; hypothesis.** Split (gross): BACK-167 1.5–3.5 pd (Claude references, projection fold, outcome vocabulary, approval pair, event vocabulary); BACK-169 1–5 pd (app-server client, worktree, Job kill, snapshot diff). |
 
 **These figures are hypotheses, not measurements** (reviewer finding 8). They exclude adaptation-verification cost and native payload-drift tracking. Re-estimate after P0.
 
@@ -228,9 +231,9 @@ In return, child runs would still give text-only results. **Net negative** for K
 | R7 | Claude Agent SDK and bundled Claude Code binaries are under Anthropic's terms ("SEE LICENSE IN README.md / LICENSE.md"). DSH's "project owner authorizes distribution" note is DeepSeek's statement, not Anthropic's, and does not extend to Kawalys. | SOURCE `B/THIRD_PARTY_NOTICES.md#L43,#L207-L220` | High (redistribution) | Low (use the user's installed CLI) | Never redistribute the SDK payload from DSH |
 | R8 | Other non-MIT: `libreoffice-kit` MPL-2.0; `eslint-plugin-sonarjs` LGPL-3.0 (dev); OAR Apache-2.0 | SOURCE `THIRD_PARTY_NOTICES.md#L46,#L48,#L284` | Medium | Low | Copy only MIT files; keep notices |
 | R9 | Trademark: "DeepSeek Harness" is registered; don't use the name in product names | DOC `B/BRAND_GUIDELINES.md#L7-L9` | Low | Low | Attribute as "DSH (MIT)" in provenance notes |
-| R10 | Alpha churn: 18 `!:` commits since 0.2.2-rc.1; storage backend changes in November | SOURCE git log | High | Low (copied files frozen) | Pin and attribute copied code by SHA |
+| R10 | Alpha churn: 11 `!:` commits plus 4 `BREAKING CHANGE` footers since 0.2.2-rc.1; storage backend changes in November | SOURCE git log | High | Low (copied files frozen) | Pin and attribute copied code by SHA |
 | R11 | Self-declared unaudited; community audit #10507 (on 0.2.1-rc.2) reports sandbox escape paths, plaintext secrets, git hook execution | DOC `B/SAFETY.md#L5-L15`; COMMUNITY #10507 (not reproduced) | High | n/a | Not a control; no DSH in the trust boundary |
-| R12 | Windows sandbox restricts writes only (not reads, network or process visibility). Extra writable roots apply only to Harness filesystem operations, not to process confinement. Linked-worktree write grant is skipped on Windows. | SOURCE `B/packages/sandbox/sandbox-windows-acl/src/index.ts#L20-L32`; `sandbox-local/src/index.ts#L376-L385`; `sandbox-policy-git/src/index.ts#L35` | High (Windows dev machine) | n/a | Isolation comes from a disposable repo or VM, not DSH |
+| R12 | Windows sandbox restricts writes only (not reads, network or process visibility). Extra writable roots apply only to Harness filesystem operations, not to process confinement. Linked-worktree write grant is skipped on Windows. | SOURCE `B/packages/sandbox/sandbox-windows-acl/src/index.ts#L20-L32`; `sandbox-local/src/index.ts#L376-L385`; `B/packages/experimental/sandbox-policy-git/src/index.ts#L35` | High (Windows dev machine) | n/a | Isolation comes from a disposable repo or VM, not DSH |
 | R13 | Native version pins drift (Codex 0.153.4 vs installed 0.170.0; #11820 `model_not_found`); Claude CLI pinned to bundle payload (#10265) | SOURCE `subagent-codex/package.json#L54`, `subagent-claude-code/package.json#L51`; COMMUNITY | High | Medium | Kawalys adapters target the user's installed CLI; version check is a stop condition |
 | R14 | Env scrub by name regex only (`/KEY\|PASSWORD\|SECRET\|TOKEN/i`); native login under HOME remains reachable by children | SOURCE `B/packages/subprocess/subprocess/src/index.ts#L47-L84` | Medium | Medium | Kawalys passes no secrets; observer reads output only |
 | R15 | Approval events lack approver identity; one-shot grants only | INFERENCE from `persistence-catalog.md#L226-L292`; DOC `user-approval/README.md#L164-L168` | Medium | n/a | Kawalys decisions/audit remain the authority |
@@ -245,11 +248,11 @@ In return, child runs would still give text-only results. **Net negative** for K
 | Plugin container | NestJS modules in `server/` | vendored Cordis | REJECT | `vendor/README.md` | — | Fork upkeep | n/a |
 | Agent run observation (Flight Deck), BACK-167 | Synthetic `AgentFlightDeck.tsx`, `contract/world.ts` (AgentCapability only simulated/not_available) | OAR / fixed providers (no passive capture) | BUILD passive observer from `codex exec --json` docs | §3 checklist | 0 | Undocumented event drift (R13) | P0 mapping contract; P1 live proof |
 | Kawalys-launched Codex client, BACK-169 | None | `subagent-codex/src/wire.ts` | REFERENCE/ADAPT (only if dispatch is approved) | §1, §3 | 0.5–1.5 pd | Payload drift (R13) | Schema generated from the installed CLI |
-| Event vocabulary | `ActivityEvent`, `ReplayEvent` (synthetic) | `core/session` event types | REFERENCE | `known-event-types.ts#L22-L88` | 0.5 pd | None | Contract review |
+| Event vocabulary | `ActivityEvent`, `ReplayEvent` (synthetic) | `core/session` event types | REFERENCE | `known-event-types.ts#L22-L88` | 0–0.5 pd | None | Contract review |
 | Event store | Postgres evidence, append-only, forced RLS | JSONL v4 session log | REJECT as store; DEFER importer | §3 sessions | — | Second store | Only if DSH becomes a source |
 | Replay projection | `lenses/logic/replay.ts` (fixed fixture cursor) | session-projection pattern | ADAPT (pattern, not code) | `session-projection.md#L48-L120` | 0.5–1 pd | None | Unit tests: checkpoint plus tail = full |
 | Outcome truthfulness | Evidence `state` ok/stale/unknown/denied/error | ok/failed/unknown; ABORTED_BEFORE_DISPATCH; TOOL_OUTCOME_UNKNOWN; missing-settle = incomplete | REFERENCE | `forge-github/src/mutation.ts#L32-L36`; `jobs.md#L27`; `repair.ts#L15-L18` | 0.5–1 pd | None | Negative tests in P0 fixture |
-| Verified outcome | None (agent self-report not evidence) | Exit code/signal diagnostics; non-durable Git snapshot diff (`deliverables/workspace-changes`) | BUILD (git/CI oracle, existing GitHub connector and Actions/Depot); REFERENCE the snapshot-diff approach | §1 | ~0.5 pd | Diff mixes concurrent edits | P1 oracle |
+| Verified outcome | None (agent self-report not evidence) | Exit code/signal diagnostics; non-durable Git snapshot diff (`deliverables/workspace-changes`) | BUILD (git/CI oracle, existing GitHub connector and Actions/Depot); REFERENCE the snapshot-diff approach | §1 | 0–0.5 pd | Diff mixes concurrent edits | P1 oracle |
 | Decisions and approvals | HumanDecision evidence plus audit trigger (migration 0004) | `approval/asked`/`decided` | REFERENCE | `user-approval/src/index.ts#L247-L260` | ~0.5 pd | No approver id in DSH | — |
 | Authorization | Descope plus capabilities, deny-by-default | DSH permission presets | REJECT | §3 | — | Duplicate policy | — |
 | Subscription / BYOK | None (no credentials collected) | pi-ai OAuth; plaintext BYOK | REJECT | R5, R6 | — | Provider terms | Entitlement check in P1 |
