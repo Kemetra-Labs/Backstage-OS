@@ -11,7 +11,7 @@ interface Window {
   readonly count: number;
 }
 
-export type WriteAction = 'decision.create' | 'note.create';
+export type WriteAction = 'decision.create' | 'note.create' | 'investigation.create';
 
 export const writeLimitKey = (workspaceId: string, userId: string, action: WriteAction | string): string => `${workspaceId}:${userId}:${action}`;
 

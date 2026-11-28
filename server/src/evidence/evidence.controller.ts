@@ -163,8 +163,8 @@ export class EvidenceController {
   }
 }
 
-/** Invisible or absent answers 404; a rule broken over visible rows answers 400. */
-async function written(write: () => Promise<string>): Promise<{ id: string }> {
+/** Invisible or absent answers 404; a rule broken over visible rows answers 400. Shared with POST /investigations. */
+export async function written(write: () => Promise<string>): Promise<{ id: string }> {
   try {
     return { id: await write() };
   } catch (err) {

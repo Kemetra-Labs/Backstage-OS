@@ -240,16 +240,36 @@ export class EvidenceRepository {
     });
   }
 
-  async createInvestigation(workspaceId: string, actor: string, input: { projectId: string; title: string }): Promise<string> {
+  /** Server-internal case creation (the `local:up` seed and tests): no visibility check, no request context. */
+  async createInvestigation(workspaceId: string, actor: string, input: InvestigationInput): Promise<string> {
+    return this.inWorkspace(workspaceId, (c) => this.insertInvestigation(c, workspaceId, actor, input, null, {}));
+  }
+
+  /**
+   * Owner case creation over HTTP (BACK-148 decision M): the same insert and `investigation.created` audit row as
+   * createInvestigation(), in one transaction, and only for a project the actor can see now (PROJECT_VISIBLE, with the
+   * grant rows share-locked so a concurrent revocation waits or wins). Absent, malformed, invisible and other-workspace
+   * projects are all NotVisibleError, with nothing written. With an idempotency claim (BACK-172 G3) a replay answers with
+   * the first id, re-authorized, and writes nothing; a different request under the same key is a conflict.
+   */
+  async createVisibleInvestigation(workspaceId: string, actor: string, input: InvestigationInput, requestId: string | null, extras: WriteExtras = {}): Promise<string> {
+    if (!UUID.test(input.projectId)) throw new NotVisibleError('project not visible');
     return this.inWorkspace(workspaceId, async (c) => {
-      const { rows } = await c.query<{ id: string }>(
-        'INSERT INTO investigations (workspace_id, project_id, title) VALUES ($1, $2, $3) RETURNING id',
-        [workspaceId, input.projectId, input.title],
-      );
-      const id = rows[0]!.id;
-      await this.audit(c, auditRow(workspaceId, actor, 'investigation.created', 'investigation', id));
-      return id;
+      const replay = await this.priorWrite(c, workspaceId, actor, 'investigation.created', extras.idempotency);
+      await visibleProject(c, actor, input.projectId);
+      if (replay !== null) return replay;
+      return this.insertInvestigation(c, workspaceId, actor, input, requestId, extras);
     });
+  }
+
+  private async insertInvestigation(c: pg.PoolClient, workspaceId: string, actor: string, input: InvestigationInput, requestId: string | null, extras: WriteExtras): Promise<string> {
+    const { rows } = await c.query<{ id: string }>(
+      'INSERT INTO investigations (workspace_id, project_id, title) VALUES ($1, $2, $3) RETURNING id',
+      [workspaceId, input.projectId, input.title],
+    );
+    const id = rows[0]!.id;
+    await this.audit(c, { ...auditRow(workspaceId, actor, 'investigation.created', 'investigation', id), requestId, metadata: writeMetadata(extras) });
+    return id;
   }
 
   /**
@@ -605,6 +625,21 @@ function citedIds(input: { readonly investigationId: string; readonly evidenceId
 }
 
 /**
+ * A project the actor can see now (PROJECT_VISIBLE, written as a join so the grant rows can be share-locked, like
+ * visibleInvestigationProject). RLS keeps other workspaces out. A project the actor cannot see does not exist for them.
+ */
+async function visibleProject(c: Client, actor: string, projectId: string): Promise<void> {
+  const { rows } = await c.query(
+    `SELECT vs.project_id FROM sources vs
+       JOIN source_grants vg ON vg.source_id = vs.id AND vg.user_id = $1 AND vg.revoked_at IS NULL
+      WHERE vs.project_id = $2
+      FOR SHARE OF vg`,
+    [actor, projectId],
+  );
+  if (rows.length === 0) throw new NotVisibleError('project not visible');
+}
+
+/**
  * The project of an investigation the actor can see (PROJECT_VISIBLE, the rule of GET /investigations/:id,
  * written as a join so the grant rows can be share-locked): a concurrent revocation waits for this
  * write or wins outright. An investigation the actor cannot see does not exist for them.
@@ -653,7 +688,13 @@ async function insertCitations(c: Client, workspaceId: string, projectId: string
   );
 }
 
-/** Per-request extras for the two human writes: the sanitized client correlation id and the idempotency claim. */
+/** The validated body of POST /investigations (BACK-148 decision M). */
+export interface InvestigationInput {
+  readonly projectId: string;
+  readonly title: string;
+}
+
+/** Per-request extras for the human writes: the sanitized client correlation id and the idempotency claim. */
 export interface WriteExtras {
   readonly clientRequestId?: string | null;
   readonly idempotency?: IdempotencyClaim;
