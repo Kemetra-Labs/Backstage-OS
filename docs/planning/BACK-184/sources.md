@@ -34,7 +34,7 @@ Secondary press (not relied on): datanorth.ai, testingcatalog.com, alphasignal.a
 - **V** Local MCP servers (e.g. `.mcp.json`) can feed a page at build time only; the published page cannot call them (S3).
 - **V** Responses cached in the viewer's browser; page can refresh on load, interval or control (S3).
 - **V** Org owners have an "Enable artifact connectors" toggle; per-tool "Needs approval" policies apply (S2, S3).
-- **U** No documented server-side scheduling, webhooks or background ingestion for a plain artifact; Claude Data "doesn't refresh on a schedule" (S6).
+- **V/U** Claude Data "doesn't refresh on a schedule", but **Refresh data** re-queries on a set interval when someone opens a dashboard that is due (S6). The Data type's own guide says a routine (scheduled task) can keep an attached file current. Installed apps with a tray icon keep running after their window closes (S1). None of these is documented as server-side ingestion into history, but a scheduled Claude routine writing into an artifact's store is a plausible Claude-native ledger (untested).
 
 ### Permissions (installed app, OS level)
 - **V** Per-permission prompts: notifications, keyboard shortcuts, float over windows, menu bar/tray, full computer access (S1).
@@ -54,11 +54,11 @@ Secondary press (not relied on): datanorth.ai, testingcatalog.com, alphasignal.a
 
 ### Portability
 - **V** Template artifacts export (Docs → Word/PDF/MD; Slides → PPTX/PDF; Design → zip/PDF/HTML) (S2).
-- **V** Legacy artifacts: view/copy/download code (S2). Publishing requires Anthropic API (not Bedrock/Vertex/Foundry), a claude.ai account, and no CMEK/HIPAA/ZDR (S3).
+- **V** Legacy artifacts: view/copy/download code (S2). **Publishing from Claude Code** requires a claude.ai account and the Anthropic API (not Bedrock/Vertex/Foundry), and no CMEK/HIPAA/ZDR for the org; otherwise Claude writes a local HTML file instead (S3). Installed apps: not for HIPAA-ready orgs; ZDR orgs can install but apps aren't covered by ZDR (S1).
 - **U** Export of artifact storage data and of connector configuration is not documented.
 
 ### Limits and exclusions
-- **V** Not for HIPAA-ready orgs; installed apps not covered by ZDR; template artifacts, legacy and Cowork live artifacts can't be installed (S1).
+- **V** Not for HIPAA-ready orgs; installed apps not covered by ZDR; template artifacts (Docs, Slides, Sheets, and by S2's list also Data), legacy and Cowork live artifacts can't be installed (S1, S2).
 - **V** Building an app and every request it makes to Claude count toward plan usage limits (S1, S6).
 
 ### Pricing (S7, list prices on 2026-11-28)
@@ -67,5 +67,5 @@ Secondary press (not relied on): datanorth.ai, testingcatalog.com, alphasignal.a
 
 ## What this means for the brief (claims only, testing in `benchmark.md`)
 1. A connector dashboard with per-chart freshness (Claude Data) is an official, first-party feature. "Dashboard + freshness label" is not a differentiator.
-2. Artifacts are viewer-scoped, client-side pages with no backend: no server-side ingestion, no scheduled collection, no history beyond what the page stores, no viewer authentication of its own.
+2. Artifacts are viewer-scoped pages with no backend of their own and no viewer authentication. History is possible through the artifact store (100 MB / 25k documents) and, untested, a scheduled routine writing to it. The gap to a server ledger is narrower than "no backend" suggests.
 3. Governance is the platform's (per-viewer connector approval, org toggles, Enterprise audit of publish/share). Per-evidence access control and audit inside the page are not documented.

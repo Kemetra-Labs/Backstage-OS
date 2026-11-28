@@ -38,6 +38,8 @@ Size: 195 commits since 2026-11-15; ~57k lines in `app/src` (incl. an i18n snaps
 
 ## 2. Capability vs connector-backed Claude Artifacts
 
+Not covered here: error-tracking and APM vendors (deploy/error correlation is their home ground), developer portals (Port, Backstage) and agent-memory services. A category scan is a proposed follow-up (decision brief §6).
+
 Legend: **SUB** directly substitutable · **PART** partially substitutable · **DIFF** differentiated with evidence · **UNV** unverified (no evidence either way).
 
 | Capability | Verdict | Why (evidence) |
@@ -47,15 +49,15 @@ Legend: **SUB** directly substitutable · **PART** partially substitutable · **
 | Cross-source correlation logic on clean data | **SUB** at fixture scale | B3: Artifact PASS in one build pass; Kawalys NOT BUILT |
 | Correlation on real, messy, multi-source history (entity resolution, release mapping, backfill) | **UNV** | Neither side has it. Needs ingestion and history, which an artifact does not have (no backend, no scheduled collection: S3, S6) |
 | Decision log across sessions | **PART** | Artifact store persists, editor-only writes enforced (B4). Kawalys adds append-only audit, citations as rows, RLS, idempotency (server tests). Value of that difference to a solo user is unproven |
-| Scoped visibility of evidence inside one workspace | **DIFF** (server) / **SUB** (single user) | Artifact: attached files and shared rows are readable by every viewer; a persona filter is client-side (B6 FAIL). Kawalys: forced RLS, deny-by-default, hidden = not found, tested. For a solo founder this difference may not matter |
-| Durable ingestion, scheduled refresh, history beyond a page view | **DIFF (architecture), UNV (value)** | Artifacts are client-side, viewer-scoped, refresh only while open (S3, S6). Kawalys has the server and scheduler but **no active real source** yet |
+| Scoped visibility of evidence inside one workspace | **UNV** (both) | Artifact: per-user storage and per-viewer connector access only; attached files and shared rows readable by every viewer (B6 PARTIAL). Kawalys: forced RLS, deny-by-default, hidden = not found are tested, but there is one role (`Role = 'owner'`), so no second principal exists (B6 NOT BUILT). For a solo founder this does not matter |
+| Durable ingestion, scheduled refresh, history beyond a page view | **PART (narrower than it looks), UNV (value)** | Artifacts refresh when opened (interval-based for Claude Data, S6) and keep up to 100 MB in their store (S2); a scheduled Claude routine can keep data current (Data type guide; untested). Kawalys has a server, forced RLS and a scheduler, but **no active real source** yet |
 | Governance / audit of who saw what | **PART** | Claude Enterprise: Compliance API audits publish/share/delete (S3), per-viewer connector approval. Per-evidence access log is not documented for artifacts; Kawalys' is unbuilt (BACK-183) |
 | Multi-provider agent workflow | **UNV** | Artifacts: documented (write via connectors, call Claude) but untested here. Kawalys: none |
 | Mission Map / Observatory / Replay / Flight Deck visuals | **SUB** (as visuals) | Mock data; any of these can be generated as an artifact page in minutes. Their value depended on real evidence behind them |
 | VIE 3D scene, Software Factory | **SUB/UNV** | Unbuilt; a WebGL artifact page is within artifact limits (CDN scripts allowed, S3). Differentiation would have to come from data, not rendering |
 | Cognitive core (memory, retrieval, search) over permitted evidence | **UNV** | Shipped and reviewed, but only over an empty pilot DB and fixtures; live read measured to fail closed at real volume. Claude has its own memory/projects; no comparative test |
 | Arabic-first UX | **PART** | Kawalys tested EN/AR/RTL; Claude can render Arabic pages on request. Native-quality claim needs users (BACK-3, BACK-31) |
-| Self-hosting, data residency, no Claude seat required | **DIFF (structural)** | Artifacts need a claude.ai account and Anthropic API; not on Bedrock/Vertex/Foundry; no CMEK/HIPAA/ZDR (S1, S3). Kawalys runs on owned infra. Demand unverified |
+| Self-hosting, data residency, no Claude seat required | **DIFF (structural), demand UNV** | Viewers with live data need a claude.ai account (S3, S5); installed apps aren't for HIPAA-ready orgs and aren't covered by ZDR (S1); publishing from Claude Code needs the Anthropic API path (S3). Kawalys runs on owned infra |
 | MCP/Intelligence API serving Claude and other clients | **UNV, complementary** | BACK-168. Turns artifacts from substitute into a front end. Artifacts call only remote connectors (S3), so this needs a hosted, authenticated endpoint |
 
 ## 3. Reuse map if direction changes

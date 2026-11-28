@@ -45,12 +45,12 @@ Part 1 was written before either side ran and committed in `0794747` before thes
 
 | ID | Score | Observation |
 |---|---|---|
-| B1 | UNKNOWN (blocker: install needs the owner's confirmation in Claude Desktop) | Documented: same artifact, online and signed in (S1). Manual check in Part 1 |
+| B1 | PASS (reopen by stable private URL) · install **FAIL by documentation** | S1: artifacts made from a template "can't be installed"; S2 lists Data as a template. Installing a non-template artifact is untested (needs the owner's click). The Part 1 manual check must use a plain (non-template) artifact |
 | B2 | PASS (logic) · render not observed | github ok (10 min), sentry **stale** (50 min vs 15 min budget), jira **down**, datadog **not_configured** |
 | B3 | PASS (logic) | deploy 501 → error 7001 "supported, error source stale", basis "release r-2026.11.25.1; first seen 6 min after deploy", cites ev-deploy-1, ev-err-1. Error 6990 **not** linked. 7001 → SHOP-101 **unknown**, "ticket source down; not read" |
-| B4 | PASS (store) · form render not observed | dec-1 with three citations persisted and readable at `view` level; a write at `interact` level (any signed-in non-editor) was **refused**; writes are editor-only (Data type rule) |
+| B4 | PARTIAL: store persists, page form never submitted | dec-1 with three citations persisted and readable at `view` level; a write at `interact` level (any signed-in non-editor) was **refused**; writes are editor-only (Data type rule) |
 | B5 | PASS (logic) | payments health → "conflict, unknown": "healthy" from stale source at 11:10 vs payments-contract failed at 11:40; SHOP-101 "not read" |
-| B6 | FAIL | Persona switch is a client-side filter the viewer chooses (owner 8 rows, viewer 7). The restricted item stays in the uploaded file, which "everyone who can open the artifact can load" (upload result; Data type guide says the same of attached files and shared rows). Per-viewer scoping exists only through each viewer's own connector permissions at the source |
+| B6 | PARTIAL | Scoping is available only per user (personal storage) or per source (each viewer's own connector access); not per evidence item inside shared data. In this build the builder put the restricted item in a shared upload, so it leaked: persona switch is a client-side filter the viewer chooses (owner 8 rows, viewer 7). The restricted item stays in the uploaded file, which "everyone who can open the artifact can load" (upload result; Data type guide says the same of attached files and shared rows). Per-viewer scoping exists only through each viewer's own connector permissions at the source |
 | B7 | UNKNOWN (blocker: live connectors and write actions are out of scope) | Documented: connector writes run as the viewer who presses the control; artifacts can call Claude (S2, S3). No approval queue or run audit is documented inside the page |
 
 Other criteria:
@@ -72,9 +72,9 @@ Other criteria:
 | B1 | PASS (reopen by URL) · install N/A | Static build or pilot URL; no desktop install |
 | B2 | PASS | Observatory and sources specs: per-source connectivity/freshness, never Healthy when stale/down |
 | B3 | NOT BUILT | Fixture has a user-written `Correlation` evidence item (PR #42 → failed run) with citations; no deploy → error → ticket correlation exists (BACK-182 To Do) |
-| B4 | PASS (server, cited) · fixture UI shows canned decisions | Decisions persisted with append-only audit and citations (migration 0004, `decisions-db.spec.ts`, `decision-audit-db.spec.ts`); recording in live mode #122 |
+| B4 | PARTIAL: server persistence with audit is cited from tests, not run here (`npm run e2e:live` needs Docker); fixture UI shows canned decisions | Decisions persisted with append-only audit and citations (migration 0004, `decisions-db.spec.ts`, `decision-audit-db.spec.ts`); recording in live mode #122 |
 | B5 | PARTIAL | Stale/not-read handled and tested ("claimed healthy on a stale read: Unknown", `world.ts:401`); a conflict is recorded in the fixture (`world.ts:120`) but there is no conflict-detection logic |
-| B6 | PARTIAL | UI: withheld evidence not detectable in DOM, same not-found state for a direct route (`nondisclosure.spec.ts`), but the persona is "a display switch on synthetic demo data, not authorization" (spec header). Server: forced RLS, deny-by-default, identical 404 for hidden items (tested). Only one real role (owner), so a second-principal boundary is not exercisable today |
+| B6 | NOT BUILT (no second principal) | UI: withheld evidence not detectable in DOM, same not-found state for a direct route (`nondisclosure.spec.ts`), but the persona is "a display switch on synthetic demo data, not authorization" (spec header). Server: forced RLS, deny-by-default, identical 404 for hidden items (tested). Only one real role (owner), so a second-principal boundary is not exercisable today |
 | B7 | NOT BUILT | Flight Deck agents are simulated |
 
 ### Limitations
@@ -82,3 +82,6 @@ Other criteria:
 - The Artifact page was not seen rendered; B2/B4 UI parts are unobserved.
 - One account: second-viewer behaviour of the Artifact is documented, not tested.
 - Same author for both sides and for the brief; see `review.md`.
+- Kawalys did not read the pinned fixture; it was scored on its own fixtures that express similar situations. Most of its 489 passing tests cover mock screens, i18n and accessibility, not the scenario logic.
+- The Artifact logic was written by the author of the fixture and the criteria (e.g. explicit `release` fields, a `startsWith(service)` match). The capability result is a floor; the effort figure is optimistic for real, unshaped data.
+- Scores revised after the independent review (B1, B4, B6); see `review.md`.
