@@ -1,126 +1,150 @@
-# BACK-184 — Decision brief: why pay for Kawalys if you already have Claude?
+# BACK-184 — Decision brief v2: Kawalys vs connector-backed Claude Artifacts (B+, gated)
 
-Status: **proposal for owner approval.** Nothing here changes Jira, the roadmap or production. Date: 2026-11-28. Repository baseline: `df529ce`.
-Evidence: [sources.md](sources.md) (official Anthropic pages, fetched today) · [benchmark.md](benchmark.md) (side-by-side synthetic test) · [capability-matrix.md](capability-matrix.md) (inventory, substitutability, reuse, cost) · [review.md](review.md) (independent critique and what changed).
+Status: **proposal and research plan for owner ratification.** Nothing here changes Jira, the Blueprint, the roadmap or production. Date: 2026-11-28. Repository baseline: `df529ce` (branch base of this PR).
+Evidence: [sources.md](sources.md) (official Anthropic pages, fetched 2026-11-28) · [benchmark.md](benchmark.md) (Claude-only synthetic side-by-side, historical) · [capability-matrix.md](capability-matrix.md) (inventory, substitutability, reuse, cost) · [review.md](review.md) (independent review of **v1**) · [decision-brief.v1-b-gated.md](decision-brief.v1-b-gated.md) (v1, unchanged).
+
+## 0. Revision status (read first)
+
+| | v1 | v2 (this file) |
+|---|---|---|
+| Direction | B-gated: freeze UI layers, evidence service behind MCP, spend no engineering until an interview and dogfooding gate passes | **B+: strategic repositioning and gated growth.** Research and planning direction only |
+| Basis | Claude-only benchmark, independent review ([review.md](review.md)), commit `0cd272b` | v1 evidence kept as history, plus Jira BACK-184 comments 19203 (proposed reconciliation) and 19204 (delegated decision) |
+| Review | Independent reviewer agent, 14 findings | **Not independently reviewed.** Comment 19203 is a self-described simulated multidisciplinary review. This revision's reviewer is the owner |
+
+**How the decision was made.** In comment 19204 the owner's delegate selected B+ as the research and planning direction, acting on the owner's delegation ("انا بفوضك") in the project conversation. That delegation covers research direction and preparation. It is **not** approval of product implementation, a launch, a real source, a customer contact, a paid run or a package install. The 27 Nov execution/security Blueprint (BACK-118/119/126, BACK-166/169) is not superseded: owner-only Alpha and the sequence Code Review Room → accepted preview → selected Factory slice stand unless the owner amends them.
+
+**What this revision did not do.** It ran no new tests and no new benchmark, fetched no competitor or provider page, and recorded no market data. Every competitor, pricing and provider-terms statement below is either an official Anthropic fact from sources.md (verified 2026-11-28) or a pointer taken from comment 19203 and marked *unverified*. CI and SonarCloud results shown on the PR belong to the commit they ran on.
+
+### Evidence vocabulary (used in every table below)
+**Implemented** (code exists), **Tested** (a named test or run passed), **Mock** (demo data only), **Unbuilt**, **Verified** (official source read 2026-11-28), **Unverified** (pointer, not read), **Unknown** (not testable yet), **Hypothesis** (proposed, no data). A hypothesis is never presented as customer-validated.
 
 ## 1. Short answer
 
-**Today there is no demonstrated reason for a Claude user to pay for Kawalys.** A connector dashboard that shows each figure's source and freshness is a first-party Claude feature (Claude Data). In our synthetic benchmark, one build pass of a Claude Data artifact produced correct deploy → error → ticket links and stale/conflict handling (logic checked; page not seen rendered), and its store kept a seeded decision log with editor-only writes. Kawalys has not built the correlation scenario, has no active real source, an empty pilot database and one user (the owner).
+1. **What still stands from v1.** Today there is no *demonstrated* reason for a Claude user to pay for Kawalys. A connector dashboard that shows each figure's source and freshness is a first-party Claude feature (Claude Data). In the v1 benchmark, one build pass of a Claude Data artifact produced correct deploy → error → ticket links and stale/conflict handling (logic checked; page not seen rendered). Kawalys has no active real source, an empty pilot database and one user. Its structural advantage (server-owned evidence, row-level access, audited writes) cannot be shown yet because there is one role.
+2. **What v1 over-reached, per comment 19203.** (a) It excluded solo users commercially on a $0 assumption the benchmark does not establish. (b) It recommended a blanket UI and Software Factory freeze, although the benchmark tested substitutability of logic on clean fixtures, not value of the combined outcome. (c) It assessed Claude only; Port, Cortex, Conductor, DeepSeek Harness and visual-agent projects occupy overlapping ground and were not examined. (d) Kawalys was scored on its own fixtures, not the pinned one, so the side-by-side is not like for like.
+3. **What B+ proposes.** Keep the four product pillars (Cognitive Core, Visual Intelligence, Software Factory, multi-provider agent integration) as *hypotheses to test fairly*, with the evidence core as the base. Offer a read-only Intelligence API/MCP as an optional distribution surface. Evaluate official subscription and BYOK economics before any claim of "free" or "unlimited". Test the **combined user outcome** against first-party CLI/manual setups and the closest competitors, because a multi-provider launcher, a subscription integration, an attractive scene or an evidence store alone is copyable.
+4. **What B+ is not.** Not a moat claim, not a launch decision, not approval of full VIE, a new agent runtime or commercial packaging, and not a blanket freeze. Work already approved, and research or planning that needs no new access, continues independently of unapproved feature work.
 
-Kawalys does have something Claude Artifacts are not designed to be: a server that owns evidence, enforces row-level access, and audits writes. But the gap is **narrower than "artifacts have no backend"**: artifacts keep up to 100 MB of shared or personal data, Claude Data re-queries on an interval when opened, and a scheduled Claude routine can keep an artifact's data current. And the one place Kawalys is structurally stronger, scoping evidence between different people, cannot be shown yet: Kawalys has a single role.
+## 2. Target user and willingness to pay (hypotheses)
 
-**Proposed decision: B-gated.** Keep the direction "Kawalys = evidence service behind MCP, thin owner UI, no more UI layers", but spend **no engineering weeks** until a short evidence gate passes: owner-only steps already coded (BACK-51 sign-off, BACK-52 activation), 6–8 interviews, a competitor category scan, and 2–3 weeks of the owner using a Claude-native baseline on real repos. If the gate fails, pause (D).
+- **Segments to test (proposed in 19203, not ratified):** solo developers or founders running AI coding agents across repos (6), nontechnical builders (3), small teams of 2–10 (3). v1's "probably not a buyer: solo developer" is **withdrawn as a conclusion** and kept as one hypothesis among the others. Founder utility is not external demand; the two are recorded separately.
+- **Willingness to pay:** no price, no revenue claim. Search interest and site traffic seen in earlier Firecrawl/Alexandria research are not buyers (19203). The demand signal being proposed is at least 3 credible paid-pilot commitments or equivalent budget-backed evidence. No payment is collected and no customer is onboarded.
 
-## 2. Target user (hypothesis, not validated)
+## 3. What the evidence shows today
 
-A small team (2–10) that already pays for Claude, runs AI coding agents across several repositories, and shares project state with people who should not get the same raw access: contractors, clients, a non-technical founder. They need context that persists, carries citations and is scoped per person.
+### 3.1 Platform facts (Verified, official, [sources.md](sources.md))
+- Installable apps: beta since 2026-11-24, Mac/Windows desktop, online and signed in. Template artifacts (Docs, Slides, Sheets; S2 also lists Data) cannot be installed (S1, S2, S4).
+- Connectors read and write as **the viewer**, after per-viewer approval. Claude Data live sharing runs the editor's approved queries for the organization (S2, S3, S5, S6).
+- Storage per artifact: personal or shared, 100 MB / 25,000 documents. Attached files and shared rows are readable by everyone who can open the artifact (S2, S8).
+- No backend of its own, strict CSP, no viewer authentication (S3). Interval refresh on open (S6). Scheduled routines can update data (S8, untested).
+- Publishing from Claude Code needs a claude.ai account and the Anthropic API path, and no CMEK/HIPAA/ZDR (S3). Installed apps: not for HIPAA-ready orgs; ZDR orgs can install but apps are not covered by ZDR (S1).
+- These are consumer-product facts as of 2026-11-28. Beta status, entitlements and prices can change; re-check before any gate decision.
 
-Probably **not** a buyer: a solo developer who wants a view of their own GitHub/Sentry/Jira. Claude covers that within a plan they already pay ($17–20/month, Pro or above; S2, S7). This removes the owner-as-solo-user case as evidence of demand.
-
-Secondary, weaker: Arabic-first agencies reporting to non-technical clients (BACK-3). Same blocker: needs a second principal.
-
-## 3. What the evidence shows
-
-### 3.1 Platform facts (official, [sources.md](sources.md))
-- Installable apps: beta since 2026-11-24, Mac/Windows desktop, online and signed in. Template artifacts (Docs, Slides, Sheets; S2 also lists Data) can't be installed (S1, S2, S4).
-- Connectors read and write as **the viewer**, after per-viewer approval; Claude Data live sharing runs the editor's approved queries for the organization (S2, S3, S5, S6).
-- Storage per artifact: personal or shared, 100 MB / 25,000 documents; attached files and shared rows are readable by everyone who can open the artifact (S2, S8).
-- No backend of its own, strict CSP, no viewer authentication (S3). Interval refresh on open (S6); scheduled routines can update data (S8, untested).
-- Publishing from Claude Code needs a claude.ai account and the Anthropic API path, and no CMEK/HIPAA/ZDR (S3). Installed apps: not for HIPAA-ready orgs; ZDR orgs can install but apps aren't covered by ZDR (S1).
-
-### 3.2 Benchmark ([benchmark.md](benchmark.md))
-Same pre-registered criteria for both. The Artifact used the pinned synthetic fixture. Kawalys did **not** read it; it was scored on its own fixtures that express similar situations. Kawalys: 10 existing e2e specs on the fixture build, 489 passed, 0 failed (mostly mock screens, i18n, accessibility). Artifact: page logic run in Node, store and access rules checked at reduced access levels; the page was not seen rendered.
+### 3.2 v1 benchmark (historical, [benchmark.md](benchmark.md))
+Pre-registered criteria, one author, synthetic data. **Limitations that now weigh more:** the Artifact used the pinned fixture, Kawalys did not read it and was scored on fixtures expressing similar situations; the Artifact page was not seen rendered; Kawalys server tests were cited, not run; the Kawalys 489 passes are mostly mock screens, i18n and accessibility; the Artifact logic was fitted to the fixture by the same author. The table is evidence about *logic substitutability on clean data*, nothing more.
 
 | Scenario | Claude Artifact (Data type) | Kawalys (fixture build) |
 |---|---|---|
 | B1 Install / reopen | Reopen PASS; install FAIL by documentation for template artifacts; non-template install untested | Reopen PASS (URL); no install concept |
 | B2 Operational state | PASS (logic) | PASS (tested) |
-| B3 Deploy → error → ticket | PASS (logic, one pass, fixture shaped by the same author) | NOT BUILT |
-| B4 Decision history | PARTIAL (store persists, editor-only writes enforced; form not exercised) | PARTIAL (server persistence with audit cited from tests, not run) |
+| B3 Deploy → error → ticket | PASS (logic, one pass) | Unbuilt |
+| B4 Decision history | PARTIAL (store persists, editor-only writes enforced; form not exercised) | PARTIAL (server persistence with audit, cited not run) |
 | B5 Stale / missing / conflicting | PASS (logic) | PARTIAL (stale/not-read tested; conflict only recorded in fixture) |
-| B6 Scoped visibility | PARTIAL (per user or per source only; shared data readable by all viewers) | NOT BUILT (one role; server RLS and hidden = not found tested) |
-| B7 Multi-provider agent workflow | UNKNOWN (documented, not tested) | NOT BUILT |
+| B6 Scoped visibility | PARTIAL (per user or per source; shared data readable by all viewers) | Unbuilt (one role; server RLS and hidden = not found tested) |
+| B7 Multi-provider agent workflow | Unknown | Unbuilt |
 
-On clean fixtures, correlation and conflict logic is a few dozen lines Claude writes in minutes. Real-data difficulty (history, entity resolution, release mapping, backfill) was not tested on either side.
-
-### 3.3 Inventory ([capability-matrix.md](capability-matrix.md))
-- **Shipped and tested:** evidence store with forced RLS and append-only audit; owner auth, deny-by-default, hidden = not found; HTTP hardening; source approval; decisions with audit; memory/retrieval/search; Unknown-never-Healthy; EN/AR/RTL.
-- **Built, inactive:** GitHub read-only transport. **Mock:** Mission Map, Observatory, Replay, Flight Deck.
+### 3.3 Capability inventory ([capability-matrix.md](capability-matrix.md))
+- **Implemented and tested:** evidence store with forced RLS and append-only audit; owner auth, deny-by-default, hidden = not found; HTTP hardening; source approval; decisions with audit; memory/retrieval/search; Unknown-never-Healthy; EN/AR/RTL.
+- **Implemented, inactive:** GitHub read-only transport (BACK-52 slice A).
+- **Mock:** Mission Map, Observatory, Replay, Flight Deck.
 - **Unbuilt:** correlation, second principal, VIE, Software Factory, agent execution, Sentry/Datadog connectors, Kawalys MCP.
-- **Not found:** a durable record of the eight VIE workshops (BACK-119 owns recovery).
-- **Not assessed:** competitors other than Claude: error-tracking/APM deploy tracking, developer portals, agent-memory services.
+- **Not found:** a durable record of the eight VIE workshops (BACK-119 owns recovery) and the earlier Retail Tower Harness study (needs recovery; reuse the method, not the retail domain).
 
-## 4. Hypotheses and the evidence gate
+## 4. Competitive and provider landscape
 
-| # | Hypothesis | Test | Pass line |
+Only the Claude rows are Verified. The rest are starting points from comment 19203 that **must be read, dated and recorded in a feature/pricing/terms matrix** before they inform any decision.
+
+| Item | Why it matters | Status |
+|---|---|---|
+| Claude Artifacts / Claude Data | First-party dashboards, per-viewer connectors, 100 MB store | **Verified** (S1–S8) |
+| Install as app — `claude.com/resources/articles/install-as-app` | Install path and limits | **Unverified** (S1 is a help-center article on the same topic, and was read) |
+| Use the Claude Agent SDK with your Claude plan — `support.claude.com/en/articles/15036540` | Whether subscription auth may back a third-party multi-provider launcher | **Unverified; decisive for the factory pillar.** A provider subscription is not a general-purpose API license |
+| Port, Cortex | Developer portals / catalogues with scorecards | **Unverified** |
+| Conductor — `conductor.build` | Parallel agent workspaces, closest "factory" comparison | **Unverified** |
+| DeepSeek Harness — releases and discussion 10265 | Candidate agent harness. 19203 reports release `v0.2.3-alpha.3` observed 28 Nov: an alpha, not proof of production stability | **Unverified** |
+| Native APM / error-tracking deploy tracking | Competes with correlation (BACK-182) | **Unverified**, was in v1 review finding 6 |
+
+**Provider-terms and Harness risks to settle before any live run (all Unknown today):** which local CLI/SDK interfaces are officially supported for Claude Code and Codex; subscription versus BYOK terms and quotas; visibility of usage and cost; explicit user consent; support policy; Harness licence, SDK and event lifecycle, subagents, worktrees, isolation, approval and cancel, secrets handling, Windows/macOS/Linux support and known regressions; replaceability and rollback. No unofficial OAuth or token copying, no quota bypass, and no claim of free or unlimited usage.
+
+## 5. B+ hypotheses and pre-registered thresholds
+
+All thresholds are **proposed**, to be ratified by the owner **before** any test runs. Missing data is not proof of failure; a failed branch is deferred, not silently dropped.
+
+| # | Hypothesis | Test | Proposed pass line |
 |---|---|---|---|
-| H3 | **Scoped sharing is worth paying for.** | 6–8 interviews (BACK-3) with founders/teams/agencies who share project state with clients or contractors | ≥ 3 describe a current workaround **and** a budget |
-| H5 | **Claude-native is not enough for the owner either.** | Owner uses a Claude-native baseline for 2–3 weeks on real repos: decision log in repo or artifact store, a Claude Data dashboard, optionally a scheduled routine | Pre-registered failure categories: (a) history lost or not reconstructable, (b) data shown to someone who should not see it, (c) no record of who read or changed what. Pass if the owner logs ≥ 3 dated, concrete incidents across ≥ 2 categories. Self-graded, so H3 is the gate's external check |
-| H6 | **Nobody already sells the correlation.** | Desk scan of error-tracking/APM deploy tracking, developer portals, agent memory (1–2 days) | No mainstream tool covers deploy → error → ticket with citations for small teams at their price point; otherwise drop H2 and BACK-182 |
-| H4 | **Self-hosting / no Claude seat matters.** | Same interviews | ≥ 2 name it as a blocker |
-| H1 | **Kawalys context makes agents better** (usefulness, not payment). Only after the gate. | BACK-168 Stage A: 10 pre-registered questions on one real repo, same model, Kawalys MCP vs the Claude-native baseline from H5 | ≥ 8/10 correct with citations and ≥ 30% fewer tool calls or tokens than the baseline |
-| H2 | **Correlation on real data is hard enough to be a product.** Only after the gate and H6. | BACK-182 fixtures, then real GitHub + one more source, vs a Claude-written rule on the same export | Clearly higher precision on pre-labelled links |
+| M1 | **There is external demand for some segment.** | 12 interviews (6 solo, 3 nontechnical builders, 3 small teams); record workaround, frequency, budget and willingness to try a paid pilot (BACK-3) | ≥ 3 credible paid-pilot commitments or equivalent budget-backed evidence. Founder utility is logged separately |
+| E1 | **Provider economics are feasible and permitted.** | Claude Code and Codex first: terms, BYOK, quotas, consent. Equivalent runs: task success, elapsed time, paid API cost, allocated subscription cost, quota cost | Documented permitted path with a measured cost per accepted task. Stop paid fallback by default |
+| O1 | **A truthful read-only one-repo baseline exists.** | BACK-52 on one owner-chosen repo with source identity, scope, revocation and truthful status | Evidence shown with source states; Unknown never Healthy |
+| F1 | **A factory workflow beats the alternatives.** | One synthetic task in a disposable repo: approved plan → one provider implements → second reviews → deterministic tests → human decision → verified evidence. Compare manual two-CLI baseline, Claude-native/Artifact where feasible, Conductor or closest available, and Kawalys, on the same fixture, task and success oracle | Fewer handoffs and less rework or time at equal quality; cost recorded as actual or Unknown |
+| V1 | **A visual prototype is faster than lists.** | Same authorized data and question, list/cards baseline vs one Code Review Room prototype, counterbalanced order | ≥ 25% lower median time-to-correct-answer, no accuracy or accessibility regression. Otherwise keep list-first |
+| C1 | **Kawalys evidence makes agents better** (usefulness, not payment). | 10 pinned context questions, same model and client, with vs without permitted Kawalys evidence (BACK-168 Stage A) | ≥ 8/10 correct with citations, ≥ 30% fewer tool calls or context tokens, zero unauthorized disclosure |
+| X1 | **Real correlation or team governance is needed** (conditional). | Only on a selected workflow: correlation vs native APM and a same-fixture rule (BACK-182); second-principal policy before team/audit (BACK-170/171/183) | Higher precision on pre-labelled links; no causal claim without evidence |
 
-**Gate (decision on or before 2027-01-15, proposed):** proceed to engineering only if H3 passes **and** H5 passes. If H3 **or** H5 fails, choose D (pause). H6 failing removes BACK-182 from scope; H4 passing raises the weight of a self-hosted offer.
+**v1's H3 and H5** (≥ 3 of 6–8 interviewees with workaround and budget; owner logs ≥ 3 concrete Claude-only failures) remain valid readings of the *scoped-sharing small-team* hypothesis. They are not the decision rule for segments they did not test.
 
-Willingness to pay stays a hypothesis: solo developer $0; small team per workspace or per seat for scoped, cited, shared project memory their agents consume; agency per client workspace. No price until H3 has results.
+### Fair-comparison rules (apply to every row above)
+Pre-register the fixture hash, tool versions, success oracle and metrics before running. Use **identical** fixtures and tasks on every side (v1 did not). Counterbalance task order for human timing. Record failures, Unknown and NOT RUN alongside wins. Separate operator effort, elapsed time, quality and cost (actual or Unknown). No new credentials, paid calls, user data, source writes, deployments, dependencies or agent execution without the existing separate gate.
 
-## 5. Options
+## 6. Work packages mapped to existing tickets
 
-| Option | What it means | Cost ahead | Risk |
+Reuse existing Jira homes; no new issue is needed yet. A discovery-only child of BACK-180 for the Harness review would be proposed only after owner approval. Nothing below edits a ticket's status, priority or description.
+
+| Pri. | Package, accountable ticket | Deliverable | Decision at trigger |
 |---|---|---|---|
-| A. Continue as planned | BACK-181..183, VIE-01..08, Software Factory, COG activation, in current order | Highest: months of solo engineering | Builds what Claude generates; no buyer evidence |
-| **B-gated (recommended)** | Freeze UI; run the gate (owner hours + interviews + scan + dogfood); then BACK-168 Stage A, second principal or BACK-182 depending on results | Gate: owner time only, ~2–4 weeks. After: weeks of engineering | Gate may fail; owner time is the scarce input |
-| C. Pivot to MCP-only | Kawalys as a self-hosted evidence service with an MCP surface; retire the UI and its CI cost | Low engineering; lower CI maintenance | Loses the human-facing and Arabic-first angle; still unvalidated |
-| D. Pause | Stop feature work after BACK-51 sign-off; keep the pilot running; revisit with evidence | Near zero | Momentum loss; foundations age |
+| P0 | Competitive and market validation — BACK-184, BACK-3 | Dated feature/pricing/terms matrix; 12 interviews (M1) | Owner ratifies segment, contacts and criteria before outreach |
+| P0 | Provider entitlement and economics — BACK-166 D02/D04, BACK-168 Stage A where relevant | Terms, BYOK, quota and cost study (E1) | Owner approves one runtime and exact permitted auth and budget before live runs |
+| P0 | Operational baseline — BACK-131/128/52/49/51, applicable BACK-127/172/117 | Approved read-only one-repo proof (O1). BACK-154/155 only if live cognitive search is selected, otherwise fail closed | Exact owner consent, custody and rotation, safe live source proof before real access |
+| P1 | Harness reference vs adapter — BACK-166 D02, BACK-14 | Recover the Retail Tower Harness evidence, diff against the pinned upstream release, licence and isolation review; report REFERENCE / ADAPT / DEFER with replaceability and rollback | Read-only analysis first; separate approval for any isolated synthetic PoC or install; never mandate an alpha runtime |
+| P1 | Factory outcome test — BACK-126, BACK-166/167/169 | F1, starting with manual handoff and read-only observation | Each isolated action approved individually after M14 governance and security; no merge or deploy, no production data; no integrated rollout before BACK-125 and applicable Alpha gates |
+| P1 | Visual value — BACK-119/120/121/125, BACK-118 | V1 | Owner ratifies metric, sample, device and workload; no full 3D, GPU infrastructure, asset purchase or second app |
+| P1 | Cognitive value and MCP — BACK-103/168/154/155, applicable BACK-45/157 | C1. Retain the delivered core; no learning activation without independently verified outcome and approval | Stage A may defer; Stage B explicitly authorized, read-only, scoped; no agent dispatch or new mandatory inference |
+| P2 cond. | Evidence/correlation and team governance — BACK-181/182/183/170/171 | X1; reuse evidence components on the selected workflow only; no duplicate RLS or permissions model | Re-enter when the chosen journey and demand need it and gates pass |
+| Future | Digital Technology Campus, broad factory — BACK-126/118/3 | Vision kept, no delivery commitment | Separate owner decision after proven incremental value |
 
-B-gated vs D: the gate costs owner time, not engineering, and it is the only cheap way to learn whether anyone pays. B-gated vs C: C is the right fallback **if** the gate passes but the owner UI shows no use; a frozen UI still costs CI time (about 489 app e2e tests across chromium and webkit shards), so C stays on the table. Sunk cost (the existing UI, the cognitive core review rounds) is not an argument for either.
+**Compared with v1's roadmap delta:** v1 proposed deferring BACK-121 to BACK-125, BACK-126, BACK-163 and the cognitive activation items, reducing BACK-181 and BACK-183, and freezing the mock lenses. Under B+ those become *tests with triggers* (V1, F1, C1, X1) rather than blanket deferrals. The v1 table remains in [decision-brief.v1-b-gated.md](decision-brief.v1-b-gated.md) §6 for reference and is **not** applied. The v1 items that carry over unchanged are BACK-51 sign-off and BACK-52 activation (owner-gated).
 
-## 6. Proposed roadmap delta (for approval; nothing applied)
+## 7. Options
 
-"Reduce" and "defer" mean editing ticket text after approval. No ticket is closed and no new ticket is proposed: every item has a home.
+| Option | Meaning | Status |
+|---|---|---|
+| A. Continue as planned | BACK-181..183, VIE-01..08, Software Factory, COG activation in current order, no new validation | Not recommended: builds before any buyer or economics evidence |
+| B-gated (v1) | Freeze UI; interviews plus owner dogfooding gate; then BACK-168 Stage A | Superseded by B+ for this brief; kept as the more conservative fallback |
+| **B+ (selected research direction)** | Four pillars as hypotheses, fair identical-fixture tests, provider economics first, no blanket freeze, existing gates unchanged | Selected in 19204 for research and planning only |
+| C. Narrow to evidence + MCP | Self-hosted evidence service, thin owner UI | The outcome if only C1 passes |
+| D. Pause commercial expansion | Keep Alpha and the pilot running, revisit with evidence | The outcome if M1 and E1 both fail |
 
-| P | Ticket | Proposal | Reason |
-|---|---|---|---|
-| P0 | [BACK-51](https://rahmaqanater.atlassian.net/browse/BACK-51) | **Retain**: owner sign-off only | Code done; closes a gate |
-| P0 | [BACK-52](https://rahmaqanater.atlassian.net/browse/BACK-52) | **Retain**: owner activation of one real repo (App, BACK-128 key custody) | Code done; real data for H5/H1 |
-| P0 | [BACK-3](https://rahmaqanater.atlassian.net/browse/BACK-3) | **Investigate now**: interviews (H3/H4) and the competitor scan (H6); owner decides whom to contact | Only source of buyer evidence |
-| P0 | — (owner) | **Dogfood** the Claude-native baseline for 2–3 weeks (H5) | Fair baseline; costs no engineering |
-| Gate | [BACK-168](https://rahmaqanater.atlassian.net/browse/BACK-168) | **Promote after the gate**: Stage A (H1), read-only, two tools; the owner recorded this direction on 2026-11-28 | Makes Claude a channel instead of a substitute; MCP also serves other clients |
-| Gate | [BACK-170](https://rahmaqanater.atlassian.net/browse/BACK-170) / [BACK-171](https://rahmaqanater.atlassian.net/browse/BACK-171) | **Bring forward if H3 passes**: a second principal before correlation | B6: scoped sharing cannot be shown with one role |
-| Gate | [BACK-182](https://rahmaqanater.atlassian.net/browse/BACK-182) | **Retain only if H6 passes**, reframed as server-side correlation over ingested history | B3: the logic itself is substitutable |
-| Gate | BACK-154 / BACK-155 | **Retain if BACK-168 proceeds** | Live memory read measured to fail closed at real volume (open PR #187) |
-| P2 | [BACK-183](https://rahmaqanater.atlassian.net/browse/BACK-183) | **Reduce**: access log for API/MCP reads; permissions page waits for a second user | Needed by BACK-168 Stage B anyway |
-| P2 | [BACK-181](https://rahmaqanater.atlassian.net/browse/BACK-181) | **Reduce**: Unknown-never-Healthy as an API guarantee plus one regression test; drop the all-screens display program | Claude Data already shows source and freshness per figure |
-| P2 | [BACK-180](https://rahmaqanater.atlassian.net/browse/BACK-180) | **Revise thesis** to "Kawalys keeps and scopes the evidence; any client can show it"; adopt the proposed team rule | Benchmark: shared artifact data is readable by every viewer |
-| P3 | [BACK-121](https://rahmaqanater.atlassian.net/browse/BACK-121) VIE-03 Code Review Room | **Defer** | Claude Code publishes pull-request walkthrough artifacts (S2; S3 "Walk through a change") |
-| P3 | [BACK-122](https://rahmaqanater.atlassian.net/browse/BACK-122)–[BACK-125](https://rahmaqanater.atlassian.net/browse/BACK-125) VIE-04..07 | **Defer**; re-entry: gate passed and a user asks for spatial views | Rendering is substitutable |
-| P3 | [BACK-126](https://rahmaqanater.atlassian.net/browse/BACK-126) Software Factory | **Defer** | Vision only; depends on VIE |
-| P3 | [BACK-119](https://rahmaqanater.atlassian.net/browse/BACK-119) | **Reduce** to recovering the workshop record | Keep provenance even if deferred |
-| P3 | [BACK-120](https://rahmaqanater.atlassian.net/browse/BACK-120) | **Merge into BACK-52 activation** | Same real GitHub path |
-| P3 | [BACK-103](https://rahmaqanater.atlassian.net/browse/BACK-103) COG-05 activation, BACK-156/157, COG-06 | **Defer** until real outcomes exist | Already gated |
-| P3 | [BACK-163](https://rahmaqanater.atlassian.net/browse/BACK-163) metrics | **Defer** | Substitutable by Claude Data |
-| — | Mission Map, Observatory, Replay, Flight Deck | **Freeze** (keep tests green, no new lens work); revisit retiring them under option C | Mock data |
+## 8. Staged decision gates
 
-### The eight design workshops
-No durable record exists in the repository or Jira; their decisions live in an owner conversation (BACK-118, BACK-119). Their delivery homes are VIE-01..08. Under B-gated: **retain** "evidence first" and "one app, one canonical model"; **reuse** VIE-02 inside BACK-52; **defer** the WebGL engine, scene model, Code Review Room and Software Factory; **investigate** only the record recovery. If the owner shares the record, each decision should be mapped individually; this brief does not invent their content.
+0. **Ratify (owner).** Segment and contacts, interview and test criteria, the 2027-01-15 checkpoint, and which runtime and budget (if any) may be used. Nothing below starts until this is done.
+1. **Desk work, no new access.** Competitor and provider-terms matrix, Harness recovery and reference review, existing operational work (BACK-51/52 and listed security gates). Output: dated tables, REFERENCE/ADAPT/DEFER recommendations.
+2. **Per-action gates.** Each real source, customer contact, package install, paid run, action dispatch, access expansion, deployment, merge or commercial commitment needs its own existing approval. Completing a ticket is never runtime authority.
+3. **Checkpoint (proposed 2027-01-15).** Judge market evidence **and** at least one repeatable workflow advantage **and** compliant, feasible economics and safety. If only evidence/MCP is supported, narrow to C. If factory or visual value passes, authorize one smallest slice. If evidence is insufficient, defer the failed branch and revisit, or pause commercial expansion (D). Do not equate personal usefulness with paid demand.
 
-## 7. Remaining costs and risks
-- **Gate:** owner time (activation, interviews, dogfooding, scan): roughly 2–4 weeks part-time. Hosting unchanged (~$12/month + current Neon plan). Token spend for dogfooding falls within the owner's Claude plan limits.
-- **After the gate:** BACK-168 Stage A 1–2 weeks; second principal or BACK-182 several weeks each; H1 needs weeks of real ingestion first, so it cannot report inside the gate window.
-- **Platform risk:** Anthropic can add server-side scheduling or richer storage scoping to artifacts. Re-check sources before the gate decision.
-- **Channel risk:** a Kawalys MCP must be a hosted remote MCP with its own auth, connected by each viewer (S3). It also works with non-Anthropic clients, which limits dependence on one vendor. Connector terms were not checked.
-- **Evidence risk:** synthetic, small benchmark built by the brief's author; artifact page not seen rendered; Kawalys server tests cited, not run. See [review.md](review.md).
+## 9. Risks
 
-## 8. Open questions for the owner
-1. Approve, amend or reject B-gated, the gate, and its date?
-2. Whom may the interviews contact?
-3. Activate BACK-52 on which repository?
-4. Can the eight-workshop record be shared?
-5. Optional: install a plain (non-template) artifact as an app in Claude Desktop and note the result in `benchmark.md` (B1).
+- **Provider terms** can forbid or limit the integration the factory pillar assumes; quotas and prices change. Unknown until E1.
+- **Harness is an alpha** (as reported in 19203); licence, isolation and secrets handling are unreviewed. Never depend on it unreplaceably.
+- **Copyability:** a launcher, a scene or an evidence store alone is reproducible by the platforms and by competitors.
+- **Evidence risk:** the v1 benchmark is synthetic, small, single-author, and not like for like. v2 adds no evidence of its own.
+- **Owner time** is the scarce input for interviews, dogfooding, recovery of the workshop record and approvals. Hosting is unchanged (about $12/month plus the current Neon plan).
+- **Scope drift:** B+ must not erode owner-only Alpha, the BACK-172 controls, or the Blueprint sequence.
+- **Review gap:** this v2 has had no independent review; 19203's review is simulated and not a runtime, security or customer test.
 
-## 9. Milestones
-- M1: BACK-51 signed off; BACK-52 ingesting one real repo with truthful source states.
-- M2: interviews and competitor scan written up against H3, H4, H6.
-- M3: owner dogfooding notes against H5.
-- **Gate decision (≤ 2027-01-15):** B continues (BACK-168 Stage A, then second principal or BACK-182), C, or D.
+## 10. Open questions for the owner
+1. Ratify B+ as the research direction, or choose B-gated, C or D? Confirm the 2027-01-15 checkpoint.
+2. Which interview segment first, and whom may be contacted?
+3. Which one runtime and exact auth and budget (if any) may be used for E1?
+4. Which repository for BACK-52 activation?
+5. Can the eight-workshop record and the Retail Tower Harness study be shared?
+6. Ratify V1, C1 and F1 thresholds, sample and devices?
+7. Optional carry-over from v1: install a plain (non-template) artifact as an app and note the result in `benchmark.md` (B1).
