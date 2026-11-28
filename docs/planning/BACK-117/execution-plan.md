@@ -88,3 +88,31 @@ Headroom is large for a deny-all pilot. Not measured: memory under real use (not
 **Rollback drill (BFF only).** Baseline release 1 BFF `sha256:2aa5d074…`; moved to release 2 BFF `sha256:2e46b2a4…` (preflight passed, `ready:true`), then back to release 1 from the env backup: ready again 16 s after the command, origin certificate unchanged. The drill ended on release 1, the pre-drill state. `web` is deliberately not rolled back: release 1 `web` has no `tls.d` import and would switch Caddy back to Let's Encrypt. **Rollback floors: bff release 1, web release 2.** Database restore was drilled earlier (BACK-114).
 
 **Still open after this record:** D3(a) sign-in (owner decision), P5 real Descope run, rulings R1 to R4, X02/X04/BACK-30 reconciliation, evidence bundle and the owner's BACK-51 sign-off; BACK-58 secret custody (0600 env file today); rotation of the two database passwords that appeared in chat; the AWS connection is still root.
+
+## 12. Release 6, 28 Nov 2026 (owner approved publish and deploy)
+
+Plan: [release-6-plan.md](release-6-plan.md). Contents: everything merged after release 5 up to `0b8300f` (BACK-131 #173,
+BACK-127 #174, BACK-172 #178, BACK-148 L/L2 #181, BACK-52 slice A #182 (inactive), cognitive/memory work #175 #179 #180, and the
+`/sign-in` font fix #183). No database migration.
+
+| Step | Result |
+| --- | --- |
+| Publish | Images run 46144075460 from `0b8300f`: bff `sha256:157b14c35140f82afb7cd01da8c073cc2384c0cb04a3106bd2fd3102c1bf012a`, web `sha256:d448dfc99df3151109b92ac1b57dff0e07b72eaaf0d15783bc7169f47924f826`; anonymous pull works |
+| Deploy (12:23 UTC) | Temporary SSH (port 22 to one /32, short-lived Lightsail key) through the AWS CLI; env backup `.env.pilot.bak-20261128T122343Z`; `KAWALYS_ALLOWED_HOSTS=kawalys.kemetralabs.com,localhost,127.0.0.1` added; checkout `0b8300f`; preflight passed (digests pinned, host list set); `/api/health` ready; bff container healthy |
+| Clean-up | Firewall restored to the saved rules (80/443: 15 IPv4 + 7 IPv6 Cloudflare ranges; 22: `lightsail-connect` only); temporary key deleted |
+| Verification | `/sign-in` font-src `'self' data: https://descopecdn.com`, `/` font-src unchanged; signed-out `GET /api/auth/session-state` and protected routes 404; inside the host the BFF answers 404 to `Host: evil.example` and 200 to `127.0.0.1` |
+
+**Gate B (BACK-172)**
+
+| Check | Result |
+| --- | --- |
+| 1. Forged client address | A client-sent `CF-Connecting-IP` is refused by Cloudflare (403) before reaching the origin; a forged `X-Forwarded-For` is ignored: 13 sign-in attempts with 13 different forged addresses gave 404 for the first 10 and 429 from the 11th (one bucket per real client) |
+| 2. Sign-in limit per real client | Counting per real client: PASS (above). A second client from another network still answered: **NOT RUN** (one network available) |
+| 3. Unknown Host | Through Cloudflare, `Host: evil.example` on the site's TLS name: 403 on a completed exchange; at the BFF itself: 404 uniform refusal |
+| 4. Origin guard | `POST /api/auth/session` with `Origin: https://evil.example`: 404 |
+| 5. Container health | bff `healthy` with the allowlist on; `/api/health` 200 ready |
+| 6. Client request id | A forged `x-request-id: forged-id-12345` is answered with a server UUID |
+
+Rollback (not needed): restore the env backup, check out `92989d1`, set the release 5 digests, preflight, `up -d bff web`.
+Open: the owner's sign-in check on release 6; the AWS connector used by the agent still needs re-authorization (the AWS CLI worked, still as root: BACK-116).
+
