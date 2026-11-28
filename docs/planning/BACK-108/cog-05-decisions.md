@@ -64,3 +64,5 @@ Otherwise the lesson reads as `unsupported`. A cited subset of the currently agr
 - a rollback row whose content matches no earlier version.
 
 The candidate is derived over the whole basis, as `approve()` does, so an episode id that conflicts under another key does not count. The reviewer check is about shape only: the hash is unkeyed, so it refuses a chain that names another reviewer but cannot prove the owner wrote it. What makes the read safe is that the content must be true of the current episodes and their HumanDecisions. The owner must come from `workspaces.owner_user_id`. Episodes are only as trustworthy as their citations: an episode must cite a visible HumanDecision, and HumanDecisions are written only through the decision route. Tests: `test/learning/learning.hardening.spec.ts`.
+
+A malformed read time is a caller error: `readLesson` throws `RangeError` before reading the chain (2026-11-28). It never reports a malformed time as `invalid-chain`.

@@ -19,7 +19,9 @@ import type pg from 'pg';
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { HISTORY_CAP } from '../../src/memory/memory.policy';
 import { projectCollapsed } from '../../src/memory/memory.projector';
-import { MemoryRepository, type MemoryRead } from '../../src/memory/memory.repository';
+import { COGNITION_READ_BUDGET_MS } from '../../src/cognition/cognition.controller';
+import { COGNITION_READS_IN_FLIGHT } from '../../src/cognition/read-slots';
+import { MemoryReadBudgetExceeded, MemoryRepository, type MemoryRead } from '../../src/memory/memory.repository';
 import type { MemoryProjection } from '../../src/memory/memory.types';
 import { ITEM_KIND_LIST, MEMORY_READ_SQL } from '../../src/memory/memory.sql';
 import { freshIds, startStore, stopStore, type StoreHarness } from '../db/store-harness';
@@ -39,10 +41,14 @@ interface Scenario {
 }
 
 const PILOT = { prs: 30, issues: 50, jira: 20, confluence: 20 } as const;
+const KAWALYS = { prs: 181, issues: 20, jira: 179, confluence: 60 } as const;
 const ALL_SCENARIOS: readonly Scenario[] = [
   { name: 'pilot-7d', description: '1 repo + 1 Jira project + 1 space, 7 days, items edited daily', days: 7, editEveryPolls: 96, noiseWorkspace: false, counts: PILOT },
   { name: 'retention-180d', description: 'same sources, 180 days, items edited daily, plus a noise workspace of equal volume', days: 180, editEveryPolls: 96, noiseWorkspace: true, counts: PILOT },
   { name: 'retention-180d-hot', description: 'same, but every item is edited every 4 hours (many runs per item)', days: 180, editEveryPolls: 16, noiseWorkspace: true, counts: PILOT },
+  // BACK-154: Kawalys itself as the representative workload (counted 2026-11-28: 181 Backstage-OS PRs, 179 BACK
+  // issues; GitHub issues and Confluence pages estimated), edited daily, with a noise workspace of equal volume.
+  ...[7, 30, 90, 180].map((days) => ({ name: `kawalys-${days}d`, description: `Kawalys volume, ${days} days, edited daily, plus a noise workspace`, days, editEveryPolls: 96, noiseWorkspace: true, counts: KAWALYS })),
 ];
 
 const ITERATIONS = Number(process.env.MEASURE_ITERATIONS ?? 20);
@@ -119,7 +125,7 @@ async function connectAll(h: StoreHarness, workspaceId: string, projectId: strin
 const pct = (sorted: readonly number[], p: number): number => sorted[Math.min(sorted.length - 1, Math.ceil(p * sorted.length) - 1)]!;
 const stats = (xs: readonly number[]) => {
   const s = [...xs].sort((a, b) => a - b);
-  return { p50: round(pct(s, 0.5)), p95: round(pct(s, 0.95)), max: round(s[s.length - 1]!), min: round(s[0]!) };
+  return { p50: round(pct(s, 0.5)), p95: round(pct(s, 0.95)), p99: round(pct(s, 0.99)), max: round(s[s.length - 1]!), min: round(s[0]!) };
 };
 const round = (n: number): number => Math.round(n * 10) / 10;
 
@@ -462,6 +468,36 @@ async function runRunsTable(h: StoreHarness, s: Seeded, userId: string): Promise
   };
 }
 
+const CONCURRENCY = Number(process.env.MEASURE_CONCURRENCY ?? COGNITION_READS_IN_FLIGHT);
+
+/**
+ * The live search's read exactly as the route runs it: readVisible under the route's work budget. One cold read,
+ * then ITERATIONS rounds of CONCURRENCY simultaneous reads. An over-budget read is counted, not timed.
+ */
+async function liveReads(h: StoreHarness, q: { workspaceId: string; userId: string; projectId: string }): Promise<Record<string, unknown>> {
+  const budgeted = new MemoryRepository(h.db.app, { budgetMs: COGNITION_READ_BUDGET_MS });
+  const one = async (): Promise<number | 'over-budget'> => {
+    const a = performance.now();
+    try {
+      await budgeted.readVisible(q);
+      return performance.now() - a;
+    } catch (e) {
+      if (e instanceof MemoryReadBudgetExceeded) return 'over-budget';
+      throw e;
+    }
+  };
+  const cold = await one();
+  const timed: number[] = [];
+  let overBudget = 0;
+  for (let i = 0; i < ITERATIONS; i += 1) {
+    for (const r of await Promise.all(Array.from({ length: CONCURRENCY }, one))) {
+      if (r === 'over-budget') overBudget += 1;
+      else timed.push(r);
+    }
+  }
+  return { budgetMs: COGNITION_READ_BUDGET_MS, concurrency: CONCURRENCY, coldMs: cold === 'over-budget' ? cold : round(cold), reads: ITERATIONS * CONCURRENCY, overBudget, ms: timed.length ? stats(timed) : null };
+}
+
 async function runScenario(s: Scenario): Promise<Record<string, unknown>> {
   const ids = freshIds();
   const h = await startStore(ids, { provider: 'github', externalRef: 'kemetra-labs/backstage-os' });
@@ -483,6 +519,8 @@ async function runScenario(s: Scenario): Promise<Record<string, unknown>> {
 
     const memory = new MemoryRepository(h.db.app);
     const q = { workspaceId: ids.ws, userId: ids.owner, projectId: h.projectId };
+    // BACK-154: the live path first, cold, then concurrent. Runs before the warm-up below on purpose.
+    const live = await liveReads(h, q);
     for (let i = 0; i < WARMUP; i += 1) await memory.read(q);
 
     const sql: number[] = [];
@@ -532,20 +570,22 @@ async function runScenario(s: Scenario): Promise<Record<string, unknown>> {
       : process.env.MEASURE_VARIANT === 'runs-table' ? await runRunsTable(h, reader, ids.owner)
       : undefined;
     if (Number(shape.items ?? 0) === 0) throw new Error(`${s.name}: the read returned no items; the seed is wrong`);
-    return { scenario: s.name, description: s.description, readerRows: reader.rows, noiseRows, seedSeconds, table, shape, iterations: ITERATIONS, ms: { sql: stats(sql), project: stats(project), total: stats(total) }, plan, planWorkMem256, ...(variant ? { variant } : {}) };
+    return { scenario: s.name, description: s.description, readerRows: reader.rows, noiseRows, seedSeconds, table, shape, iterations: ITERATIONS, ms: { sql: stats(sql), project: stats(project), total: stats(total) }, live, plan, planWorkMem256, ...(variant ? { variant } : {}) };
   } finally {
     await stopStore(h);
   }
 }
 
 function markdown(results: readonly Record<string, unknown>[]): string {
-  const lines = ['| scenario | reader rows | table rows | table+index MB | runs returned | JSON KB | total p50 ms | total p95 ms | sql p95 ms | project p95 ms | server exec ms | temp blocks written |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |'];
+  const lines = ['| scenario | reader rows | table rows | table+index MB | runs returned | JSON KB | total p50 ms | total p95 ms | sql p95 ms | project p95 ms | server exec ms | temp blocks written | live cold ms | live p50 ms | live p95 ms | live p99 ms | over budget |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |'];
   for (const r of results) {
     const ms = r.ms as Record<string, { p50: number; p95: number }>;
     const shape = r.shape as { runRowsReturned: number; resultJsonKb: number };
     const table = r.table as { evidenceRows: number; tableMb: number; indexesMb: number };
     const plan = r.plan as PlanSummary;
-    lines.push(`| ${String(r.scenario)} | ${String(r.readerRows)} | ${table.evidenceRows} | ${table.tableMb + table.indexesMb} | ${shape.runRowsReturned} | ${shape.resultJsonKb} | ${ms.total!.p50} | ${ms.total!.p95} | ${ms.sql!.p95} | ${ms.project!.p95} | ${plan.executionMs} | ${plan.tempWrittenBlocks} |`);
+    const live = r.live as { coldMs: number | string; reads: number; overBudget: number; ms: { p50: number; p95: number; p99?: number } | null };
+    const lm = live.ms;
+    lines.push(`| ${String(r.scenario)} | ${String(r.readerRows)} | ${table.evidenceRows} | ${table.tableMb + table.indexesMb} | ${shape.runRowsReturned} | ${shape.resultJsonKb} | ${ms.total!.p50} | ${ms.total!.p95} | ${ms.sql!.p95} | ${ms.project!.p95} | ${plan.executionMs} | ${plan.tempWrittenBlocks} | ${live.coldMs} | ${lm?.p50 ?? '-'} | ${lm?.p95 ?? '-'} | ${lm?.p99 ?? '-'} | ${live.overBudget}/${live.reads} |`);
   }
   return lines.join('\n');
 }

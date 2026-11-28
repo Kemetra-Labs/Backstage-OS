@@ -14,6 +14,7 @@
     "check": "npm run typecheck && npm test",
     "measure:memory": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testMatch \"**/memory.measure.ts\"",
     "measure:portfolio": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testMatch \"**/portfolio-read.measure.ts\"",
+    "measure:timing": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testMatch \"**/cognition-timing.measure.ts\"",
     "start": "node dist/main.js",
     "e2e:serve": "tsc -p tsconfig.e2e.json && node dist-e2e/test/e2e/serve-e2e.js",
     "local:up": "npm run build && node dist/ops/local-up.js",

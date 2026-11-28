@@ -203,6 +203,15 @@ describe('a lesson is shown only if approve() and rollback() could have written 
   });
 });
 
+describe('a read time from the caller', () => {
+  it('a malformed read time is a caller error, with or without rows', () => {
+    for (const bad of ['Dec 1 2026', '2026-12-01T00:00:00', '']) {
+      expect(() => readLesson([], basisOf(eps), bad, OWNER)).toThrow(RangeError);
+      expect(() => readLesson(chain, basisOf(eps), bad, OWNER)).toThrow(RangeError);
+    }
+  });
+});
+
 describe('a lesson with no citation is never shown', () => {
   const base = chain[0]!;
   it.each([
