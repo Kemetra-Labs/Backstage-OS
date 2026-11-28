@@ -26,6 +26,12 @@ export type HttpResult =
 /** The session check to run after a not_found: GET /auth/me on the server, through the same-origin proxy. */
 export const SESSION_CHECK_PATH = '/api/auth/me';
 
+/**
+ * The read-only session check (BACK-127, owner decision E(a)): GET /auth/session-state answers like /auth/me but never slides the
+ * server's idle window, so a check on return to the tab cannot extend a session.
+ */
+export const SESSION_STATE_PATH = '/api/auth/session-state';
+
 /** The token exchange: POST /auth/session on the server (through the same-origin proxy) turns a Descope JWT into the session cookie. */
 export const SESSION_EXCHANGE_PATH = '/api/auth/session';
 

@@ -103,3 +103,50 @@ export function planSubmit(draft: DecisionDraft, citable: readonly string[]): Su
  * The server has no duplicate check yet (D5 (a)), so a retry without that check could record a second decision.
  */
 export const refreshesList = (r: SubmitResult): boolean => r === 'recorded' || r === 'unavailable' || r === 'error';
+
+/**
+ * BACK-127: whether a submit's answer still belongs to the session it was sent under. An answer that lands after the session
+ * locked, signed out or signed in again (a new generation) is stale: it is not shown and it never touches the draft.
+ * null session = fixture mode: nothing can be stale.
+ */
+export function answerStillCurrent(
+  startedGeneration: number,
+  now: { readonly status: string; readonly generation: number; readonly locked: boolean } | null,
+): boolean {
+  return now === null || (now.status === 'signedIn' && !now.locked && now.generation === startedGeneration);
+}
+
+/** open: the form. locked: the session is locked. rereading: unlocked, but this case was not read for the current sign-in yet. */
+export function formGate(
+  session: { readonly locked: boolean; readonly generation: number } | null,
+  readGeneration: number | null,
+): 'open' | 'locked' | 'rereading' {
+  if (session === null) return 'open';
+  if (session.locked) return 'locked';
+  return readGeneration === session.generation ? 'open' : 'rereading';
+}
+
+export interface SettledAnswer {
+  /** What the form shows; null for a stale answer. */
+  readonly show: SubmitResult | null;
+  readonly clearDraft: boolean;
+  readonly reportNotFound: boolean;
+  /** The decision list is read again (for a stale answer too: the decision may have been recorded, so the list is re-read on unlock). */
+  readonly refreshList: boolean;
+}
+
+/** What to do with a submit's answer. A stale one shows nothing and leaves the draft exactly as it was. */
+export function settleAnswer(r: SubmitResult, current: boolean): SettledAnswer {
+  if (!current) return { show: null, clearDraft: false, reportNotFound: false, refreshList: refreshesList(r) };
+  return { show: r, clearDraft: r === 'recorded', reportNotFound: r === 'not_found', refreshList: refreshesList(r) };
+}
+
+/**
+ * BACK-127: when a draft comes back after a lock, its ticked records are pruned to the ones the fresh read lists, so a record
+ * that left the list (revoked, hidden) is never cited from a draft that outlived it. `changed` asks for the existing notice.
+ */
+export function pruneForReshow(draft: DecisionDraft | undefined, citable: readonly string[]): { readonly draft: DecisionDraft | undefined; readonly changed: boolean } {
+  if (draft === undefined) return { draft, changed: false };
+  const evidenceIds = draft.evidenceIds.filter((id) => citable.includes(id));
+  return evidenceIds.length === draft.evidenceIds.length ? { draft, changed: false } : { draft: { ...draft, evidenceIds }, changed: true };
+}

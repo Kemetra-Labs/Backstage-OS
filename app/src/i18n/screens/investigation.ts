@@ -86,6 +86,9 @@ export interface InvestigationCopy {
     readonly problems: Readonly<Record<'decisionBlank' | 'decisionTooLong' | 'rationaleBlank' | 'rationaleTooLong' | 'tooManyEvidence' | 'unstorable', string>>;
     readonly submit: string;
     readonly submitting: string;
+    /** BACK-127: the form while the session is locked (nothing of the draft is shown), and while the case is read again before the draft returns. */
+    readonly locked: { readonly title: string; readonly body: string };
+    readonly rereading: string;
     /** Why submit is off while the session is not signed in; the draft is kept. */
     readonly needSession: Readonly<Record<'checking' | 'signedOut' | 'ended' | 'unavailable' | 'error', string>>;
     readonly result: Readonly<Record<'recorded' | 'invalid' | 'not_found' | 'rate_limited' | 'unavailable' | 'error' | 'citationsChanged', { readonly title: string; readonly body: string }>>;
@@ -201,6 +204,8 @@ const en: InvestigationCopy = {
     },
     submit: 'Record decision',
     submitting: 'Recording…',
+    locked: { title: 'Locked', body: 'Your session is not confirmed, so this form and any draft are hidden until it is.' },
+    rereading: 'Reading this case again before your draft comes back.',
     needSession: {
       checking: 'Checking your session. You can record once it is confirmed.',
       signedOut: 'You are not signed in, so nothing can be recorded. Your draft is kept; sign in, then choose Check again.',
@@ -329,6 +334,8 @@ const ar: InvestigationCopy = {
     },
     submit: 'تسجيل القرار',
     submitting: 'جارٍ التسجيل…',
+    locked: { title: 'مقفل', body: 'جلستك غير مؤكَّدة، لذا هذا النموذج وأي مسودة مخفيان حتى تُؤكَّد.' },
+    rereading: 'نقرأ هذه الحالة مرة أخرى قبل أن تعود مسودتك.',
     needSession: {
       checking: 'نتحقق من جلستك. يمكنك التسجيل بعد التأكد منها.',
       signedOut: 'لم تسجّل الدخول، لذا لا يمكن تسجيل شيء. مسودتك محفوظة؛ سجّل الدخول ثم اختر «تحقّق مرة أخرى».',

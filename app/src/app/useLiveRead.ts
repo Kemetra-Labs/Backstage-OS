@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LiveRead } from '../live/reads';
-import { liveReadKey } from '../live/session';
+import { heldFor, liveReadKey } from '../live/session';
 import { useSession, useSessionStore } from './SessionContext';
 
 /**
@@ -13,12 +13,17 @@ import { useSession, useSessionStore } from './SessionContext';
  * it held when the session is signed out or ended. Reads wait for the first session check, so a page load makes one read per
  * panel, not two. A read that fails not_found is reported to the session, which re-checks GET /api/auth/me while it believes it
  * is signed in.
+ *
+ * Locked (BACK-127): while the session is locked the key carries `#locked` (the held answer is dropped, an in-flight read for the
+ * old key is aborted and ignored) and no read is started, so nothing is requested or shown that the server can no longer vouch for.
+ * Locked panels say so in words (failed, `locked`). Unlocking is always a new generation or a sign-out, so the panel reads again.
  */
 export function useLiveRead<T>(load: ((signal: AbortSignal) => Promise<LiveRead<T> | null>) | null, key: string): LiveRead<T> | null {
   const session = useSessionStore();
   const snapshot = useSession();
   const fullKey = liveReadKey(key, snapshot);
-  const waiting = snapshot?.status === 'checking';
+  const locked = snapshot?.locked === true;
+  const waiting = snapshot?.status === 'checking' || locked;
   const [held, setHeld] = useState<{ readonly key: string; readonly read: LiveRead<T> } | null>(null);
   useEffect(() => {
     if (!load || waiting) return undefined;
@@ -37,5 +42,7 @@ export function useLiveRead<T>(load: ((signal: AbortSignal) => Promise<LiveRead<
     // Keyed on purpose: the loader is a new function every render.
   }, [fullKey, waiting]);
   if (!load) return null;
-  return held && held.key === fullKey ? held.read : { status: 'loading' };
+  // Locked: said in words (LiveState 'locked'), never a spinner for a read that is not made.
+  if (locked) return { status: 'failed', failure: 'locked' };
+  return heldFor(held, fullKey);
 }

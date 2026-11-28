@@ -28,6 +28,7 @@ function render(over: Partial<RecordDecisionViewProps> = {}, lang: 'en' | 'ar' =
     records: [],
     technical: false,
     sessionStatus: 'signedIn',
+    gate: 'open',
     submitting: false,
     showProblems: false,
     result: null,
@@ -169,6 +170,51 @@ describe('record decision control labels', () => {
     for (const lang of ['en', 'ar'] as const) {
       const c = hostCopy('INVESTIGATION', lang).recordDecision;
       for (const label of [c.submit, c.submitting, c.decisionLabel, c.rationaleLabel, c.evidenceLegend, c.title]) expect(isForbiddenControlLabel(label), `${lang}: ${label}`).toBe(false);
+    }
+  });
+});
+
+describe('RecordDecisionView gate (BACK-127 SEC-02 G2, G4)', () => {
+  const secret = { decision: 'Revert pull request #42', rationale: 'Failures began after it merged.', evidenceIds: [REC(1).id] };
+  const records = [REC(1, { sourceRef: 'github:example-org/demo-storefront#pull/42' })];
+
+  it('locked: no draft text, no field, no record, no source reference, no control; says so in words', () => {
+    const html = render({ gate: 'locked', draft: secret, records, technical: true, sessionStatus: 'unavailable' });
+    expect(html).not.toContain('Revert pull request');
+    expect(html).not.toContain('Failures began');
+    expect(html).not.toContain('github:example-org');
+    expect(html).not.toContain('<textarea');
+    expect(html).not.toContain('<input');
+    expect(html).not.toContain('<button');
+    expect(html).not.toContain('Record 1');
+    expect(text(html)).toContain('Locked');
+    expect(text(html)).toContain('any draft are hidden');
+  });
+
+  it('locked hides any result too, so no stale answer is on screen', () => {
+    expect(text(render({ gate: 'locked', result: 'recorded' }))).not.toContain('Decision recorded');
+    expect(render({ gate: 'locked', result: 'error' })).not.toContain('role="alert"');
+  });
+
+  it('rereading (unlocked, the case not yet read for this sign-in): still no draft, no record, no control', () => {
+    const html = render({ gate: 'rereading', draft: secret, records });
+    expect(html).not.toContain('Revert pull request');
+    expect(html).not.toContain('<textarea');
+    expect(html).not.toContain('<button');
+    expect(text(html)).toContain('Reading this case again');
+  });
+
+  it('open is the form as before', () => {
+    const html = render({ gate: 'open', draft: secret, records });
+    expect(html).toContain('Revert pull request #42</textarea>');
+    expect(html.match(/checked=""/g)).toHaveLength(1);
+  });
+
+  it('Arabic: the locked and rereading states have their own words', () => {
+    for (const gate of ['locked', 'rereading'] as const) {
+      const ar = text(render({ gate }, 'ar')).replace(/[0-9\s/]+/g, ' ');
+      expect(ar, gate).not.toMatch(/[A-Za-z]{2,}/);
+      expect(text(render({ gate }, 'ar')), gate).not.toBe(text(render({ gate }, 'en')));
     }
   });
 });

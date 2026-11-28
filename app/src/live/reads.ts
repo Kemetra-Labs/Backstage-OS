@@ -15,7 +15,8 @@ export function liveMode(env: { readonly VITE_KAWALYS_LIVE?: string }): boolean 
 export const LIVE: boolean = import.meta.env.VITE_KAWALYS_LIVE === '1';
 
 /** Why a live panel shows nothing: an HTTP failure, or no investigation to show (none named, and none visible on the server). */
-export type LiveFailure = HttpFailure | 'notChosen';
+/** `locked`: the session was signed in and cannot be confirmed (BACK-127): no read is made and nothing is shown. */
+export type LiveFailure = HttpFailure | 'notChosen' | 'locked';
 
 export type LiveRead<T> =
   | { readonly status: 'loading' }
@@ -97,7 +98,8 @@ export function liveStateKind(s: LiveFailure | 'loading'): StateKind {
   switch (s) {
     case 'loading': return 'loading';
     case 'not_found':
-    case 'notChosen': return 'unknown';
+    case 'notChosen':
+    case 'locked': return 'unknown';
     case 'unavailable': return 'unavailable';
     case 'invalid':
     case 'rate_limited':

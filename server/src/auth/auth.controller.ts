@@ -1,7 +1,7 @@
 import { Controller, Delete, Get, Headers, HttpCode, HttpException, Inject, Logger, Post, Req, Res, UnauthorizedException } from "@nestjs/common";
 import type { RequestWithId, ResponseLike } from "../http/request-id";
 import type { AuthedRequest } from "./auth.guard";
-import { IDENTITY_DIRECTORY, IDENTITY_VERIFIER, LAB_MODE, SESSION_SERVICE, SIGN_IN_LIMITER } from "./auth.tokens";
+import { IDENTITY_DIRECTORY, IDENTITY_VERIFIER, LAB_MODE, SESSION_SERVICE, SESSION_STATE_LIMITER, SIGN_IN_LIMITER } from "./auth.tokens";
 import type { IdentityDirectory } from "./identity/identity-directory";
 import type { IdentityVerificationPort, RefusalReason } from "./identity/identity-verification.port";
 import { Public } from "./public.decorator";
@@ -42,6 +42,7 @@ export class AuthController {
     @Inject(IDENTITY_DIRECTORY) private readonly directory: IdentityDirectory,
     @Inject(SESSION_SERVICE) private readonly sessions: SessionService,
     @Inject(SIGN_IN_LIMITER) private readonly limiter: SignInRateLimiter,
+    @Inject(SESSION_STATE_LIMITER) private readonly stateLimiter: SignInRateLimiter,
     @Inject(LAB_MODE) private readonly lab: boolean,
   ) {}
 
@@ -88,6 +89,28 @@ export class AuthController {
     const principal = req.principal;
     if (principal === undefined) throw new UnauthorizedException();
     return { user: { id: principal.userId, role: principal.role } };
+  }
+
+  /**
+   * The read-only session check (BACK-127, owner decision E(a)). Public so the global guard does not run (it slides the idle
+   * window); it makes the same checks as AuthGuard through SessionService.peek, which never touches last_seen_at. Every
+   * failure is the same UnauthorizedException (uniform not_found); the rate limit is the one visible exception, as at sign-in.
+   */
+  @Public()
+  @Get("session-state")
+  async sessionState(@Req() req: RemoteRequest & RequestWithId, @Res({ passthrough: true }) res: CookieResponse) {
+    res.setHeader("cache-control", "no-store");
+    if (!this.stateLimiter.tryAcquire(req.ip ?? req.socket?.remoteAddress ?? "unknown")) throw new HttpException("", TOO_MANY_REQUESTS);
+    const token = readSessionToken(req.headers["cookie"]);
+    if (token === null) throw new UnauthorizedException();
+    const session = await this.sessions.peek(token);
+    if (session === null) throw new UnauthorizedException();
+    const user = await this.directory.resolve(session.subject);
+    if (user === null || user.userId !== session.userId) {
+      await this.sessions.revoke(token);
+      throw new UnauthorizedException();
+    }
+    return { user: { id: user.userId, role: user.role } };
   }
 
   /** Revokes the current session. */

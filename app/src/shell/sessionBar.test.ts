@@ -13,7 +13,8 @@ const STATUSES: readonly SessionStatus[] = ['checking', 'signedIn', 'signedOut',
 function render(status: SessionStatus, lang: 'en' | 'ar' = 'en', signOutFailed = false): string {
   const shell = hostCopy('SHELL', lang);
   const app = { lang, shell, copy: hostCopy('COPY', lang) } as unknown as AppState;
-  const snapshot: SessionSnapshot = { status, generation: 1, signOutFailed };
+  const locked = signOutFailed || status === 'ended' || status === 'unavailable' || status === 'error';
+  const snapshot: SessionSnapshot = { status, generation: 1, signOutFailed, locked };
   const noop = () => undefined;
   return renderToStaticMarkup(createElement(AppContext.Provider, { value: app }, createElement(SessionBarView, { snapshot, onRecheck: noop, onSignOut: noop })));
 }
@@ -34,7 +35,7 @@ describe('SessionBarView', () => {
     const html = render('signedIn', 'en', true);
     expect(text(html)).toContain('Sign-out did not complete');
     expect(html).toContain('data-state="error"');
-    expect(html).toContain('>Sign out</button>');
+    expect(html).toContain('Try signing out again</button>');
   });
 
   it('signed out links the sign-in page in a new tab and offers Check again', () => {
@@ -57,11 +58,11 @@ describe('SessionBarView', () => {
   it('ended says the session ended and that unsent work is kept, with the same way back', () => {
     const html = render('ended');
     expect(text(html)).toContain('Your session ended');
-    expect(text(html)).toContain('Anything you have not sent on this page is kept.');
+    expect(text(html)).toContain('Your unsent draft stays in this tab');
     expect(html).toContain(`href="${SIGN_IN_PATH}"`);
     expect(html).toMatch(/<a [^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
     expect(html).toContain('>Check again</button>');
-    expect(html).toContain('role="alert"');
+    expect(html).not.toContain('role="alert"'); // focus moves to the notice instead: one announcement
     expect(render('signedOut')).not.toContain('role="alert"');
   });
 
@@ -95,6 +96,44 @@ describe('SessionBarView', () => {
       // Only the {Kawalys} token may stay Latin in Arabic.
       expect(text(ar).replace(/Kawalys/g, ''), s).not.toMatch(/[A-Za-z]{3,}/);
       expect(text(ar), s).not.toBe(text(en));
+    }
+  });
+});
+
+describe('SessionBarView locked notice (BACK-127 G, E)', () => {
+  it('ended, unavailable and error each say what happened, that the screen is locked, and offer Sign in again and Check again', () => {
+    for (const s of ['ended', 'unavailable', 'error'] as const) {
+      const html = render(s);
+      expect(text(html), s).toContain('This screen is locked');
+      expect(html, s).toContain('data-locked="true"');
+      expect(html, s).toContain('>Sign in again</a>');
+      expect(html, s).toContain('>Check again</button>');
+      expect(html, s).toMatch(/<a [^>]*href="\/sign-in"/);
+      expect(html, s).not.toContain('role="alert"');
+    }
+  });
+
+  it('Sign in again keeps the language, and nothing redirects by itself', () => {
+    const html = render('unavailable', 'ar');
+    expect(html).toMatch(/<a [^>]*href="\/sign-in\?lang=ar"/);
+    expect(html).not.toMatch(/http-equiv|location\./i);
+  });
+
+  it('a failed sign-out stays locked with the unconfirmed-logout wording and a retry, not a sign-in link', () => {
+    const html = render('signedIn', 'en', true);
+    expect(text(html)).toContain('Sign-out did not complete');
+    expect(text(html)).toContain('this screen stays locked');
+    expect(text(html)).toContain('draft was cleared');
+    expect(text(html)).not.toContain('Nothing is lost');
+    expect(html).toContain('Try signing out again</button>');
+    expect(html).not.toContain('Sign in again');
+    expect(html).not.toContain('Signed in as the owner');
+  });
+
+  it('not locked: no locked notice and no data-locked mark', () => {
+    for (const s of ['checking', 'signedIn', 'signedOut'] as const) {
+      expect(render(s), s).not.toContain('data-locked="true"');
+      expect(text(render(s)), s).not.toContain('This screen is locked');
     }
   });
 });
