@@ -252,9 +252,11 @@ const governed = (rows: readonly LessonRow[], owner: string, now: number): boole
  * episodes no longer support it; expired at its expiry; otherwise an advisory note only.
  */
 export function readLesson(rows: readonly LessonRow[], basis: Basis, now: string, owner: string): LessonRead {
-  if (!rows.length) return { state: 'none' };
+  // The read time comes from the server clock: a malformed one is a caller bug, not a property of the chain.
   const at = instant(now);
-  if (at === null || !chainOk(rows) || !safely(() => governed(rows, owner, at))) return { state: 'invalid-chain' };
+  if (at === null) throw new RangeError('learning: invalid now');
+  if (!rows.length) return { state: 'none' };
+  if (!chainOk(rows) || !safely(() => governed(rows, owner, at))) return { state: 'invalid-chain' };
   const { version, content } = rows[rows.length - 1]!;
   // A lesson needs at least one citation and one episode, or it is not shown.
   if (!safely(() => strings(content.evidenceIds) && strings(content.episodeIds) && content.evidenceIds.length > 0 && content.episodeIds.length > 0)) return { state: 'uncited' };

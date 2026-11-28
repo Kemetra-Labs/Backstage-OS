@@ -26,6 +26,7 @@ const ALLOWED = new Set([
   '../retrieval/retrieval.policy',
   '../retrieval/retrieval.search',
   './cognition.controller',
+  './read-slots',
 ]);
 
 describe('cognition module is the pinned, read-only consumer', () => {
