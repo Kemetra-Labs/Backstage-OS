@@ -1,0 +1,150 @@
+<meta name="dash-one-writer">
+<meta name="dash-form" content="freeform">
+<style>
+.bx{display:grid;gap:var(--cds-gap-lg);font-family:var(--font-anthropic-sans)}
+.bx h2{font-size:var(--cds-font-size-heading);font-weight:var(--cds-font-weight-medium);margin:0}
+.bx .muted{color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)}
+.bx .card{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:var(--cds-pad-lg);min-width:0}
+.bx .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--cds-gap-md)}
+.bx .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:var(--cds-font-size-caption);border:1px solid var(--color-border-line)}
+.bx .ok{color:var(--color-ok)} .bx .warn{color:var(--color-warn)} .bx .bad{color:var(--color-bad)}
+.bx table{width:100%;border-collapse:collapse;font-size:var(--cds-font-size-body);font-variant-numeric:tabular-nums}
+.bx th,.bx td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--color-border-line);vertical-align:top}
+.bx .tw{overflow-x:auto}
+.bx form{display:grid;gap:var(--cds-gap-sm)}
+.bx input,.bx textarea{font:inherit;padding:6px;border:1px solid var(--color-border-line);border-radius:var(--cds-radius);background:var(--color-bg);color:var(--color-fg)}
+.bx button{font:inherit;padding:6px 12px;border-radius:var(--cds-radius);border:1px solid var(--color-border-line);background:var(--color-panel);color:var(--color-fg);cursor:pointer;justify-self:start}
+</style>
+<div class="bx">
+  <header>
+    <h2 id="title">Demo Storefront operations (synthetic)</h2>
+    <p class="muted">Benchmark page for BACK-184. Synthetic fixture v1, as of 25 Nov 2026 12:00 UTC. No live connectors.</p>
+    <p>Viewing as: <select class="dash-select" id="persona" aria-label="Persona"><option value="owner">Owner</option><option value="viewer">Viewer</option></select></p>
+  </header>
+
+  <section id="sources" class="card">
+    <h2>Sources</h2>
+    <p class="muted">State per source. Stale means older than its freshness budget. Down and not configured are never shown as healthy.</p>
+    <div class="grid" data-draw="srcgrid" data-source="src_rows"></div>
+  </section>
+
+  <section id="chain" class="card">
+    <h2>Deploy → error → ticket</h2>
+    <p class="muted">A link is a hypothesis built from cited evidence: same release, error first seen after the deploy. A link to an unreadable source is unknown.</p>
+    <div class="tw"><table data-source="links" data-row-key="link">
+      <thead><tr><th data-field="link">Link</th><th data-field="from">From</th><th data-field="to">To</th><th data-field="status">Status</th><th data-field="basis">Basis</th><th data-field="cites">Cites</th></tr></thead>
+      <tbody data-draw="links"></tbody>
+    </table></div>
+  </section>
+
+  <section id="conflicts" class="card">
+    <h2>Conflicting and missing evidence</h2>
+    <div class="tw"><table data-source="conflicts" data-row-key="subject">
+      <thead><tr><th data-field="subject">Subject</th><th data-field="verdict">Verdict</th><th data-field="why">Why</th><th data-field="cites">Cites</th></tr></thead>
+      <tbody data-draw="conflicts"></tbody>
+    </table></div>
+  </section>
+
+  <section id="evidence" class="card">
+    <h2>Evidence</h2>
+    <p class="muted">Rows visible to the selected persona: <b data-draw="evcount" data-source="ev_rows">—</b>.</p>
+    <div class="tw"><table data-source="ev_rows" data-row-key="id">
+      <thead><tr><th data-field="id">Id</th><th data-field="provider">Source</th><th data-field="kind">Kind</th><th data-field="observedAt">Observed</th><th data-field="ref">Ref</th></tr></thead>
+      <tbody data-draw="evtable"></tbody>
+    </table></div>
+  </section>
+
+  <section id="decisions" class="card">
+    <h2>Decisions</h2>
+    <p class="muted">Kept in this page's shared store, so they survive reloads. Only editors can add.</p>
+    <div class="tw"><table data-source="decisions" data-row-key="id">
+      <thead><tr><th data-field="at">When</th><th data-field="by">By</th><th data-field="decision">Decision</th><th data-field="citations">Cites</th></tr></thead>
+      <tbody data-draw="dectable"></tbody>
+    </table></div>
+    <form id="decform">
+      <label for="dec-text">Record a decision</label>
+      <textarea id="dec-text" rows="2" required></textarea>
+      <label for="dec-cites">Cited evidence ids (comma separated)</label>
+      <input id="dec-cites" type="text">
+      <button type="submit">Save decision</button>
+      <p id="dec-err" class="bad" hidden>That wasn't saved. Only editors can add decisions.</p>
+      <p id="dec-ok" class="ok" hidden>Saved.</p>
+    </form>
+  </section>
+</div>
+<script>
+const AS_OF = Date.parse('2026-11-25T12:00:00Z');
+function fx(f){ return (f && !Array.isArray(f)) ? f : null; }
+dash.calc('src_rows', {title:'Source states', description:'Each source with its age at the fixture time and a display state.', inputs:['fixture'], fn:(fixture)=>{
+  const f=fx(fixture); if(!f) return [];
+  return f.sources.map(s=>{
+    const age = s.lastReadAt ? Math.round((AS_OF-Date.parse(s.lastReadAt))/60000) : null;
+    let shown = s.state;
+    if (s.state==='ok' && age!==null && s.freshnessBudgetMin && age> s.freshnessBudgetMin) shown='stale';
+    return {provider:s.provider, state:shown, ageMin:age, reason:s.reason||null};
+  });
+}});
+dash.calc('ev_rows', {title:'Visible evidence', description:'Evidence rows the selected persona may see (client-side filter).', inputs:['fixture'], fn:(fixture)=>{
+  const f=fx(fixture); if(!f) return [];
+  const p=(dash.params().persona)||'owner'; const sees=f.personas[p].sees;
+  const prov=Object.fromEntries(f.sources.map(s=>[s.id,s.provider]));
+  return f.evidence.filter(e=>sees.includes(e.visibility)).map(e=>({id:e.id, provider:prov[e.sourceId], kind:e.payload.kind, observedAt:e.observedAt||'not read', ref:e.ref}));
+}});
+dash.calc('links', {title:'Deploy, error and ticket links', description:'Deployment to error when the release matches and the error was first seen after the deploy; error to ticket only when the ticket source is readable.', inputs:['fixture'], fn:(fixture)=>{
+  const f=fx(fixture); if(!f) return [];
+  const st=Object.fromEntries(f.sources.map(s=>[s.id,s.state]));
+  const deps=f.evidence.filter(e=>e.payload.kind==='deployment');
+  const errs=f.evidence.filter(e=>e.payload.kind==='error_issue');
+  const tix=f.evidence.filter(e=>e.payload.kind==='ticket');
+  const out=[];
+  for(const d of deps) for(const e of errs){
+    const same=e.payload.release===d.payload.release; const after=Date.parse(e.payload.firstSeen)>=Date.parse(d.observedAt);
+    if(!(same&&after)) continue;
+    const stale=st[e.sourceId]!=='ok';
+    out.push({link:d.id+'>'+e.id, from:d.ref, to:e.ref, status: stale?'supported, error source stale':'supported',
+      basis:'release '+d.payload.release+'; first seen '+Math.round((Date.parse(e.payload.firstSeen)-Date.parse(d.observedAt))/60000)+' min after deploy', cites:d.id+', '+e.id});
+    for(const t of tix){ const readable=st[t.sourceId]==='ok';
+      out.push({link:e.id+'>'+t.id, from:e.ref, to:t.ref, status: readable?'check ticket text':'unknown', basis: readable?'ticket readable':'ticket source '+st[t.sourceId]+'; not read', cites:e.id+', '+t.id}); }
+  }
+  return out;
+}});
+dash.calc('conflicts', {title:'Conflicts and gaps', description:'A health claim from a stale source contradicted by a newer failing run, and evidence that could not be read.', inputs:['fixture'], fn:(fixture)=>{
+  const f=fx(fixture); if(!f) return [];
+  const st=Object.fromEntries(f.sources.map(s=>[s.id,s.state])); const out=[];
+  for(const c of f.evidence.filter(e=>e.payload.kind==='health_claim')){
+    const svc=c.payload.service;
+    const later=f.evidence.filter(e=>e.payload.kind==='workflow_run' && e.payload.conclusion==='failure' && (e.payload.workflow||'').startsWith(svc) && Date.parse(e.observedAt)>Date.parse(c.observedAt));
+    if(later.length) out.push({subject:svc+' health', verdict:'conflict, unknown', why:'"'+c.payload.claim+'" from '+st[c.sourceId]+' source at '+c.observedAt.slice(11,16)+'; '+later[0].payload.workflow+' failed at '+later[0].observedAt.slice(11,16), cites:[c.id,...later.map(l=>l.id)].join(', ')});
+    else out.push({subject:svc+' health', verdict: st[c.sourceId]==='ok'?c.payload.claim:'unknown', why:'only source is '+st[c.sourceId], cites:c.id});
+  }
+  for(const e of f.evidence.filter(e=>e.notRead)) out.push({subject:e.ref, verdict:'not read', why:'source '+st[e.sourceId], cites:e.id});
+  return out;
+}});
+function cell(tr,v,cls){const td=document.createElement('td'); td.textContent=v==null?'':String(v); if(cls) td.className=cls; tr.appendChild(td);}
+function rowsOrDash(el,id,cols,clsFn){ const d=dash.data(id); el.replaceChildren();
+  if(d.status!=='ok'){ const tr=document.createElement('tr'); cell(tr, d.status==='error'?'Could not load.':'Loading…'); el.appendChild(tr); return; }
+  for(const r of d.data){ const tr=document.createElement('tr'); for(const c of cols) cell(tr, Array.isArray(r[c])?r[c].join(', '):r[c], clsFn&&clsFn(c,r)); el.appendChild(tr);} }
+dash.draw('srcgrid', el=>{ const d=dash.data('src_rows'); el.replaceChildren();
+  if(d.status!=='ok'){ el.textContent='—'; return; }
+  for(const s of d.data){ const div=document.createElement('div'); div.className='card';
+    const h=document.createElement('div'); h.textContent=s.provider; h.style.fontWeight='600';
+    const p=document.createElement('span'); p.className='pill '+(s.state==='ok'?'ok':s.state==='stale'?'warn':'bad'); p.textContent=s.state.replace('_',' ');
+    p.dataset.source='src_rows'; p.dataset.field='state'; p.dataset.where='provider='+s.provider;
+    const a=document.createElement('div'); a.className='muted'; a.textContent= s.ageMin==null ? 'never read' : ('last read '+s.ageMin+' min before fixture time');
+    div.append(h,p,a); el.appendChild(div);} });
+dash.draw('links', el=>rowsOrDash(el,'links',['link','from','to','status','basis','cites'],(c,r)=>c==='status'?(r.status==='unknown'?'warn':'ok'):''));
+dash.draw('conflicts', el=>rowsOrDash(el,'conflicts',['subject','verdict','why','cites'],(c)=>c==='verdict'?'warn':''));
+dash.draw('evtable', el=>rowsOrDash(el,'ev_rows',['id','provider','kind','observedAt','ref']));
+dash.draw('evcount', el=>{ const d=dash.data('ev_rows'); el.textContent = d.status==='ok'? String(d.data.length) : '—'; });
+dash.draw('dectable', el=>rowsOrDash(el,'decisions',['at','by','decision','citations']));
+document.querySelectorAll('#persona').forEach(sel=>{ sel.addEventListener('change',()=>dash.setParams({persona: sel.value})); });
+document.querySelectorAll('#decform').forEach(form=>form.addEventListener('submit', async ev=>{
+  ev.preventDefault();
+  const text=form.querySelector('#dec-text').value.trim(); const cites=form.querySelector('#dec-cites').value.split(',').map(s=>s.trim()).filter(Boolean);
+  let ok=true;
+  try{ const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);
+    await db.collection('data/team/decisions').add({at:new Date().toISOString(), by: await user.id(), decision:text, citations:cites}); }
+  catch{ ok=false; }
+  form.querySelectorAll('#dec-err').forEach(p=>{p.hidden=ok;}); form.querySelectorAll('#dec-ok').forEach(p=>{p.hidden=!ok;});
+}));
+</script>
