@@ -215,7 +215,7 @@ describe('a stored lesson chain re-verifies in src', () => {
     await write(v3);
     const rows = fromStored(await readBack('stored|reasoning-v3'), scope());
     expect(rows).toEqual(v3);
-    expect(readLesson(rows!, basisOf(eps), '2026-12-01T00:00:00Z')).toMatchObject({ state: 'approved', version: 3, outcome: 'failure' });
+    expect(readLesson(rows!, basisOf(eps), '2026-12-01T00:00:00Z', userA)).toMatchObject({ state: 'approved', version: 3, outcome: 'failure' });
   });
 
   it('a stored row whose content no longer matches its hash reads as an invalid chain', async () => {
@@ -224,7 +224,7 @@ describe('a stored lesson chain re-verifies in src', () => {
     const v1 = rowsOrThrow(approve([], cands(tampered)[0]!, { reviewer: userA, owner: userA, at: '2026-11-27T12:00:00Z', expiresAt: '2027-01-01T00:00:00Z' }, basisOf(tampered)));
     await write(v1, (r) => JSON.stringify({ ...r.content, outcome: 'success' }));
     const rows = fromStored(await readBack(key), scope());
-    expect(readLesson(rows!, basisOf(tampered), '2026-12-01T00:00:00Z')).toEqual({ state: 'invalid-chain' });
+    expect(readLesson(rows!, basisOf(tampered), '2026-12-01T00:00:00Z', userA)).toEqual({ state: 'invalid-chain' });
   });
 });
 

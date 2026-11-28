@@ -200,35 +200,58 @@ export function rollback(
 }
 
 /**
- * The current episodes still support exactly this content: every cited episode still counts (visible,
- * observation, HumanDecision), there are at least N of them, the evidence is exactly their citations, and
- * the key's current candidate has the same outcome and is not contested. More agreeing episodes since the
- * approval are fine. This is what makes the unkeyed chain safe to read: a self-consistent chain written by
- * anything but approve() cannot claim what the episodes do not show.
+ * The current episodes still support this content: every cited episode still counts (visible, observation,
+ * HumanDecision), there are at least N of them, the evidence is exactly their citations, and the key's
+ * current candidate has the same outcome and is not contested. A cited subset of the currently agreeing
+ * episodes is accepted, so more agreeing episodes since the approval do not demote a lesson. This is what
+ * makes the unkeyed chain safe to read: a self-consistent chain cannot claim what the episodes do not show.
  */
 function supported(content: LessonContent, basis: Basis): boolean {
-  const current = candidatesOf(basis.episodes, basis.visible, basis.decisions).find((c) => c.applicabilityKey === content.applicabilityKey);
+  // Only this key's episodes matter, so the read costs what this lesson's episodes cost.
+  const own = basis.episodes.filter((e) => e.applicabilityKey === content.applicabilityKey);
+  const current = candidatesOf(own, basis.visible, basis.decisions)[0];
   if (!current || current.contested || current.outcome !== content.outcome) return false;
   const live = new Set(current.episodeIds);
   const cited = content.episodeIds;
   if (cited.length < MIN_EPISODES || !sameJson(sorted(cited), cited) || !cited.every((id) => live.has(id))) return false;
   const citedSet = new Set(cited);
-  const citations = basis.episodes.filter((e) => citedSet.has(e.id)).flatMap(citesOf);
+  // From the counting episodes only, the same set the candidate was built from.
+  const citations = own.filter((e) => citedSet.has(e.id) && counts(e, basis.visible, basis.decisions)).flatMap(citesOf);
   return sameJson(sorted(citations), content.evidenceIds);
 }
 
+const validWindow = (c: LessonContent): boolean => {
+  const at = instant(c.approvedAt);
+  const expires = instant(c.expiresAt);
+  return at !== null && expires !== null && expires > at && expires - at <= MAX_LESSON_DAYS * DAY_MS;
+};
+
+/**
+ * What approve() and rollback() enforce outside the content: the workspace owner reviewed every row, the
+ * first row is an approval, every approval has a valid window, and a rollback restores the content of an
+ * earlier version. `owner` must come from the workspace row (workspaces.owner_user_id).
+ */
+const governed = (rows: readonly LessonRow[], owner: string): boolean =>
+  rows.every(
+    (r, i) =>
+      r.reviewer === owner &&
+      validWindow(r.content) &&
+      (r.kind === 'approved' ? true : i > 0 && rows.slice(0, i).some((earlier) => sameJson(earlier.content, r.content))),
+  );
+
 /**
  * O4 and O6: the current version, read against the current basis (episodes, visible evidence and
- * HumanDecisions). Suspended if any cited evidence is not visible, unsupported if the current episodes no
- * longer support it, expired at its expiry; otherwise an advisory note only.
+ * HumanDecisions) and the workspace owner. Invalid if the chain is broken or could not have been written by
+ * approve() and rollback(); suspended if any cited evidence is not visible; unsupported if the current
+ * episodes no longer support it; expired at its expiry; otherwise an advisory note only.
  */
-export function readLesson(rows: readonly LessonRow[], basis: Basis, now: string): LessonRead {
+export function readLesson(rows: readonly LessonRow[], basis: Basis, now: string, owner: string): LessonRead {
   if (!rows.length) return { state: 'none' };
-  if (!chainOk(rows)) return { state: 'invalid-chain' };
+  if (!chainOk(rows) || !safely(() => governed(rows, owner))) return { state: 'invalid-chain' };
   const { version, content } = rows[rows.length - 1]!;
   // A lesson needs at least one citation and one episode, or it is not shown.
-  if (!safely(() => content.evidenceIds.length > 0 && content.episodeIds.length > 0)) return { state: 'uncited' };
-  if (!content.evidenceIds.every((id) => basis.visible.has(id))) return { state: 'suspended' };
+  if (!safely(() => strings(content.evidenceIds) && strings(content.episodeIds) && content.evidenceIds.length > 0 && content.episodeIds.length > 0)) return { state: 'uncited' };
+  if (!safely(() => content.evidenceIds.every((id) => basis.visible.has(id)))) return { state: 'suspended' };
   if (!safely(() => supported(content, basis))) return { state: 'unsupported' };
   if (!(Date.parse(now) < Date.parse(content.expiresAt))) return { state: 'expired' };
   return { state: 'approved', version, effect: 'advisory-note', applicabilityKey: content.applicabilityKey, outcome: content.outcome, episodeIds: content.episodeIds };

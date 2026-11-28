@@ -91,7 +91,7 @@ describe('malformed or conflicting inputs refuse instead of throwing or dependin
     const bad = { ...eps[0]!, decisionEvidence: 'd0' as unknown as string[] };
     expect(() => cands([bad, ...eps.slice(1)])).not.toThrow();
     const broken = [{ ...chain[0]!, content: null as unknown as LessonRow['content'] }];
-    expect(readLesson(broken, basisOf(eps), NOW)).toEqual({ state: 'invalid-chain' });
+    expect(readLesson(broken, basisOf(eps), NOW, OWNER)).toEqual({ state: 'invalid-chain' });
     expect(rollback(broken, { reviewer: OWNER, owner: OWNER, toVersion: 1 })).toEqual({ ok: false, reason: 'invalid-chain' });
   });
 });
@@ -101,7 +101,7 @@ describe('malformed or conflicting inputs refuse instead of throwing or dependin
 describe('a lesson is shown only while the current episodes still support it', () => {
   const v1 = chain[0]!;
   const sealedWith = (content: Partial<LessonRow['content']>) => [seal({ version: 1, previous: null, kind: 'approved', reviewer: OWNER, content: { ...v1.content, ...content } })];
-  const state = (rows: readonly LessonRow[], basis = basisOf(eps)) => readLesson(rows, basis, NOW).state;
+  const state = (rows: readonly LessonRow[], basis = basisOf(eps)) => readLesson(rows, basis, NOW, OWNER).state;
 
   it('the approved chain is supported (control)', () => {
     expect(state(chain)).toBe('approved');
@@ -132,9 +132,59 @@ describe('a lesson is shown only while the current episodes still support it', (
     expect(state(chain, basisOf(contrary))).toBe('unsupported');
   });
 
+  it('evidence is computed from counting episodes only: a non-counting duplicate id changes nothing', () => {
+    const shadow = { ...eps[0]!, label: 'hypothesis' as const, outcomeEvidence: ['x1'] };
+    const basis = basisOf([...eps, shadow], new Set([...visibleAll(eps), 'x1']));
+    expect(state(chain, basis)).toBe('approved');
+    const withX1 = sealedWith({ evidenceIds: [...v1.content.evidenceIds, 'x1'].sort() });
+    expect(state(withX1, basis)).toBe('unsupported');
+  });
+
+  it('a malformed evidence list refuses instead of throwing', () => {
+    const odd = sealedWith({ evidenceIds: 'abc' as unknown as string[] });
+    expect(() => state(odd)).not.toThrow();
+    expect(state(odd)).not.toBe('approved');
+  });
+
   it('more agreeing episodes after approval keep it supported', () => {
     const more = [...eps, ep(90, 'failure'), ep(91, 'failure')];
     expect(state(chain, basisOf(more))).toBe('approved');
+  });
+});
+
+// The read also checks what approve() and rollback() enforce outside the content, so a self-sealed chain
+// cannot claim a reviewer, an expiry or a rollback that those functions would have refused.
+describe('a lesson is shown only if approve() and rollback() could have written its chain', () => {
+  const v1 = chain[0]!;
+  const read = (rows: readonly LessonRow[], owner = OWNER) => readLesson(rows, basisOf(eps), NOW, owner).state;
+  const resealed = (row: Partial<LessonRow> & { content?: Partial<LessonRow['content']> }) =>
+    seal({ version: 1, previous: null, kind: row.kind ?? 'approved', reviewer: row.reviewer ?? OWNER, content: { ...v1.content, ...(row.content ?? {}) } });
+
+  it('a chain reviewed by someone other than the owner is refused', () => {
+    expect(read([resealed({ reviewer: 'attacker' })])).toBe('invalid-chain');
+    expect(read(chain, 'another-owner')).toBe('invalid-chain');
+  });
+
+  it.each([
+    ['an expiry past the lifetime cap', { expiresAt: '2099-01-01T00:00:00Z' }],
+    ['an expiry before the approval', { approvedAt: '2026-11-27T12:00:00Z', expiresAt: '2026-11-27T11:00:00Z' }],
+    ['a non-ISO approval time', { approvedAt: 'Nov 27 2026' }],
+  ])('a chain with %s is refused', (_name, content) => {
+    expect(read([resealed({ content })])).toBe('invalid-chain');
+  });
+
+  it('a first row that claims to be a rollback is refused', () => {
+    expect(read([resealed({ kind: 'rolled-back' })])).toBe('invalid-chain');
+  });
+
+  it('a rollback row whose content matches no earlier version is refused', () => {
+    const forged = seal({ version: 2, previous: v1.hash, kind: 'rolled-back', reviewer: OWNER, content: { ...v1.content, approvedAt: '2026-11-28T00:00:00Z' } });
+    expect(read([v1, forged])).toBe('invalid-chain');
+  });
+
+  it('a genuine rollback reads as approved (control)', () => {
+    const rolled = rowsOrThrow(rollback(chain, { reviewer: OWNER, owner: OWNER, toVersion: 1 }));
+    expect(read(rolled)).toBe('approved');
   });
 });
 
@@ -145,12 +195,12 @@ describe('a lesson with no citation is never shown', () => {
     ['no episodes', { ...base.content, episodeIds: [] }],
   ])('a validly sealed lesson with %s reads as uncited', (_name, content) => {
     const rows = [seal({ version: 1, previous: null, kind: 'approved', reviewer: OWNER, content })];
-    expect(readLesson(rows, basisOf(eps), NOW)).toEqual({ state: 'uncited' });
+    expect(readLesson(rows, basisOf(eps), NOW, OWNER)).toEqual({ state: 'uncited' });
   });
 });
 
 describe('the chain is verified in src', () => {
-  const read = (rows: readonly LessonRow[]) => readLesson(rows, basisOf(eps), NOW).state;
+  const read = (rows: readonly LessonRow[]) => readLesson(rows, basisOf(eps), NOW, OWNER).state;
 
   it('the hash covers exactly the stored columns', () => {
     expect(chain.map((r) => seal({ version: r.version, previous: r.previous, kind: r.kind, reviewer: r.reviewer, content: r.content }).hash)).toEqual(chain.map((r) => r.hash));
@@ -183,7 +233,7 @@ describe('fromStored maps database rows and keeps them verifiable', () => {
   it('a stored chain in any order reads back as the same verified lesson', () => {
     const rows = fromStored([...chain].reverse().map(stored), SCOPE);
     expect(rows).toEqual(chain);
-    expect(readLesson(rows!, basisOf(eps), NOW)).toMatchObject({ state: 'approved', version: 2, applicabilityKey: KEY });
+    expect(readLesson(rows!, basisOf(eps), NOW, OWNER)).toMatchObject({ state: 'approved', version: 2, applicabilityKey: KEY });
   });
 
   it.each([
@@ -209,6 +259,6 @@ describe('fromStored maps database rows and keeps them verifiable', () => {
 
   it('duplicate versions map, then fail chain verification', () => {
     const rows = fromStored([stored(chain[0]!), stored(chain[0]!)], SCOPE);
-    expect(readLesson(rows!, basisOf(eps), NOW)).toEqual({ state: 'invalid-chain' });
+    expect(readLesson(rows!, basisOf(eps), NOW, OWNER)).toEqual({ state: 'invalid-chain' });
   });
 });

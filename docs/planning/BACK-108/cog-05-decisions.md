@@ -55,4 +55,12 @@ The requirements above are now enforced in `server/src/learning/learning.core.ts
 - the evidence is exactly the cited episodes' citations;
 - the key's current candidate has the same outcome and is not contested.
 
-Otherwise the lesson reads as `unsupported`. More agreeing episodes since the approval are fine. A self-consistent chain written by anything other than `approve()` therefore cannot claim what the episodes do not show, and the unkeyed hash is safe to read. Episodes are only as trustworthy as their citations: an episode must cite a visible HumanDecision, and HumanDecisions are written only through the decision route. Tests: `test/learning/learning.hardening.spec.ts`.
+Otherwise the lesson reads as `unsupported`. A cited subset of the currently agreeing episodes is accepted, so more agreeing episodes since the approval do not demote a lesson. The content must be true of the current episodes, but it need not be exactly what `approve()` would produce today.
+
+`readLesson` also takes the workspace owner, and refuses (`invalid-chain`) a chain that `approve()` and `rollback()` could not have written:
+- a row reviewed by anyone other than the owner;
+- an approval window that is not canonical UTC ISO, or that ends at or before its start or more than 180 days after it;
+- a first row that is not an approval;
+- a rollback row whose content matches no earlier version.
+
+A self-consistent chain written by anything else therefore cannot claim what the episodes or the owner did not approve, and the unkeyed hash is safe to read. The owner must come from `workspaces.owner_user_id`. Episodes are only as trustworthy as their citations: an episode must cite a visible HumanDecision, and HumanDecisions are written only through the decision route. Tests: `test/learning/learning.hardening.spec.ts`.

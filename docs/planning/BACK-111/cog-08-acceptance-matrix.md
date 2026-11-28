@@ -308,5 +308,5 @@ Independence note: this reviewer was a Claude agent without the author's conclus
 
 ## 22. COG-05 read-time re-derivation; a deterministic work test (2026-11-28)
 
-- **COG-05:** `readLesson` re-derives a lesson from the current episodes, and a forged self-consistent chain reads as `unsupported` (`cog-05-decisions.md`). For activation, only the write path itself remains.
-- **COG-03:** the edge-budget linearity test (`retrieval.findings7.spec.ts`) counts work instead of timing it. A wall-clock ratio failed CI under parallel load on #179. The count is deterministic: about 4x for 4x input on the current code, and 15x on the bucket rescan it replaced (`f005f59`), against a bound of 8.
+- **COG-05:** `readLesson` re-derives a lesson from the current episodes, and checks what `approve()` and `rollback()` enforce: the owner as reviewer, the approval window, and that a rollback restores an earlier version. A forged self-consistent chain reads as `unsupported` or `invalid-chain` (`cog-05-decisions.md`). The independent review was NO-GO at first, and its findings are fixed in the same PR. For activation, only the write path itself remains.
+- **COG-03:** the edge-budget linearity test (`retrieval.findings7.spec.ts`) counts work instead of timing it. A wall-clock ratio failed CI under parallel load on #179. The count is deterministic: about 4x for 4x input on the current code, and 15x on the bucket rescan it replaced (`f005f59`), against a bound of 8. The counter also counts Set and Map lookups. It cannot see plain indexed loops that touch no Set or Map.
