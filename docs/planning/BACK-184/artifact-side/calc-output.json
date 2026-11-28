@@ -1,0 +1,231 @@
+{
+ "owner": {
+  "src_rows": [
+   {
+    "provider": "github",
+    "state": "ok",
+    "ageMin": 10,
+    "reason": null
+   },
+   {
+    "provider": "sentry",
+    "state": "stale",
+    "ageMin": 50,
+    "reason": null
+   },
+   {
+    "provider": "jira",
+    "state": "down",
+    "ageMin": null,
+    "reason": "unavailable"
+   },
+   {
+    "provider": "datadog",
+    "state": "not_configured",
+    "ageMin": null,
+    "reason": null
+   }
+  ],
+  "ev_rows": [
+   {
+    "id": "ev-deploy-1",
+    "provider": "github",
+    "kind": "deployment",
+    "observedAt": "2026-11-25T11:00:00Z",
+    "ref": "github:example-org/demo-storefront#deployments/501"
+   },
+   {
+    "id": "ev-run-1",
+    "provider": "github",
+    "kind": "workflow_run",
+    "observedAt": "2026-11-25T11:15:00Z",
+    "ref": "github:example-org/demo-storefront#actions/runs/1002"
+   },
+   {
+    "id": "ev-err-1",
+    "provider": "sentry",
+    "kind": "error_issue",
+    "observedAt": "2026-11-25T11:10:00Z",
+    "ref": "sentry:demo-storefront/issues/7001"
+   },
+   {
+    "id": "ev-err-2",
+    "provider": "sentry",
+    "kind": "error_issue",
+    "observedAt": "2026-11-25T11:10:00Z",
+    "ref": "sentry:demo-storefront/issues/6990"
+   },
+   {
+    "id": "ev-ticket-1",
+    "provider": "jira",
+    "kind": "ticket",
+    "observedAt": "not read",
+    "ref": "jira:SHOP-101"
+   },
+   {
+    "id": "ev-health-sentry",
+    "provider": "sentry",
+    "kind": "health_claim",
+    "observedAt": "2026-11-25T11:10:00Z",
+    "ref": "sentry:demo-storefront/stats"
+   },
+   {
+    "id": "ev-health-ci",
+    "provider": "github",
+    "kind": "workflow_run",
+    "observedAt": "2026-11-25T11:40:00Z",
+    "ref": "github:example-org/demo-storefront#actions/runs/1007"
+   },
+   {
+    "id": "ev-sec-1",
+    "provider": "github",
+    "kind": "security_advisory",
+    "observedAt": "2026-11-25T10:00:00Z",
+    "ref": "github:example-org/demo-storefront#security/advisories/3"
+   }
+  ],
+  "links": [
+   {
+    "link": "ev-deploy-1>ev-err-1",
+    "from": "github:example-org/demo-storefront#deployments/501",
+    "to": "sentry:demo-storefront/issues/7001",
+    "status": "supported, error source stale",
+    "basis": "release r-2026.11.25.1; first seen 6 min after deploy",
+    "cites": "ev-deploy-1, ev-err-1"
+   },
+   {
+    "link": "ev-err-1>ev-ticket-1",
+    "from": "sentry:demo-storefront/issues/7001",
+    "to": "jira:SHOP-101",
+    "status": "unknown",
+    "basis": "ticket source down; not read",
+    "cites": "ev-err-1, ev-ticket-1"
+   }
+  ],
+  "conflicts": [
+   {
+    "subject": "payments health",
+    "verdict": "conflict, unknown",
+    "why": "\"healthy\" from stale source at 11:10; payments-contract failed at 11:40",
+    "cites": "ev-health-sentry, ev-health-ci"
+   },
+   {
+    "subject": "jira:SHOP-101",
+    "verdict": "not read",
+    "why": "source down",
+    "cites": "ev-ticket-1"
+   }
+  ]
+ },
+ "viewer": {
+  "src_rows": [
+   {
+    "provider": "github",
+    "state": "ok",
+    "ageMin": 10,
+    "reason": null
+   },
+   {
+    "provider": "sentry",
+    "state": "stale",
+    "ageMin": 50,
+    "reason": null
+   },
+   {
+    "provider": "jira",
+    "state": "down",
+    "ageMin": null,
+    "reason": "unavailable"
+   },
+   {
+    "provider": "datadog",
+    "state": "not_configured",
+    "ageMin": null,
+    "reason": null
+   }
+  ],
+  "ev_rows": [
+   {
+    "id": "ev-deploy-1",
+    "provider": "github",
+    "kind": "deployment",
+    "observedAt": "2026-11-25T11:00:00Z",
+    "ref": "github:example-org/demo-storefront#deployments/501"
+   },
+   {
+    "id": "ev-run-1",
+    "provider": "github",
+    "kind": "workflow_run",
+    "observedAt": "2026-11-25T11:15:00Z",
+    "ref": "github:example-org/demo-storefront#actions/runs/1002"
+   },
+   {
+    "id": "ev-err-1",
+    "provider": "sentry",
+    "kind": "error_issue",
+    "observedAt": "2026-11-25T11:10:00Z",
+    "ref": "sentry:demo-storefront/issues/7001"
+   },
+   {
+    "id": "ev-err-2",
+    "provider": "sentry",
+    "kind": "error_issue",
+    "observedAt": "2026-11-25T11:10:00Z",
+    "ref": "sentry:demo-storefront/issues/6990"
+   },
+   {
+    "id": "ev-ticket-1",
+    "provider": "jira",
+    "kind": "ticket",
+    "observedAt": "not read",
+    "ref": "jira:SHOP-101"
+   },
+   {
+    "id": "ev-health-sentry",
+    "provider": "sentry",
+    "kind": "health_claim",
+    "observedAt": "2026-11-25T11:10:00Z",
+    "ref": "sentry:demo-storefront/stats"
+   },
+   {
+    "id": "ev-health-ci",
+    "provider": "github",
+    "kind": "workflow_run",
+    "observedAt": "2026-11-25T11:40:00Z",
+    "ref": "github:example-org/demo-storefront#actions/runs/1007"
+   }
+  ],
+  "links": [
+   {
+    "link": "ev-deploy-1>ev-err-1",
+    "from": "github:example-org/demo-storefront#deployments/501",
+    "to": "sentry:demo-storefront/issues/7001",
+    "status": "supported, error source stale",
+    "basis": "release r-2026.11.25.1; first seen 6 min after deploy",
+    "cites": "ev-deploy-1, ev-err-1"
+   },
+   {
+    "link": "ev-err-1>ev-ticket-1",
+    "from": "sentry:demo-storefront/issues/7001",
+    "to": "jira:SHOP-101",
+    "status": "unknown",
+    "basis": "ticket source down; not read",
+    "cites": "ev-err-1, ev-ticket-1"
+   }
+  ],
+  "conflicts": [
+   {
+    "subject": "payments health",
+    "verdict": "conflict, unknown",
+    "why": "\"healthy\" from stale source at 11:10; payments-contract failed at 11:40",
+    "cites": "ev-health-sentry, ev-health-ci"
+   },
+   {
+    "subject": "jira:SHOP-101",
+    "verdict": "not read",
+    "why": "source down",
+    "cites": "ev-ticket-1"
+   }
+  ]
+ }
+}

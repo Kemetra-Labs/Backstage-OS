@@ -1,0 +1,39 @@
+{
+  "fixture": "BACK-184 bench v1",
+  "synthetic": true,
+  "note": "Synthetic only. Derived from the shape of app/src/fixture/investigation-response.json and app/src/fixture/world.ts at df529ce (example-org/demo-storefront, PR #42, checkout-e2e). No real data, names, hosts or ids.",
+  "asOf": "2026-11-25T12:00:00Z",
+  "project": { "key": "demo-storefront", "name": "Demo Storefront" },
+  "sources": [
+    { "id": "src-gh", "provider": "github", "state": "ok", "lastReadAt": "2026-11-25T11:50:00Z", "freshnessBudgetMin": 30 },
+    { "id": "src-sentry", "provider": "sentry", "state": "stale", "lastReadAt": "2026-11-25T11:10:00Z", "freshnessBudgetMin": 15 },
+    { "id": "src-jira", "provider": "jira", "state": "down", "lastReadAt": null, "reason": "unavailable" },
+    { "id": "src-dd", "provider": "datadog", "state": "not_configured", "lastReadAt": null }
+  ],
+  "evidence": [
+    { "id": "ev-deploy-1", "type": "Observation", "sourceId": "src-gh", "visibility": "all", "observedAt": "2026-11-25T11:00:00Z",
+      "ref": "github:example-org/demo-storefront#deployments/501", "payload": { "kind": "deployment", "env": "production", "pullRequest": 42, "release": "r-2026.11.25.1" } },
+    { "id": "ev-run-1", "type": "Observation", "sourceId": "src-gh", "visibility": "all", "observedAt": "2026-11-25T11:15:00Z",
+      "ref": "github:example-org/demo-storefront#actions/runs/1002", "payload": { "kind": "workflow_run", "workflow": "checkout-e2e", "conclusion": "failure" } },
+    { "id": "ev-err-1", "type": "Observation", "sourceId": "src-sentry", "visibility": "all", "observedAt": "2026-11-25T11:10:00Z",
+      "ref": "sentry:demo-storefront/issues/7001", "payload": { "kind": "error_issue", "title": "TypeError in CheckoutSummary", "firstSeen": "2026-11-25T11:06:00Z", "release": "r-2026.11.25.1", "events": 41 } },
+    { "id": "ev-err-2", "type": "Observation", "sourceId": "src-sentry", "visibility": "all", "observedAt": "2026-11-25T11:10:00Z",
+      "ref": "sentry:demo-storefront/issues/6990", "payload": { "kind": "error_issue", "title": "Timeout in SearchIndex", "firstSeen": "2026-11-24T09:00:00Z", "release": "r-2026.11.24.3", "events": 5 } },
+    { "id": "ev-ticket-1", "type": "Observation", "sourceId": "src-jira", "visibility": "all", "observedAt": null, "notRead": true,
+      "ref": "jira:SHOP-101", "payload": { "kind": "ticket", "expected": "a ticket referencing sentry issue 7001 is believed to exist but Jira was not readable" } },
+    { "id": "ev-health-sentry", "type": "Observation", "sourceId": "src-sentry", "visibility": "all", "observedAt": "2026-11-25T11:10:00Z",
+      "ref": "sentry:demo-storefront/stats", "payload": { "kind": "health_claim", "service": "payments", "claim": "healthy", "errorRate": 0.0 } },
+    { "id": "ev-health-ci", "type": "Observation", "sourceId": "src-gh", "visibility": "all", "observedAt": "2026-11-25T11:40:00Z",
+      "ref": "github:example-org/demo-storefront#actions/runs/1007", "payload": { "kind": "workflow_run", "workflow": "payments-contract", "conclusion": "failure" } },
+    { "id": "ev-sec-1", "type": "Observation", "sourceId": "src-gh", "visibility": "restricted", "observedAt": "2026-11-25T10:00:00Z",
+      "ref": "github:example-org/demo-storefront#security/advisories/3", "payload": { "kind": "security_advisory", "severity": "high" } }
+  ],
+  "decisions": [
+    { "id": "dec-1", "at": "2026-11-25T12:00:00Z", "by": "owner", "decision": "Revert PR #42 on production and re-run checkout-e2e",
+      "rationale": "Deploy 501 shipped release r-2026.11.25.1; error 7001 first seen 6 min later on that release; checkout-e2e failed.", "citations": ["ev-deploy-1", "ev-err-1", "ev-run-1"] }
+  ],
+  "personas": {
+    "owner": { "sees": ["all", "restricted"] },
+    "viewer": { "sees": ["all"] }
+  }
+}
