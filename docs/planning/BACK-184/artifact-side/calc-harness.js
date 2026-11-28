@@ -1,19 +1,24 @@
 // BACK-184 benchmark: runs the dash.calc functions of dashboard-page.html against the pinned fixture.
-// Inputs are fixed committed files next to this script (no CLI arguments). The page script runs in an
-// isolated vm context with stub globals only (no require, process or fs).
+// No dynamic code execution: the page script is required as a committed module (dashboard-calcs.js),
+// after a plain text check that it is still identical to the script inside dashboard-page.html.
+// Inputs are fixed committed files next to this script (no CLI arguments).
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
+const load = require('./dashboard-calcs.js');
 
-const HERE = __dirname;
-const PAGE = path.join(HERE, 'dashboard-page.html');
-const FIXTURE = path.join(HERE, '..', 'fixtures', 'bench-fixture.v1.json');
+const START = '// --- page script start ---';
+const END = '// --- page script end ---';
 
-const html = fs.readFileSync(PAGE, 'utf8');
-const fixture = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
-const script = html.split('<script>')[1].split('</script>')[0];
+const html = fs.readFileSync(path.join(__dirname, 'dashboard-page.html'), 'utf8').replace(/\r\n/g, '\n');
+const pageScript = html.split('<script>')[1].split('</script>')[0];
+const moduleText = fs.readFileSync(path.join(__dirname, 'dashboard-calcs.js'), 'utf8').replace(/\r\n/g, '\n');
+const moduleScript = moduleText.slice(moduleText.indexOf(START) + START.length, moduleText.indexOf(END));
+if (moduleScript !== pageScript) {
+  throw new Error('dashboard-calcs.js no longer matches the script in dashboard-page.html');
+}
 
+const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'bench-fixture.v1.json'), 'utf8'));
 const calcs = {};
 let params = { persona: 'owner' };
 const dash = {
@@ -23,8 +28,7 @@ const dash = {
   params: () => params,
   setParams: (p) => { params = { ...params, ...p }; },
 };
-const sandbox = { dash, document: { querySelectorAll: () => [] }, claude: {}, Date, Math, JSON, Object, String, Array };
-vm.runInNewContext(script, sandbox, { filename: 'dashboard-page.html#script', timeout: 2000 });
+load(dash, { querySelectorAll: () => [] }, {});
 
 const out = {};
 for (const persona of ['owner', 'viewer']) {
