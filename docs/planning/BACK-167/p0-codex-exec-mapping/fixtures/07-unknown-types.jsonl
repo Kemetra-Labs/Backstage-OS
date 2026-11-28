@@ -1,0 +1,6 @@
+{"type":"thread.started","thread_id":"0199a000-0000-7000-8000-0000000007bb"}
+{"type":"turn.started"}
+{"type":"turn.paused","reason":"synthetic future event type"}
+{"type":"item.completed","item":{"id":"item_0","type":"image_view","path":"docs/diagram.png"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Done."}}
+{"type":"turn.completed","usage":{"input_tokens":500,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":10,"reasoning_output_tokens":0}}

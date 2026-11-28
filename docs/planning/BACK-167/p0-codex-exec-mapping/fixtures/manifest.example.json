@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "note": "Synthetic example. Written by the Kawalys verifier around a user-started run, never by the agent.",
+  "capture": {
+    "file": "01-completed.jsonl",
+    "sha256": "<sha256 of the captured file, computed by the verifier>",
+    "receivedAt": "2026-11-28T18:00:05Z",
+    "lineCount": 7
+  },
+  "runtime": {
+    "provider": "codex",
+    "cliVersion": "codex-cli 0.170.0",
+    "schemaPin": "openai/codex rust-v0.170.0 (29eb79e9866b3262a777fdf8195c1b9e63684c91) codex-rs/exec/src/exec_events.rs",
+    "sandbox": "read-only",
+    "authMode": "chatgpt-plan (as reported by `codex login status`; not verified as entitlement)"
+  },
+  "repo": {
+    "path": "<disposable synthetic repo>",
+    "headBefore": "<git rev-parse HEAD before the run>",
+    "headAfter": "<git rev-parse HEAD after the run>",
+    "statusAfterClean": true
+  },
+  "process": {
+    "startedAt": "2026-11-28T17:59:41Z",
+    "endedAt": "2026-11-28T18:00:04Z",
+    "exitCode": 0,
+    "exitCodeSource": "wrapper-reported; not part of the event stream"
+  }
+}

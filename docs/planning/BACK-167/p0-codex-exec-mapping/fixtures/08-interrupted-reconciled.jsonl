@@ -1,0 +1,4 @@
+{"type":"thread.started","thread_id":"0199a000-0000-7000-8000-0000000008aa"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_0","type":"command_execution","command":"rg -n parseRow src","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_0","type":"command_execution","command":"rg -n parseRow src","aggregated_output":"","exit_code":null,"status":"in_progress"}}

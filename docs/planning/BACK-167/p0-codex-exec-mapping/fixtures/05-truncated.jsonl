@@ -1,0 +1,3 @@
+{"type":"thread.started","thread_id":"0199a000-0000-7000-8000-0000000005ee"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"Functions without tests: parseR

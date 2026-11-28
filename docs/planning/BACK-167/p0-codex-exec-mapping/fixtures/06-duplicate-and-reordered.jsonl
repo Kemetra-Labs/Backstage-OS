@@ -1,0 +1,8 @@
+{"type":"thread.started","thread_id":"0199a000-0000-7000-8000-0000000006cc"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"command_execution","command":"rg --files src","aggregated_output":"src/fixture.ts\n","exit_code":0,"status":"completed"}}
+{"type":"item.started","item":{"id":"item_0","type":"command_execution","command":"rg --files src","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Functions without tests: parseRow."}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Functions without tests: parseRow."}}
+{"type":"turn.completed","usage":{"input_tokens":800,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":40,"reasoning_output_tokens":0}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"Late message after the terminal event."}}
