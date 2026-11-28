@@ -24,6 +24,18 @@ export class GitHubTransportFailure extends Error {
   }
 }
 
+/**
+ * Thrown when no installation token could be obtained (BACK-52). `denied`: GitHub refused the App or the
+ * installation (401/403/404/422). `unavailable`: anything else (5xx, network, timeout, malformed answer).
+ * The message is fixed: it never carries a key, a JWT, a token or GitHub's own text.
+ */
+export class GitHubTokenError extends Error {
+  constructor(readonly kind: 'denied' | 'unavailable') {
+    super(`github token ${kind}`);
+    this.name = 'GitHubTokenError';
+  }
+}
+
 export interface GitHubReadTransport {
   /** GET a path relative to the GitHub REST API root, e.g. `/repos/owner/repo`. */
   get(path: string): Promise<GitHubResponse>;

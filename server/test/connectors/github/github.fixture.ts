@@ -5,11 +5,13 @@
 import { GitHubTransportFailure, type GitHubReadTransport, type GitHubResponse } from '../../../src/connectors/github/github.transport';
 
 export const OWNER_REPO = 'kemetra-labs/backstage-os';
+/** The pinned numeric repository id of the synthetic repository (BACK-52 Q); `repoBody.id` carries it. */
+export const REPO_ID = 424242;
 
 const person = { login: 'octo-person', id: 1, avatar_url: 'https://avatars.example/u/1', email: 'person@example.com' };
 
 export const repoBody = {
-  id: 1,
+  id: REPO_ID,
   full_name: 'Kemetra-Labs/Backstage-OS',
   private: true,
   default_branch: 'main',

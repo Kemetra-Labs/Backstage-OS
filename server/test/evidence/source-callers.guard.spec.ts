@@ -9,6 +9,13 @@ import ts from 'typescript';
 
 const SRC = resolve(process.cwd(), 'src');
 const WRITE_PATH_FILES = new Set(['evidence/evidence.repository.ts', 'ops/local-stack.ts']);
+// Sanctioned narrow callers (BACK-52 slice A): each may use ONLY the names listed, nothing else of the write paths.
+// The GitHub refresh runner is the one production caller of ingest; the operator connect command is the one caller
+// of connectSource outside the repository and the local seed. The scheduler goes through the runner and has no entry.
+const NARROW_CALLERS = new Map<string, ReadonlySet<string>>([
+  ['connectors/github/github.runner.ts', new Set(['ingest'])],
+  ['ops/source-connect.ts', new Set(['connectSource'])],
+]);
 const MINT_FILES = new Set(['evidence/source-approval.ts']);
 const WRITE_NAMES = new Set(['connectSource', 'reconnectSource', 'disconnectSource']);
 const MINT_NAME = 'fromSessionIssuedAt';
@@ -71,7 +78,9 @@ export function offendingFiles(files: ReadonlyMap<string, string>): string[] {
   return [...files]
     .filter(([name, text]) => {
       const f = scan(name, text);
-      return (f.writePaths.length > 0 && !WRITE_PATH_FILES.has(name)) || (f.mints.length > 0 && !MINT_FILES.has(name)) || f.testImports.length > 0;
+      const narrow = NARROW_CALLERS.get(name);
+      const stray = f.writePaths.filter((w) => !narrow?.has(w));
+      return (stray.length > 0 && !WRITE_PATH_FILES.has(name)) || (f.mints.length > 0 && !MINT_FILES.has(name)) || f.testImports.length > 0;
     })
     .map(([name]) => name);
 }
@@ -81,11 +90,33 @@ const files = new Map(sourceFiles(SRC).map((f) => [relative(SRC, f).split(sep).j
 describe('source write-path callers', () => {
   it('scans a real tree', () => {
     expect(files.size).toBeGreaterThan(40);
-    for (const name of [...WRITE_PATH_FILES, ...MINT_FILES]) expect(files.has(name)).toBe(true);
+    for (const name of [...WRITE_PATH_FILES, ...MINT_FILES, ...NARROW_CALLERS.keys()]) expect(files.has(name)).toBe(true);
   });
 
-  it('only the repository and the local stack use connect, reconnect, disconnect or ingest; only the definition mints a Reauthorization; src never imports test code', () => {
+  it('only the repository, the local stack and the two narrow BACK-52 callers use connect, reconnect, disconnect or ingest; only the definition mints a Reauthorization; src never imports test code', () => {
     expect(offendingFiles(files)).toEqual([]);
+  });
+
+  it('lets the runner ingest and the connect command connect, and nothing more (self-test)', () => {
+    const ok = new Map([
+      ['connectors/github/github.runner.ts', 'await repo.ingest(ws, items);'],
+      ['ops/source-connect.ts', 'await repo.connectSource(ws, u, i);'],
+    ]);
+    expect(offendingFiles(ok)).toEqual([]);
+    const bad = new Map([
+      ['connectors/github/github.runner.ts', 'await repo.connectSource(ws, u, i);'],
+      ['ops/source-connect.ts', 'await repo.ingest(ws, items);'],
+      ['connectors/github/github.scheduler.ts', 'await repo.ingest(ws, items);'],
+      ['connectors/github/github.wiring.ts', 'await repo.connectSource(ws, u, i);'],
+      ['ops/source-connect.ts ', 'await repo.reconnectSource(ws, u, i, r);'],
+    ]);
+    expect(offendingFiles(bad)).toEqual([
+      'connectors/github/github.runner.ts',
+      'ops/source-connect.ts',
+      'connectors/github/github.scheduler.ts',
+      'connectors/github/github.wiring.ts',
+      'ops/source-connect.ts ',
+    ]);
   });
 
   it('flags synthetic offenders however they are laid out (self-test)', () => {

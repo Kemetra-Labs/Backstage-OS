@@ -7,7 +7,7 @@ import { GitHubTransportFailure } from '../../src/connectors/github/github.trans
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import type { EvidenceRepository } from '../../src/evidence/evidence.repository';
 import { PortfolioRepository, PROJECT_LIMIT } from '../../src/portfolio/portfolio.repository';
-import { happyScript, OWNER_REPO, ScriptedTransport, type Script } from '../connectors/github/github.fixture';
+import { happyScript, OWNER_REPO, REPO_ID, ScriptedTransport, type Script } from '../connectors/github/github.fixture';
 import { expectNotFound, expectSessionRequired, startOwnerApp, type OwnerApp } from '../db/owner-app';
 
 let t: OwnerApp | undefined;
@@ -21,7 +21,7 @@ let projectId = '';
 let sourceId = '';
 
 const read = async (script: Script, at: string, src = sourceId, ref = OWNER_REPO) =>
-  evidence.ingest(ws, await observeRepository(new ScriptedTransport(script), { sourceId: src, externalRef: ref }, new Date(at)));
+  evidence.ingest(ws, await observeRepository(new ScriptedTransport(script), { sourceId: src, externalRef: ref, repositoryId: REPO_ID }, new Date(at)));
 
 beforeAll(async () => {
   t = await startOwnerApp();

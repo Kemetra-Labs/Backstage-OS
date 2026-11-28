@@ -10,7 +10,7 @@
 // - Only allow-listed fields are kept (X04): no bodies, logins, emails, avatars or descriptions.
 import type { ObservationInput } from '../../evidence/evidence.repository';
 import type { EvidenceState } from '../../evidence/evidence.types';
-import { GitHubTransportFailure, type GitHubReadTransport, type GitHubResponse } from './github.transport';
+import { GitHubTokenError, GitHubTransportFailure, type GitHubReadTransport, type GitHubResponse } from './github.transport';
 
 /** Stored lower-case `owner/repo` (migrations/0003 lower-cases external_ref). No dots-only repo names. */
 export const REPO_REF = /^[a-z0-9](?:[a-z0-9-]{0,38})\/(?!\.{1,2}$)[a-z0-9._-]{1,100}$/;
@@ -31,18 +31,22 @@ export type StatusReason =
   | 'transport_error'
   | 'malformed'
   | 'ref_mismatch'
+  | 'id_mismatch'
   | 'invalid_ref';
 
 export interface GitHubSource {
   readonly sourceId: string;
   /** owner/repo as stored on the source row. */
   readonly externalRef: string;
+  /** The immutable numeric repository id pinned in the approved identity (BACK-52 Q); a body with another id is refused. */
+  readonly repositoryId: number;
 }
 
 type Outcome = { readonly ok: true; readonly body: unknown } | { readonly ok: false; readonly state: EvidenceState; readonly reason: StatusReason };
 
 class Malformed extends Error {}
 class RefMismatch extends Error {}
+class IdMismatch extends Error {}
 
 /** HTTP status (or thrown failure) to evidence state. Nothing here can produce `ok`. */
 function classify(response: GitHubResponse): Outcome {
@@ -63,6 +67,10 @@ async function read(transport: GitHubReadTransport, path: string): Promise<Outco
     return classify(await transport.get(path));
   } catch (err) {
     if (err instanceof GitHubTransportFailure) return { ok: false, state: 'unknown', reason: err.kind };
+    // No token: the App or installation was refused, or GitHub's token endpoint was unreachable. Never ok.
+    if (err instanceof GitHubTokenError) {
+      return err.kind === 'denied' ? { ok: false, state: 'denied', reason: 'denied' } : { ok: false, state: 'unknown', reason: 'unavailable' };
+    }
     return { ok: false, state: 'error', reason: 'transport_error' };
   }
 }
@@ -121,16 +129,19 @@ function ownUrl(v: unknown, ref: string): string | null {
   }
 }
 
-function repositoryPayload(body: unknown, ref: string): Record<string, unknown> {
+function repositoryPayload(body: unknown, ref: string, repositoryId: number): Record<string, unknown> {
   if (!isObject(body)) throw new Malformed();
-  const { full_name, default_branch, archived, private: isPrivate, pushed_at } = body;
+  const { id, full_name, default_branch, archived, private: isPrivate, pushed_at } = body;
   if (typeof full_name !== 'string' || typeof default_branch !== 'string' || typeof archived !== 'boolean' || typeof isPrivate !== 'boolean') {
     throw new Malformed();
   }
   // A renamed or redirected repository must not be stored under this source.
   if (full_name.toLowerCase() !== ref) throw new RefMismatch();
+  // The name now points at another repository (deleted and recreated, or transferred): the pinned id is the proof.
+  if (typeof id !== 'number' || id !== repositoryId) throw new IdMismatch();
   return {
     kind: 'repository',
+    repositoryId,
     fullName: clip(full_name),
     defaultBranch: clip(default_branch),
     archived,
@@ -208,9 +219,9 @@ export async function observeRepository(transport: GitHubReadTransport, source: 
   if (!repo.ok) return [make(repo.state, root, statusPayload('repository', repo.reason))];
   let repoPayload: Record<string, unknown>;
   try {
-    repoPayload = repositoryPayload(repo.body, ref);
+    repoPayload = repositoryPayload(repo.body, ref, source.repositoryId);
   } catch (err) {
-    return [make('error', root, statusPayload('repository', err instanceof RefMismatch ? 'ref_mismatch' : 'malformed'))];
+    return [make('error', root, statusPayload('repository', err instanceof RefMismatch ? 'ref_mismatch' : err instanceof IdMismatch ? 'id_mismatch' : 'malformed'))];
   }
 
   const out: ObservationInput[] = [make('ok', root, repoPayload)];

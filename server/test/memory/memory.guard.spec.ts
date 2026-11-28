@@ -18,7 +18,7 @@ const now = new Date('2026-11-25T12:00:00Z');
 
 async function emitted(): Promise<ObservationInput[]> {
   return [
-    ...(await observeRepository(new github.ScriptedTransport(github.happyScript()), { sourceId, externalRef: github.OWNER_REPO }, now)),
+    ...(await observeRepository(new github.ScriptedTransport(github.happyScript()), { sourceId, externalRef: github.OWNER_REPO, repositoryId: github.REPO_ID }, now)),
     ...(await observeJiraProjects(new jira.ScriptedTransport(jira.happyScript()), { sourceId, site: jira.SITE, projectKeys: ['BACK', 'OPS'] }, jira.NOW)),
     ...(await observeConfluenceSpaces(new confluence.ScriptedTransport(confluence.happyScript()), { sourceId, site: confluence.SITE, spaceKeys: ['ENG', 'OPS'] }, confluence.NOW)),
   ];
@@ -66,10 +66,10 @@ describe('memory policy matches the observers', () => {
       const spaceOnly = confluence.happyScript();
       for (const path of Object.keys(spaceOnly)) if (path.includes('/pages')) delete spaceOnly[path];
       return [
-        ...(await observeRepository(new github.ScriptedTransport({}), { sourceId, externalRef: github.OWNER_REPO }, now)),
-        ...(await observeRepository(new github.ScriptedTransport(noPulls), { sourceId, externalRef: github.OWNER_REPO }, now)),
-        ...(await observeRepository(new github.ScriptedTransport(noIssues), { sourceId, externalRef: github.OWNER_REPO }, now)),
-        ...(await observeRepository(new github.ScriptedTransport({}), { sourceId, externalRef: 'not a repo' }, now)),
+        ...(await observeRepository(new github.ScriptedTransport({}), { sourceId, externalRef: github.OWNER_REPO, repositoryId: github.REPO_ID }, now)),
+        ...(await observeRepository(new github.ScriptedTransport(noPulls), { sourceId, externalRef: github.OWNER_REPO, repositoryId: github.REPO_ID }, now)),
+        ...(await observeRepository(new github.ScriptedTransport(noIssues), { sourceId, externalRef: github.OWNER_REPO, repositoryId: github.REPO_ID }, now)),
+        ...(await observeRepository(new github.ScriptedTransport({}), { sourceId, externalRef: 'not a repo', repositoryId: github.REPO_ID }, now)),
         ...(await observeJiraProjects(new jira.ScriptedTransport({}), { sourceId, site: jira.SITE, projectKeys: ['BACK'] }, jira.NOW)),
         ...(await observeJiraProjects(new jira.ScriptedTransport({}), { sourceId, site: jira.SITE, projectKeys: ['bad key'] }, jira.NOW)),
         ...(await observeConfluenceSpaces(new confluence.ScriptedTransport({}), { sourceId, site: confluence.SITE, spaceKeys: ['ENG'] }, confluence.NOW)),

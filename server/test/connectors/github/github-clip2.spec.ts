@@ -5,7 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import { clip, isClipped, observeRepository } from '../../../src/connectors/github/github.observer';
 import { CLIP_LIMIT } from '../../../src/retrieval/retrieval.policy';
-import { happyScript, OWNER_REPO, ok, ScriptedTransport } from './github.fixture';
+import { happyScript, OWNER_REPO, REPO_ID, ok, ScriptedTransport } from './github.fixture';
 
 const NUL = String.fromCharCode(0);
 const now = new Date('2026-11-25T11:55:00Z');
@@ -13,7 +13,7 @@ const now = new Date('2026-11-25T11:55:00Z');
 async function payloadFor(title: string): Promise<Record<string, unknown>> {
   const script = happyScript();
   script[`/repos/${OWNER_REPO}/pulls`] = ok([{ number: 1, title, state: 'open', draft: false, updated_at: '2026-11-25T11:00:00Z', html_url: null }]);
-  const items = await observeRepository(new ScriptedTransport(script), { sourceId: randomUUID(), externalRef: OWNER_REPO }, now);
+  const items = await observeRepository(new ScriptedTransport(script), { sourceId: randomUUID(), externalRef: OWNER_REPO, repositoryId: REPO_ID }, now);
   return items.find((i) => i.payload['kind'] === 'pull_request')!.payload;
 }
 

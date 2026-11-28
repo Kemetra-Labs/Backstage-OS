@@ -189,6 +189,29 @@ async function sourceIdentityOf(c: pg.PoolClient, sourceId: string): Promise<{ p
   return { projectId: rows[0].project_id, identity: { provider: rows[0].provider, externalRef: rows[0].external_ref } };
 }
 
+/** A source with the key of its project, as the GitHub refresh runner needs it (BACK-52). */
+export interface SourceForRefresh {
+  readonly sourceId: string;
+  readonly projectId: string;
+  readonly projectKey: string;
+  readonly identity: SourceIdentity;
+}
+
+interface SourceForRefreshRow {
+  id: string;
+  project_id: string;
+  key: string;
+  provider: SourceProvider;
+  external_ref: string;
+}
+
+const toSourceForRefresh = (r: SourceForRefreshRow): SourceForRefresh => ({
+  sourceId: r.id,
+  projectId: r.project_id,
+  projectKey: r.key,
+  identity: { provider: r.provider, externalRef: r.external_ref },
+});
+
 export class EvidenceRepository {
   constructor(
     private readonly pool: pg.Pool,
@@ -307,6 +330,36 @@ export class EvidenceRepository {
       ]);
       if ((res.rowCount ?? 0) === 0) throw new NotVisibleError();
       await this.audit(c, auditRow(workspaceId, actor, 'source.disconnected', 'source', sourceId));
+    });
+  }
+
+  /** READ ONLY (BACK-52). One source of this workspace with its project key; a source RLS hides is null. */
+  async sourceForRefresh(workspaceId: string, sourceId: string): Promise<SourceForRefresh | null> {
+    if (!UUID.test(sourceId)) return null;
+    return this.inWorkspace(workspaceId, async (c) => {
+      const { rows } = await c.query<SourceForRefreshRow>(
+        'SELECT s.id, s.project_id, p.key, s.provider, s.external_ref FROM sources s JOIN projects p ON p.id = s.project_id WHERE s.id = $1',
+        [sourceId],
+      );
+      return rows[0] ? toSourceForRefresh(rows[0]) : null;
+    });
+  }
+
+  /** READ ONLY (BACK-52). Every GitHub source of this workspace, oldest first. Grants and approval are checked by the caller. */
+  async githubSourcesForRefresh(workspaceId: string): Promise<SourceForRefresh[]> {
+    return this.inWorkspace(workspaceId, async (c) => {
+      const { rows } = await c.query<SourceForRefreshRow>(
+        "SELECT s.id, s.project_id, p.key, s.provider, s.external_ref FROM sources s JOIN projects p ON p.id = s.project_id WHERE s.provider = 'github' ORDER BY s.created_at, s.id",
+      );
+      return rows.map(toSourceForRefresh);
+    });
+  }
+
+  /** READ ONLY (BACK-52). The id of the project with this key in this workspace, or null. */
+  async projectIdByKey(workspaceId: string, key: string): Promise<string | null> {
+    return this.inWorkspace(workspaceId, async (c) => {
+      const { rows } = await c.query<{ id: string }>('SELECT id FROM projects WHERE key = $1', [key]);
+      return rows[0]?.id ?? null;
     });
   }
 
