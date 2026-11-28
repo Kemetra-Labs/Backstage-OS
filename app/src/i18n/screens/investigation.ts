@@ -75,8 +75,11 @@ export interface InvestigationCopy {
       readonly title: string;
       readonly lede: string;
       readonly count: (n: number) => string;
-      /** The server lists at most `n` (its LIST_LIMIT): a full list is a lower bound, never the total. */
-      readonly countAtLeast: (n: number) => string;
+      /**
+       * A full answer (the server's cap, LIST_LIMIT): `shown` is a lower bound, never the total. `shown` can be below `cap`, since the
+       * case's own observations are counted in the cap and then listed with the case instead.
+       */
+      readonly countAtLeast: (shown: number, cap: number) => string;
       readonly none: string;
       readonly unreadable: string;
       readonly notPart: string;
@@ -209,7 +212,7 @@ const en: InvestigationCopy = {
       title: 'Project observations, not part of this case',
       lede: 'Observations of this case\'s project that were not recorded in this case. Citing one in a decision links it to the decision; a citation is a reference, not proof of cause.',
       count: (n) => `{${n}} listed`,
-      countAtLeast: (n) => `At least {${n}}: only the newest {${n}} are listed, so older ones may be missing.`,
+      countAtLeast: (shown, cap) => `At least {${shown}}: the server returned only the project's newest {${cap}} observations, so older ones may be missing.`,
       none: 'No other observation of this project is listed. That is not the same as nothing being wrong.',
       unreadable: 'The project observations could not be read. That is not the same as there being none.',
       notPart: 'Not part of this case',
@@ -355,7 +358,7 @@ const ar: InvestigationCopy = {
       title: 'ملاحظات المشروع، ليست جزءًا من هذه الحالة',
       lede: 'ملاحظات من مشروع هذه الحالة لم تُسجَّل فيها. الاستشهاد بإحداها في قرار يربطها بالقرار؛ والاستشهاد إشارة، وليس دليلًا على السبب.',
       count: (n) => `مُدرج {${n}}`,
-      countAtLeast: (n) => `{${n}} على الأقل: تُدرج أحدث {${n}} فقط، لذا قد تنقص ملاحظات أقدم.`,
+      countAtLeast: (shown, cap) => `{${shown}} على الأقل: أعاد الخادم أحدث {${cap}} ملاحظة فقط من المشروع، لذا قد تنقص ملاحظات أقدم.`,
       none: 'لا توجد ملاحظة أخرى مُدرجة لهذا المشروع. وهذا لا يعني أن كل شيء على ما يرام.',
       unreadable: 'تعذّرت قراءة ملاحظات المشروع. وهذا لا يعني أنه لا توجد ملاحظات.',
       notPart: 'ليست جزءًا من هذه الحالة',

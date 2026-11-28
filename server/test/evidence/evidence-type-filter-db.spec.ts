@@ -95,11 +95,11 @@ describe('the type filter keeps the visibility rule (repository)', () => {
     expect((await evidence.list(ws, owner, { projectId: otherProjectId, type: 'Observation' })).map((r) => r.id)).toEqual([otherProjectObs]);
   });
 
-  it('a member with no grant on the source sees nothing, filtered or not', async () => {
+  it('a user with no grant on the source sees nothing, filtered or not', async () => {
     const stranger = randomUUID();
     await db.admin.query('INSERT INTO kawalys.users (id) VALUES ($1)', [stranger]);
-    await db.admin.query(`INSERT INTO kawalys.memberships (workspace_id, user_id, role) VALUES ($1, $2, 'member')`, [ws, stranger]).catch(() => undefined);
     expect(await evidence.list(ws, stranger, { projectId, type: 'Observation' })).toEqual([]);
+    expect(await evidence.list(ws, stranger, { projectId })).toEqual([]);
   });
 
   it('another workspace sees nothing of this project', async () => {

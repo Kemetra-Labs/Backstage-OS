@@ -192,7 +192,7 @@ function Cites({ cites }: { readonly cites: readonly CitedRow[] }) {
  * BACK-148 (decision L): the case project's observations that are not part of this case, labelled as such, with the count and,
  * for a full answer, the server's cap as a lower bound. A list that could not be read says so; it is never shown as none.
  */
-function ProjectObservations({ view }: { readonly view: ProjectObservationsView }) {
+export function ProjectObservations({ view }: { readonly view: ProjectObservationsView }) {
   const { lang } = useApp();
   const s = hostCopy('INVESTIGATION', lang).serverRecords;
   const p = s.projectObs;
@@ -203,7 +203,7 @@ function ProjectObservations({ view }: { readonly view: ProjectObservationsView 
       {view.state === 'unreadable' ? <StateBlock kind="unknown" title={p.title} body={p.unreadable} /> : (
         <>
           <p className="note" data-testid="project-observations-count" data-at-least={view.atLeast ? 'true' : 'false'}>
-            <Text s={view.atLeast ? p.countAtLeast(EVIDENCE_LIST_LIMIT) : p.count(view.rows.length)} />
+            <Text s={view.atLeast ? p.countAtLeast(view.rows.length, EVIDENCE_LIST_LIMIT) : p.count(view.rows.length)} />
           </p>
           {view.incomplete && <p className="srv-incomplete">{s.incomplete}</p>}
           {view.rows.length === 0 ? <p className="note">{p.none}</p> : (
