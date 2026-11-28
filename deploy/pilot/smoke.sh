@@ -317,6 +317,8 @@ check "/sign-in: CSP default-src 'self'" has_directive "$SIGNIN_CSP" "default-sr
 check "/sign-in: CSP object-src 'none'" has_directive "$SIGNIN_CSP" "object-src 'none'"
 check "/sign-in: CSP frame-ancestors 'none'" has_directive "$SIGNIN_CSP" "frame-ancestors 'none'"
 check "/sign-in: CSP base-uri 'self'" has_directive "$SIGNIN_CSP" "base-uri 'self'"
+check "/sign-in: CSP font-src is exactly 'self' data: and the Descope components CDN (release 6, O2)" has_directive "$SIGNIN_CSP" "font-src 'self' data: https://descopecdn.com"
+check "/: CSP font-src stays 'self' data: (no Descope host on app pages)" has_directive "$ROOT_CSP" "font-src 'self' data:"
 check "/sign-in: CSP script-src has no unsafe-inline, unsafe-eval, wildcard, data:, unpkg or jsdelivr" bash -c '[ -n "$0" ] && ! echo "$0" | grep -qE "unsafe-inline|unsafe-eval|\*|data:|unpkg|jsdelivr"' "$SIGNIN_SCRIPT_SRC"
 check "/sign-in: CSP script-src allows 'self' and the Descope components CDN" bash -c 'echo "$0" | grep -qF "'"'self'"'" && echo "$0" | grep -qF "https://descopecdn.com"' "$SIGNIN_SCRIPT_SRC"
 check "/sign-in: no Content-Security-Policy-Report-Only header is left (enforcing only)" bash -c '! echo "$0" | grep -qi "^content-security-policy-report-only:"' "$SIGNIN_H"
