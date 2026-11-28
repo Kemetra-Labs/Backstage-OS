@@ -24,8 +24,8 @@ if [[ -z "${hosts//[[:space:]]/}" ]]; then
 elif printf '%s' "$hosts" | grep -q '\*'; then
   echo "preflight: KAWALYS_ALLOWED_HOSTS must not contain a wildcard" >&2
   bad=1
-elif ! printf '%s' "$hosts" | tr ',' '\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | tr 'A-Z' 'a-z' | grep -Eq '^127\.0\.0\.1(:[0-9]+)?$'; then
-  echo "preflight: KAWALYS_ALLOWED_HOSTS must list 127.0.0.1 (the bff container healthcheck sends it as the Host header)" >&2
+elif ! printf '%s' "$hosts" | tr ',' '\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | tr 'A-Z' 'a-z' | grep -Eq '^127\.0\.0\.1(:8787)?$'; then
+  echo "preflight: KAWALYS_ALLOWED_HOSTS must list 127.0.0.1 or 127.0.0.1:8787 (the bff container healthcheck sends 127.0.0.1:8787 as the Host header)" >&2
   bad=1
 fi
 [[ "$bad" = 0 ]] || exit 1

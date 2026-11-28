@@ -78,10 +78,12 @@ export async function apiRequest(path: string, init: ApiRequestInit = {}): Promi
   const url = apiPath(path);
   if (url === null) return { ok: false, failure: 'invalid', status: null };
   const hasBody = init.body !== undefined;
-  const headers: Record<string, string> = {
-    ...init.headers,
-    ...(hasBody ? { Accept: 'application/json', 'Content-Type': 'application/json' } : { Accept: 'application/json' }),
-  };
+  // Caller headers first, minus any spelling of the fixed ones: Accept and Content-Type are always ours (fetch merges names
+  // case-insensitively, so a caller's `content-type` next to ours would change the request).
+  const FIXED = new Set(['accept', 'content-type']);
+  const headers: Record<string, string> = Object.fromEntries(Object.entries(init.headers ?? {}).filter(([name]) => !FIXED.has(name.toLowerCase())));
+  headers.Accept = 'application/json';
+  if (hasBody) headers['Content-Type'] = 'application/json';
   if (init.bearer !== undefined) headers.Authorization = `Bearer ${init.bearer}`;
   const doFetch = init.fetcher ?? globalThis.fetch;
   let status: number;
