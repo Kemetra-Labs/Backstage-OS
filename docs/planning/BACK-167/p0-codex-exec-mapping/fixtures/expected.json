@@ -1,0 +1,142 @@
+{
+  "contract": "BACK-167 P0 codex exec --json mapping v0 (draft)",
+  "schemaPin": "openai/codex rust-v0.170.0 (29eb79e9866b3262a777fdf8195c1b9e63684c91)",
+  "vocabulary": {
+    "runState": ["completed_self_reported", "failed", "interrupted_or_unknown"],
+    "summaryEvidenceState": ["ok", "unknown", "error"],
+    "lineState": ["ok", "unknown", "error", "duplicate"],
+    "outcome": ["not_verified"],
+    "usage": ["reported", "unknown"],
+    "expectedExitCode": "0 or 1 as the process would exit; null = cannot be predicted (malformed capture)"
+  },
+  "cases": {
+    "01-completed.jsonl": {
+      "threadId": "0199a000-0000-7000-8000-00000000c0de",
+      "runState": "completed_self_reported",
+      "summaryEvidenceState": "ok",
+      "outcome": "not_verified",
+      "usage": "reported",
+      "expectedExitCode": 0,
+      "lines": { "1": "ok", "2": "ok", "3": "ok", "4": "ok", "5": "ok", "6": "ok", "7": "ok" },
+      "anomalies": [],
+      "flags": []
+    },
+    "02-interrupted.jsonl": {
+      "note": "Hard kill or crash: the process died before reconciling open items.",
+      "threadId": "0199a000-0000-7000-8000-0000000002ab",
+      "runState": "interrupted_or_unknown",
+      "summaryEvidenceState": "unknown",
+      "outcome": "not_verified",
+      "usage": "unknown",
+      "expectedExitCode": null,
+      "lines": { "1": "ok", "2": "ok", "3": "ok" },
+      "anomalies": [
+        { "kind": "missing_terminal_event" },
+        { "kind": "unfinished_item", "itemId": "item_0", "line": 3 }
+      ],
+      "flags": []
+    },
+    "03-failed.jsonl": {
+      "threadId": "0199a000-0000-7000-8000-0000000003fa",
+      "runState": "failed",
+      "summaryEvidenceState": "ok",
+      "outcome": "not_verified",
+      "usage": "unknown",
+      "expectedExitCode": 1,
+      "lines": { "1": "ok", "2": "ok", "3": "ok", "4": "ok" },
+      "anomalies": [],
+      "flags": [ { "kind": "error_event_seen", "line": 3 } ]
+    },
+    "04-declined-and-zero-usage.jsonl": {
+      "threadId": "0199a000-0000-7000-8000-0000000004dd",
+      "runState": "completed_self_reported",
+      "summaryEvidenceState": "ok",
+      "outcome": "not_verified",
+      "usage": "unknown",
+      "usageReason": "all-zero usage is what exec emits when no token count was received; it cannot be told apart from 'not reported'",
+      "expectedExitCode": 0,
+      "lines": {
+        "1": "ok", "2": "ok", "3": "ok", "4": "ok", "5": "ok",
+        "6": "ok", "7": "ok", "8": "ok", "9": "ok", "10": "ok"
+      },
+      "anomalies": [],
+      "flags": [
+        { "kind": "command_declined", "itemId": "item_0", "line": 4 },
+        { "kind": "command_failed", "itemId": "item_1", "line": 6 },
+        { "kind": "file_change_failed", "itemId": "item_2", "line": 8 }
+      ]
+    },
+    "05-truncated.jsonl": {
+      "threadId": "0199a000-0000-7000-8000-0000000005ee",
+      "runState": "interrupted_or_unknown",
+      "summaryEvidenceState": "error",
+      "outcome": "not_verified",
+      "usage": "unknown",
+      "expectedExitCode": null,
+      "lines": { "1": "ok", "2": "ok", "3": "error" },
+      "anomalies": [
+        { "kind": "malformed_line", "line": 3 },
+        { "kind": "missing_terminal_event" }
+      ],
+      "flags": []
+    },
+    "06-duplicate-and-reordered.jsonl": {
+      "threadId": "0199a000-0000-7000-8000-0000000006cc",
+      "runState": "completed_self_reported",
+      "summaryEvidenceState": "unknown",
+      "outcome": "not_verified",
+      "usage": "reported",
+      "expectedExitCode": 0,
+      "lines": {
+        "1": "ok", "2": "ok", "3": "unknown", "4": "unknown", "5": "ok", "6": "duplicate", "7": "ok", "8": "unknown"
+      },
+      "anomalies": [
+        { "kind": "completed_before_started", "itemId": "item_0", "lines": [3, 4] },
+        { "kind": "exact_duplicate_line", "itemId": "item_1", "line": 6, "duplicateOf": 5 },
+        { "kind": "event_after_terminal", "line": 8 }
+      ],
+      "flags": []
+    },
+    "07-unknown-types.jsonl": {
+      "threadId": "0199a000-0000-7000-8000-0000000007bb",
+      "runState": "completed_self_reported",
+      "summaryEvidenceState": "unknown",
+      "outcome": "not_verified",
+      "usage": "reported",
+      "expectedExitCode": 0,
+      "lines": { "1": "ok", "2": "ok", "3": "unknown", "4": "unknown", "5": "ok", "6": "ok" },
+      "anomalies": [
+        { "kind": "unknown_event_type", "type": "turn.paused", "line": 3 },
+        { "kind": "unknown_item_type", "type": "image_view", "line": 4 }
+      ],
+      "flags": []
+    },
+    "08-interrupted-reconciled.jsonl": {
+      "note": "Normal Ctrl-C: exec reconciles open items into item.completed before shutdown and emits no terminal event. The reconciled status value is INFERENCE until a real capture confirms it.",
+      "threadId": "0199a000-0000-7000-8000-0000000008aa",
+      "runState": "interrupted_or_unknown",
+      "summaryEvidenceState": "unknown",
+      "outcome": "not_verified",
+      "usage": "unknown",
+      "expectedExitCode": 1,
+      "lines": { "1": "ok", "2": "ok", "3": "ok", "4": "ok" },
+      "anomalies": [
+        { "kind": "missing_terminal_event" },
+        { "kind": "unfinished_item", "itemId": "item_0", "line": 4 }
+      ],
+      "flags": []
+    }
+  },
+  "manifestCases": {
+    "version-gate": {
+      "manifest": { "runtime": { "cliVersion": "codex-cli 0.171.0" } },
+      "capture": "01-completed.jsonl",
+      "expect": { "parsed": false, "summaryEvidenceState": "unknown", "anomalies": [ { "kind": "schema_version_mismatch" } ] }
+    },
+    "exit-code-mismatch": {
+      "manifest": { "process": { "exitCode": 1 } },
+      "capture": "01-completed.jsonl",
+      "expect": { "parsed": true, "runState": "completed_self_reported", "flags": [ { "kind": "exit_code_mismatch", "expected": 0, "reported": 1 } ] }
+    }
+  }
+}

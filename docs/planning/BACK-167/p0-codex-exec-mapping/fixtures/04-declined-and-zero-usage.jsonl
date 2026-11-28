@@ -1,0 +1,10 @@
+{"type":"thread.started","thread_id":"0199a000-0000-7000-8000-0000000004dd"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_0","type":"command_execution","command":"touch src/new.ts","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_0","type":"command_execution","command":"touch src/new.ts","aggregated_output":"","exit_code":null,"status":"declined"}}
+{"type":"item.started","item":{"id":"item_1","type":"command_execution","command":"cp src/fixture.ts src/copy.ts","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"command_execution","command":"cp src/fixture.ts src/copy.ts","aggregated_output":"cp: cannot create regular file 'src/copy.ts': Read-only file system\n","exit_code":1,"status":"failed"}}
+{"type":"item.started","item":{"id":"item_2","type":"file_change","changes":[{"path":"src/fixture.ts","kind":"update"}],"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_2","type":"file_change","changes":[{"path":"src/fixture.ts","kind":"update"}],"status":"failed"}}
+{"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":"I could not write files in this sandbox."}}
+{"type":"turn.completed","usage":{"input_tokens":0,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":0,"reasoning_output_tokens":0}}
