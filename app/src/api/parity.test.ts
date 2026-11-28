@@ -7,6 +7,7 @@ import type { SourceAuthority } from '../contract/types';
 import DECISIONS from '../fixture/decisions-response.json';
 import EVIDENCE from '../fixture/evidence-response.json';
 import INVESTIGATION from '../fixture/investigation-response.json';
+import PROJECT_OBSERVATIONS from '../fixture/project-observations-response.json';
 import { decisionLabel, toEvidenceReference } from './evidence';
 
 /** The server's fixture clock (evidence-parity.spec.ts NOW). */
@@ -121,5 +122,23 @@ describe('GET /decisions fixture (BACK-98)', () => {
     const { createdBy: _drop, ...missing } = d;
     expect(isDecisionRecord(missing)).toBe(false);
     expect(isDecisionRecord({ ...d, citations: 'e-1' })).toBe(false);
+  });
+});
+
+describe('GET /evidence?projectId=&type=Observation fixture (BACK-148, decision L2)', () => {
+  const items = PROJECT_OBSERVATIONS.items as Rec[];
+  const inv = INVESTIGATION as Rec;
+
+  it('holds only Observations of the case project, each parsable, and is the Observation subset of GET /evidence', () => {
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((r) => r['type'] === 'Observation' && r['projectId'] === inv['projectId'])).toBe(true);
+    expect(parseRecords(items).dropped).toEqual([]);
+    const all = (EVIDENCE.items as Rec[]).filter((r) => r['type'] === 'Observation').map((r) => r['id']).sort();
+    expect(items.map((r) => r['id']).sort()).toEqual(all);
+  });
+
+  it('has observations outside the case (the projection) and one inside it (which the room lists with the case)', () => {
+    expect(items.some((r) => r['investigationId'] === null)).toBe(true);
+    expect(items.some((r) => r['investigationId'] === inv['id'])).toBe(true);
   });
 });

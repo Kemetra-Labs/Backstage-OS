@@ -26,6 +26,8 @@ export interface RecordDecisionViewProps {
   readonly draft: DecisionDraft;
   /** The records of this case that can be cited. */
   readonly records: readonly RecordRow[];
+  /** BACK-148: the case project's observations that are not part of this case; citable too, in their own labelled group. */
+  readonly projectRecords?: readonly RecordRow[];
   /** Technical also sees each record's source reference. */
   readonly technical: boolean;
   readonly sessionStatus: SessionStatus;
@@ -55,10 +57,9 @@ const RESULT_KIND: Readonly<Record<Exclude<FormResult, 'recorded'>, StateKind>> 
  * person decided and never says approved. While the session is not signed in the draft stays and submit is off, with the
  * reason; a failed or unconfirmed send keeps the draft and says so. No record id is shown.
  */
-export function RecordDecisionView({ gate, draft, records, technical, sessionStatus, submitting, showProblems, result, onChange, onSubmit }: RecordDecisionViewProps) {
-  const { lang, copy } = useApp();
+export function RecordDecisionView({ gate, draft, records, projectRecords = [], technical, sessionStatus, submitting, showProblems, result, onChange, onSubmit }: RecordDecisionViewProps) {
+  const { lang } = useApp();
   const c = hostCopy('INVESTIGATION', lang).recordDecision;
-  const s = hostCopy('INVESTIGATION', lang).serverRecords;
   if (gate !== 'open') {
     // Nothing of the draft, the records or any control while locked, and nothing until the case is read again after unlocking.
     return (
@@ -74,6 +75,9 @@ export function RecordDecisionView({ gate, draft, records, technical, sessionSta
   const canSubmit = sessionStatus === 'signedIn' && !submitting;
   const toggle = (id: string) =>
     onChange({ ...draft, evidenceIds: draft.evidenceIds.includes(id) ? draft.evidenceIds.filter((x) => x !== id) : [...draft.evidenceIds, id] });
+  const pick = (r: RecordRow, i: number, project = false) => (
+    <PickRow key={r.id} r={r} i={i} project={project} checked={draft.evidenceIds.includes(r.id)} disabled={submitting} technical={technical} onToggle={() => toggle(r.id)} />
+  );
 
   return (
     <section className="rec-decision" aria-labelledby="rd-title" data-testid="record-decision" data-gate="open">
@@ -109,21 +113,19 @@ export function RecordDecisionView({ gate, draft, records, technical, sessionSta
         <fieldset className="rd-evidence">
           <legend>{c.evidenceLegend}</legend>
           <p className="note">{c.evidenceHint}</p>
-          {records.length === 0 ? <p className="note">{c.evidenceNone}</p> : (
+          {records.length === 0 && projectRecords.length === 0 ? <p className="note">{c.evidenceNone}</p> : (
             <ul className="rows rd-rows">
-              {records.map((r, i) => (
-                <li key={r.id}>
-                  <label className="rd-pick">
-                    <input type="checkbox" checked={draft.evidenceIds.includes(r.id)} disabled={submitting} onChange={() => toggle(r.id)} />
-                    <span className="rd-pos"><Text s={c.record(i + 1)} /></span>
-                    <TruthChip label={r.label} style="standard" copy={copy} />
-                    <span className="srv-read">{s.read[r.read]}</span>
-                    {r.ageMinutes !== null && <span className="srv-age"> · <Text s={s.age(r.ageMinutes)} /></span>}
-                    {technical && r.sourceRef && <span> · <bdi dir="ltr" className="srv-ref">{r.sourceRef}</bdi></span>}
-                  </label>
-                </li>
-              ))}
+              {records.map((r, i) => pick(r, i))}
             </ul>
+          )}
+          {projectRecords.length > 0 && (
+            <div className="rd-project" data-testid="rd-project">
+              <p className="note"><strong>{c.projectLegend}</strong></p>
+              <p className="note">{c.projectHint}</p>
+              <ul className="rows rd-rows">
+                {projectRecords.map((r, i) => pick(r, records.length + i, true))}
+              </ul>
+            </div>
           )}
         </fieldset>
         <div id="rd-errors" aria-live="polite">
@@ -152,14 +154,37 @@ export function RecordDecisionView({ gate, draft, records, technical, sessionSta
   );
 }
 
+/** One citable record in the picker, with its read badges. Module level, so a re-render never remounts the checkbox. */
+function PickRow({ r, i, project, checked, disabled, technical, onToggle }: {
+  readonly r: RecordRow; readonly i: number; readonly project: boolean; readonly checked: boolean; readonly disabled: boolean; readonly technical: boolean; readonly onToggle: () => void;
+}) {
+  const { lang, copy } = useApp();
+  const c = hostCopy('INVESTIGATION', lang).recordDecision;
+  const s = hostCopy('INVESTIGATION', lang).serverRecords;
+  return (
+    <li data-testid={project ? 'rd-project-pick' : undefined}>
+      <label className="rd-pick">
+        <input type="checkbox" checked={checked} disabled={disabled} onChange={onToggle} />
+        <span className="rd-pos"><Text s={c.record(i + 1)} /></span>
+        <TruthChip label={r.label} style="standard" copy={copy} />
+        <span className="srv-read">{s.read[r.read]}</span>
+        {r.ageMinutes !== null && <span className="srv-age"> · <Text s={s.age(r.ageMinutes)} /></span>}
+        {technical && r.sourceRef && <span> · <bdi dir="ltr" className="srv-ref">{r.sourceRef}</bdi></span>}
+      </label>
+    </li>
+  );
+}
+
 /**
  * The decision form wired to the live session and the in-memory draft (useSessionDraft, key `decision:<investigationId>`): the
  * draft survives a session that ends and the sign-in after it, and is cleared only by a recorded decision or an explicit sign-out.
  * One submit at a time (D5 (a)); a not_found is reported to the session, which decides signed out versus a hidden case.
  */
-export function RecordDecision({ investigationId, records, technical, readGeneration, onSubmitted }: {
+export function RecordDecision({ investigationId, records, projectRecords = [], technical, readGeneration, onSubmitted }: {
   readonly investigationId: string;
   readonly records: readonly RecordRow[];
+  /** BACK-148: project observations the form may cite; they count as citable, so a submit or a re-show never prunes them as gone. */
+  readonly projectRecords?: readonly RecordRow[];
   readonly technical: boolean;
   /** The session generation for which this case was last read successfully while unlocked; null if never. The draft returns only for the current one. */
   readonly readGeneration: number | null;
@@ -176,11 +201,12 @@ export function RecordDecision({ investigationId, records, technical, readGenera
   const current = draft ?? EMPTY_DRAFT;
   const gate: FormGate = formGate(session, readGeneration);
   const open = gate === 'open';
+  const citable = [...records, ...projectRecords].map((r) => r.id);
 
   // Re-show (BACK-127): when the draft comes back after a lock, prune its ticked records to the fresh read and say so if one left.
   useEffect(() => {
     if (!open) return;
-    const pruned = pruneForReshow(draft, records.map((r) => r.id));
+    const pruned = pruneForReshow(draft, citable);
     if (pruned.changed) setDraft(pruned.draft);
     setResult(pruned.changed ? 'citationsChanged' : null);
     // On the gate opening only: later list changes are handled at submit (planSubmit), as before.
@@ -189,7 +215,7 @@ export function RecordDecision({ investigationId, records, technical, readGenera
   const submit = () => {
     if (!open || session?.status !== 'signedIn' || session.locked) return;
     const started = session.generation;
-    const plan = planSubmit(current, records.map((r) => r.id));
+    const plan = planSubmit(current, citable);
     if (plan.kind === 'problems') {
       setShowProblems(true);
       return;
@@ -230,6 +256,7 @@ export function RecordDecision({ investigationId, records, technical, readGenera
       gate={gate}
       draft={current}
       records={records}
+      projectRecords={projectRecords}
       technical={technical}
       sessionStatus={session?.status ?? 'checking'}
       submitting={submitting}

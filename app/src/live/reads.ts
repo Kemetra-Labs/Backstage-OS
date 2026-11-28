@@ -29,7 +29,17 @@ export interface InvestigationBodies {
   readonly decisions: unknown;
   /** Where the case came from: the address (`?investigation=`), or the newest one the server lists for this session. */
   readonly chosen: 'address' | 'newest';
+  /**
+   * BACK-148 (decision L): GET /evidence?projectId=<case project>&type=Observation. null when it failed (or the case body had no
+   * project id to ask with): the room then says the list could not be read, never that there are none. It never fails the room.
+   */
+  readonly observations: unknown;
+  /** GET /evidence/:id for cited records found in neither list, by id; null for one the server did not return (unknown). */
+  readonly cited: Readonly<Record<string, unknown>>;
 }
+
+/** At most this many cited records are read one by one per room read; the rest stay unresolved (shown as unknown). */
+export const CITED_RESOLVE_MAX = 50;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -67,8 +77,64 @@ async function newestInvestigation(signal?: AbortSignal, fetcher?: Fetcher): Pro
   return typeof id === 'string' && UUID.test(id) ? { id } : { failure: 'error' };
 }
 
+type Obj = Record<string, unknown>;
+const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
+const listItems = (body: unknown): unknown[] => (isObj(body) && Array.isArray(body['items']) ? (body['items'] as unknown[]) : []);
+const idsOf = (items: readonly unknown[]): string[] => items.flatMap((r) => (isObj(r) && typeof r['id'] === 'string' ? [r['id']] : []));
+const citationsOf = (items: readonly unknown[]): string[] =>
+  items.flatMap((r) => (isObj(r) && Array.isArray(r['citations']) ? (r['citations'] as unknown[]).filter((c): c is string => typeof c === 'string') : []));
+
 /**
- * GET /investigations/:id and GET /decisions?investigationId=:id, in parallel. The case is the one named in the address; with
+ * The cited ids the room cannot resolve from its own lists (the case's evidence and the project observations): cited by a decision
+ * of GET /decisions or by a decision in the case body, UUIDs only, each once, in first-cited order, at most `max`.
+ */
+export function citationsToResolve(investigation: unknown, decisions: unknown, observations: unknown, max: number = CITED_RESOLVE_MAX): string[] {
+  const evidence = isObj(investigation) && Array.isArray(investigation['evidence']) ? (investigation['evidence'] as unknown[]) : [];
+  const known = new Set([...idsOf(evidence), ...idsOf(listItems(observations))]);
+  const out: string[] = [];
+  for (const id of [...citationsOf(listItems(decisions)), ...citationsOf(evidence)]) {
+    if (out.length >= max) break;
+    if (UUID.test(id) && !known.has(id) && !out.includes(id)) out.push(id);
+  }
+  return out;
+}
+
+/** The UUID `projectId` of an investigation body, or null: no request path is built from anything else. */
+function projectIdOf(investigation: unknown): string | null {
+  const v = isObj(investigation) ? investigation['projectId'] : undefined;
+  return typeof v === 'string' && UUID.test(v) ? v : null;
+}
+
+/**
+ * The project observations, then each cited record found in neither list (GET /evidence/:id). A failure of either is data for the
+ * view (null), never a room failure. null only when aborted.
+ */
+async function readReferences(
+  investigation: unknown,
+  decisions: unknown,
+  signal?: AbortSignal,
+  fetcher?: Fetcher,
+): Promise<{ observations: unknown; cited: Record<string, unknown> } | null> {
+  const projectId = projectIdOf(investigation);
+  let observations: unknown = null;
+  if (projectId !== null) {
+    const r = await apiRequest(`/api/evidence?projectId=${projectId}&type=Observation`, { signal, fetcher });
+    if (!r.ok && r.aborted) return null;
+    observations = r.ok ? r.body : null;
+  }
+  const ids = citationsToResolve(investigation, decisions, observations);
+  const answers = await Promise.all(ids.map((id) => apiRequest(`/api/evidence/${id}`, { signal, fetcher })));
+  const cited: Record<string, unknown> = {};
+  for (const [i, r] of answers.entries()) {
+    if (!r.ok && r.aborted) return null;
+    cited[ids[i]!] = r.ok ? r.body : null;
+  }
+  return { observations, cited };
+}
+
+/**
+ * GET /investigations/:id and GET /decisions?investigationId=:id, in parallel; then (BACK-148) the case project's observations and
+ * any cited record neither list holds. The case is the one named in the address; with
  * none, the newest visible one (owner decision 2026-11-26), so a live demo needs no id copied into the link. null when aborted.
  */
 export async function readInvestigation(named: string | null, signal?: AbortSignal, fetcher?: Fetcher): Promise<LiveRead<InvestigationBodies> | null> {
@@ -87,7 +153,10 @@ export async function readInvestigation(named: string | null, signal?: AbortSign
   ]);
   if ((!inv.ok && inv.aborted) || (!dec.ok && dec.aborted)) return null;
   if (!inv.ok) return { status: 'failed', failure: inv.failure };
-  return { status: 'ok', body: { investigation: inv.body, decisions: dec.ok ? dec.body : null, chosen } };
+  const decisions = dec.ok ? dec.body : null;
+  const refs = await readReferences(inv.body, decisions, signal, fetcher);
+  if (refs === null) return null;
+  return { status: 'ok', body: { investigation: inv.body, decisions, chosen, ...refs } };
 }
 
 /**

@@ -4,7 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import DECISIONS from '../fixture/decisions-response.json';
 import INVESTIGATION from '../fixture/investigation-response.json';
-import { FIXTURE_NOW, investigationReadView } from './investigationReadView';
+import PROJECT_OBSERVATIONS from '../fixture/project-observations-response.json';
+import { EVIDENCE_LIST_LIMIT, FIXTURE_NOW, investigationReadView, projectObservationsView } from './investigationReadView';
 
 const CORRELATION = '00000000-0000-4000-8000-000000000001';
 const DECISION = '00000000-0000-4000-8000-000000000005';
@@ -47,6 +48,7 @@ describe('the synthetic investigation and decisions fixtures', () => {
     expect(view().decisions[0]).toEqual({
       id: DECISION, label: 'proposed', creator: 'recorded', ageMinutes: 0,
       text: 'Revert pull request #42 on main and re-run checkout-e2e',
+      cites: [{ id: CORRELATION, where: 'case', row: row(CORRELATION) }, { id: FAILED_RUN, where: 'case', row: row(FAILED_RUN) }],
     });
   });
 
@@ -119,7 +121,10 @@ describe('decisions are never approved without their owning link', () => {
     const body = { ...INVESTIGATION, evidence: INVESTIGATION.evidence.filter((r) => r.type !== 'HumanDecision') };
     const items = [{ ...DECISIONS.items[0]!, createdBy: null }];
     expect(view('technical', body, { items, nextCursor: null }).decisions).toEqual([
-      { id: DECISION, label: 'proposed', creator: 'notRecorded', ageMinutes: 0, text: 'Revert pull request #42 on main and re-run checkout-e2e' },
+      {
+        id: DECISION, label: 'proposed', creator: 'notRecorded', ageMinutes: 0, text: 'Revert pull request #42 on main and re-run checkout-e2e',
+        cites: [{ id: CORRELATION, where: 'case', row: row(CORRELATION) }, { id: FAILED_RUN, where: 'case', row: row(FAILED_RUN) }],
+      },
     ]);
   });
 
@@ -200,5 +205,85 @@ describe('live origin (BACK-51 P1)', () => {
 
   it('Nontechnical still gets no panel in live mode', () => {
     expect(investigationReadView('nontechnical', INVESTIGATION, DECISIONS, FIXTURE_NOW, 'live')).toBeNull();
+  });
+});
+
+// BACK-148 (decision L): the case project's observations that are not part of this case, and what a decision cites.
+const CASE_ID = INVESTIGATION.id;
+const OBS_OK = '00000000-0000-4000-8000-000000000006';
+const OBS_UNKNOWN = '00000000-0000-4000-8000-000000000008';
+const OBS_STALE = '00000000-0000-4000-8000-000000000009';
+const obsItems = () => structuredClone(PROJECT_OBSERVATIONS.items) as unknown as Record<string, unknown>[];
+
+describe('project observations, not part of this case (BACK-148)', () => {
+  it('lists the project observations without the case\'s own (those are in the case list), newest first, as demo data', () => {
+    const v = projectObservationsView('technical')!;
+    expect(v).toMatchObject({ state: 'ok', atLeast: false, incomplete: false, demo: true });
+    expect(v.rows.map((r) => r.id)).toEqual([OBS_OK, OBS_UNKNOWN, OBS_STALE]);
+    expect(v.rows.map((r) => r.id)).not.toContain(FAILED_RUN);
+  });
+
+  it('keeps each read state honest: unknown is not read, stale stays stale; nothing unknown or stale is current', () => {
+    const v = projectObservationsView('technical')!;
+    const by = (id: string) => v.rows.find((r) => r.id === id)!;
+    expect(by(OBS_UNKNOWN)).toMatchObject({ read: 'notRead', reason: 'unknown', label: 'unknown', ageMinutes: null });
+    expect(by(OBS_STALE).read).toBe('stale');
+    expect(v.rows.filter((r) => r.read === 'current').map((r) => r.id)).toEqual(v.rows.filter((r) => r.id === OBS_OK && r.read === 'current').map((r) => r.id));
+  });
+
+  it('Owner gets no source reference; Nontechnical gets nothing', () => {
+    expect(projectObservationsView('owner')!.rows.every((r) => r.sourceRef === null)).toBe(true);
+    expect(projectObservationsView('technical')!.rows.every((r) => r.sourceRef?.startsWith('github:'))).toBe(true);
+    expect(projectObservationsView('nontechnical')).toBeNull();
+  });
+
+  it('a failed or malformed read is unreadable, never an empty list', () => {
+    for (const body of [null, {}, { items: 'x' }, 'nope']) expect(projectObservationsView('technical', INVESTIGATION, body)!.state, String(body)).toBe('unreadable');
+    expect(projectObservationsView('technical', { evidence: [] }, PROJECT_OBSERVATIONS)!.state).toBe('unreadable');
+  });
+
+  it('a full answer is a lower bound: atLeast follows the raw count, before the case\'s own rows are taken out', () => {
+    const one = obsItems().find((r) => r['id'] === OBS_OK)!;
+    const items = Array.from({ length: EVIDENCE_LIST_LIMIT }, (_, i) => ({ ...one, id: `00000000-0000-4000-8000-${String(1000 + i).padStart(12, '0')}`, investigationId: i === 0 ? CASE_ID : null }));
+    const v = projectObservationsView('technical', INVESTIGATION, { items }, FIXTURE_NOW, 'live')!;
+    expect(v).toMatchObject({ atLeast: true, demo: false });
+    expect(v.rows).toHaveLength(EVIDENCE_LIST_LIMIT - 1);
+    expect(projectObservationsView('technical', INVESTIGATION, { items: items.slice(1) })!.atLeast).toBe(false);
+  });
+
+  it('a record that is not an Observation, or does not parse, is left out and said', () => {
+    const items = [...obsItems(), { ...obsItems()[0]!, id: '00000000-0000-4000-8000-0000000000c1', type: 'Correlation' }, 7];
+    const v = projectObservationsView('technical', INVESTIGATION, { items })!;
+    expect(v).toMatchObject({ state: 'ok', incomplete: true });
+    expect(v.rows.map((r) => r.id)).toEqual([OBS_OK, OBS_UNKNOWN, OBS_STALE]);
+  });
+});
+
+describe('what a decision cites (BACK-148)', () => {
+  const FAR = '00000000-0000-4000-8000-0000000000f0';
+  const citing = (citations: string[]) => ({ items: [{ ...DECISIONS.items[0]!, citations }], nextCursor: null });
+  const noCaseDecision = { ...INVESTIGATION, evidence: INVESTIGATION.evidence.filter((r) => r.type !== 'HumanDecision') };
+  const cites = (citations: string[], cited: Record<string, unknown> = {}, observations: unknown = PROJECT_OBSERVATIONS) =>
+    investigationReadView('technical', noCaseDecision, citing(citations), FIXTURE_NOW, 'live', { observations, cited })!.decisions[0]!.cites;
+
+  it('a project observation is cited from outside the case, with its own read badges', () => {
+    expect(cites([OBS_STALE])).toEqual([{ id: OBS_STALE, where: 'outside', row: expect.objectContaining({ id: OBS_STALE, read: 'stale' }) }]);
+  });
+
+  it('a citation past the capped list is resolved from GET /evidence/:id; one the server did not return is unknown', () => {
+    const far = { ...obsItems()[0]!, id: FAR, investigationId: null };
+    expect(cites([FAR], { [FAR]: far }, { items: [] })[0]).toMatchObject({ where: 'outside', row: { id: FAR } });
+    expect(cites([FAR], { [FAR]: null }, { items: [] })[0]).toEqual({ id: FAR, where: 'unresolved', row: null });
+    expect(cites([FAR], {}, null)[0]).toEqual({ id: FAR, where: 'unresolved', row: null });
+  });
+
+  it('an answer whose id does not match, or that is a decision, is not taken as the cited record', () => {
+    expect(cites([FAR], { [FAR]: { ...obsItems()[0]!, id: OBS_OK } }, { items: [] })[0]!.where).toBe('unresolved');
+    expect(cites([FAR], { [FAR]: { ...DECISIONS.items[0]!, id: FAR, type: 'HumanDecision' } }, { items: [] })[0]!.where).toBe('unresolved');
+  });
+
+  it('a resolved record of this case reads as in the case', () => {
+    expect(cites([CORRELATION])[0]!.where).toBe('case');
+    expect(cites([FAR], { [FAR]: { ...obsItems()[0]!, id: FAR, investigationId: CASE_ID } }, { items: [] })[0]!.where).toBe('case');
   });
 });

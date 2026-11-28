@@ -67,6 +67,25 @@ export interface InvestigationCopy {
     readonly noDecisions: string;
     readonly incomplete: string;
     readonly unreadable: { readonly title: string; readonly body: string };
+    /**
+     * BACK-148 (decision L): the case project's Observations that are not part of this case, read with
+     * GET /evidence?projectId=&type=Observation. Citing one in a decision is the association; it is never proof of cause.
+     */
+    readonly projectObs: {
+      readonly title: string;
+      readonly lede: string;
+      readonly count: (n: number) => string;
+      /** The server lists at most `n` (its LIST_LIMIT): a full list is a lower bound, never the total. */
+      readonly countAtLeast: (n: number) => string;
+      readonly none: string;
+      readonly unreadable: string;
+      readonly notPart: string;
+    };
+    /** What each decision cites. A cited record that could not be read is unknown, never fine. */
+    readonly cites: {
+      readonly title: string;
+      readonly where: Readonly<Record<'case' | 'outside' | 'unresolved', string>>;
+    };
   };
   /**
    * Record a decision (BACK-51 P3, live mode only, owner decision D4). A decision records what a person decided: it runs nothing
@@ -82,6 +101,9 @@ export interface InvestigationCopy {
     readonly evidenceLegend: string;
     readonly evidenceHint: string;
     readonly evidenceNone: string;
+    /** BACK-148: the project observations, a separate group of the same picker. */
+    readonly projectLegend: string;
+    readonly projectHint: string;
     readonly record: (i: number) => string;
     readonly problems: Readonly<Record<'decisionBlank' | 'decisionTooLong' | 'rationaleBlank' | 'rationaleTooLong' | 'tooManyEvidence' | 'unstorable', string>>;
     readonly submit: string;
@@ -183,6 +205,19 @@ const en: InvestigationCopy = {
       title: 'These records could not be read',
       body: 'The answer was not in a form we can read, so nothing is shown. It is unknown, not healthy.',
     },
+    projectObs: {
+      title: 'Project observations, not part of this case',
+      lede: 'Observations of this case\'s project that were not recorded in this case. Citing one in a decision links it to the decision; a citation is a reference, not proof of cause.',
+      count: (n) => `{${n}} listed`,
+      countAtLeast: (n) => `At least {${n}}: only the newest {${n}} are listed, so older ones may be missing.`,
+      none: 'No other observation of this project is listed. That is not the same as nothing being wrong.',
+      unreadable: 'The project observations could not be read. That is not the same as there being none.',
+      notPart: 'Not part of this case',
+    },
+    cites: {
+      title: 'Cites',
+      where: { case: 'In this case', outside: 'Not part of this case', unresolved: 'Could not be read: unknown' },
+    },
   },
   recordDecision: {
     title: 'Record a decision',
@@ -193,6 +228,8 @@ const en: InvestigationCopy = {
     evidenceLegend: 'Cited records (optional)',
     evidenceHint: 'Pick the records this decision rests on. Up to 50.',
     evidenceNone: 'No record is listed to cite. You can still record the decision without citing one.',
+    projectLegend: 'Project observations, not part of this case',
+    projectHint: 'Citing one links it to this decision. It does not move it into the case.',
     record: (i) => `Record {${i}}`,
     problems: {
       decisionBlank: 'Write the decision.',
@@ -314,6 +351,19 @@ const ar: InvestigationCopy = {
       title: 'تعذّرت قراءة هذه السجلات',
       body: 'لم تكن الإجابة بصيغة نستطيع قراءتها، لذا لا يُعرض شيء. الحالة غير معروفة، وليست سليمة.',
     },
+    projectObs: {
+      title: 'ملاحظات المشروع، ليست جزءًا من هذه الحالة',
+      lede: 'ملاحظات من مشروع هذه الحالة لم تُسجَّل فيها. الاستشهاد بإحداها في قرار يربطها بالقرار؛ والاستشهاد إشارة، وليس دليلًا على السبب.',
+      count: (n) => `مُدرج {${n}}`,
+      countAtLeast: (n) => `{${n}} على الأقل: تُدرج أحدث {${n}} فقط، لذا قد تنقص ملاحظات أقدم.`,
+      none: 'لا توجد ملاحظة أخرى مُدرجة لهذا المشروع. وهذا لا يعني أن كل شيء على ما يرام.',
+      unreadable: 'تعذّرت قراءة ملاحظات المشروع. وهذا لا يعني أنه لا توجد ملاحظات.',
+      notPart: 'ليست جزءًا من هذه الحالة',
+    },
+    cites: {
+      title: 'يستشهد بـ',
+      where: { case: 'في هذه الحالة', outside: 'ليس جزءًا من هذه الحالة', unresolved: 'تعذّرت قراءته: غير معروف' },
+    },
   },
   recordDecision: {
     title: 'تسجيل قرار',
@@ -324,6 +374,8 @@ const ar: InvestigationCopy = {
     evidenceLegend: 'السجلات المُستشهد بها (اختياري)',
     evidenceHint: 'اختر السجلات التي يستند إليها هذا القرار. حتى 50 سجلًا.',
     evidenceNone: 'لا يوجد سجل مُدرج للاستشهاد به. يمكنك تسجيل القرار دون الاستشهاد بسجل.',
+    projectLegend: 'ملاحظات المشروع، ليست جزءًا من هذه الحالة',
+    projectHint: 'الاستشهاد بإحداها يربطها بهذا القرار، ولا ينقلها إلى الحالة.',
     record: (i) => `السجل {${i}}`,
     problems: {
       decisionBlank: 'اكتب القرار.',

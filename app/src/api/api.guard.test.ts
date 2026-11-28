@@ -19,7 +19,7 @@ const ALLOWED_IMPORTERS = [...PORTFOLIO_VIEW, ...INVESTIGATION_VIEW];
 /** Which files may read which synthetic fixture. src/api/parity.test.ts is the app half of the BACK-98 parity check. */
 const FIXTURE_READERS: ReadonlyArray<{ readonly fixture: RegExp; readonly readers: readonly string[] }> = [
   { fixture: /portfolio(-project)?-response\.json$/, readers: PORTFOLIO_VIEW },
-  { fixture: /(investigation|decisions)-response\.json$/, readers: [...INVESTIGATION_VIEW, 'api/parity.test.ts'] },
+  { fixture: /(investigation|decisions|project-observations)-response\.json$/, readers: [...INVESTIGATION_VIEW, 'api/parity.test.ts'] },
   { fixture: /evidence-response\.json$/, readers: ['api/parity.test.ts'] },
 ];
 const FIXTURES = [
@@ -29,6 +29,8 @@ const FIXTURES = [
   'fixture/evidence-response.json',
   'fixture/investigation-response.json',
   'fixture/decisions-response.json',
+  // BACK-148: the case project's observations (GET /evidence?projectId=&type=Observation), read by the investigation view.
+  'fixture/project-observations-response.json',
 ];
 const REQUEST = /\bfetch\b|XMLHttpRequest|WebSocket|EventSource|sendBeacon|https?:\/\//;
 

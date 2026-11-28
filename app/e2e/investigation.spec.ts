@@ -226,6 +226,9 @@ const SRV_DEMO = { en: 'Demo data: synthetic records, not live', ar: 'بيانا
 const SRV_TITLE = { en: 'Server-shaped demo records', ar: 'سجلات تجريبية بصيغة الخادم' } as const;
 const SRV_LABEL = { en: ['Hypothesis', 'Unknown', 'Proposed'], ar: ['فرضية', 'مجهول', 'مقترح'] } as const;
 const SRV_READ = { en: ['Stale', 'Not read'], ar: ['قديمة', 'غير مقروءة'] } as const;
+const PROJ_TITLE = { en: 'Project observations, not part of this case', ar: 'ملاحظات المشروع، ليست جزءًا من هذه الحالة' } as const;
+const PROJ_NOT_PART = { en: 'Not part of this case', ar: 'ليست جزءًا من هذه الحالة' } as const;
+const PROJ_READ = { en: ['Current', 'Not read', 'Stale'], ar: ['حديثة', 'غير مقروءة', 'قديمة'] } as const;
 for (const lang of LANGS) {
   for (const persona of ['owner', 'technical'] as const) {
     test(`server-shaped records ${lang}/${persona}: demo marker, type badges, read states, proposed decision, no health word, no link, no request`, async ({ page }) => {
@@ -239,14 +242,17 @@ for (const lang of LANGS) {
       const records = panel.getByTestId('server-record');
       await expect(records).toHaveCount(2);
       await expect(panel.locator('[data-testid="server-record"] [data-truth]')).toHaveText([SRV_LABEL[lang][0], SRV_LABEL[lang][1]]);
-      await expect(panel.locator('.srv-read')).toHaveText([...SRV_READ[lang]]);
+      await expect(panel.locator('[data-testid="server-record"] .srv-read')).toHaveText([...SRV_READ[lang]]);
       await expect(records.nth(1)).toContainText(lang === 'ar' ? 'فشلت قراءة المصدر.' : 'The source read failed.');
       await expect(records.nth(1).locator('.srv-age')).toHaveCount(0);
       const decision = panel.getByTestId('server-decision');
       await expect(decision).toHaveCount(1);
-      await expect(decision.locator('[data-truth]')).toHaveText(SRV_LABEL[lang][2]);
+      await expect(decision.locator('> .srv-state [data-truth]')).toHaveText(SRV_LABEL[lang][2]);
       await expect(decision.locator('[data-creator="recorded"]')).toBeVisible();
-      await expect(panel.locator('[data-truth="approved"], [data-truth="observed"], [data-read="current"], [data-health], a, button')).toHaveCount(0);
+      await expect(panel.locator('[data-truth="approved"], [data-health], a, button')).toHaveCount(0);
+      // The case's records and the decision's citations: nothing current or observed (the one current read is a project observation).
+      const caseSide = panel.locator('[data-testid="server-record"], [data-testid="server-decision"]');
+      await expect(caseSide.locator('[data-truth="observed"], [data-read="current"]')).toHaveCount(0);
       expect(await panel.innerText()).not.toMatch(/healthy|سليم/i);
       // Owner sees no source reference and none of the server's free text; Technical sees both, isolated left to right.
       const refs = panel.locator('bdi.srv-ref');
@@ -254,9 +260,44 @@ for (const lang of LANGS) {
         await expect(refs).toHaveCount(0);
         for (const t of ['example-org', '#42', 'checkout-e2e', 'actions/runs']) await expect(panel).not.toContainText(t);
       } else {
-        await expect(refs).toHaveText(['github:example-org/demo-storefront#pull/42', 'github:example-org/demo-storefront#actions/runs/1002', 'Revert pull request #42 on main and re-run checkout-e2e']);
+        await expect(panel.locator('[data-testid="server-record"] bdi.srv-ref, [data-testid="server-decision"] dd bdi.srv-ref')).toHaveText(['github:example-org/demo-storefront#pull/42', 'github:example-org/demo-storefront#actions/runs/1002', 'Revert pull request #42 on main and re-run checkout-e2e']);
         for (const el of await refs.all()) await expect(el).toHaveAttribute('dir', 'ltr');
       }
+      expect(requests).toEqual([]);
+      expect(errors).toEqual([]);
+    });
+  }
+
+  // BACK-148 (decision L): the case project's observations that are not part of this case, from the committed projection fixture.
+  for (const persona of ['owner', 'technical'] as const) {
+    test(`project observations ${lang}/${persona}: labelled apart from the case, honest read states, count, citations, no request`, async ({ page }) => {
+      const requests: string[] = [];
+      page.on('request', (r) => { if (!['document', 'script', 'stylesheet', 'image', 'font'].includes(r.resourceType())) requests.push(`${r.resourceType()} ${r.url()}`); });
+      const errors = await load(page, { lang, persona });
+      const section = page.getByTestId('project-observations');
+      await expect(section).toHaveAttribute('data-state', 'ok');
+      await expect(section.locator('h3')).toHaveText(PROJ_TITLE[lang]);
+      const rows = section.getByTestId('project-observation');
+      // The case's own observation (the failed run) is listed with the case, not here.
+      await expect(rows).toHaveCount(3);
+      for (const row of await rows.all()) await expect(row).toHaveAttribute('data-read', /^(current|notRead|stale)$/);
+      await expect(section.locator('.srv-read')).toHaveText([...PROJ_READ[lang]]);
+      await expect(rows.nth(1).locator('[data-truth]')).toHaveText(lang === 'ar' ? 'مجهول' : 'Unknown');
+      for (const row of await rows.all()) await expect(row).toContainText(PROJ_NOT_PART[lang]);
+      await expect(section.getByTestId('project-observations-count')).toHaveAttribute('data-at-least', 'false');
+      await expect(section.getByTestId('project-observations-count')).toContainText('3');
+      // The fixture decision cites two records of the case: each says where it is.
+      await expect(page.getByTestId('server-decision-cite')).toHaveCount(2);
+      await expect(page.locator('[data-testid="server-decision-cite"][data-where="case"]')).toHaveCount(2);
+      const refs = section.locator('bdi.srv-ref');
+      if (persona === 'owner') await expect(refs).toHaveCount(0);
+      else {
+        await expect(refs).toHaveText(['github:example-org/demo-storefront#actions/runs/1001', 'github:example-org/demo-storefront#deployments', 'github:example-org/demo-storefront#pulls']);
+        for (const el of await refs.all()) await expect(el).toHaveAttribute('dir', 'ltr');
+      }
+      // No form in the default build: it is live mode only.
+      await expect(page.getByTestId('record-decision')).toHaveCount(0);
+      expect(await section.innerText()).not.toMatch(/healthy|سليم/i);
       expect(requests).toEqual([]);
       expect(errors).toEqual([]);
     });
@@ -266,5 +307,6 @@ for (const lang of LANGS) {
     await load(page, { lang, persona: 'nontechnical' });
     await expect(page.getByTestId('server-records')).toHaveCount(0);
     await expect(page.locator('main')).not.toContainText(SRV_TITLE[lang]);
+    await expect(page.getByTestId('project-observations')).toHaveCount(0);
   });
 }
