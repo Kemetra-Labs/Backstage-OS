@@ -59,8 +59,8 @@ Otherwise the lesson reads as `unsupported`. A cited subset of the currently agr
 
 `readLesson` also takes the workspace owner, and refuses (`invalid-chain`) a chain that `approve()` and `rollback()` could not have written:
 - a row reviewed by anyone other than the owner;
-- an approval window that is not canonical UTC ISO, or that ends at or before its start or more than 180 days after it;
+- an approval window that is not canonical UTC ISO, that starts after the read time or before the previous approval, or that ends at or before its start or more than 180 days after it;
 - a first row that is not an approval;
 - a rollback row whose content matches no earlier version.
 
-A self-consistent chain written by anything else therefore cannot claim what the episodes or the owner did not approve, and the unkeyed hash is safe to read. The owner must come from `workspaces.owner_user_id`. Episodes are only as trustworthy as their citations: an episode must cite a visible HumanDecision, and HumanDecisions are written only through the decision route. Tests: `test/learning/learning.hardening.spec.ts`.
+The candidate is derived over the whole basis, as `approve()` does, so an episode id that conflicts under another key does not count. The reviewer check is about shape only: the hash is unkeyed, so it refuses a chain that names another reviewer but cannot prove the owner wrote it. What makes the read safe is that the content must be true of the current episodes and their HumanDecisions. The owner must come from `workspaces.owner_user_id`. Episodes are only as trustworthy as their citations: an episode must cite a visible HumanDecision, and HumanDecisions are written only through the decision route. Tests: `test/learning/learning.hardening.spec.ts`.

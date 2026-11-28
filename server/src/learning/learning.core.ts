@@ -207,23 +207,25 @@ export function rollback(
  * makes the unkeyed chain safe to read: a self-consistent chain cannot claim what the episodes do not show.
  */
 function supported(content: LessonContent, basis: Basis): boolean {
-  // Only this key's episodes matter, so the read costs what this lesson's episodes cost.
-  const own = basis.episodes.filter((e) => e.applicabilityKey === content.applicabilityKey);
-  const current = candidatesOf(own, basis.visible, basis.decisions)[0];
+  // Over the whole basis, as approve() derives it: an id that conflicts under another key is dropped here too.
+  const current = candidatesOf(basis.episodes, basis.visible, basis.decisions).find((c) => c.applicabilityKey === content.applicabilityKey);
   if (!current || current.contested || current.outcome !== content.outcome) return false;
   const live = new Set(current.episodeIds);
   const cited = content.episodeIds;
   if (cited.length < MIN_EPISODES || !sameJson(sorted(cited), cited) || !cited.every((id) => live.has(id))) return false;
   const citedSet = new Set(cited);
   // From the counting episodes only, the same set the candidate was built from.
-  const citations = own.filter((e) => citedSet.has(e.id) && counts(e, basis.visible, basis.decisions)).flatMap(citesOf);
+  const citations = basis.episodes
+    .filter((e) => e.applicabilityKey === content.applicabilityKey && citedSet.has(e.id) && counts(e, basis.visible, basis.decisions))
+    .flatMap(citesOf);
   return sameJson(sorted(citations), content.evidenceIds);
 }
 
-const validWindow = (c: LessonContent): boolean => {
+/** A canonical window of at most MAX_LESSON_DAYS, approved no later than `now` and not before `notBefore`. */
+const validWindow = (c: LessonContent, now: number, notBefore: number): boolean => {
   const at = instant(c.approvedAt);
   const expires = instant(c.expiresAt);
-  return at !== null && expires !== null && expires > at && expires - at <= MAX_LESSON_DAYS * DAY_MS;
+  return at !== null && expires !== null && at <= now && at >= notBefore && expires > at && expires - at <= MAX_LESSON_DAYS * DAY_MS;
 };
 
 /**
@@ -231,13 +233,17 @@ const validWindow = (c: LessonContent): boolean => {
  * first row is an approval, every approval has a valid window, and a rollback restores the content of an
  * earlier version. `owner` must come from the workspace row (workspaces.owner_user_id).
  */
-const governed = (rows: readonly LessonRow[], owner: string): boolean =>
-  rows.every(
-    (r, i) =>
-      r.reviewer === owner &&
-      validWindow(r.content) &&
-      (r.kind === 'approved' ? true : i > 0 && rows.slice(0, i).some((earlier) => sameJson(earlier.content, r.content))),
-  );
+// The reviewer check is shape only: the hash is unkeyed, so it stops a chain naming another reviewer, it
+// does not prove the owner wrote it. What makes the read safe is that the content must hold (supported()).
+const governed = (rows: readonly LessonRow[], owner: string, now: number): boolean =>
+  rows.every((r, i) => {
+    if (r.reviewer !== owner) return false;
+    if (r.kind === 'rolled-back') return i > 0 && rows.slice(0, i).some((earlier) => sameJson(earlier.content, r.content));
+    // An approval carries its own time: canonical, not in the future, not before the previous approval.
+    const previous = rows.slice(0, i).reverse().find((x) => x.kind === 'approved');
+    const notBefore = previous ? (instant(previous.content.approvedAt) ?? Number.POSITIVE_INFINITY) : Number.NEGATIVE_INFINITY;
+    return validWindow(r.content, now, notBefore);
+  });
 
 /**
  * O4 and O6: the current version, read against the current basis (episodes, visible evidence and
@@ -247,7 +253,8 @@ const governed = (rows: readonly LessonRow[], owner: string): boolean =>
  */
 export function readLesson(rows: readonly LessonRow[], basis: Basis, now: string, owner: string): LessonRead {
   if (!rows.length) return { state: 'none' };
-  if (!chainOk(rows) || !safely(() => governed(rows, owner))) return { state: 'invalid-chain' };
+  const at = instant(now);
+  if (at === null || !chainOk(rows) || !safely(() => governed(rows, owner, at))) return { state: 'invalid-chain' };
   const { version, content } = rows[rows.length - 1]!;
   // A lesson needs at least one citation and one episode, or it is not shown.
   if (!safely(() => strings(content.evidenceIds) && strings(content.episodeIds) && content.evidenceIds.length > 0 && content.episodeIds.length > 0)) return { state: 'uncited' };

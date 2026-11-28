@@ -146,6 +146,11 @@ describe('a lesson is shown only while the current episodes still support it', (
     expect(state(odd)).not.toBe('approved');
   });
 
+  it('an episode id that conflicts under another key does not count for this lesson either', () => {
+    const conflicting = { ...eps[0]!, applicabilityKey: 'other|reasoning-v3', outcome: 'success' as const };
+    expect(state(chain, basisOf([...eps, conflicting]))).toBe('unsupported');
+  });
+
   it('more agreeing episodes after approval keep it supported', () => {
     const more = [...eps, ep(90, 'failure'), ep(91, 'failure')];
     expect(state(chain, basisOf(more))).toBe('approved');
@@ -171,6 +176,16 @@ describe('a lesson is shown only if approve() and rollback() could have written 
     ['a non-ISO approval time', { approvedAt: 'Nov 27 2026' }],
   ])('a chain with %s is refused', (_name, content) => {
     expect(read([resealed({ content })])).toBe('invalid-chain');
+  });
+
+  it('a chain approved in the future, or with a non-canonical expiry, is refused', () => {
+    expect(read([resealed({ content: { approvedAt: '2027-05-01T00:00:00Z', expiresAt: '2027-10-01T00:00:00Z' } })])).toBe('invalid-chain');
+    expect(read([resealed({ content: { expiresAt: '2027-01-01T00:00:00' } })])).toBe('invalid-chain');
+  });
+
+  it('a later version approved before the version it follows is refused', () => {
+    const earlier = seal({ version: 2, previous: v1.hash, kind: 'approved', reviewer: OWNER, content: { ...v1.content, approvedAt: '2026-11-01T00:00:00Z' } });
+    expect(read([v1, earlier])).toBe('invalid-chain');
   });
 
   it('a first row that claims to be a rollback is refused', () => {
