@@ -70,7 +70,7 @@
 	# if Descope's config turns telemetry on; the collector host is in a CDN bundle that was not read); accounts.google.com and
 	# oidc-client-ts (social and OIDC flows, not magic link). The screens after "Sign In Screen" (the magic-link wait and verification
 	# screens) were not enumerated; their content could name more hosts.
-	header @signin Content-Security-Policy "default-src 'self'; script-src 'self' https://descopecdn.com https://static.descope.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://imgs.descope.com; font-src 'self' data:; connect-src 'self' https://api.descope.com https://static.descope.com https://static2.descope.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+	header @signin Content-Security-Policy "default-src 'self'; script-src 'self' https://descopecdn.com https://static.descope.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://imgs.descope.com; font-src 'self' data: https://descopecdn.com; connect-src 'self' https://api.descope.com https://static.descope.com https://static2.descope.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
 	# /api/... goes to the BFF with the prefix stripped; the Host header is passed through.
 	# X-Forwarded-For is overwritten, never appended to a client-sent value, so the BFF (which trusts only this proxy)
