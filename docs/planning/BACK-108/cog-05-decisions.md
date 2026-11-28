@@ -43,6 +43,16 @@ The requirements above are now enforced in `server/src/learning/learning.core.ts
   - Malformed inputs refuse instead of throwing.
   - More stored-row negatives.
 - **Before activation (tracked):**
-  - The chain hash is unkeyed, so it gives tamper-evidence, not authentication. Anyone who can insert a whole self-consistent chain can forge one. Activation needs either a keyed MAC for the chain or a `readLesson` that re-derives the content from the current basis. The hash also does not cover workspace and project; the scope check in `fromStored` covers that today.
+  - The chain hash is unkeyed, so it gives tamper-evidence, not authentication. Anyone who can insert a whole self-consistent chain can forge one. **Closed 2026-11-28** by re-derivation at read (below), with no keyed MAC needed. The hash also does not cover workspace and project; the scope check in `fromStored` covers that.
   - The write path must supply `at` from the server clock and the owner from `workspaces.owner_user_id`, write the lesson citation rows, and handle the table limits (content up to 64 KiB, key 1 to 200 characters, reviewer a member uuid) as refusals.
 - Tests: `test/learning/learning.hardening.spec.ts` (pure) and the new cases in `learning-db.spec.ts`. No schema change.
+
+## Built: re-derivation at read (2026-11-28)
+
+`readLesson(rows, basis, now)` now reads a lesson against the current basis: the episodes, the visible evidence and the HumanDecisions. A lesson is shown as an advisory note only while the current episodes still support exactly what it says. That means:
+
+- every cited episode still counts (visible, observation, HumanDecision), and there are at least N of them;
+- the evidence is exactly the cited episodes' citations;
+- the key's current candidate has the same outcome and is not contested.
+
+Otherwise the lesson reads as `unsupported`. More agreeing episodes since the approval are fine. A self-consistent chain written by anything other than `approve()` therefore cannot claim what the episodes do not show, and the unkeyed hash is safe to read. Episodes are only as trustworthy as their citations: an episode must cite a visible HumanDecision, and HumanDecisions are written only through the decision route. Tests: `test/learning/learning.hardening.spec.ts`.
