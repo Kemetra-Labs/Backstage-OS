@@ -3,6 +3,7 @@
 // server's read model produces.
 import { describe, expect, it } from 'vitest';
 import { parsePortfolio } from '../api/portfolio';
+import { hostCopy } from '../i18n/host';
 import PROJECT from '../fixture/portfolio-project-response.json';
 import RESPONSE from '../fixture/portfolio-response.json';
 import { FIXTURE_NOW, FORCED_FORMS, forcedBody, forcedFormFrom, githubReadView, githubReadViewFor } from './githubReadView';
@@ -31,7 +32,7 @@ describe('the synthetic GET /portfolio fixture', () => {
 
 describe('githubReadView', () => {
   it('is always marked as demo data and is complete', () => {
-    expect(githubReadView()).toMatchObject({ state: 'ok', demo: true, incomplete: false });
+    expect(githubReadView()).toMatchObject({ state: 'ok', demo: true, incomplete: false, capped: false, limit: 100 });
   });
 
   it('shows each read state from the fixture clock, never a health word', () => {
@@ -75,7 +76,7 @@ describe('githubReadView', () => {
   });
 
   it('a body that is not a portfolio shows nothing and says the view is incomplete, never an empty success', () => {
-    expect(githubReadView({ nope: true })).toEqual({ projects: [], state: 'unreadable', demo: true, incomplete: true });
+    expect(githubReadView({ nope: true })).toEqual({ projects: [], state: 'unreadable', demo: true, incomplete: true, capped: false, limit: null });
     const partial = { projects: [...RESPONSE.projects, { id: 'x' }] };
     expect(githubReadView(partial).incomplete).toBe(true);
   });
@@ -113,12 +114,12 @@ describe('forced connector errors (BACK-62)', () => {
 
   it('a malformed body is an unreadable panel, still marked demo data, with no row', () => {
     for (const body of [null, 'x', [], { projects: 'x' }, { projects: null }, { nope: true }]) {
-      expect(githubReadView(body)).toEqual({ projects: [], state: 'unreadable', demo: true, incomplete: true });
+      expect(githubReadView(body)).toEqual({ projects: [], state: 'unreadable', demo: true, incomplete: true, capped: false, limit: null });
     }
   });
 
   it('a body whose every project is dropped is unreadable, not empty', () => {
-    expect(githubReadView({ projects: [{ id: 'x' }, 7] })).toMatchObject({ projects: [], state: 'unreadable', demo: true, incomplete: true });
+    expect(githubReadView({ projects: [{ id: 'x' }, 7] })).toMatchObject({ projects: [], state: 'unreadable', demo: true, incomplete: true, capped: false, limit: null });
   });
 
   it('a partly dropped body keeps its rows and says it is incomplete', () => {
@@ -128,7 +129,7 @@ describe('forced connector errors (BACK-62)', () => {
   });
 
   it('an empty project list is an explicit empty panel, still marked demo data, never a complete success', () => {
-    expect(githubReadView({ projects: [] })).toEqual({ projects: [], state: 'empty', demo: true, incomplete: false });
+    expect(githubReadView({ projects: [] })).toEqual({ projects: [], state: 'empty', demo: true, incomplete: false, capped: false, limit: null });
   });
 
   it('a project with no source keeps the project and lists no row (the panel says nothing was read)', () => {
@@ -168,8 +169,8 @@ describe('forced connector errors (BACK-62)', () => {
 
 describe('live origin (BACK-51 P1)', () => {
   it('a live body is never marked as demo data, in any state', () => {
-    expect(githubReadView({ projects: [] }, FIXTURE_NOW, 'live')).toEqual({ projects: [], state: 'empty', demo: false, incomplete: false });
-    expect(githubReadView({ nope: true }, FIXTURE_NOW, 'live')).toEqual({ projects: [], state: 'unreadable', demo: false, incomplete: true });
+    expect(githubReadView({ projects: [] }, FIXTURE_NOW, 'live')).toEqual({ projects: [], state: 'empty', demo: false, incomplete: false, capped: false, limit: null });
+    expect(githubReadView({ nope: true }, FIXTURE_NOW, 'live')).toEqual({ projects: [], state: 'unreadable', demo: false, incomplete: true, capped: false, limit: null });
     expect(githubReadView(RESPONSE, FIXTURE_NOW, 'live').demo).toBe(false);
   });
 
@@ -184,5 +185,34 @@ describe('live origin (BACK-51 P1)', () => {
 
   it('in live mode the fetched body is used, never the fixture', () => {
     expect(githubReadViewFor('', FIXTURE_NOW, 'live', { projects: [] }).state).toBe('empty');
+  });
+});
+
+describe('the cap note (BACK-49)', () => {
+  const capped = { ...RESPONSE, capped: true };
+
+  it('a capped body is marked capped, and an uncapped one is not (the fixture predates nothing: it carries the fields)', () => {
+    expect(githubReadView(capped).capped).toBe(true);
+    expect(githubReadView(capped).limit).toBe(100);
+    expect(githubReadView(RESPONSE).capped).toBe(false);
+    expect(githubReadView(capped, FIXTURE_NOW, 'live').capped).toBe(true);
+  });
+
+  it('the list itself is unchanged by the cap: the same rows', () => {
+    expect(rows(githubReadView(capped)).map((s) => s.externalRef)).toEqual(rows(githubReadView()).map((s) => s.externalRef));
+  });
+
+  it('the panel never claims a cap on an unreadable or empty answer', () => {
+    expect(githubReadView({ projects: [], limit: 100, capped: true }).capped).toBe(false); // the empty state, never a cap note
+    expect(githubReadView({ nope: true }).capped).toBe(false);
+  });
+
+  it('says it in English and Arabic, with the limit and never a total', () => {
+    const en = hostCopy('PORTFOLIO_COPY', 'en').github.capped(100);
+    const ar = hostCopy('PORTFOLIO_COPY', 'ar').github.capped(100);
+    expect(en).toBe('Showing the first {100} projects; more exist.');
+    expect(en.replace(/[{}]/g, '')).toBe('Showing the first 100 projects; more exist.');
+    expect(ar).toBe('يُعرض أول {100} مشروع فقط؛ توجد مشاريع أخرى.');
+    expect(`${en}${ar}`).not.toMatch(/total|إجمالي/i);
   });
 });

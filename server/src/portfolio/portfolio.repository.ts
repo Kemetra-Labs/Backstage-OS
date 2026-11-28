@@ -9,7 +9,7 @@ import { UUID } from '../evidence/evidence.types';
 import { PROJECT_VISIBLE } from '../evidence/visibility';
 import { summarizeProject, summarizeSource, type BatchRow, type ProjectSummary } from './portfolio.model';
 
-/** At most this many projects, ordered by key. Documented in server/README.md. */
+/** At most this many projects, ordered by key; the list says when it was cut (`capped`). Documented in server/README.md. */
 export const PROJECT_LIMIT = 100;
 
 /** $1 holds an active grant on source `alias`. */
@@ -46,7 +46,7 @@ interface EvidenceRow {
 // The latest read of a source is the newest ingest batch (one transaction, one database-set
 // received_at) that holds a repository-level record. Newer rows of another kind for the same
 // source (a later Correlation, for example) never hide the read.
-const LATEST_READ = `
+export const LATEST_READ = `
   WITH latest AS (
     SELECT e.source_id, max(e.received_at) AS at
       FROM evidence e
@@ -64,17 +64,35 @@ const LATEST_READ = `
 export class PortfolioRepository {
   constructor(private readonly pool: pg.Pool) {}
 
-  /** Every visible project with its granted sources; `withItems` adds the latest read's items. */
+  /** Every visible project (at most PROJECT_LIMIT) with its granted sources; `withItems` adds the latest read's items. */
   async list(workspaceId: string, user: string, options: { projectId?: string; withItems: boolean }): Promise<ProjectSummary[]> {
-    if (options.projectId !== undefined && !UUID.test(options.projectId)) return [];
+    return (await this.read(workspaceId, user, options)).projects;
+  }
+
+  /**
+   * The portfolio list: at most PROJECT_LIMIT visible projects ordered by key, and `capped`, true exactly when more
+   * visible projects exist. Both are computed over projects the reader holds a granted GitHub source on, never over
+   * hidden ones, so `capped` reveals nothing about projects the reader cannot see. No total is ever returned.
+   */
+  listPortfolio(workspaceId: string, user: string): Promise<{ projects: ProjectSummary[]; capped: boolean }> {
+    return this.read(workspaceId, user, { withItems: false });
+  }
+
+  private async read(
+    workspaceId: string,
+    user: string,
+    options: { projectId?: string; withItems: boolean },
+  ): Promise<{ projects: ProjectSummary[]; capped: boolean }> {
+    if (options.projectId !== undefined && !UUID.test(options.projectId)) return { projects: [], capped: false };
     return runWithWorkspaceContext(this.pool, workspaceId, async (c) => {
-      const { rows: sources } = await c.query<SourceRow>(
+      // One more than the limit is read, to learn whether the list was cut; the extra project is dropped below.
+      const { rows: read } = await c.query<SourceRow>(
         `WITH visible AS (
            SELECT p.id, p.key, p.name FROM projects p
             WHERE ($2::uuid IS NULL OR p.id = $2)
               AND ${PROJECT_VISIBLE('p.id')}
               AND EXISTS (SELECT 1 FROM sources ps WHERE ps.project_id = p.id AND ps.provider = '${PORTFOLIO_PROVIDER}' AND ${GRANTED('ps')})
-            ORDER BY p.key LIMIT ${PROJECT_LIMIT})
+            ORDER BY p.key LIMIT ${PROJECT_LIMIT + 1})
          SELECT v.id AS project_id, v.key AS project_key, v.name AS project_name,
                 s.id AS source_id, s.provider, s.external_ref
            FROM visible v JOIN sources s ON s.project_id = v.id
@@ -82,9 +100,13 @@ export class PortfolioRepository {
           ORDER BY v.key, s.external_ref, s.id`,
         [user, options.projectId ?? null],
       );
-      if (sources.length === 0) return [];
+      const projectIds = [...new Set(read.map((r) => r.project_id))];
+      const capped = projectIds.length > PROJECT_LIMIT;
+      const kept = new Set(projectIds.slice(0, PROJECT_LIMIT));
+      const sources = capped ? read.filter((r) => kept.has(r.project_id)) : read;
+      if (sources.length === 0) return { projects: [], capped: false };
       const { rows: evidence } = await c.query<EvidenceRow>(LATEST_READ, [user, sources.map((s) => s.source_id)]);
-      return assemble(sources, evidence, options.withItems);
+      return { projects: assemble(sources, evidence, options.withItems), capped };
     });
   }
 }

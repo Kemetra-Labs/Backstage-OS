@@ -3,7 +3,7 @@
 // not exist and one the caller may not see look the same: 404. The persona header is never read.
 import { Controller, Get, Inject, NotFoundException, Param, Req, UseGuards } from '@nestjs/common';
 import { RequireCapability, WorkspaceGuard, type WorkspaceRequest } from '../auth/workspace.guard';
-import { PortfolioRepository } from './portfolio.repository';
+import { PortfolioRepository, PROJECT_LIMIT } from './portfolio.repository';
 
 export const PORTFOLIO_REPOSITORY = Symbol('KAWALYS_PORTFOLIO_REPOSITORY');
 
@@ -18,12 +18,13 @@ function principalOf(req: WorkspaceRequest) {
 export class PortfolioController {
   constructor(@Inject(PORTFOLIO_REPOSITORY) private readonly repo: PortfolioRepository) {}
 
-  /** Visible projects with per-source read state and open-item counts; no items. */
+  /** Visible projects (at most `limit`) with per-source read state and open-item counts; no items. `capped`: more visible projects exist. */
   @Get()
   @RequireCapability('evidence.read')
   async list(@Req() req: WorkspaceRequest) {
     const p = principalOf(req);
-    return { projects: await this.repo.list(p.workspaceId, p.userId, { withItems: false }) };
+    const { projects, capped } = await this.repo.listPortfolio(p.workspaceId, p.userId);
+    return { projects, limit: PROJECT_LIMIT, capped };
   }
 
   /** One visible project with the items of each source's latest read. */

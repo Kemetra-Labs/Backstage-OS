@@ -24,6 +24,7 @@
 /* GitHub reads (BACK-57): read states only, never health colours. Synthetic data carries the demo marker. */
 .pf-gh-lede { color: var(--muted); max-width: 70ch; }
 .pf-gh-incomplete { color: var(--amber); }
+.pf-gh-capped { color: var(--muted); }
 .pf-gh-project { display: grid; gap: 8px; padding-top: 12px; }
 .pf-gh-project h3 { font-size: 16px; margin: 0; }
 .pf-gh-project li { display: grid; gap: 4px 16px; padding: 10px 0; border-top: 1px dashed var(--line); min-width: 0; }

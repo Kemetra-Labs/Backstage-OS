@@ -130,11 +130,15 @@ export interface PortfolioParse {
   readonly malformed: boolean;
   /** Projects and sources that could not be expressed and were left out: the view is incomplete. */
   readonly dropped: number;
+  /** BACK-49: the server cut the list at `limit` (more visible projects exist). Only a real `true` counts; never a total. */
+  readonly capped: boolean;
+  /** The server's list limit, when it sent a valid one (the detail route, wrapped, sends none). */
+  readonly limit: number | null;
 }
 
 /** `GET /portfolio` or `GET /portfolio/:id` (wrapped as `{ projects: [project] }`). Never throws. */
 export function parsePortfolio(body: unknown): PortfolioParse {
-  if (!isObject(body) || !Array.isArray(body['projects'])) return { projects: [], malformed: true, dropped: 0 };
+  if (!isObject(body) || !Array.isArray(body['projects'])) return { projects: [], malformed: true, dropped: 0, capped: false, limit: null };
   let dropped = 0;
   const projects: ParsedProject[] = [];
   for (const raw of body['projects']) {
@@ -146,7 +150,9 @@ export function parsePortfolio(body: unknown): PortfolioParse {
     dropped += p.droppedSources;
     projects.push({ id: p.id, key: p.key, name: p.name, sources: p.sources });
   }
-  return { projects, malformed: false, dropped };
+  const limit = body['limit'];
+  const okLimit = typeof limit === 'number' && Number.isSafeInteger(limit) && limit >= 1;
+  return { projects, malformed: false, dropped, capped: body['capped'] === true, limit: okLimit ? limit : null };
 }
 
 // ---- Display mapping ------------------------------------------------------------------------------
@@ -221,6 +227,8 @@ export interface ApiPortfolio {
   readonly projects: readonly ApiProject[];
   readonly malformed: boolean;
   readonly dropped: number;
+  readonly capped: boolean;
+  readonly limit: number | null;
 }
 
 export function toPortfolio(parse: PortfolioParse, o: PortfolioOptions): ApiPortfolio {
@@ -234,5 +242,5 @@ export function toPortfolio(parse: PortfolioParse, o: PortfolioOptions): ApiPort
     const items = sources.filter((x) => x.parsed.state === 'ok' && x.api.authority.lastSuccessAt !== null).flatMap((x) => x.parsed.items.map((i) => itemRef(i, x.parsed, x.api.authority)));
     return { id: p.id, key: p.key, name: p.name, sources: sources.map((x) => x.api), items };
   });
-  return { projects, malformed: parse.malformed, dropped: parse.dropped };
+  return { projects, malformed: parse.malformed, dropped: parse.dropped, capped: parse.capped, limit: parse.limit };
 }

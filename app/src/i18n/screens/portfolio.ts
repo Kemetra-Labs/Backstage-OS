@@ -34,6 +34,8 @@ export interface PortfolioCopy {
     readonly lede: string;
     readonly demo: string;
     readonly incomplete: string;
+    /** BACK-49: the list was cut at the server's limit. Says that more exist; never a total. */
+    readonly capped: (limit: number) => string;
     /** BACK-62: the panel never goes blank. A well-formed answer with no project, and one that could not be read at all. */
     readonly empty: { readonly title: string; readonly body: string };
     readonly unreadable: { readonly title: string; readonly body: string };
@@ -107,6 +109,7 @@ const en: PortfolioCopy = {
     lede: 'The latest read of each connected repository. These are read states, not a health claim.',
     demo: 'Demo data: synthetic reads, not live',
     incomplete: 'Part of this answer could not be read and is left out, so this list is incomplete.',
+    capped: (limit) => `Showing the first {${limit}} projects; more exist.`,
     empty: {
       title: 'No GitHub reads to show',
       body: 'The answer listed no project, so nothing was read. That is unknown, not healthy.',
@@ -194,6 +197,7 @@ const ar: PortfolioCopy = {
     lede: 'آخر قراءة لكل مستودع متصل. هذه حالات قراءة، وليست حكمًا على السلامة.',
     demo: 'بيانات تجريبية: قراءات مصطنعة، ليست مباشرة',
     incomplete: 'تعذّرت قراءة جزء من هذه الإجابة فاستُبعد، لذا القائمة غير مكتملة.',
+    capped: (limit) => `يُعرض أول {${limit}} مشروع فقط؛ توجد مشاريع أخرى.`,
     empty: {
       title: 'لا توجد قراءات {GitHub} لعرضها',
       body: 'لم تذكر الإجابة أي مشروع، لذا لم يُقرأ شيء. الحالة غير معروفة، وليست سليمة.',

@@ -8,6 +8,7 @@
 // KAWALYS_WRITE_PORTFOLIO_FIXTURE=1.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { PROJECT_LIMIT } from '../../src/portfolio/portfolio.repository';
 import { summarizeProject, summarizeSource, type BatchRow, type ProjectRef, type SourceRef } from '../../src/portfolio/portfolio.model';
 
 // Jest runs from server/ (npm test, CI); from the repo root the app folder is a sibling of the cwd's child.
@@ -76,8 +77,8 @@ function portfolioProjects(withItems: boolean) {
 }
 
 const json = (v: unknown): unknown => JSON.parse(JSON.stringify(v));
-/** GET /portfolio: { projects }, no items. */
-const portfolioBody = () => json({ projects: portfolioProjects(false) });
+/** GET /portfolio: { projects, limit, capped }, no items. The synthetic portfolio is far below the limit: not capped. */
+const portfolioBody = () => json({ projects: portfolioProjects(false), limit: PROJECT_LIMIT, capped: false });
 /** GET /portfolio/:projectId for Demo Checkout: the project itself, with items. */
 const projectBody = () => json(portfolioProjects(true)[0]);
 
@@ -98,7 +99,7 @@ describe('GET /portfolio response parity with the app fixture', () => {
   });
 
   it('covers every state the screen must show: current, at least, stale, never read, failed and denied', () => {
-    const sources = (portfolioBody() as { projects: { sources: { state: string; reason: string | null; lists: { pullRequests: { complete: boolean | null } } }[] }[] }).projects.flatMap((p) => p.sources);
+    const sources = (portfolioBody() as { limit: number; capped: boolean; projects: { sources: { state: string; reason: string | null; lists: { pullRequests: { complete: boolean | null } } }[] }[] }).projects.flatMap((p) => p.sources);
     expect(sources.map((s) => `${s.state}/${s.reason}`)).toEqual(['ok/null', 'ok/null', 'ok/null', 'unknown/never_read', 'unknown/timeout', 'denied/not_visible']);
     expect(sources[1]!.lists.pullRequests.complete).toBe(false);
   });
