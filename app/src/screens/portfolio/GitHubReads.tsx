@@ -54,6 +54,7 @@ export function GitHubReads() {
         <>
           {v.state === 'unreadable' && <StateBlock kind="error" title={g.unreadable.title} body={g.unreadable.body} />}
           {v.state === 'empty' && <StateBlock kind="empty" title={g.empty.title} body={g.empty.body} />}
+          {v.state === 'ok' && v.capped && <p className="pf-gh-capped" role="status" data-testid="github-capped"><Text s={g.capped(v.limit ?? v.projects.length)} /></p>}
           {v.state === 'ok' && v.incomplete && <p className="pf-gh-incomplete" role="status">{g.incomplete}</p>}
           {v.projects.map((p) => (
             <section key={p.id} className="pf-gh-project" aria-labelledby={`pf-gh-${p.id}`} data-testid={`github-project-${p.id}`}>

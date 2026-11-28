@@ -53,6 +53,9 @@ export interface GitHubReadView {
   readonly demo: boolean;
   /** The body could not be read, or some of it was left out: say so, never show it as complete. */
   readonly incomplete: boolean;
+  /** BACK-49: the server listed only the first `limit` projects and more exist. A lower bound, never a total. */
+  readonly capped: boolean;
+  readonly limit: number | null;
 }
 
 const failureOf = (code: string | null): FailureReason =>
@@ -92,6 +95,8 @@ export function githubReadView(body: unknown = RESPONSE, now: Date = FIXTURE_NOW
     // A fixture body (or a forced failure of it) is never presented as live, in any state.
     demo: synthetic,
     incomplete,
+    capped: projects.length > 0 && api.capped,
+    limit: api.limit,
   };
 }
 

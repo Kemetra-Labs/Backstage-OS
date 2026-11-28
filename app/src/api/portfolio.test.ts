@@ -137,11 +137,11 @@ describe('the response is untrusted', () => {
     ['no projects array', {}],
     ['projects not an array', { projects: {} }],
   ])('%s: malformed, never an empty portfolio that looks fine, never a throw', (_label, body) => {
-    expect(parsePortfolio(body)).toEqual({ projects: [], malformed: true, dropped: 0 });
+    expect(parsePortfolio(body)).toEqual({ projects: [], malformed: true, dropped: 0, capped: false, limit: null });
   });
 
   it('a real empty portfolio is not malformed', () => {
-    expect(parsePortfolio({ projects: [] })).toEqual({ projects: [], malformed: false, dropped: 0 });
+    expect(parsePortfolio({ projects: [] })).toEqual({ projects: [], malformed: false, dropped: 0, capped: false, limit: null });
   });
 
   it('drops a malformed project instead of guessing, and counts it', () => {
@@ -191,5 +191,29 @@ describe('the response is untrusted', () => {
     expect(it('https://user:pw@github.com/x/y/pull/1').observation!.sourceUrl).toBeUndefined();
     expect(it('http://github.com/x/y/pull/1').observation!.sourceUrl).toBeUndefined();
     expect(it(null).observation!.sourceUrl).toBeUndefined();
+  });
+});
+
+describe('the cap (BACK-49): limit and capped', () => {
+  const body = (extra: Record<string, unknown>) => ({ projects: [project()], ...extra });
+
+  it('parses limit and capped from the list body', () => {
+    expect(parsePortfolio(body({ limit: 100, capped: true }))).toMatchObject({ limit: 100, capped: true, malformed: false });
+    expect(parsePortfolio(body({ limit: 100, capped: false }))).toMatchObject({ limit: 100, capped: false });
+  });
+
+  it('a body without them (the detail route, wrapped) is not capped, with no limit', () => {
+    expect(parsePortfolio(body({}))).toMatchObject({ limit: null, capped: false });
+  });
+
+  it('only a real true caps; a malformed limit or flag never invents a cap or a limit', () => {
+    expect(parsePortfolio(body({ limit: 'many', capped: 'yes' }))).toMatchObject({ limit: null, capped: false, malformed: false });
+    expect(parsePortfolio(body({ limit: -5, capped: 1 }))).toMatchObject({ limit: null, capped: false });
+    expect(parsePortfolio(body({ limit: 1.5 }))).toMatchObject({ limit: null });
+  });
+
+  it('is carried to the display model', () => {
+    expect(toPortfolio(parsePortfolio(body({ limit: 100, capped: true })), opts)).toMatchObject({ limit: 100, capped: true });
+    expect(toPortfolio(parsePortfolio({ nope: 1 }), opts)).toMatchObject({ limit: null, capped: false, malformed: true });
   });
 });
