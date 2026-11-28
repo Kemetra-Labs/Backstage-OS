@@ -1,6 +1,8 @@
 # BACK-148 Q1: how a real observation reaches an investigation (options card)
 
-**Status: PROPOSED, decision only, no code.** Prepared 28 Nov 2026 against `main` `8bf802d`. Answers BACK-148 Q1
+**Status: DECIDED 28 Nov 2026. The owner approved L, L2, M and N as recommended ("approve L, L2, M, N as
+recommended"). No code yet: per N, fixture-backed app work for L/L2 may start; the M route and real validation wait for
+BACK-172 (merged) and BACK-52. Q2 and Q3 remain open.** Prepared 28 Nov 2026 against `main` `8bf802d`. Answers BACK-148 Q1
 ("explicit linking versus scoped read projection, and does the first path need case creation?"), which the ticket
 requires before any schema or API change. Q2 (correction, revocation and ownership of a linked case) and Q3 (which real
 observation is permitted) stay open and are only noted where an option touches them. Nothing here authorizes code,
@@ -103,4 +105,5 @@ Letters continue after BACK-131 (A-D), BACK-127 (E-G) and BACK-172 (H-K).
 | **M** | First-path case creation | **(i)**: owner-only `POST /investigations` reusing `createInvestigation()`, after BACK-172 merges. |
 | **N** | Order | Fixture-backed app work for L starts after this decision; the M route and real validation wait for BACK-172 (merged) and BACK-52 (one consented source, Q3). |
 
-Owner rulings are not inferred: until L, L2, M and N are answered, nothing in this card is built.
+Owner rulings: **L = A, L2 = yes, M = (i), N as written**, approved by the owner on 28 Nov 2026. Option B and the
+copy option C are not pursued.
