@@ -10,13 +10,14 @@ export const CAPABILITIES = [
   'source.connect',
   'source.disconnect',
   'audit.read',
+  'investigation.create', // owner-only case creation (BACK-148 decision M); the project must be visible to the caller
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
 export type Role = 'owner';
 
 export const ROLE_CAPABILITIES: Readonly<Record<Role, readonly Capability[]>> = {
-  owner: ['evidence.read', 'decision.create', 'note.create', 'source.connect', 'source.disconnect', 'audit.read'],
+  owner: ['evidence.read', 'decision.create', 'note.create', 'source.connect', 'source.disconnect', 'audit.read', 'investigation.create'],
 };
 
 export function capabilitiesFor(role: Role): readonly Capability[] {

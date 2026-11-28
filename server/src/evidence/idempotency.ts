@@ -1,10 +1,10 @@
-// Idempotency for the two evidence write routes (BACK-172 G3, owner decisions H(a) and I). Pure helpers: the
+// Idempotency for the human write routes (BACK-172 G3, owner decisions H(a) and I; case creation added by BACK-148 M). Pure helpers: the
 // optional `Idempotency-Key` header, the key hash and the canonical request hash. The record itself is the
 // write's own audit row (metadata.idempotency_key_hash and metadata.request_hash), looked up by the repository
 // under an advisory lock; there is no schema of its own. The raw key is never stored or logged.
 import { createHash } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
-import type { DecisionInput, NoteInput } from './evidence.repository';
+import type { DecisionInput, InvestigationInput, NoteInput } from './evidence.repository';
 
 /** How long a key is remembered (owner decision I). */
 export const IDEMPOTENCY_WINDOW_SECONDS = 24 * 60 * 60;
@@ -12,7 +12,7 @@ export const IDEMPOTENCY_WINDOW_SECONDS = 24 * 60 * 60;
 const KEY = /^[A-Za-z0-9-]{8,64}$/;
 
 /** The audit action each idempotent write already records. */
-export type IdempotentAction = 'decision.recorded' | 'note.recorded';
+export type IdempotentAction = 'decision.recorded' | 'note.recorded' | 'investigation.created';
 
 export interface IdempotencyClaim {
   /** SHA-256 of `${action}:${key}`, hex. */
@@ -37,8 +37,13 @@ const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0
 const citations = (ids: readonly string[]): string[] => [...new Set(ids.map((id) => id.toLowerCase()))].sort(byCodeUnit);
 
 /** Fixed key order, so equal inputs always serialise to the same text. */
-function canonical(action: IdempotentAction, input: DecisionInput | NoteInput): string {
-  const common = { action, investigationId: input.investigationId.toLowerCase(), evidenceIds: citations(input.evidenceIds) };
+function canonical(action: IdempotentAction, input: DecisionInput | NoteInput | InvestigationInput): string {
+  if (action === 'investigation.created') {
+    const i = input as InvestigationInput;
+    return JSON.stringify({ action, projectId: i.projectId.toLowerCase(), title: i.title });
+  }
+  const evidenceInput = input as DecisionInput | NoteInput;
+  const common = { action, investigationId: evidenceInput.investigationId.toLowerCase(), evidenceIds: citations(evidenceInput.evidenceIds) };
   if (action === 'decision.recorded') {
     const d = input as DecisionInput;
     return JSON.stringify({ ...common, decision: d.decision, rationale: d.rationale });
@@ -47,6 +52,6 @@ function canonical(action: IdempotentAction, input: DecisionInput | NoteInput): 
   return JSON.stringify({ ...common, type: n.type, text: n.text });
 }
 
-export function idempotencyClaim(action: IdempotentAction, key: string, input: DecisionInput | NoteInput): IdempotencyClaim {
+export function idempotencyClaim(action: IdempotentAction, key: string, input: DecisionInput | NoteInput | InvestigationInput): IdempotencyClaim {
   return { keyHash: sha256(`${action}:${key}`), requestHash: sha256(canonical(action, input)) };
 }

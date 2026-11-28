@@ -41,7 +41,7 @@ export interface KawalysDatabase {
 
 export interface CreateAppOptions {
   readonly database?: KawalysDatabase;
-  /** Clock of the evidence write limiter (BACK-172 G2). Tests inject one; the default is Date.now. */
+  /** Clock of the write limiters (BACK-172 G2; POST /investigations, BACK-148 M). Tests inject one; the default is Date.now. */
   readonly writeClock?: () => number;
   /**
    * Test seams for the GitHub refresh scheduler (BACK-52). Production passes nothing: the global fetch and the
@@ -80,7 +80,7 @@ export async function createApp(
   if (db && workspaces) {
     const evidence = new EvidenceRepository(db.appPool, approval);
     imports.push(EvidenceModule.register(evidence, workspaces, options.writeClock));
-    imports.push(InvestigationModule.register(new InvestigationRepository(db.appPool), evidence, workspaces));
+    imports.push(InvestigationModule.register(new InvestigationRepository(db.appPool), evidence, workspaces, options.writeClock));
     imports.push(PortfolioModule.register(new PortfolioRepository(db.appPool), workspaces));
     // COG-07 live search (owner decision 2026-11-27): read-only, rate limited per user, time-bounded per read.
     imports.push(CognitionModule.register(new MemoryRepository(db.appPool, { budgetMs: COGNITION_READ_BUDGET_MS }), workspaces));

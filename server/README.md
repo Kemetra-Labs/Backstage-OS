@@ -71,7 +71,7 @@ The command ends by printing the two `export KAWALYS_DATABASE_URL_*` lines for t
 | `GET /demo/evidence/:id` | Session required. Synthetic evidence. Fixture ids `E-1` (visible to all) and `E-5` (technical persona only). Persona comes from `x-kawalys-demo-persona`: `technical`, `owner` or `nontechnical` (default). |
 | `GET /evidence`, `GET /evidence/:id`, `POST /investigations/:id/decisions`, `POST /investigations/:id/notes` | Exist **only when both database URLs are set** (see Evidence API below). Session plus a workspace capability required. Without the database they answer 404. |
 | `GET /portfolio`, `GET /portfolio/:projectId` | Same conditions as the evidence routes, read-only, `evidence.read`. See Portfolio API below. |
-| `GET /investigations`, `GET /investigations/:id` | Same conditions as the evidence routes, read-only, `evidence.read`. See Investigation API below. |
+| `GET /investigations`, `GET /investigations/:id`, `POST /investigations` | Same conditions as the evidence routes. The reads need `evidence.read`; case creation needs `investigation.create` (owner only, BACK-148 M). See Investigation API below. |
 | `GET /decisions` | Same conditions as the evidence routes, read-only, `evidence.read`. Recent human decisions with creator and time. See Recent decisions below. |
 
 Every route is protected unless it is marked `@Public()` (the guard is global), so a new controller is denied by default.
@@ -258,7 +258,7 @@ Failures follow the same fixed-envelope policy as authentication (404 for denied
 
 **Known limits:**
 
-- Projects and sources have no write routes, and investigations have read routes only (see Investigation API below).
+- Projects and sources have no write routes. Investigations can be created by the owner (`POST /investigations`, BACK-148 M) but not renamed, closed or deleted (see Investigation API below).
 - Correlation and Hypothesis evidence each come from one source, including user notes: a note cannot link evidence of two sources (for example a GitHub pull request and a monitoring alert). Doing that safely needs a schema change and its own visibility rule; it is not built. This already applies today to two repositories of one project: a note citing both is refused with 400.
 - The list is capped at 500 rows and has no pagination or truncation flag yet.
 - Database-role hardening is partial: since BACK-100 a `HumanDecision` row cannot commit without its audit row, but `kawalys_app` could still insert a grant for any user id, or an audit row of its own choosing; the application never does.
@@ -299,12 +299,13 @@ Tests: `test/connectors/github/` (canned responses, mutation-checked), plus a Do
 
 ## Investigation API (BACK-50 server slice)
 
-Read-only routes for investigations. No new capability, schema or dependency.
+Investigation reads (BACK-50 server slice) and owner case creation (BACK-148 decision M). No schema or dependency; one capability, `investigation.create`, owner only.
 
 | Route | Behaviour |
 | --- | --- |
 | `GET /investigations` | Session and `evidence.read`. `{ items }`: visible investigations (`id`, `projectId`, `title`, `status`, `createdAt`), newest first, at most 100. Optional `projectId`. An unknown, malformed or repeated filter gives `{ items: [] }`. |
 | `GET /investigations/:id` | Session and `evidence.read`. The investigation plus `evidence`: its records as `GET /evidence?investigationId=` returns them, with `type` and `state` unchanged. Those two fields are the badges; no health is computed. 404 when the id is unknown, malformed or not visible. |
+| `POST /investigations` | Session and `investigation.create` (owner only). Body `{ projectId, title }`: `projectId` a string, `title` 1 to 300 characters with the evidence text rules (no NUL, no unpaired surrogate, not blank), else 400. The project must be visible to the caller (`PROJECT_VISIBLE`, grant rows share-locked in the same transaction as the insert); an absent, malformed, invisible or other-workspace project is the same 404 and nothing is written. Reuses `createInvestigation()`'s insert and its `investigation.created` audit row, which carries the server request id. BACK-172 controls: 30 per minute per workspace, principal and action (429), the 32 kB body cap, and an optional `Idempotency-Key` (same key and body: the first id, no second row or audit; same key, other body: 422 `idempotency_conflict`; a replay is re-authorized, so it is 404 once the project is hidden). Returns 201 `{ id }`. |
 
 **Visibility** is one shared rule, `src/evidence/visibility.ts` (`PROJECT_VISIBLE`). An investigation is visible exactly when its project is: the caller holds an active grant on one of the project's sources. The portfolio (further narrowed to GitHub sources since BACK-99), the decision write path and decision reads in `GET /evidence` use the same rule; the write path share-locks the grant rows, so a concurrent revocation waits or wins outright. Another workspace is excluded by RLS, and the persona header is never read.
 
