@@ -2,9 +2,14 @@
 // cited evidence; a candidate lesson needs N verified, visible, observation-labelled episodes; approval
 // is owner-only and append-only; a lesson is an advisory note that never changes a state, gate,
 // recommendation or rule. Activation is blocked (D6): nothing here is wired to a route or to reasoning.
-import { sha256 } from '../memory/memory.canonical';
+// The read and write path requirements (decision citations are HumanDecisions, at least one citation,
+// the chain verified in src, owner-only on write) are enforced here, ahead of any activation.
+import { canonicalJson, sha256 } from '../memory/memory.canonical';
 
 export const MIN_EPISODES = 5;
+/** Longest a lesson approval may stay valid (conservative and reversible; the owner can change it). */
+export const MAX_LESSON_DAYS = 180;
+const DAY_MS = 86_400_000;
 
 export interface Episode {
   readonly id: string;
@@ -24,11 +29,20 @@ export interface Candidate {
   readonly contested: boolean;
 }
 
+/** What candidates are computed from: the episodes, the visible evidence, and which of it is a HumanDecision. */
+export interface Basis {
+  readonly episodes: readonly Episode[];
+  readonly visible: ReadonlySet<string>;
+  readonly decisions: ReadonlySet<string>;
+}
+
 export interface LessonContent {
   readonly applicabilityKey: string;
   readonly outcome: Episode['outcome'];
   readonly episodeIds: readonly string[];
   readonly evidenceIds: readonly string[];
+  /** When the owner approved this content. Inside the content, so the stored hash covers it. */
+  readonly approvedAt: string;
   readonly expiresAt: string;
 }
 
@@ -37,13 +51,13 @@ export interface LessonRow {
   readonly previous: string | null;
   readonly kind: 'approved' | 'rolled-back';
   readonly reviewer: string;
-  readonly at: string;
   readonly content: LessonContent;
+  /** sha256 of exactly the stored columns: version, previous, kind, reviewer and content. */
   readonly hash: string;
 }
 
 export type LessonRead =
-  | { readonly state: 'none' | 'suspended' | 'expired' | 'invalid-chain' }
+  | { readonly state: 'none' | 'suspended' | 'expired' | 'invalid-chain' | 'uncited' }
   | {
       readonly state: 'approved';
       readonly version: number;
@@ -60,17 +74,45 @@ const order = (a: string, b: string): number => (a === b ? 0 : a < b ? -1 : 1);
 const sorted = (xs: Iterable<string>): string[] => [...new Set(xs)].sort(order);
 const citesOf = (e: Episode): string[] => [...e.decisionEvidence, ...e.outcomeEvidence];
 
+/** A malformed input refuses instead of throwing. */
+const safely = (check: () => boolean): boolean => {
+  try {
+    return check();
+  } catch {
+    return false;
+  }
+};
+const sameJson = (a: unknown, b: unknown): boolean => safely(() => canonicalJson(a) === canonicalJson(b));
+
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+/** Only a canonical UTC ISO-8601 instant, so what is sealed is unambiguous. */
+const instant = (s: unknown): number | null => {
+  if (typeof s !== 'string' || !ISO_INSTANT.test(s)) return null;
+  const t = Date.parse(s);
+  return Number.isFinite(t) && new Date(t).toISOString() === (s.length === 20 ? s.replace('Z', '.000Z') : s) ? t : null;
+};
+
+// An episode counts only when its decision and outcome are both cited and visible (O1, O4), and every
+// decision citation is a HumanDecision.
+const counts = (e: Episode, visible: ReadonlySet<string>, decisions: ReadonlySet<string>): boolean =>
+  e.label === 'observation' &&
+  e.decisionEvidence.length > 0 &&
+  e.outcomeEvidence.length > 0 &&
+  e.decisionEvidence.every((id) => decisions.has(id)) &&
+  citesOf(e).every((id) => visible.has(id));
+
 /** O2: deterministic candidates; abstains below N; disagreeing episodes make a candidate contested. */
-export function candidatesOf(episodes: readonly Episode[], visible: ReadonlySet<string>): Candidate[] {
-  const byId = new Map<string, Episode>();
+export function candidatesOf(episodes: readonly Episode[], visible: ReadonlySet<string>, decisions: ReadonlySet<string>): Candidate[] {
+  const byId = new Map<string, Episode | null>();
   for (const e of episodes) {
-    const cites = citesOf(e);
-    // An episode exists only when its decision and outcome are both cited and visible (O1, O4).
-    if (e.label !== 'observation' || !e.decisionEvidence.length || !e.outcomeEvidence.length || !cites.every((id) => visible.has(id))) continue;
-    if (!byId.has(e.id)) byId.set(e.id, e);
+    if (!safely(() => counts(e, visible, decisions))) continue;
+    const seen = byId.get(e.id);
+    // The same id with different content is a conflict: drop it, so the result does not depend on order.
+    if (seen === undefined) byId.set(e.id, e);
+    else if (seen !== null && !sameJson(seen, e)) byId.set(e.id, null);
   }
   const groups = new Map<string, Episode[]>();
-  for (const e of byId.values()) groups.set(e.applicabilityKey, [...(groups.get(e.applicabilityKey) ?? []), e]);
+  for (const e of byId.values()) if (e) groups.set(e.applicabilityKey, [...(groups.get(e.applicabilityKey) ?? []), e]);
 
   const out: Candidate[] = [];
   for (const key of sorted(groups.keys())) {
@@ -89,42 +131,64 @@ export function candidatesOf(episodes: readonly Episode[], visible: ReadonlySet<
   return out;
 }
 
-const sealed = (row: Omit<LessonRow, 'hash'>): LessonRow => ({ ...row, hash: sha256(row) });
+// The hash input is named field by field, so it is exactly what learning_lessons stores, and nothing a
+// caller adds to a row object can change it.
+const hashOf = (r: Omit<LessonRow, 'hash'>): string =>
+  sha256({ version: r.version, previous: r.previous, kind: r.kind, reviewer: r.reviewer, content: r.content });
 
+/** No gaps, each previous hash is the prior version's hash, the hash covers the row, one lesson key throughout. */
 const chainOk = (rows: readonly LessonRow[]): boolean =>
-  rows.every((r, i) => {
-    const { hash, ...rest } = r;
-    return r.version === i + 1 && r.previous === (i === 0 ? null : rows[i - 1]!.hash) && hash === sha256(rest);
-  });
+  safely(() =>
+    rows.every(
+      (r, i) =>
+        r.version === i + 1 &&
+        r.previous === (i === 0 ? null : rows[i - 1]!.hash) &&
+        r.content.applicabilityKey === rows[0]!.content.applicabilityKey &&
+        r.hash === hashOf(r),
+    ),
+  );
 
-function append(rows: readonly LessonRow[], kind: LessonRow['kind'], reviewer: string, at: string, content: LessonContent): Appended {
+function append(rows: readonly LessonRow[], kind: LessonRow['kind'], reviewer: string, content: LessonContent): Appended {
   const previous = rows.length ? rows[rows.length - 1]!.hash : null;
-  return { ok: true, rows: [...rows, sealed({ version: rows.length + 1, previous, kind, reviewer, at, content })] };
+  const row = { version: rows.length + 1, previous, kind, reviewer, content };
+  return { ok: true, rows: [...rows, { ...row, hash: hashOf(row) }] };
 }
+
 
 export interface Grant {
   readonly reviewer: string;
+  /** The workspace owner, read from the workspace row (workspaces.owner_user_id), never from the request. */
   readonly owner: string;
   readonly expiresAt: string;
+  /** The approval time, from the server clock at write time, never from the request. */
   readonly at: string;
 }
 
-/** O3 and O5: the workspace owner approves a non-contested candidate with an expiry; append-only. */
-export function approve(rows: readonly LessonRow[], candidate: Candidate, grant: Grant): Appended | Refusal<'not-owner' | 'contested' | 'bad-expiry' | 'invalid-chain'> {
+type ApproveRefusal = 'not-owner' | 'contested' | 'bad-expiry' | 'invalid-chain' | 'other-lesson' | 'not-a-candidate';
+
+/**
+ * O3 and O5: the workspace owner approves a non-contested candidate with an expiry; append-only. The
+ * candidate must be exactly what the basis still yields, so a hand-made or stale candidate is refused,
+ * and the sealed content always comes from the derived candidate, not from the caller's object.
+ */
+export function approve(rows: readonly LessonRow[], candidate: Candidate, grant: Grant, basis: Basis): Appended | Refusal<ApproveRefusal> {
   if (grant.reviewer !== grant.owner) return { ok: false, reason: 'not-owner' };
   if (candidate.contested) return { ok: false, reason: 'contested' };
-  const at = Date.parse(grant.at);
-  const expires = Date.parse(grant.expiresAt);
-  if (!Number.isFinite(at) || !Number.isFinite(expires) || expires <= at) return { ok: false, reason: 'bad-expiry' };
+  const at = instant(grant.at);
+  const expires = instant(grant.expiresAt);
+  if (at === null || expires === null || expires <= at || expires - at > MAX_LESSON_DAYS * DAY_MS) return { ok: false, reason: 'bad-expiry' };
   if (!chainOk(rows)) return { ok: false, reason: 'invalid-chain' };
-  const { applicabilityKey, outcome, episodeIds, evidenceIds } = candidate;
-  return append(rows, 'approved', grant.reviewer, grant.at, { applicabilityKey, outcome, episodeIds, evidenceIds, expiresAt: grant.expiresAt });
+  if (rows.length && rows[0]!.content.applicabilityKey !== candidate.applicabilityKey) return { ok: false, reason: 'other-lesson' };
+  const current = candidatesOf(basis.episodes, basis.visible, basis.decisions).find((c) => c.applicabilityKey === candidate.applicabilityKey);
+  if (!current || current.contested || !sameJson(current, candidate)) return { ok: false, reason: 'not-a-candidate' };
+  const { applicabilityKey, outcome, episodeIds, evidenceIds } = current;
+  return append(rows, 'approved', grant.reviewer, { applicabilityKey, outcome, episodeIds, evidenceIds, approvedAt: grant.at, expiresAt: grant.expiresAt });
 }
 
 /** O3: restores an earlier version's content byte for byte, as a new appended row. */
 export function rollback(
   rows: readonly LessonRow[],
-  req: { readonly reviewer: string; readonly owner: string; readonly toVersion: number; readonly at: string },
+  req: { readonly reviewer: string; readonly owner: string; readonly toVersion: number },
 ): Appended | Refusal<'not-owner' | 'no-such-version' | 'invalid-chain'> {
   if (req.reviewer !== req.owner) return { ok: false, reason: 'not-owner' };
   if (!chainOk(rows)) return { ok: false, reason: 'invalid-chain' };
@@ -132,7 +196,7 @@ export function rollback(
   if (!target) return { ok: false, reason: 'no-such-version' };
   // A deep copy that keeps key order, so the restored content serializes byte for byte the same.
   const content: LessonContent = { ...target.content, episodeIds: [...target.content.episodeIds], evidenceIds: [...target.content.evidenceIds] };
-  return append(rows, 'rolled-back', req.reviewer, req.at, content);
+  return append(rows, 'rolled-back', req.reviewer, content);
 }
 
 /** O4 and O6: the current version, suspended if any cited evidence is not visible; advisory only. */
@@ -140,7 +204,68 @@ export function readLesson(rows: readonly LessonRow[], visible: ReadonlySet<stri
   if (!rows.length) return { state: 'none' };
   if (!chainOk(rows)) return { state: 'invalid-chain' };
   const { version, content } = rows[rows.length - 1]!;
+  // A lesson needs at least one citation and one episode, or it is not shown.
+  if (!safely(() => content.evidenceIds.length > 0 && content.episodeIds.length > 0)) return { state: 'uncited' };
   if (!content.evidenceIds.every((id) => visible.has(id))) return { state: 'suspended' };
   if (!(Date.parse(now) < Date.parse(content.expiresAt))) return { state: 'expired' };
   return { state: 'approved', version, effect: 'advisory-note', applicabilityKey: content.applicabilityKey, outcome: content.outcome, episodeIds: content.episodeIds };
+}
+
+/** A learning_lessons row as the database returns it. Every field is checked before use. */
+export interface StoredLesson {
+  readonly workspace_id: unknown;
+  readonly project_id: unknown;
+  readonly version: unknown;
+  readonly previous_hash: unknown;
+  readonly kind: unknown;
+  readonly reviewer_user_id: unknown;
+  readonly applicability_key: unknown;
+  readonly content: unknown;
+  readonly hash: unknown;
+}
+
+const CONTENT_KEYS = ['applicabilityKey', 'approvedAt', 'episodeIds', 'evidenceIds', 'expiresAt', 'outcome'].join();
+const strings = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');
+
+function contentOf(v: unknown): LessonContent | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null;
+  const o = v as Record<string, unknown>;
+  if (Object.getPrototypeOf(o) !== Object.prototype || Object.keys(o).sort(order).join() !== CONTENT_KEYS) return null;
+  const { applicabilityKey, outcome, episodeIds, evidenceIds, approvedAt, expiresAt } = o;
+  if (typeof applicabilityKey !== 'string' || (outcome !== 'success' && outcome !== 'failure')) return null;
+  if (!strings(episodeIds) || !strings(evidenceIds) || typeof approvedAt !== 'string' || typeof expiresAt !== 'string') return null;
+  return { applicabilityKey, outcome, episodeIds, evidenceIds, approvedAt, expiresAt };
+}
+
+/** The workspace and project the reader asked for. The hash does not cover them, so they are checked here. */
+export interface LessonScope {
+  readonly workspaceId: string;
+  readonly projectId: string;
+}
+
+function rowOf(s: StoredLesson, scope: LessonScope): LessonRow | null {
+  if (s.workspace_id !== scope.workspaceId || s.project_id !== scope.projectId) return null;
+  const content = contentOf(s.content);
+  if (!content || s.applicability_key !== content.applicabilityKey) return null;
+  if (typeof s.version !== 'number' || !Number.isInteger(s.version)) return null;
+  if (s.previous_hash !== null && !(typeof s.previous_hash === 'string' && /^[0-9a-f]{64}$/.test(s.previous_hash))) return null;
+  if ((s.kind !== 'approved' && s.kind !== 'rolled-back') || typeof s.reviewer_user_id !== 'string' || typeof s.hash !== 'string') return null;
+  return { version: s.version, previous: s.previous_hash, kind: s.kind, reviewer: s.reviewer_user_id, content, hash: s.hash };
+}
+
+/**
+ * Maps the stored rows of one lesson in one project to chain rows in version order, or null when any row
+ * is malformed or belongs to another workspace or project. The result still goes through readLesson,
+ * which verifies the chain: the database checks the shape of each row, and src checks that the rows
+ * form one unbroken, untampered chain. The chain is tamper-evidence, not authentication: its hash is
+ * unkeyed (cog-05-decisions.md, before activation).
+ */
+export function fromStored(stored: readonly StoredLesson[], scope: LessonScope): LessonRow[] | null {
+  const rows: LessonRow[] = [];
+  for (const s of stored) {
+    const row = rowOf(s, scope);
+    if (!row) return null;
+    rows.push(row);
+  }
+  return rows.sort((a, b) => a.version - b.version);
 }

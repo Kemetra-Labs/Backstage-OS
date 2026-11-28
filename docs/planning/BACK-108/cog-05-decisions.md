@@ -27,3 +27,22 @@ Order: this record, then the pure logic (test-first), then the migration PR.
 - **Independent database review: GO**, no blockers. Fixed: reviewer membership; an index for reads by key; a test that a citation cannot point at another workspace's episode. Accepted: global primary keys on the citation tables (same as `evidence_citations` in 0003; an oracle only with two known random UUIDs).
 - **Requirements for the read and write path (when activation is approved):** an episode needs at least one decision and one outcome citation, and a lesson at least one citation, or it is not shown; a `decision` citation must be a HumanDecision; the hash chain is verified in `src` (no gaps, `previous_hash` equals the previous version's hash, the hash covers the content); owner-only review (O5) is checked on write.
 - Nothing in `src` reads or writes these tables; activation stays blocked (D6).
+
+## Built: read and write path requirements in the pure core (2026-11-28)
+
+The requirements above are now enforced in `server/src/learning/learning.core.ts`, still without activation (D6):
+
+- **Decision citations are HumanDecisions.** `candidatesOf` takes the set of visible HumanDecision evidence ids; an episode whose decision citation is not in it does not count.
+- **At least one citation.** `approve` takes the basis (episodes, visible evidence, HumanDecisions), re-derives the candidate and refuses anything else (`not-a-candidate`): a hand-made, relabelled or stale candidate cannot be sealed, and the sealed content comes from the derived candidate. `readLesson` returns `uncited` for a lesson with no evidence or no episode.
+- **Chain verified in src.** Design fix: the hash used to cover an approval time the table cannot store (`recorded_at` is set by the database), so a stored chain could never be re-verified. The approval time now lives in the content (`approvedAt`), and the hash covers exactly the stored columns (version, previous hash, kind, reviewer, content). The chain check also refuses a key switch between versions. `fromStored` maps database rows (strict content keys and types, key column equal to the content key) and sorts them by version; `test/learning/learning-db.spec.ts` writes a chain as `kawalys_app`, reads it back and verifies it, and a tampered stored row reads as `invalid-chain`.
+- **Owner-only on write.** `approve` and `rollback` refuse a reviewer who is not the owner. At the database level this holds because every membership is `owner` (0001); a test now fails if that role is ever widened. **For activation:** the write path must read the owner from `workspaces.owner_user_id`, never from the request, and must write the lesson citation rows from the content.
+- **Independent review (Claude reviewer, 2026-11-28): GO.** Fixed in the same PR:
+  - `fromStored` takes the requested workspace and project and refuses rows of any other.
+  - Approval and expiry must be canonical UTC ISO-8601 instants, and an approval lasts at most `MAX_LESSON_DAYS` = 180. This is a conservative, reversible choice; the owner can change it.
+  - Two episodes with one id and different content are both dropped, so the result does not depend on input order.
+  - Malformed inputs refuse instead of throwing.
+  - More stored-row negatives.
+- **Before activation (tracked):**
+  - The chain hash is unkeyed, so it gives tamper-evidence, not authentication. Anyone who can insert a whole self-consistent chain can forge one. Activation needs either a keyed MAC for the chain or a `readLesson` that re-derives the content from the current basis. The hash also does not cover workspace and project; the scope check in `fromStored` covers that today.
+  - The write path must supply `at` from the server clock and the owner from `workspaces.owner_user_id`, write the lesson citation rows, and handle the table limits (content up to 64 KiB, key 1 to 200 characters, reviewer a member uuid) as refusals.
+- Tests: `test/learning/learning.hardening.spec.ts` (pure) and the new cases in `learning-db.spec.ts`. No schema change.
