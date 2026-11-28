@@ -10,6 +10,9 @@ import { SessionService } from "./session/session.service";
 import type { SessionStore } from "./session/session.types";
 import { SignInRateLimiter } from "./sign-in-rate-limiter";
 
+/** Per client and minute. The app checks at most once a minute (return to the tab, back online); this leaves room for several tabs. */
+export const SESSION_STATE_LIMIT_PER_MINUTE = 30;
+
 export interface AuthOverrides {
   readonly verifier?: IdentityVerificationPort;
   readonly directory?: IdentityDirectory;
@@ -22,6 +25,8 @@ export interface AuthDeps {
   readonly directory: IdentityDirectory;
   readonly sessions: SessionService;
   readonly limiter: SignInRateLimiter;
+  /** The read-only session check (GET /auth/session-state): its own bucket, so return-to-tab checks never spend sign-in attempts. */
+  readonly stateLimiter: SignInRateLimiter;
   /** True only when the owner lab is on and the Descope project is configured: then GET /auth/lab exists. */
   readonly lab: boolean;
   readonly labProjectId: string | null;
@@ -58,6 +63,7 @@ export function buildAuth(env: Env, overrides: AuthOverrides = {}, persistence?:
     idleTtlMs: config.session.idleTtlSeconds * 1000,
   });
   const limiter = new SignInRateLimiter(clock, config.signInLimitPerMinute);
+  const stateLimiter = new SignInRateLimiter(clock, SESSION_STATE_LIMIT_PER_MINUTE);
   const labProjectId = config.lab && config.descope !== null ? config.descope.projectId : null;
-  return { verifier, directory, sessions, limiter, lab: labProjectId !== null, labProjectId };
+  return { verifier, directory, sessions, limiter, stateLimiter, lab: labProjectId !== null, labProjectId };
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { useSession, useSessionDraft, useSessionStore } from '../../app/SessionContext';
 import { StateBlock } from '../../components/StateBlock';
@@ -7,7 +7,7 @@ import { TruthChip } from '../../components/TruthChip';
 import { hostCopy } from '../../i18n/host';
 import type { StateKind } from '../../i18n/shell';
 import {
-  createSubmitGuard, DECISION_MAX, draftProblems, EMPTY_DRAFT, planSubmit, RATIONALE_MAX, refreshesList, submitDecision, type DecisionDraft, type DraftProblem, type SubmitResult,
+  answerStillCurrent, createSubmitGuard, DECISION_MAX, draftProblems, EMPTY_DRAFT, formGate, planSubmit, pruneForReshow, RATIONALE_MAX, settleAnswer, submitDecision, type DecisionDraft, type DraftProblem, type SubmitResult,
 } from '../../live/decisions';
 import type { SessionStatus } from '../../live/session';
 import type { RecordRow } from '../../view/investigationReadView';
@@ -15,7 +15,14 @@ import type { RecordRow } from '../../view/investigationReadView';
 /** What the form can show after a submit: the server's answer, or (nothing sent) a ticked record that left the list. */
 export type FormResult = SubmitResult | 'citationsChanged';
 
+/**
+ * open: the form. locked: the session is locked, so no draft text, record or control is shown (BACK-127). rereading: unlocked, but
+ * the case has not been read again for this sign-in, so the draft stays hidden until it has (and is pruned to what that read lists).
+ */
+export type FormGate = 'open' | 'locked' | 'rereading';
+
 export interface RecordDecisionViewProps {
+  readonly gate: FormGate;
   readonly draft: DecisionDraft;
   /** The records of this case that can be cited. */
   readonly records: readonly RecordRow[];
@@ -47,10 +54,19 @@ const RESULT_KIND: Readonly<Record<Exclude<FormResult, 'recorded'>, StateKind>> 
  * person decided and never says approved. While the session is not signed in the draft stays and submit is off, with the
  * reason; a failed or unconfirmed send keeps the draft and says so. No record id is shown.
  */
-export function RecordDecisionView({ draft, records, technical, sessionStatus, submitting, showProblems, result, onChange, onSubmit }: RecordDecisionViewProps) {
+export function RecordDecisionView({ gate, draft, records, technical, sessionStatus, submitting, showProblems, result, onChange, onSubmit }: RecordDecisionViewProps) {
   const { lang, copy } = useApp();
   const c = hostCopy('INVESTIGATION', lang).recordDecision;
   const s = hostCopy('INVESTIGATION', lang).serverRecords;
+  if (gate !== 'open') {
+    // Nothing of the draft, the records or any control while locked, and nothing until the case is read again after unlocking.
+    return (
+      <section className="rec-decision" aria-labelledby="rd-title" data-testid="record-decision" data-gate={gate}>
+        <h3 id="rd-title">{c.title}</h3>
+        {gate === 'locked' ? <StateBlock kind="unknown" title={c.locked.title} body={c.locked.body} /> : <p className="note" role="status">{c.rereading}</p>}
+      </section>
+    );
+  }
   const all = draftProblems(draft);
   const shown = all.filter((p) => showProblems || ALWAYS.includes(p));
   const bad = (a: DraftProblem, b: DraftProblem) => shown.includes(a) || shown.includes(b);
@@ -59,7 +75,7 @@ export function RecordDecisionView({ draft, records, technical, sessionStatus, s
     onChange({ ...draft, evidenceIds: draft.evidenceIds.includes(id) ? draft.evidenceIds.filter((x) => x !== id) : [...draft.evidenceIds, id] });
 
   return (
-    <section className="rec-decision" aria-labelledby="rd-title" data-testid="record-decision">
+    <section className="rec-decision" aria-labelledby="rd-title" data-testid="record-decision" data-gate="open">
       <h3 id="rd-title">{c.title}</h3>
       <p className="note"><Text s={c.lede} /></p>
       <form noValidate aria-busy={submitting ? 'true' : undefined} onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
@@ -140,10 +156,12 @@ export function RecordDecisionView({ draft, records, technical, sessionStatus, s
  * draft survives a session that ends and the sign-in after it, and is cleared only by a recorded decision or an explicit sign-out.
  * One submit at a time (D5 (a)); a not_found is reported to the session, which decides signed out versus a hidden case.
  */
-export function RecordDecision({ investigationId, records, technical, onSubmitted }: {
+export function RecordDecision({ investigationId, records, technical, readGeneration, onSubmitted }: {
   readonly investigationId: string;
   readonly records: readonly RecordRow[];
   readonly technical: boolean;
+  /** The session generation for which this case was last read successfully while unlocked; null if never. The draft returns only for the current one. */
+  readonly readGeneration: number | null;
   /** The decision list should be read again: after a recorded decision, and after an answer where it may have been recorded anyway. */
   readonly onSubmitted: () => void;
 }) {
@@ -155,9 +173,21 @@ export function RecordDecision({ investigationId, records, technical, onSubmitte
   const [result, setResult] = useState<FormResult | null>(null);
   const [showProblems, setShowProblems] = useState(false);
   const current = draft ?? EMPTY_DRAFT;
+  const gate: FormGate = formGate(session, readGeneration);
+  const open = gate === 'open';
+
+  // Re-show (BACK-127): when the draft comes back after a lock, prune its ticked records to the fresh read and say so if one left.
+  useEffect(() => {
+    if (!open) return;
+    const pruned = pruneForReshow(draft, records.map((r) => r.id));
+    if (pruned.changed) setDraft(pruned.draft);
+    setResult(pruned.changed ? 'citationsChanged' : null);
+    // On the gate opening only: later list changes are handled at submit (planSubmit), as before.
+  }, [open]);
 
   const submit = () => {
-    if (session?.status !== 'signedIn') return;
+    if (!open || session?.status !== 'signedIn' || session.locked) return;
+    const started = session.generation;
     const plan = planSubmit(current, records.map((r) => r.id));
     if (plan.kind === 'problems') {
       setShowProblems(true);
@@ -173,12 +203,15 @@ export function RecordDecision({ investigationId, records, technical, onSubmitte
       setSubmitting(true);
       try {
         const r = await submitDecision(investigationId, plan.sendable);
-        setResult(r);
-        if (r === 'recorded') {
+        // An answer that lands after the session locked or signed in again shows nothing and leaves the draft as it was (BACK-127).
+        const out = settleAnswer(r, answerStillCurrent(started, store?.getSnapshot() ?? null));
+        if (out.show !== null) setResult(out.show);
+        if (out.clearDraft) {
           setDraft(undefined);
           setShowProblems(false);
-        } else if (r === 'not_found') store?.reportNotFound();
-        if (refreshesList(r)) onSubmitted();
+        }
+        if (out.reportNotFound) store?.reportNotFound();
+        if (out.refreshList) onSubmitted();
       } finally {
         setSubmitting(false);
       }
@@ -187,6 +220,7 @@ export function RecordDecision({ investigationId, records, technical, onSubmitte
 
   return (
     <RecordDecisionView
+      gate={gate}
       draft={current}
       records={records}
       technical={technical}

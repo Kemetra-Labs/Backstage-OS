@@ -22,7 +22,7 @@ import { Shadow } from './screens/Shadow';
 import { Sources } from './screens/Sources';
 import { hostCopy } from './i18n/host';
 import { LIVE } from './live/reads';
-import { SessionStore } from './live/session';
+import { listenForReturn, SessionStore } from './live/session';
 import { SignInPage } from './live/signInPage';
 import { isSignInRoute } from './live/signInFlow';
 
@@ -74,7 +74,12 @@ function MainApp() {
   const route = useRoute();
   // Live mode only (BACK-51 P2): one session store for the app's life, above every screen. The default build creates none.
   const [session] = useState(() => (LIVE ? new SessionStore() : null));
-  useEffect(() => { void session?.start(); }, [session]);
+  // BACK-127: the first check, and a read-only re-check when the owner comes back (tab visible, online); no timer.
+  useEffect(() => {
+    if (!session) return undefined;
+    void session.start();
+    return listenForReturn(session);
+  }, [session]);
   const copy = hostCopy('COPY', lang);
   const shell = hostCopy('SHELL', lang);
 

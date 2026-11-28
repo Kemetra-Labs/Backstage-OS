@@ -2,7 +2,7 @@ import { type DynamicModule, Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { AuthController } from "./auth.controller";
 import { AuthGuard } from "./auth.guard";
-import { IDENTITY_DIRECTORY, IDENTITY_VERIFIER, LAB_MODE, LAB_PROJECT_ID, SESSION_SERVICE, SIGN_IN_LIMITER } from "./auth.tokens";
+import { IDENTITY_DIRECTORY, IDENTITY_VERIFIER, LAB_MODE, LAB_PROJECT_ID, SESSION_SERVICE, SESSION_STATE_LIMITER, SIGN_IN_LIMITER } from "./auth.tokens";
 import type { AuthDeps } from "./build-auth";
 import { LabController } from "./lab/lab.controller";
 
@@ -19,6 +19,7 @@ export class AuthModule {
         { provide: IDENTITY_DIRECTORY, useValue: deps.directory },
         { provide: SESSION_SERVICE, useValue: deps.sessions },
         { provide: SIGN_IN_LIMITER, useValue: deps.limiter },
+        { provide: SESSION_STATE_LIMITER, useValue: deps.stateLimiter },
         { provide: LAB_PROJECT_ID, useValue: deps.labProjectId },
         { provide: LAB_MODE, useValue: deps.lab },
         { provide: APP_GUARD, useClass: AuthGuard },

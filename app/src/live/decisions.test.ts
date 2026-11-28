@@ -1,7 +1,7 @@
 // BACK-51 P3: the decision form's rules and its one POST. The fetcher is injected: nothing here touches the network.
 import { describe, expect, it, vi } from 'vitest';
 import {
-  createSubmitGuard, DECISION_MAX, draftProblems, EMPTY_DRAFT, EVIDENCE_MAX, investigationIdOf, planSubmit, RATIONALE_MAX, refreshesList, submitDecision, type DecisionDraft, type SubmitResult,
+  answerStillCurrent, createSubmitGuard, DECISION_MAX, draftProblems, EMPTY_DRAFT, EVIDENCE_MAX, investigationIdOf, planSubmit, pruneForReshow, RATIONALE_MAX, refreshesList, settleAnswer, submitDecision, type DecisionDraft, type SubmitResult,
 } from './decisions';
 
 const INV = '00000000-0000-4000-8000-000000000004';
@@ -147,5 +147,66 @@ describe('refreshesList (the decision list the copy points the owner to is read 
     const no: SubmitResult[] = ['invalid', 'not_found', 'rate_limited'];
     for (const r of yes) expect(refreshesList(r), r).toBe(true);
     for (const r of no) expect(refreshesList(r), r).toBe(false);
+  });
+});
+
+describe('answerStillCurrent (BACK-127: a late answer after a lock or a new sign-in is stale)', () => {
+  const snap = (status: 'signedIn' | 'ended' | 'unavailable', generation: number, locked = false) => ({ status, generation, locked });
+
+  it('is current only on the same generation, signed in and not locked', () => {
+    expect(answerStillCurrent(1, snap('signedIn', 1))).toBe(true);
+    expect(answerStillCurrent(1, snap('signedIn', 2))).toBe(false);
+    expect(answerStillCurrent(1, snap('ended', 1, true))).toBe(false);
+    expect(answerStillCurrent(1, snap('unavailable', 1, true))).toBe(false);
+    expect(answerStillCurrent(1, snap('signedIn', 1, true))).toBe(false); // a failed sign-out
+  });
+
+  it('fixture mode (no session) is current', () => {
+    expect(answerStillCurrent(0, null)).toBe(true);
+  });
+});
+
+describe('settleAnswer', () => {
+  it('a current answer shows, clears the draft only when recorded, reports not_found, refreshes as before', () => {
+    expect(settleAnswer('recorded', true)).toEqual({ show: 'recorded', clearDraft: true, reportNotFound: false, refreshList: true });
+    expect(settleAnswer('not_found', true)).toEqual({ show: 'not_found', clearDraft: false, reportNotFound: true, refreshList: false });
+    expect(settleAnswer('unavailable', true)).toEqual({ show: 'unavailable', clearDraft: false, reportNotFound: false, refreshList: true });
+    expect(settleAnswer('invalid', true)).toEqual({ show: 'invalid', clearDraft: false, reportNotFound: false, refreshList: false });
+  });
+
+  it('a stale answer shows nothing and never clears or changes the draft; the list is read again where it may have been recorded', () => {
+    for (const r of ['recorded', 'invalid', 'not_found', 'rate_limited', 'unavailable', 'error'] as const) {
+      const out = settleAnswer(r, false);
+      expect(out.show, r).toBeNull();
+      expect(out.clearDraft, r).toBe(false);
+      expect(out.reportNotFound, r).toBe(false);
+      expect(out.refreshList, r).toBe(refreshesList(r));
+    }
+  });
+});
+
+describe('pruneForReshow (BACK-127: revoked citations never come back)', () => {
+  const A = '00000000-0000-4000-8000-00000000000a';
+  const B = '00000000-0000-4000-8000-00000000000b';
+
+  it('no draft: nothing to do', () => {
+    expect(pruneForReshow(undefined, [A])).toEqual({ draft: undefined, changed: false });
+  });
+
+  it('keeps ids that the new read still lists, order and text untouched', () => {
+    const d: DecisionDraft = { decision: 'x', rationale: 'y', evidenceIds: [A, B] };
+    expect(pruneForReshow(d, [B, A])).toEqual({ draft: d, changed: false });
+  });
+
+  it('drops an id the new read does not list and says it changed', () => {
+    const d: DecisionDraft = { decision: 'x', rationale: 'y', evidenceIds: [A, B] };
+    expect(pruneForReshow(d, [B])).toEqual({ draft: { decision: 'x', rationale: 'y', evidenceIds: [B] }, changed: true });
+    expect(pruneForReshow(d, []).draft?.evidenceIds).toEqual([]);
+  });
+
+  it('does not mutate the draft it was given', () => {
+    const d: DecisionDraft = { decision: 'x', rationale: 'y', evidenceIds: [A, B] };
+    pruneForReshow(d, [B]);
+    expect(d.evidenceIds).toEqual([A, B]);
   });
 });

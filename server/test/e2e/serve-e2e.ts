@@ -3,6 +3,7 @@
 // Writes KAWALYS_E2E_SEED_FILE with the seeded ids, including a foreign workspace the owner must never see.
 import { randomUUID } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
+import { createServer, type Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { createApp } from '../../src/create-app';
@@ -15,6 +16,7 @@ import { approveAll } from '../evidence/approve-all-policy';
 
 const HOST = '127.0.0.1';
 const PORT = 8787;
+const HOOK_PORT = 8788;
 const FOREIGN_PROJECT = 'Foreign Project (synthetic)';
 
 // The signed-in owner holds an active grant on a synthetic source in the foreign workspace and the foreign investigation has
@@ -48,6 +50,31 @@ async function seedForeign(db: KawalysDb, ownerUserId: string): Promise<{ invest
     c.query('INSERT INTO source_grants (workspace_id, source_id, user_id) VALUES ($1, $2, $3)', [ws, sourceId, ownerUserId]),
   );
   return { investigationId, projectName: FOREIGN_PROJECT, projectId };
+}
+
+// TEST-ONLY hook (BACK-127): the live suite revokes and restores the owner's grants on the seeded project's sources, to prove a
+// revoked record does not come back after a new sign-in. Loopback only, started with this test entry, never under src/.
+function startGrantHook(db: KawalysDb, projectId: string): Server {
+  const inProject = 'source_id IN (SELECT id FROM kawalys.sources WHERE project_id = $1)';
+  const server = createServer((req, res) => {
+    const done = (code: number) => { res.statusCode = code; res.end(); };
+    const run = async (): Promise<void> => {
+      if (req.method !== 'POST') return done(405);
+      if (req.url === '/grants/revoke') await db.admin.query(`UPDATE kawalys.source_grants SET revoked_at = now() WHERE revoked_at IS NULL AND ${inProject}`, [projectId]);
+      else if (req.url === '/grants/restore')
+        await db.admin.query(
+          `INSERT INTO kawalys.source_grants (workspace_id, source_id, user_id)
+           SELECT DISTINCT g.workspace_id, g.source_id, g.user_id FROM kawalys.source_grants g
+            WHERE g.${inProject} AND NOT EXISTS (SELECT 1 FROM kawalys.source_grants a WHERE a.source_id = g.source_id AND a.user_id = g.user_id AND a.revoked_at IS NULL)`,
+          [projectId],
+        );
+      else return done(404);
+      done(204);
+    };
+    run().catch(() => done(500));
+  });
+  server.listen(HOOK_PORT, HOST);
+  return server;
 }
 
 async function main(): Promise<void> {
@@ -88,6 +115,7 @@ async function main(): Promise<void> {
     writeFileSync(seedFile, JSON.stringify({ investigationId: seeded.investigationId, projectId: seeded.projectId, projectName: SEED.projectName, foreign }));
     app = await createApp([], { verifier: new FakeIdentityVerifier() }, { database: { appPool: pools.app, authPool: pools.auth } });
     await app.listen(PORT, HOST);
+    startGrantHook(pools, seeded.projectId);
     process.stderr.write(`e2e server ready on http://${HOST}:${PORT}\n`);
   } catch (err) {
     await stopKawalysDb(pools).catch(() => undefined);

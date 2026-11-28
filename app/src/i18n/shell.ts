@@ -5,7 +5,7 @@ import type { EdgeKind, Severity } from '../contract/world';
 
 export type StateKind = 'loading' | 'empty' | 'error' | 'restricted' | 'unavailable' | 'not_configured' | 'unknown';
 /** The live states a panel can show instead of data (BACK-51 P1); live/reads.ts LiveFailure plus loading. */
-export type LiveStateKey = 'loading' | 'not_found' | 'notChosen' | 'unavailable' | 'invalid' | 'rate_limited' | 'error';
+export type LiveStateKey = 'loading' | 'not_found' | 'notChosen' | 'unavailable' | 'invalid' | 'rate_limited' | 'error' | 'locked';
 export type NavKey = 'home' | 'portfolio' | 'map' | 'project' | 'investigation' | 'decisions' | 'agents' | 'sources';
 
 export interface ShellCopy {
@@ -68,6 +68,8 @@ export interface ShellCopy {
       readonly error: { readonly title: string; readonly body: string };
       readonly signIn: string;
       readonly checkAgain: string;
+      /** BACK-127: the locked notice (the session was signed in and cannot be confirmed, or a sign-out did not reach the server). */
+      readonly locked: { readonly body: string; readonly signOutBody: string; readonly signIn: string; readonly retrySignOut: string };
     };
     /**
      * The sign-in page (D3(a)). The messages are neutral on purpose: refused names no cause (a wrong account, an expired link and a
@@ -153,6 +155,7 @@ const en: ShellCopy = {
       invalid: { title: 'The server refused the request', body: 'The request was not accepted. Nothing is shown.' },
       rate_limited: { title: 'Too many requests', body: 'The server asked us to slow down. Try again in a minute.' },
       error: { title: 'The server answered with an error', body: 'Nothing is shown. This is unknown, not healthy.' },
+      locked: { title: 'Locked', body: 'Your session is not confirmed, so nothing is shown here until it is. Use the session notice above.' },
     },
     session: {
       label: 'Session',
@@ -161,11 +164,17 @@ const en: ShellCopy = {
       signOut: 'Sign out',
       signOutFailed: { title: 'Sign-out did not complete', body: 'The server could not be reached, so you may still be signed in. Try again.' },
       signedOut: { title: 'Not signed in', body: 'Sign in on the sign-in page, which opens in a new tab, then come back and choose Check again.' },
-      ended: { title: 'Your session ended', body: 'Sign in again on the sign-in page, then choose Check again. Anything you have not sent on this page is kept.' },
+      ended: { title: 'Your session ended', body: 'Sign in again on the sign-in page, then choose Check again. Your unsent draft stays in this tab and comes back when you sign in as the same person.' },
       unavailable: { title: 'Sign-in status unknown', body: 'The server could not be reached, so we cannot tell whether you are signed in.' },
       error: { title: 'Sign-in status unknown', body: 'The server gave an answer we could not read, so you are not shown as signed in.' },
       signIn: 'Open the sign-in page (new tab)',
       checkAgain: 'Check again',
+      locked: {
+        body: 'This screen is locked. Records, counts and your unsent draft are hidden until your session is confirmed. Nothing is lost.',
+        signOutBody: 'The server did not confirm the sign-out, so this screen stays locked. Your unsent draft was cleared, and nothing protected is shown.',
+        signIn: 'Sign in again',
+        retrySignOut: 'Try signing out again',
+      },
     },
     signIn: {
       title: 'Sign in to {Kawalys}',
@@ -250,6 +259,7 @@ const ar: ShellCopy = {
       invalid: { title: 'رفض الخادم الطلب', body: 'لم يُقبل الطلب. لا يُعرض شيء.' },
       rate_limited: { title: 'طلبات كثيرة جدًا', body: 'طلب الخادم الإبطاء. حاول بعد دقيقة.' },
       error: { title: 'أجاب الخادم بخطأ', body: 'لا يُعرض شيء. الحالة غير معروفة وليست سليمة.' },
+      locked: { title: 'مقفل', body: 'جلستك غير مؤكَّدة، لذا لا يُعرض شيء هنا حتى تُؤكَّد. استخدم إشعار الجلسة أعلاه.' },
     },
     session: {
       label: 'الجلسة',
@@ -258,11 +268,17 @@ const ar: ShellCopy = {
       signOut: 'تسجيل الخروج',
       signOutFailed: { title: 'لم يكتمل تسجيل الخروج', body: 'تعذّر الوصول إلى الخادم، لذا قد تكون ما زلت مسجّل الدخول. حاول مرة أخرى.' },
       signedOut: { title: 'لم يتم تسجيل الدخول', body: 'سجّل الدخول من صفحة تسجيل الدخول التي تُفتح في علامة تبويب جديدة، ثم عُد واختر «تحقّق مرة أخرى».' },
-      ended: { title: 'انتهت جلستك', body: 'سجّل الدخول مرة أخرى من صفحة تسجيل الدخول، ثم اختر «تحقّق مرة أخرى». يُحفظ كل ما لم ترسله في هذه الصفحة.' },
+      ended: { title: 'انتهت جلستك', body: 'سجّل الدخول مرة أخرى من صفحة تسجيل الدخول، ثم اختر «تحقّق مرة أخرى». تبقى مسودتك غير المُرسلة في هذه العلامة وتعود عندما تسجّل الدخول بصفتك الشخص نفسه.' },
       unavailable: { title: 'حالة تسجيل الدخول غير معروفة', body: 'تعذّر الوصول إلى الخادم، لذا لا نعرف إن كنت مسجّل الدخول.' },
       error: { title: 'حالة تسجيل الدخول غير معروفة', body: 'أعطى الخادم إجابة لم نتمكن من قراءتها، لذا لا تظهر مسجّل الدخول.' },
       signIn: 'فتح صفحة تسجيل الدخول (علامة تبويب جديدة)',
       checkAgain: 'تحقّق مرة أخرى',
+      locked: {
+        body: 'الشاشة مقفلة. السجلات والأعداد ومسودتك غير المُرسلة مخفية حتى تُؤكَّد جلستك. لم يضع شيء.',
+        signOutBody: 'لم يؤكد الخادم تسجيل الخروج، لذا تبقى الشاشة مقفلة. مُسحت مسودتك غير المُرسلة، ولا يظهر شيء محمي.',
+        signIn: 'سجّل الدخول مرة أخرى',
+        retrySignOut: 'حاول تسجيل الخروج مرة أخرى',
+      },
     },
     signIn: {
       title: 'تسجيل الدخول إلى {Kawalys}',

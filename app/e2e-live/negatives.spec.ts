@@ -94,13 +94,20 @@ test('session expiring mid-form keeps the draft', async ({ page }) => {
   await page.waitForLoadState('networkidle');
   await expect(page.getByTestId('server-record')).toHaveCount(0);
   await expect(page.getByTestId('server-decision')).toHaveCount(0);
-  await expect(form.locator('#rd-decision')).toHaveValue(decision);
-  await expect(form.locator('#rd-rationale')).toHaveValue(rationale);
+  // BACK-127: ended is locked. The notice is shown, no field and no draft text is on screen; the draft is only hidden.
+  await expect(bar).toHaveAttribute('data-locked', 'true');
+  await expect(form).toHaveAttribute('data-gate', 'locked');
+  await expect(form.locator('#rd-decision')).toHaveCount(0);
+  await expect(form.locator('button')).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText(decision);
+  await expect(page.locator('body')).not.toContainText(rationale);
 
   // Sign in again without reloading: the draft lives in memory.
   expect(await signIn(page)).toBe(200);
   await bar.getByRole('button', { name: 'Check again' }).click();
   await expect(bar).toHaveAttribute('data-session', 'signedIn');
+  // The draft returns only after the case is read again for this sign-in.
+  await expect(form).toHaveAttribute('data-gate', 'open');
   await expect(form.locator('#rd-decision')).toHaveValue(decision);
   await expect(form.locator('#rd-rationale')).toHaveValue(rationale);
 

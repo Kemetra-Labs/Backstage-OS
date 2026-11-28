@@ -11,6 +11,7 @@ import { hostCopy } from '../../i18n/host';
 import { investigationReadView, type RecordRow } from '../../view/investigationReadView';
 import { investigationIdOf } from '../../live/decisions';
 import { investigationIdFrom, LIVE, readInvestigation } from '../../live/reads';
+import { hidesRecords } from '../../live/session';
 import { RecordDecision } from './RecordDecision';
 
 /**
@@ -27,6 +28,8 @@ export function ServerRecords() {
   const lastCase = useRef<{ id: string; records: readonly RecordRow[] } | null>(null);
   // Whether the case was the newest one (no id in the address): said in a note, also after a re-read pinned to that case.
   const fromNewest = useRef(false);
+  // The session generation for which the case was last read while unlocked (BACK-127): the form's draft returns only after that.
+  const readGeneration = useRef<number | null>(null);
   const session = useSession();
   const { persona, lang, copy, shell } = useApp();
   const s = hostCopy('INVESTIGATION', lang).serverRecords;
@@ -45,17 +48,19 @@ export function ServerRecords() {
   // "Decision recorded" confirmation never vanishes. While the session is signed out or ended its record rows are dropped (no
   // panel keeps the owner's data then); the draft and the reason submit is off stay.
   if (LIVE) {
-    const out = session !== null && (session.status === 'signedOut' || session.status === 'ended');
+    // Locked (BACK-127) hides the records like signed out or ended does; the form shows its locked state.
+    const out = hidesRecords(session);
     if (out) {
       if (lastCase.current) lastCase.current = { id: lastCase.current.id, records: [] };
     } else if (live?.status === 'ok' && v && v.state !== 'unreadable') {
       const caseId = investigationIdOf(live.body.investigation);
       lastCase.current = caseId === null ? null : { id: caseId, records: v.records };
+      if (caseId !== null) readGeneration.current = session?.generation ?? null;
       if (live.body.chosen === 'newest' && refresh === 0) fromNewest.current = true;
     }
   }
   const form = LIVE && lastCase.current
-    ? <RecordDecision key={lastCase.current.id} investigationId={lastCase.current.id} records={lastCase.current.records} technical={persona === 'technical'} onSubmitted={() => setRefresh((n) => n + 1)} />
+    ? <RecordDecision key={lastCase.current.id} investigationId={lastCase.current.id} records={lastCase.current.records} technical={persona === 'technical'} readGeneration={readGeneration.current} onSubmitted={() => setRefresh((n) => n + 1)} />
     : null;
   if (!v) {
     return (

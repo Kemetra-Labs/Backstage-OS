@@ -60,6 +60,21 @@ export class SessionService {
     return this.store.touch(hash, at);
   }
 
+  /**
+   * The same verdict as authenticate (unknown, malformed, expired, idle or revoked is null) but a pure read: it never touches
+   * last_seen_at, so a check on return to the tab cannot extend the idle window, and it revokes nothing. It returns the stored
+   * record; the caller still rechecks the directory.
+   */
+  async peek(raw: string): Promise<SessionRecord | null> {
+    if (!RAW_TOKEN_RE.test(raw)) return null;
+    const hash = hashOf(raw);
+    const record = await this.store.get(hash);
+    if (record === null || !tokenHashesEqual(record.tokenHash, hash)) return null;
+    const at = this.now();
+    if (at >= record.absoluteExpiresAt || at - record.lastSeenAt >= this.policy.idleTtlMs) return null;
+    return record;
+  }
+
   async revoke(raw: string): Promise<boolean> {
     return RAW_TOKEN_RE.test(raw) ? this.store.revoke(hashOf(raw)) : false;
   }
