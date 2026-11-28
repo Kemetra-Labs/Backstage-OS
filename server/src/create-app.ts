@@ -19,6 +19,7 @@ import { ReadinessModule } from "./health/readiness.module";
 import { InvestigationModule } from "./investigations/investigation.module";
 import { InvestigationRepository } from "./investigations/investigation.repository";
 import { CognitionModule } from "./cognition/cognition.module";
+import { COGNITION_READ_BUDGET_MS } from "./cognition/cognition.controller";
 import { MemoryRepository } from "./memory/memory.repository";
 import { PortfolioModule } from "./portfolio/portfolio.module";
 import { PortfolioRepository } from "./portfolio/portfolio.repository";
@@ -59,8 +60,8 @@ export async function createApp(
     imports.push(EvidenceModule.register(evidence, workspaces));
     imports.push(InvestigationModule.register(new InvestigationRepository(db.appPool), evidence, workspaces));
     imports.push(PortfolioModule.register(new PortfolioRepository(db.appPool), workspaces));
-    // COG-07 live search (owner decision 2026-11-27): read-only, rate limited per user.
-    imports.push(CognitionModule.register(new MemoryRepository(db.appPool), workspaces));
+    // COG-07 live search (owner decision 2026-11-27): read-only, rate limited per user, time-bounded per read.
+    imports.push(CognitionModule.register(new MemoryRepository(db.appPool, { budgetMs: COGNITION_READ_BUDGET_MS }), workspaces));
   } else {
     // The fixture demo route (it reads the display persona header) exists only without a database (audit L3).
     imports.push(DemoModule);

@@ -4,7 +4,7 @@ import { HttpException } from '@nestjs/common';
 import { CognitionController } from '../../src/cognition/cognition.controller';
 import type { SignInRateLimiter } from '../../src/auth/sign-in-rate-limiter';
 import type { WorkspaceRequest } from '../../src/auth/workspace.guard';
-import type { MemoryRepository } from '../../src/memory/memory.repository';
+import { MemoryReadBudgetExceeded, type MemoryRepository } from '../../src/memory/memory.repository';
 
 const PROJECT = '00000000-0000-4000-8000-000000000001';
 const req = { workspace: { workspaceId: '00000000-0000-4000-8000-0000000000aa', userId: '00000000-0000-4000-8000-0000000000bb' } } as unknown as WorkspaceRequest;
@@ -43,6 +43,12 @@ describe('nothing refused reaches the memory read', () => {
     const h = harness(true);
     expect(await statusOf(h.controller.search(req, PROJECT, q))).toBe(400);
     expect(h.reads()).toBe(0);
+  });
+
+  it('an over-budget read is never turned into not found or an empty answer', async () => {
+    const memory = { readVisible: async () => { throw new MemoryReadBudgetExceeded(); } } as unknown as MemoryRepository;
+    const controller = new CognitionController(memory, { tryAcquire: () => true } as unknown as SignInRateLimiter);
+    await expect(controller.search(req, PROJECT, 'portfolio')).rejects.toBeInstanceOf(MemoryReadBudgetExceeded);
   });
 
   it('a valid query reaches the read (control)', async () => {

@@ -297,4 +297,10 @@ Independence note: this reviewer was a Claude agent without the author's conclus
 | COG-07 shadow view | Delivered: fixture view (#155) and, by the owner's choice, a live search read (#158, security review GO; #159). Live reasoning waits for a real task-plan source. |
 | COG-08 acceptance | This matrix; closed by this sign-off. |
 
-**Still tracked:** memory read work budget, second-project DB test, SQL timing, validator top-level key enumeration, and, for activation only, the COG-05 write path itself (owner read from the workspace row, lesson citation rows); the other COG-05 read/write-path requirements are enforced in the pure core since 2026-11-28 (`cog-05-decisions.md`).
+**Still tracked:** SQL timing, validator top-level key enumeration, and, for activation only, the COG-05 write path itself (owner read from the workspace row, lesson citation rows); the other COG-05 read/write-path requirements are enforced in the pure core since 2026-11-28 (`cog-05-decisions.md`).
+
+## 21. Tracked items closed: memory read work budget and second-project case (2026-11-28)
+
+- **Work budget:** the live search's memory read now has a work budget. `MemoryRepository` takes `budgetMs`, which sets `statement_timeout` for the read's own transaction only. Past the budget, the read is cancelled and rolled back, and it raises `MemoryReadBudgetExceeded`, never a partial projection. The live route answers with the generic error body, the same for a visible and a hidden project. The budget is `COGNITION_READ_BUDGET_MS` = 2 s, a conservative and reversible default; DEC-1's 500 ms interactive bar still needs DEC-2 option A. Background reads keep no budget. The S2 SQL is unchanged.
+- **Second project:** a DB case now holds the reader fixed, adds evidence to a second project the reader can also read, and shows this project's items and fingerprint unchanged. A control read shows the new evidence landed in the other project.
+- Tests: `test/memory/memory-db.spec.ts` (`work budget`, `a second project the reader also sees`) and `test/cognition/cognition-db.spec.ts` (`work budget`). Both use a table lock, so the over-budget case is deterministic.

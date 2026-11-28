@@ -92,6 +92,29 @@ function toMarker(r: ReadRow): Marker {
   };
 }
 
+/**
+ * The read did not finish within its work budget. It was cancelled and rolled back: no partial
+ * projection is ever returned. The safe-error filter answers it with its generic error body.
+ */
+export class MemoryReadBudgetExceeded extends Error {
+  constructor() {
+    super('memory read: work budget exceeded');
+    this.name = 'MemoryReadBudgetExceeded';
+  }
+}
+
+/** SQLSTATE query_canceled: raised when statement_timeout fires. */
+const QUERY_CANCELED = '57014';
+
+export interface MemoryRepositoryOptions {
+  /**
+   * Work budget per read, in milliseconds (DEC-1). The S2 statement processes all eligible history
+   * before the history cap applies, so a read on a request path is bounded in time. Unset means no
+   * budget (background reads).
+   */
+  readonly budgetMs?: number;
+}
+
 export interface MemoryRead {
   readonly input: CollapsedInput;
   readonly sources: readonly MemorySource[];
@@ -101,7 +124,16 @@ export interface MemoryRead {
 }
 
 export class MemoryRepository {
-  constructor(private readonly pool: pg.Pool) {}
+  private readonly budgetMs: number | undefined;
+
+  constructor(
+    private readonly pool: pg.Pool,
+    options: MemoryRepositoryOptions = {},
+  ) {
+    const { budgetMs } = options;
+    if (budgetMs !== undefined && !(Number.isSafeInteger(budgetMs) && budgetMs > 0)) throw new RangeError('memory read: invalid budgetMs');
+    this.budgetMs = budgetMs;
+  }
 
   /** The raw S2 result: one statement, one snapshot. Exposed for the differential test. */
   async readCollapsed(q: MemoryReadInput): Promise<MemoryRead> {
@@ -110,6 +142,9 @@ export class MemoryRepository {
     }
     const horizons = [...(q.purgeHorizons ?? new Map<string, Date>())];
     const rows = await runWithWorkspaceContext(this.pool, q.workspaceId, async (c) => {
+      // Local to this transaction (is_local = true), so the pooled connection never keeps it. It reads no
+      // table, so the data still comes from the one S2 statement and its one snapshot.
+      if (this.budgetMs !== undefined) await c.query(`SELECT set_config('statement_timeout', $1, true)`, [String(this.budgetMs)]);
       const res = await c.query<ReadRow>(MEMORY_READ_SQL, [
         q.userId,
         q.projectId,
@@ -119,6 +154,8 @@ export class MemoryRepository {
         horizons.map(([, at]) => at),
       ]);
       return res.rows;
+    }).catch((e: unknown) => {
+      throw (e as { code?: unknown } | null)?.code === QUERY_CANCELED ? new MemoryReadBudgetExceeded() : e;
     });
     const clock = rows.find((r) => r.role === 'clock');
     const grants = rows.filter((r) => r.role === 'grant');
