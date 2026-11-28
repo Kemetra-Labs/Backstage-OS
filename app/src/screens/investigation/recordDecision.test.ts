@@ -41,7 +41,7 @@ function render(over: Partial<RecordDecisionViewProps> = {}, lang: 'en' | 'ar' =
 
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 const GOOD: DecisionDraft = { decision: 'Revert pull request #42', rationale: 'Failures began after it merged.', evidenceIds: [] };
-const RESULTS: readonly FormResult[] = ['recorded', 'invalid', 'not_found', 'rate_limited', 'unavailable', 'error', 'citationsChanged'];
+const RESULTS: readonly FormResult[] = ['recorded', 'invalid', 'not_found', 'rate_limited', 'unavailable', 'error', 'citationsChanged', 'idempotency_conflict'];
 const SESSIONS: readonly SessionStatus[] = ['checking', 'signedIn', 'signedOut', 'ended', 'unavailable', 'error'];
 
 describe('RecordDecisionView', () => {
@@ -216,5 +216,18 @@ describe('RecordDecisionView gate (BACK-127 SEC-02 G2, G4)', () => {
       expect(ar, gate).not.toMatch(/[A-Za-z]{2,}/);
       expect(text(render({ gate }, 'ar')), gate).not.toBe(text(render({ gate }, 'en')));
     }
+  });
+});
+
+describe('idempotency_conflict (BACK-172 G4)', () => {
+  it('says in English and Arabic that nothing was recorded and that the draft changed since the first attempt', () => {
+    const en = text(render({ draft: GOOD, result: 'idempotency_conflict' }, 'en'));
+    expect(en).toContain('Nothing was recorded');
+    expect(en).toContain('changed since the first attempt');
+    const ar = text(render({ draft: GOOD, result: 'idempotency_conflict' }, 'ar'));
+    expect(ar).toContain('لم يُسجَّل شيء');
+    expect(ar).toContain('المحاولة الأولى');
+    expect(render({ draft: GOOD, result: 'idempotency_conflict' })).toContain('role="alert"');
+    expect(en).not.toContain('Decision recorded');
   });
 });

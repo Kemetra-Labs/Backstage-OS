@@ -91,7 +91,7 @@ export interface InvestigationCopy {
     readonly rereading: string;
     /** Why submit is off while the session is not signed in; the draft is kept. */
     readonly needSession: Readonly<Record<'checking' | 'signedOut' | 'ended' | 'unavailable' | 'error', string>>;
-    readonly result: Readonly<Record<'recorded' | 'invalid' | 'not_found' | 'rate_limited' | 'unavailable' | 'error' | 'citationsChanged', { readonly title: string; readonly body: string }>>;
+    readonly result: Readonly<Record<'recorded' | 'invalid' | 'not_found' | 'rate_limited' | 'unavailable' | 'error' | 'citationsChanged' | 'idempotency_conflict', { readonly title: string; readonly body: string }>>;
   };
 }
 
@@ -220,6 +220,7 @@ const en: InvestigationCopy = {
       rate_limited: { title: 'Too many requests', body: 'Nothing was recorded. Try again in a minute. Your draft is kept.' },
       unavailable: { title: 'Not confirmed', body: 'We could not confirm that the decision was recorded. Check the decision list before trying again. Your draft is kept.' },
       error: { title: 'The server answered with an error', body: 'Do not assume the decision was recorded: check the decision list before trying again. Your draft is kept.' },
+      idempotency_conflict: { title: 'This retry does not match the first attempt', body: 'Nothing was recorded by this request. The draft changed since the first attempt, so the first attempt cannot be repeated. Check the decision list, then record again. Your draft is kept.' },
       citationsChanged: { title: 'A cited record is no longer listed', body: 'It was removed from your selection. Check the cited records, then record again. Nothing was sent. Your draft is kept.' },
     },
   },
@@ -350,6 +351,7 @@ const ar: InvestigationCopy = {
       rate_limited: { title: 'طلبات كثيرة جدًا', body: 'لم يُسجَّل شيء. حاول بعد دقيقة. مسودتك محفوظة.' },
       unavailable: { title: 'لم يتأكد التسجيل', body: 'لم نتمكن من التأكد من تسجيل القرار. راجع قائمة القرارات قبل المحاولة مرة أخرى. مسودتك محفوظة.' },
       error: { title: 'أجاب الخادم بخطأ', body: 'لا تفترض أن القرار سُجّل: راجع قائمة القرارات قبل المحاولة مرة أخرى. مسودتك محفوظة.' },
+      idempotency_conflict: { title: 'هذه المحاولة لا تطابق المحاولة الأولى', body: 'لم يُسجَّل شيء بهذا الطلب. تغيّرت المسودة منذ المحاولة الأولى فلا يمكن تكرارها. راجع قائمة القرارات ثم سجّل مرة أخرى. مسودتك محفوظة.' },
       citationsChanged: { title: 'لم يعد أحد السجلات المُستشهد بها مُدرجًا', body: 'أُزيل من اختيارك. راجع السجلات المُستشهد بها ثم سجّل مرة أخرى. لم يُرسل شيء. مسودتك محفوظة.' },
     },
   },

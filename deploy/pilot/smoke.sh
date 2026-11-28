@@ -28,6 +28,8 @@ export KAWALYS_HTTP_PORT="$HTTP_PORT" KAWALYS_HTTPS_PORT="$HTTPS_PORT"
 if [ "$HTTPS_PORT" = 443 ]; then BASE="https://localhost"; else BASE="https://localhost:${HTTPS_PORT}"; fi
 # Pin the site address and allowlist for this run (the shell wins over --env-file): an exported deployment value must not steer the smoke.
 export KAWALYS_SITE_ADDRESS=localhost KAWALYS_ALLOWED_ORIGINS="$BASE"
+# Host allowlist (BACK-172): the site host Caddy forwards, and 127.0.0.1 for the bff container healthcheck.
+export KAWALYS_ALLOWED_HOSTS="localhost,127.0.0.1"
 
 TMP="$(mktemp -d)"
 TMP_NATIVE="$(cygpath -m "$TMP" 2>/dev/null || echo "$TMP")"   # native Windows path for docker.exe
@@ -41,6 +43,7 @@ cat > "$TMP/.env.pilot" <<ENV
 KAWALYS_SITE_ADDRESS=localhost
 KAWALYS_NODE_ENV=development
 KAWALYS_ALLOWED_ORIGINS=${BASE}
+KAWALYS_ALLOWED_HOSTS=localhost,127.0.0.1
 KAWALYS_HTTP_PORT=${HTTP_PORT}
 KAWALYS_HTTPS_PORT=${HTTPS_PORT}
 KAWALYS_IMAGE_PREFIX=${IMAGE_PREFIX}
@@ -80,6 +83,7 @@ MANAGED_FILE="$(cygpath -m "$HERE/compose.managed.yml" 2>/dev/null || echo "$HER
 MANAGED_ENV="$TMP_NATIVE/managed.env"
 cat > "$TMP/managed.env" <<ENV
 KAWALYS_SITE_ADDRESS=localhost
+KAWALYS_ALLOWED_HOSTS=localhost,127.0.0.1
 KAWALYS_DATABASE_URL_APP=postgresql://kawalys_app:dummy@db.example.invalid/kawalys?sslmode=verify-full
 KAWALYS_DATABASE_URL_AUTH=postgresql://kawalys_auth:dummy@db.example.invalid/kawalys?sslmode=verify-full
 KAWALYS_ADMIN_DATABASE_URL=postgresql://kawalys_admin:dummy@db.example.invalid/kawalys?sslmode=verify-full
@@ -108,6 +112,9 @@ check "managed: bff has trust-proxy, allowed origins and NODE_ENV defaulting to 
 grep -v -E '^(KAWALYS_ADMIN_DATABASE_URL|KAWALYS_ROLE_PASSWORD_[A-Z]+)=' "$TMP/managed.env" > "$TMP/managed-runtime.env"
 check "managed: config succeeds with runtime vars only (no admin URL or role passwords, no ops profile)" quiet docker compose -f "$MANAGED_FILE" --env-file "$TMP_NATIVE/managed-runtime.env" config
 check "managed: no NODE_EXTRA_CA_CERTS and no pg-tls mount" managed_json_check '!("NODE_EXTRA_CA_CERTS" in c.services.bff.environment)&&!JSON.stringify(c).includes("pg-tls")' --profile ops
+check "managed: bff gets KAWALYS_ALLOWED_HOSTS from the env file (BACK-172)" managed_json_check 'c.services.bff.environment.KAWALYS_ALLOWED_HOSTS==="localhost,127.0.0.1"'
+grep -v '^KAWALYS_ALLOWED_HOSTS=' "$TMP/managed.env" > "$TMP/managed-nohosts.env"
+check "managed: config fails and names KAWALYS_ALLOWED_HOSTS when it is unset (BACK-172)" bash -c '! env -u KAWALYS_ALLOWED_HOSTS docker compose -f "$0" --env-file "$1" config >"$2" 2>&1 && grep -q KAWALYS_ALLOWED_HOSTS "$2"' "$MANAGED_FILE" "$TMP_NATIVE/managed-nohosts.env" "$TMP_NATIVE/managed-nohosts.out"
 grep -v '^KAWALYS_DATABASE_URL_APP=' "$TMP/managed.env" > "$TMP/managed-missing.env"
 MANAGED_ENV_MISSING="$TMP_NATIVE/managed-missing.env"
 check "managed: config fails and names KAWALYS_DATABASE_URL_APP when it is unset" bash -c '! docker compose -f "$0" --env-file "$1" config >"$2" 2>&1 && grep -q KAWALYS_DATABASE_URL_APP "$2"' "$MANAGED_FILE" "$MANAGED_ENV_MISSING" "$TMP_NATIVE/managed-missing.out"
@@ -152,18 +159,30 @@ check "origin-cert: config fails and names KAWALYS_ORIGIN_CERT_DIR when it is un
 PF="$HERE/preflight-deploy.sh"
 printf 'KAWALYS_BFF_IMAGE=ghcr.io/kemetra-labs/kawalys-bff@sha256:%s
 KAWALYS_WEB_IMAGE=ghcr.io/kemetra-labs/kawalys-web@sha256:%s
+KAWALYS_ALLOWED_HOSTS=Kawalys.example.com,localhost,127.0.0.1
 SECRET_X=hunter2
 ' "$DIGEST_A" "$DIGEST_B" > "$TMP/pf-ok.env"
 printf 'KAWALYS_BFF_IMAGE=ghcr.io/kemetra-labs/kawalys-bff:abc123
 KAWALYS_WEB_IMAGE=ghcr.io/kemetra-labs/kawalys-web@sha256:%s
+KAWALYS_ALLOWED_HOSTS=localhost,127.0.0.1
 SECRET_X=hunter2
 ' "$DIGEST_B" > "$TMP/pf-tag.env"
 printf 'KAWALYS_WEB_IMAGE=ghcr.io/kemetra-labs/kawalys-web@sha256:%s
+KAWALYS_ALLOWED_HOSTS=localhost,127.0.0.1
 SECRET_X=hunter2
 ' "$DIGEST_B" > "$TMP/pf-missing.env"
 check "preflight: accepts two valid digest refs" bash "$PF" "$TMP/pf-ok.env"
 check "preflight: rejects a tag-only ref, names the variable, leaks no value" bash -c 'out="$(bash "$0" "$1" 2>&1)"; rc=$?; [ $rc -ne 0 ] && echo "$out" | grep -q KAWALYS_BFF_IMAGE && ! echo "$out" | grep -q "hunter2\|abc123"' "$PF" "$TMP/pf-tag.env"
+grep -v '^KAWALYS_ALLOWED_HOSTS=' "$TMP/pf-ok.env" > "$TMP/pf-nohosts.env"
+grep -v '^KAWALYS_ALLOWED_HOSTS=' "$TMP/pf-ok.env" > "$TMP/pf-nolocal.env"; echo "KAWALYS_ALLOWED_HOSTS=kawalys.example.com,localhost" >> "$TMP/pf-nolocal.env"
+grep -v '^KAWALYS_ALLOWED_HOSTS=' "$TMP/pf-ok.env" > "$TMP/pf-empty.env"; echo "KAWALYS_ALLOWED_HOSTS=" >> "$TMP/pf-empty.env"
+check "preflight: rejects a missing KAWALYS_ALLOWED_HOSTS, names it (BACK-172)" bash -c 'out="$(bash "$0" "$1" 2>&1)"; rc=$?; [ $rc -ne 0 ] && echo "$out" | grep -q KAWALYS_ALLOWED_HOSTS' "$PF" "$TMP/pf-nohosts.env"
+check "preflight: rejects an empty KAWALYS_ALLOWED_HOSTS" bash -c '! bash "$0" "$1" >/dev/null 2>&1' "$PF" "$TMP/pf-empty.env"
+check "preflight: rejects a host list without 127.0.0.1 (the healthcheck Host)" bash -c '! bash "$0" "$1" >/dev/null 2>&1' "$PF" "$TMP/pf-nolocal.env"
 check "preflight: rejects a missing variable" bash -c '! bash "$0" "$1" >/dev/null 2>&1' "$PF" "$TMP/pf-missing.env"
+
+grep -v '^KAWALYS_ALLOWED_HOSTS=' "$TMP/.env.pilot" > "$TMP/stack-nohosts.env"
+check "compose.yml: config fails and names KAWALYS_ALLOWED_HOSTS when it is unset (BACK-172)" bash -c 'env -u KAWALYS_ALLOWED_HOSTS docker compose -p x -f "$0" --env-file "$1" config >"$2" 2>&1; rc=$?; [ $rc -ne 0 ] && grep -q KAWALYS_ALLOWED_HOSTS "$2"' "$COMPOSE_FILE_NATIVE" "$TMP_NATIVE/stack-nohosts.env" "$TMP_NATIVE/stack-nohosts.out"
 
 log "isolation: every resource of this run belongs to $PROJECT, none to the deployment project kawalys-pilot"
 log "build images and start postgres"
@@ -246,6 +265,16 @@ check "GET / serves the app (HTML with the app root)" bash -c "curl -sk --max-ti
 check "GET /some/spa/route falls back to index.html" bash -c "curl -sk --max-time 10 '$BASE/investigations/x' | grep -q 'id=\"root\"'"
 check "GET /api/portfolio -> 404 (deny-all, Descope unset)" is_code 404 "$BASE/api/portfolio"
 check "GET /api/portfolio body is not_found" grep -q 'not_found' "$TMP/body"
+# Host allowlist (BACK-172): the BFF answers 404 to an unlisted Host and 200 to a listed one, and the container healthcheck
+# (Host 127.0.0.1:8787) stays healthy. Probed inside the bff container, so Caddy's own host routing is not what answers.
+bff_host_probe() { # $1 Host header value; prints the HTTP status
+  dc exec -T bff sh -c 'wget -S -q -O /dev/null --header "Host: $0" http://127.0.0.1:8787/process 2>&1 | grep -m1 "HTTP/" | awk "{print \$2}"' "$1" | tr -d '\r\n'
+}
+check "unknown Host header reaches the BFF -> 404 (BACK-172)" test "$(bff_host_probe evil.example)" = 404
+check "a Host with a non-numeric port -> 404 (BACK-172)" test "$(bff_host_probe localhost:evil)" = 404
+check "listed Host (the site host) -> 200 (BACK-172)" test "$(bff_host_probe localhost)" = 200
+check "listed Host with a port -> 200 (BACK-172)" test "$(bff_host_probe localhost:18443)" = 200
+check "bff container healthcheck is healthy with the allowlist on (BACK-172)" test "$(docker inspect --format '{{.State.Health.Status}}' "$(dc ps -q bff)" | tr -d '\r\n')" = healthy
 check "bff container healthcheck uses liveness (/process), not the database probe" grep -q "8787/process" "$HERE/compose.yml"
 check "bff container healthcheck does not call /health" bash -c '! grep -q "8787/health" "$0"' "$HERE/compose.yml"
 check_headers() { # $1 label, $2 url

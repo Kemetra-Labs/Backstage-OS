@@ -23,6 +23,7 @@ describe('safeErrorEnvelope', () => {
 
   it('does not offer forbidden or unauthorized', () => {
     expect(Object.keys(SAFE_MESSAGES).sort()).toEqual([
+      'idempotency_conflict',
       'internal_error',
       'not_found',
       'rate_limited',
@@ -36,6 +37,7 @@ describe('safeErrorEnvelope', () => {
       not_found: 404,
       validation_error: 400,
       rate_limited: 429,
+      idempotency_conflict: 422,
       internal_error: 500,
     });
   });

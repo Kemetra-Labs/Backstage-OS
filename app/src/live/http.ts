@@ -47,6 +47,8 @@ export interface ApiRequestInit {
   readonly fetcher?: Fetcher;
   /** Sent as `Authorization: Bearer <token>`. Header only, for the one token exchange (exchangeSessionToken): never in a URL. */
   readonly bearer?: string;
+  /** Extra request headers (BACK-172: `Idempotency-Key` on the decision POST). Never a credential; the fixed ones above win. */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -76,7 +78,10 @@ export async function apiRequest(path: string, init: ApiRequestInit = {}): Promi
   const url = apiPath(path);
   if (url === null) return { ok: false, failure: 'invalid', status: null };
   const hasBody = init.body !== undefined;
-  const headers: Record<string, string> = hasBody ? { Accept: 'application/json', 'Content-Type': 'application/json' } : { Accept: 'application/json' };
+  const headers: Record<string, string> = {
+    ...init.headers,
+    ...(hasBody ? { Accept: 'application/json', 'Content-Type': 'application/json' } : { Accept: 'application/json' }),
+  };
   if (init.bearer !== undefined) headers.Authorization = `Bearer ${init.bearer}`;
   const doFetch = init.fetcher ?? globalThis.fetch;
   let status: number;

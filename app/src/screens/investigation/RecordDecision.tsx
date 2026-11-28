@@ -7,7 +7,7 @@ import { TruthChip } from '../../components/TruthChip';
 import { hostCopy } from '../../i18n/host';
 import type { StateKind } from '../../i18n/shell';
 import {
-  answerStillCurrent, createSubmitGuard, DECISION_MAX, draftProblems, EMPTY_DRAFT, formGate, planSubmit, pruneForReshow, RATIONALE_MAX, settleAnswer, submitDecision, type DecisionDraft, type DraftProblem, type SubmitResult,
+  answerStillCurrent, createSubmitGuard, DECISION_MAX, draftProblems, EMPTY_DRAFT, formGate, planSubmit, pruneForReshow, RATIONALE_MAX, settleAnswer, submitDecision, withoutSubmitKey, withSubmitKey, type DecisionDraft, type DraftProblem, type SubmitResult,
 } from '../../live/decisions';
 import type { SessionStatus } from '../../live/session';
 import type { RecordRow } from '../../view/investigationReadView';
@@ -42,6 +42,7 @@ const ALWAYS: readonly DraftProblem[] = ['decisionTooLong', 'rationaleTooLong', 
 
 const RESULT_KIND: Readonly<Record<Exclude<FormResult, 'recorded'>, StateKind>> = {
   citationsChanged: 'unknown',
+  idempotency_conflict: 'error',
   invalid: 'error',
   not_found: 'unknown',
   rate_limited: 'error',
@@ -202,7 +203,11 @@ export function RecordDecision({ investigationId, records, technical, readGenera
     void guard.run(async () => {
       setSubmitting(true);
       try {
-        const r = await submitDecision(investigationId, plan.sendable);
+        // BACK-172 G4: one key per attempt, kept with the draft; a retry after an unknown outcome sends the same key, so the
+        // server answers with the first decision instead of recording a second one. Any edit drops it (onChange below).
+        const keyed = withSubmitKey(plan.sendable);
+        setDraft(keyed);
+        const r = await submitDecision(investigationId, keyed);
         // An answer that lands after the session locked or signed in again shows nothing and leaves the draft as it was (BACK-127).
         const out = settleAnswer(r, answerStillCurrent(started, store?.getSnapshot() ?? null));
         if (out.show !== null) setResult(out.show);
@@ -210,6 +215,8 @@ export function RecordDecision({ investigationId, records, technical, readGenera
           setDraft(undefined);
           setShowProblems(false);
         }
+        // The key was used for a different request: nothing was recorded; the next attempt starts a new one.
+        if (out.show === 'idempotency_conflict') setDraft(withoutSubmitKey(keyed));
         if (out.reportNotFound) store?.reportNotFound();
         if (out.refreshList) onSubmitted();
       } finally {
@@ -228,7 +235,7 @@ export function RecordDecision({ investigationId, records, technical, readGenera
       submitting={submitting}
       showProblems={showProblems}
       result={result === 'not_found' && session?.status !== 'signedIn' ? null : result}
-      onChange={(d) => { setDraft(d); setResult(null); }}
+      onChange={(d) => { setDraft(withoutSubmitKey(d)); setResult(null); }}
       onSubmit={submit}
     />
   );

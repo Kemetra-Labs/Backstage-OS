@@ -145,6 +145,7 @@ describe('createApp in production', () => {
   it('refuses a POST with neither Sec-Fetch-Site nor Origin with the 404 envelope', async () => {
     Object.assign(process.env, {
       NODE_ENV: 'production',
+      KAWALYS_ALLOWED_HOSTS: '127.0.0.1', // required in production (BACK-172 G5); supertest calls 127.0.0.1:<port>
       KAWALYS_DESCOPE_PROJECT_ID: 'PkawalysTest0001',
       KAWALYS_OWNER_SUBJECT: 'UkawalysOwner0001',
     });

@@ -98,8 +98,8 @@ describe('Kawalys BFF', () => {
       expect(rb).toEqual(ab);
       const rh = { ...restricted.headers };
       const ah = { ...absent.headers };
-      delete rh.date;
-      delete ah.date;
+      // The server request id differs per request (BACK-172 G1), and the etag hashes a body that carries it.
+      for (const h of [rh, ah]) for (const k of ['date', 'x-request-id', 'etag']) delete h[k];
       expect(rh).toEqual(ah);
       expect(restricted.text).not.toContain('E-5');
       expect(restricted.text).not.toContain('technical');
@@ -160,10 +160,11 @@ describe('Kawalys BFF', () => {
     expect(res.headers['x-request-id']).toBe(res.body.error.request_id);
   });
 
-  it('x-request-id is echoed only when well-formed', async () => {
+  it('x-request-id is always a server UUID: a client value is never echoed (BACK-172 G1)', async () => {
     const ok = await request(app.getHttpServer()).get('/nope').set('x-request-id', 'req-1234abcd');
-    expect(ok.headers['x-request-id']).toBe('req-1234abcd');
-    expect(ok.body.error.request_id).toBe('req-1234abcd');
+    expect(ok.headers['x-request-id']).toMatch(UUID);
+    expect(ok.headers['x-request-id']).not.toBe('req-1234abcd');
+    expect(ok.body.error.request_id).toBe(ok.headers['x-request-id']);
     const bad = await request(app.getHttpServer()).get('/process').set('x-request-id', 'a'.repeat(100));
     expect(bad.headers['x-request-id']).toMatch(UUID);
     const bad2 = await request(app.getHttpServer()).get('/nope').set('x-request-id', 'a'.repeat(100));

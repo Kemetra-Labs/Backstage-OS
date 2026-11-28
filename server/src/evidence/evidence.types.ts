@@ -73,6 +73,9 @@ export interface EvidenceFilter {
 /** The record does not exist or the caller may not see it. Callers map this to 404. */
 export class NotVisibleError extends Error {}
 
+/** An Idempotency-Key was already used by this caller for a different request. Callers map this to 422. */
+export class IdempotencyConflictError extends Error {}
+
 /** A well-formed request that breaks a rule and reveals nothing hidden. Callers map this to 400. */
 export class RefusedError extends Error {}
 

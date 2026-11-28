@@ -2,7 +2,7 @@
 # Deploy preflight (BACK-117): usage  bash deploy/pilot/preflight-deploy.sh <env-file>
 # Requires KAWALYS_BFF_IMAGE and KAWALYS_WEB_IMAGE in the env file to be digest references
 # (name@sha256:<64 hex>), never a mutable tag. The file is parsed with grep/sed, never sourced, and no
-# value from it is printed (it may hold secrets). Run it before `docker compose pull` / `up`.
+# value from it is printed (it may hold secrets). It also requires KAWALYS_ALLOWED_HOSTS (BACK-172). Run it before `docker compose pull` / `up`.
 set -u
 envfile="${1:-}"
 [[ -n "$envfile" && -f "$envfile" ]] || { echo "preflight: usage: preflight-deploy.sh <env-file>" >&2; exit 2; }
@@ -16,5 +16,17 @@ for var in KAWALYS_BFF_IMAGE KAWALYS_WEB_IMAGE; do
     bad=1
   fi
 done
+# BACK-172: the BFF refuses to start in production without KAWALYS_ALLOWED_HOSTS, and its container healthcheck calls 127.0.0.1.
+hosts="$(grep -E "^KAWALYS_ALLOWED_HOSTS=" "$envfile" | tail -n 1 | sed -e 's/^KAWALYS_ALLOWED_HOSTS=//' -e 's/\r$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/")"
+if [[ -z "${hosts//[[:space:]]/}" ]]; then
+  echo "preflight: KAWALYS_ALLOWED_HOSTS is missing or empty (comma-separated host names: <site host>,localhost,127.0.0.1)" >&2
+  bad=1
+elif printf '%s' "$hosts" | grep -q '\*'; then
+  echo "preflight: KAWALYS_ALLOWED_HOSTS must not contain a wildcard" >&2
+  bad=1
+elif ! printf '%s' "$hosts" | tr ',' '\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | tr 'A-Z' 'a-z' | grep -Eq '^127\.0\.0\.1(:[0-9]+)?$'; then
+  echo "preflight: KAWALYS_ALLOWED_HOSTS must list 127.0.0.1 (the bff container healthcheck sends it as the Host header)" >&2
+  bad=1
+fi
 [[ "$bad" = 0 ]] || exit 1
-echo "preflight: image references are digest-pinned"
+echo "preflight: image references are digest-pinned and the host allowlist is set"

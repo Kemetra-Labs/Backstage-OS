@@ -5,9 +5,11 @@
 import type pg from 'pg';
 import { insertAuditRowInTransaction, type TransactionalAuditRow } from '../audit/audit-row.writer';
 import { runWithWorkspaceContext } from '../db/workspace-context';
+import { IDEMPOTENCY_WINDOW_SECONDS, type IdempotencyClaim, type IdempotentAction } from './idempotency';
 import {
   DECISION_LIMIT_MAX,
   EVIDENCE_STATES,
+  IdempotencyConflictError,
   NOTE_TYPES,
   NotVisibleError,
   RefusedError,
@@ -192,6 +194,8 @@ export class EvidenceRepository {
     private readonly pool: pg.Pool,
     private readonly policy: SourceApprovalPolicy,
     private readonly audit: AuditWriter = insertAuditRowInTransaction,
+    /** How long an Idempotency-Key is remembered; injectable so a test can use a short window (audit rows cannot be backdated). */
+    private readonly idempotencyWindowSeconds: number = IDEMPOTENCY_WINDOW_SECONDS,
   ) {}
 
   private inWorkspace<T>(workspaceId: string, work: (c: pg.PoolClient) => Promise<T>): Promise<T> {
@@ -432,9 +436,16 @@ export class EvidenceRepository {
    * source evidence of the same project that the decider can see now; their grants are
    * share-locked so a concurrent revocation cannot slip in between the check and the insert.
    */
-  async recordDecision(workspaceId: string, actor: string, input: DecisionInput, requestId: string | null): Promise<string> {
+  async recordDecision(workspaceId: string, actor: string, input: DecisionInput, requestId: string | null, extras: WriteExtras = {}): Promise<string> {
     const cited = citedIds(input);
     return this.inWorkspace(workspaceId, async (c) => {
+      const replay = await this.priorWrite(c, workspaceId, actor, 'decision.recorded', extras.idempotency);
+      if (replay !== null) {
+        // The same request again: answer with the recorded id only while the caller can still see what it cites.
+        const replayProject = await visibleInvestigationProject(c, actor, input.investigationId);
+        await visibleCitations(c, actor, cited, replayProject);
+        return replay;
+      }
       const projectId = await visibleInvestigationProject(c, actor, input.investigationId);
       await visibleCitations(c, actor, cited, projectId);
       const payload = { decision: input.decision, rationale: input.rationale };
@@ -445,9 +456,38 @@ export class EvidenceRepository {
       );
       const id = rows[0]!.id;
       await insertCitations(c, workspaceId, projectId, id, cited);
-      await this.audit(c, { ...auditRow(workspaceId, actor, 'decision.recorded', 'evidence', id), requestId });
+      await this.audit(c, { ...auditRow(workspaceId, actor, 'decision.recorded', 'evidence', id), requestId, metadata: writeMetadata(extras) });
       return id;
     });
+  }
+
+  /**
+   * Idempotency (BACK-172 G3), inside the write transaction. With a claim: serialise on (workspace, actor, action,
+   * key) with a transaction advisory lock, then look for an audit row of this action by this actor carrying the same
+   * key hash within the window. Null = not seen, write as usual (the row then stores the claim). A different request
+   * hash is a conflict. Without a claim nothing is locked or read. RLS keeps other workspaces out; the actor filter
+   * keeps other principals out. The caller re-authorizes a replay before answering with the id.
+   */
+  private async priorWrite(
+    c: pg.PoolClient,
+    workspaceId: string,
+    actor: string,
+    action: IdempotentAction,
+    claim: IdempotencyClaim | undefined,
+  ): Promise<string | null> {
+    if (!claim) return null;
+    await c.query(`SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`, [`idem:${workspaceId}:${actor}:${action}:${claim.keyHash}`]);
+    const { rows } = await c.query<{ target_id: string; request_hash: string | null }>(
+      `SELECT target_id, metadata->>'request_hash' AS request_hash FROM audit_events
+        WHERE action = $1 AND actor_user_id = $2 AND metadata->>'idempotency_key_hash' = $3
+          AND occurred_at > now() - make_interval(secs => $4::double precision)
+        ORDER BY occurred_at DESC, id LIMIT 1`,
+      [action, actor, claim.keyHash, this.idempotencyWindowSeconds],
+    );
+    const prior = rows[0];
+    if (!prior) return null;
+    if (prior.request_hash !== claim.requestHash) throw new IdempotencyConflictError('idempotency key reused for a different request');
+    return prior.target_id;
   }
 
   /**
@@ -458,11 +498,17 @@ export class EvidenceRepository {
    * can see the note can see everything it cites. Its state is the worst cited state: a note built on
    * unknown evidence is never shown as ok. Invisible ids answer like absent ones (NotVisibleError).
    */
-  async recordNote(workspaceId: string, actor: string, input: NoteInput, requestId: string | null): Promise<string> {
+  async recordNote(workspaceId: string, actor: string, input: NoteInput, requestId: string | null, extras: WriteExtras = {}): Promise<string> {
     if (!(NOTE_TYPES as readonly string[]).includes(input.type)) throw new RefusedError('a note is a Correlation or a Hypothesis');
     const cited = citedIds(input);
     if (cited.length === 0) throw new RefusedError('a note must cite evidence');
     return this.inWorkspace(workspaceId, async (c) => {
+      const replay = await this.priorWrite(c, workspaceId, actor, 'note.recorded', extras.idempotency);
+      if (replay !== null) {
+        const replayProject = await visibleInvestigationProject(c, actor, input.investigationId);
+        await visibleCitations(c, actor, cited, replayProject);
+        return replay;
+      }
       const projectId = await visibleInvestigationProject(c, actor, input.investigationId);
       const rows = await visibleCitations(c, actor, cited, projectId);
       const sources = new Set(rows.map((r) => r.source_id));
@@ -475,7 +521,7 @@ export class EvidenceRepository {
       );
       const id = inserted[0]!.id;
       await insertCitations(c, workspaceId, projectId, id, cited);
-      await this.audit(c, { ...auditRow(workspaceId, actor, 'note.recorded', 'evidence', id), requestId });
+      await this.audit(c, { ...auditRow(workspaceId, actor, 'note.recorded', 'evidence', id), requestId, metadata: writeMetadata(extras) });
       return id;
     });
   }
@@ -546,6 +592,20 @@ async function insertCitations(c: Client, workspaceId: string, projectId: string
      SELECT $1, $2, $3, unnest($4::uuid[])`,
     [workspaceId, projectId, citing, cited],
   );
+}
+
+/** Per-request extras for the two human writes: the sanitized client correlation id and the idempotency claim. */
+export interface WriteExtras {
+  readonly clientRequestId?: string | null;
+  readonly idempotency?: IdempotencyClaim;
+}
+
+/** Audit metadata for a human write: ids and hashes only, never the raw idempotency key. */
+function writeMetadata(extras: WriteExtras): Record<string, unknown> {
+  return {
+    ...(extras.clientRequestId ? { client_request_id: extras.clientRequestId } : {}),
+    ...(extras.idempotency ? { idempotency_key_hash: extras.idempotency.keyHash, request_hash: extras.idempotency.requestHash } : {}),
+  };
 }
 
 function auditRow(workspaceId: string, actor: string, action: string, targetType: string, targetId: string): TransactionalAuditRow {

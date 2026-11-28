@@ -13,7 +13,9 @@ import { EvidenceModule } from "./evidence/evidence.module";
 import { EvidenceRepository } from "./evidence/evidence.repository";
 import { configuredApprovalPolicy } from "./evidence/source-approval";
 import { DemoModule } from "./demo/demo.module";
+import { allowedHosts } from "./config/allowed-hosts";
 import { allowedOrigins } from "./config/allowed-origins";
+import { hostCheck } from "./http/host-check";
 import { trustProxy } from "./config/trust-proxy";
 import { ReadinessModule } from "./health/readiness.module";
 import { InvestigationModule } from "./investigations/investigation.module";
@@ -34,6 +36,8 @@ export interface KawalysDatabase {
 
 export interface CreateAppOptions {
   readonly database?: KawalysDatabase;
+  /** Clock of the evidence write limiter (BACK-172 G2). Tests inject one; the default is Date.now. */
+  readonly writeClock?: () => number;
 }
 
 export async function createApp(
@@ -56,7 +60,7 @@ export async function createApp(
   // Evidence routes exist only with the database; the global AuthGuard protects them like every route.
   if (db && workspaces) {
     const evidence = new EvidenceRepository(db.appPool, approval);
-    imports.push(EvidenceModule.register(evidence, workspaces));
+    imports.push(EvidenceModule.register(evidence, workspaces, options.writeClock));
     imports.push(InvestigationModule.register(new InvestigationRepository(db.appPool), evidence, workspaces));
     imports.push(PortfolioModule.register(new PortfolioRepository(db.appPool), workspaces));
     // COG-07 live search (owner decision 2026-11-27): read-only, rate limited per user.
@@ -76,15 +80,21 @@ export async function createApp(
   const trusted = trustProxy(process.env);
   // Same rule for KAWALYS_ALLOWED_ORIGINS (audit M1): a malformed value stops startup before the app exists.
   const origins = allowedOrigins(process.env);
+  // Host allowlist (BACK-172 G5): required in production (after the auth check above), off when unset elsewhere.
+  const hosts = allowedHosts(process.env);
   const app = await NestFactory.create<NestExpressApplication>(RootModule, { logger: ["error"], bodyParser: false });
   app.getHttpAdapter().getInstance().disable("x-powered-by");
   // Behind the pilot proxy: trust X-Forwarded-For only from the listed proxy addresses (BACK-64). Unset: ignored.
   if (trusted !== null) app.getHttpAdapter().getInstance().set("trust proxy", [...trusted]);
   app.use(requestIdMiddleware);
+  // An unlisted Host gets the uniform 404 before the Origin check or any parsing (BACK-172 G5).
+  if (hosts !== null) app.use(hostCheck(hosts));
   // State-changing requests must be same-origin or from an allowlisted Origin (audit M1); registered before any route.
   app.use(originCheck({ allowed: origins, production: process.env.NODE_ENV === "production" }));
   // After the origin check, so a refused request is never parsed.
-  app.useBodyParser("json");
+  // Explicit 32 kB cap (BACK-172 G2; the largest valid decision is about 12 kB). An oversize body is refused here,
+  // before any route handler, as the uniform 400 validation_error with no-store (SafeErrorFilter).
+  app.useBodyParser("json", { limit: "32kb" });
   app.useGlobalFilters(new SafeErrorFilter());
   await app.init();
   return app;
