@@ -155,7 +155,8 @@ export class MemoryRepository {
       ]);
       return res.rows;
     }).catch((e: unknown) => {
-      throw (e as { code?: unknown } | null)?.code === QUERY_CANCELED ? new MemoryReadBudgetExceeded() : e;
+      // Only a budgeted read reports a cancel as its budget; any other cancel stays what it was.
+      throw this.budgetMs !== undefined && (e as { code?: unknown } | null)?.code === QUERY_CANCELED ? new MemoryReadBudgetExceeded() : e;
     });
     const clock = rows.find((r) => r.role === 'clock');
     const grants = rows.filter((r) => r.role === 'grant');

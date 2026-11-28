@@ -40,6 +40,9 @@ v AS (
     FROM evidence e
     JOIN granted gr ON gr.source_id = e.source_id
    WHERE e.project_id = $2
+     -- Uncorrelated, so a one-time filter: with no active grant, evidence is never scanned, whatever the
+     -- project holds. A hidden project then costs what a missing one does (work-budget review).
+     AND EXISTS (SELECT 1 FROM granted)
      AND e.type = 'Observation'
      AND date_trunc('milliseconds', e.received_at) <= (SELECT known_at FROM clock)
      AND (e.payload->>'kind' = ANY($4::text[]) OR e.payload->>'kind' IN ('source_status', 'list_page'))

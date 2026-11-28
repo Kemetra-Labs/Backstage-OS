@@ -8,6 +8,7 @@ import type { ObservationInput } from '../../src/evidence/evidence.repository';
 import { canonicalCollapsed, collapse } from '../../src/memory/memory.collapse';
 import { project } from '../../src/memory/memory.projector';
 import { MemoryReadBudgetExceeded, MemoryRepository, type MemoryReadInput } from '../../src/memory/memory.repository';
+import { ITEM_KIND_LIST, MEMORY_READ_SQL } from '../../src/memory/memory.sql';
 import type { MemoryRequest, MemoryRow } from '../../src/memory/memory.types';
 import { freshIds, reconnect, startStore, stopStore, type StoreHarness } from '../db/store-harness';
 import { at, CONF, confPage, GH, ghIssue, JIRA, jiraIssue, listPage, pr, repo, REPO, status } from './memory.fixture';
@@ -275,11 +276,34 @@ describe('work budget', () => {
     }
   }, 15_000);
 
+  it('a read without a budget that is cancelled keeps its own error, not a budget one', async () => {
+    const locker = await h.db.admin.connect();
+    try {
+      await locker.query('BEGIN');
+      await locker.query('LOCK TABLE kawalys.evidence IN ACCESS EXCLUSIVE MODE');
+      const pending = memory.read(query()).then(() => null, (e: unknown) => e);
+      let cancelled = false;
+      for (let i = 0; i < 100 && !cancelled; i++) {
+        const { rows } = await h.db.admin.query(`SELECT pid FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE '%clock AS (SELECT now()%'`);
+        if (rows.length) cancelled = (await h.db.admin.query('SELECT pg_cancel_backend($1) AS ok', [rows[0].pid])).rows[0].ok === true;
+        else await new Promise((r) => setTimeout(r, 50));
+      }
+      expect(cancelled).toBe(true);
+      const err = await pending;
+      expect(err).not.toBeInstanceOf(MemoryReadBudgetExceeded);
+      expect((err as { code?: string }).code).toBe('57014');
+    } finally {
+      await locker.query('ROLLBACK');
+      locker.release();
+    }
+  }, 15_000);
+
   it('the budget ends with the read: the pooled connection keeps no timeout', async () => {
-    // One connection, so the check runs on the very connection the read used.
+    // One connection, so the check runs on the very connection the read used. A generous budget: a leak
+    // would still show as '10s' instead of '0', and a slow runner cannot time the read out.
     const single = new pg.Pool({ ...h.db.app.options, max: 1 });
     try {
-      await new MemoryRepository(single, { budgetMs: 200 }).read(query());
+      await new MemoryRepository(single, { budgetMs: 10_000 }).read(query());
       const { rows } = await single.query("SELECT current_setting('statement_timeout') AS t");
       expect(rows[0].t).toBe('0');
     } finally {
@@ -292,12 +316,37 @@ describe('work budget', () => {
     expect(await new MemoryRepository(h.db.app, { budgetMs: 30_000 }).read(q)).toEqual(await memory.read(q));
   });
 
+  // Independent review: a hidden project with a long history must not reach the budget while a missing
+  // one answers at once, or the budget becomes an existence oracle. Without a grant, the statement never
+  // executes a scan of evidence, whatever the project holds (the evidence of this project is not visible
+  // to the stranger).
+  it('a reader with no grant on the project never scans evidence', async () => {
+    const plan = await runWithWorkspaceContext(h.db.app, ids.ws, async (c) => {
+      const res = await c.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${MEMORY_READ_SQL}`, [ids.stranger, h.projectId, null, ITEM_KIND_LIST, [], []]);
+      return (res.rows[0] as Record<string, unknown>)['QUERY PLAN'] as [{ Plan: PlanNode }];
+    });
+    const scans: PlanNode[] = [];
+    const walk = (n: PlanNode) => {
+      if (n['Relation Name'] === 'evidence') scans.push(n);
+      for (const child of n.Plans ?? []) walk(child);
+    };
+    walk(plan[0].Plan);
+    expect(scans.length).toBeGreaterThan(0);
+    expect(scans.map((n) => n['Actual Loops'])).toEqual(scans.map(() => 0));
+  });
+
   it('refuses a budget that is not a positive whole number of milliseconds', () => {
     for (const budgetMs of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
       expect(() => new MemoryRepository(h.db.app, { budgetMs })).toThrow(RangeError);
     }
   });
 });
+
+interface PlanNode {
+  readonly 'Relation Name'?: string;
+  readonly 'Actual Loops'?: number;
+  readonly Plans?: readonly PlanNode[];
+}
 
 // A second project the reader can also read (tracked since the COG-08 review): evidence added there
 // changes nothing in this project's projection, and the control read shows the new evidence did land.

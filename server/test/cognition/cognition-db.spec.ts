@@ -64,7 +64,10 @@ describe('work budget (DEC-1)', () => {
       await locker.query('BEGIN');
       // Holds the read past its budget deterministically: statement_timeout counts lock waits.
       await locker.query('LOCK TABLE kawalys.evidence IN ACCESS EXCLUSIVE MODE');
+      const started = Date.now();
       const visible = await search(projectId, 'portfolio');
+      // The failure is the budget firing, not some other error: the read waited the whole budget.
+      expect(Date.now() - started).toBeGreaterThanOrEqual(COGNITION_READ_BUDGET_MS);
       const hidden = await search(otherWorkspaceProject, 'portfolio');
       for (const res of [visible, hidden]) {
         expect(res.status).toBe(500);
