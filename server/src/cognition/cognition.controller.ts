@@ -10,9 +10,11 @@ import { UUID } from '../evidence/evidence.types';
 import type { MemoryRepository } from '../memory/memory.repository';
 import { MAX_QUERY_CHARS } from '../retrieval/retrieval.policy';
 import { search } from '../retrieval/retrieval.search';
+import type { ReadSlots } from './read-slots';
 
 export const COGNITION_MEMORY = Symbol('KAWALYS_COGNITION_MEMORY');
 export const COGNITION_LIMITER = Symbol('KAWALYS_COGNITION_LIMITER');
+export const COGNITION_SLOTS = Symbol('KAWALYS_COGNITION_SLOTS');
 export const COGNITION_READS_PER_MINUTE = 30;
 /**
  * Work budget of one live memory read (DEC-1). Past it the read is cancelled and rolled back, and the route
@@ -21,6 +23,7 @@ export const COGNITION_READS_PER_MINUTE = 30;
  */
 export const COGNITION_READ_BUDGET_MS = 2_000;
 const TOO_MANY_REQUESTS = 429;
+const SERVICE_UNAVAILABLE = 503;
 
 export interface CognitionHit {
   /** Null when the item has no title. */
@@ -47,6 +50,8 @@ export class CognitionController {
     @Inject(COGNITION_MEMORY) private readonly memory: MemoryRepository,
     // The sign-in limiter's fixed-window design, keyed here by user id.
     @Inject(COGNITION_LIMITER) private readonly limiter: SignInRateLimiter,
+    // Reads in flight across the process (BACK-154): the rate limit alone does not bound concurrency.
+    @Inject(COGNITION_SLOTS) private readonly slots: ReadSlots,
   ) {}
 
   @Get('projects/:projectId/search')
@@ -60,7 +65,16 @@ export class CognitionController {
     // Cheap checks before the read, so a refused query never costs a database round trip (security review).
     if (typeof q !== 'string' || q.trim() === '' || q.length > MAX_QUERY_CHARS) throw new BadRequestException();
     if (!UUID.test(projectId)) throw new NotFoundException();
-    const projection = await this.memory.readVisible({ workspaceId: p.workspaceId, userId: p.userId, projectId });
+    // Taken for every valid id, visible or not, so being at capacity says nothing about a project. At capacity
+    // the read is refused at once with the generic error body. An admitted read may still wait for a pooled
+    // connection: the pool has no connect timeout, and the 2 s budget starts once the statement runs.
+    if (!this.slots.tryAcquire()) throw new HttpException('', SERVICE_UNAVAILABLE);
+    let projection: Awaited<ReturnType<MemoryRepository['readVisible']>>;
+    try {
+      projection = await this.memory.readVisible({ workspaceId: p.workspaceId, userId: p.userId, projectId });
+    } finally {
+      this.slots.release();
+    }
     if (!projection) throw new NotFoundException();
     const r = search(projection, q);
     if (r.outcome === 'invalid-query') throw new BadRequestException();

@@ -12,6 +12,27 @@ import type { ReasoningInput, Reason, TaskResult } from './reasoning.types';
 const order = (a: string, b: string): number => (a === b ? 0 : a < b ? -1 : 1);
 const ids = (xs: readonly string[]): string[] => [...new Set(xs)].sort(order);
 
+/**
+ * Longest serialized candidate accepted, in UTF-16 code units (BACK-155 Q2). Twice the largest result the
+ * input rules allow (MAX_TASKS x MAX_REQUIREMENTS, MAX_ID ids), rounded up to a power of two.
+ */
+export const MAX_CANDIDATE_CHARS = 1 << 20; // 1,048,576; the largest legitimate result measured 343,707 (2026-11-28, UUID evidence ids, two observations per item)
+
+/**
+ * The boundary for a candidate that arrives over a future transport: the length is checked before
+ * JSON.parse runs, so an oversized candidate costs nothing to refuse, and a parsed one is plain data.
+ */
+export function validateSerializedResult(projection: MemoryProjection, input: ReasoningInput, json: string): boolean {
+  if (typeof json !== 'string' || json.length > MAX_CANDIDATE_CHARS) return false;
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(json);
+  } catch {
+    return false;
+  }
+  return validateResult(projection, input, candidate);
+}
+
 export function validateResult(projection: MemoryProjection, input: ReasoningInput, candidate: unknown): boolean {
   try {
     return sameData(candidate, expected(projection, input));
