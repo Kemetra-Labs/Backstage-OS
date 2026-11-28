@@ -199,6 +199,7 @@ Local code and tests only (owner approved gate A on 2026-11-23). Active only whe
 | `source.connect` | yes |
 | `source.disconnect` | yes |
 | `audit.read` | yes |
+| `investigation.create` | yes (BACK-148 M: `POST /investigations`, visible project only) |
 | `evidence.ingest` | no (server-internal connector path; no user role holds it) |
 
 Effective permission for source data is the role capability AND an active source grant (see Evidence API below).

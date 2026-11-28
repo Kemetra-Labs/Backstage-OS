@@ -19,7 +19,6 @@ import { startOwnerApp, type OwnerApp } from '../db/owner-app';
 let t: OwnerApp | undefined;
 let now = 1_000_000;
 let projectId = '';
-let sourceId = '';
 
 const server = () => t!.app.getHttpServer();
 const create = (body: unknown, headers: Record<string, string> = {}) => {
@@ -48,7 +47,7 @@ async function project(tag: string): Promise<{ project: string; source: string }
 
 beforeAll(async () => {
   t = await startOwnerApp({ writeClock: () => now });
-  ({ project: projectId, source: sourceId } = await project('create-case'));
+  ({ project: projectId } = await project('create-case'));
 }, 180_000);
 
 afterAll(async () => {
@@ -236,13 +235,22 @@ describe('revocation race (repository)', () => {
         () => 'created',
         (e: unknown) => (e instanceof NotVisibleError ? 'not-visible' : e),
       );
-      await new Promise((r) => setTimeout(r, 300));
+      // Prove the create is blocked on the grant row lock (FOR SHARE) before the revocation commits; otherwise it would
+      // only see an already-committed revocation and the test would pass without the lock.
+      let waiting = 0;
+      for (let i = 0; i < 100 && waiting === 0; i++) {
+        await new Promise((r) => setTimeout(r, 50));
+        const { rows } = await t!.db.admin.query<{ n: string }>(
+          `SELECT count(*) AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query ILIKE '%FOR SHARE OF vg%'`,
+        );
+        waiting = Number(rows[0]!.n);
+      }
+      expect(waiting).toBe(1);
       await admin.query('COMMIT');
       expect(await pending).toBe('not-visible');
     } finally {
       admin.release();
     }
     expect(await investigationsIn(p)).toBe(0);
-    void sourceId;
   });
 });
