@@ -120,13 +120,22 @@ describe('POST /investigations (BACK-148 decision M)', () => {
     const noSource = await t!.evidence.createProject(t!.ws, t!.owner, { key: 'create-nosource', name: 'No source' });
 
     const audits = await createdAudits();
+    // The whole envelope must match across the six cases: status, body and cache-control. The only per-request field is the
+    // server's own request id, which must equal the response's x-request-id; it is then masked before the comparison.
     const answers = [];
     for (const target of [randomUUID(), 'not-a-uuid', '../auth/me', revoked, theirs, noSource]) {
       const res = await create({ projectId: target, title: 'Should not exist' });
-      answers.push({ status: res.status, code: res.body?.error?.code });
+      const body = res.body as { error?: { request_id?: unknown } };
+      expect(body.error?.request_id).toBe(res.headers['x-request-id']);
+      answers.push({
+        status: res.status,
+        cacheControl: res.headers['cache-control'],
+        contentType: res.headers['content-type'],
+        body: { ...body, error: { ...body.error, request_id: '<masked>' } },
+      });
     }
     expect(new Set(answers.map((a) => JSON.stringify(a))).size).toBe(1);
-    expect(answers[0]!.status).toBe(404);
+    expect(answers[0]).toMatchObject({ status: 404, cacheControl: 'no-store', body: { error: { code: 'not_found' } } });
     for (const p of [revoked, theirs, noSource]) expect(await investigationsIn(p)).toBe(0);
     expect(await createdAudits()).toBe(audits);
   });
@@ -175,6 +184,59 @@ describe('BACK-172 shared controls on POST /investigations', () => {
     expect(conflict.status).toBe(422);
     expect(conflict.body.error.code).toBe('idempotency_conflict');
     expect(await investigationsIn(projectId)).toBe(before + 1);
+    expect(await createdAudits()).toBe(audits);
+  });
+
+  it('concurrent identical requests with one key and body: one case, one audit row, the same id in both answers', async () => {
+    now += 120_000;
+    const { project: p, source } = await project('create-concurrent');
+    const key = `case-${randomUUID()}`;
+    const body = { projectId: p, title: 'Sent twice at once' };
+    const audits = await createdAudits();
+    // Make the race deterministic: hold the project's grant row so both requests are in their write transaction at the same
+    // time (one waits on the idempotency advisory lock, or, without that lock, both wait on the grant lock after reading
+    // "not seen"), and release only once the database shows both waiting.
+    const admin = await t!.db.admin.connect();
+    let answers: request.Response[];
+    try {
+      await admin.query('BEGIN');
+      await admin.query('SELECT 1 FROM kawalys.source_grants WHERE source_id = $1 FOR UPDATE', [source]);
+      const sent = Promise.all([create(body, { 'Idempotency-Key': key }), create(body, { 'Idempotency-Key': key })]);
+      let waiting = 0;
+      for (let i = 0; i < 100 && waiting < 2; i++) {
+        await new Promise((r) => setTimeout(r, 50));
+        const { rows } = await t!.db.admin.query<{ n: string }>(`SELECT count(*) AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND backend_type = 'client backend'`);
+        waiting = Number(rows[0]!.n);
+      }
+      expect(waiting).toBe(2);
+      await admin.query('ROLLBACK');
+      answers = await sent;
+    } finally {
+      admin.release();
+    }
+    expect(answers.map((r) => r.status)).toEqual([201, 201]);
+    expect(answers[0]!.body.id).toBe(answers[1]!.body.id);
+    expect(await investigationsIn(p)).toBe(1);
+    expect(await createdAudits()).toBe(audits + 1);
+  });
+
+  it('pins the order: a reused key with another body for an invisible project is 422; without that earlier use it is 404', async () => {
+    now += 120_000;
+    const { project: p, source } = await project('create-order');
+    const key = `case-${randomUUID()}`;
+    expect((await create({ projectId: p, title: 'First use of the key' }, { 'Idempotency-Key': key })).status).toBe(201);
+    await t!.evidence.disconnectSource(t!.ws, t!.owner, source);
+    const audits = await createdAudits();
+    // The idempotency lookup runs before the visibility check (as on the decision and note routes): the caller learns only of
+    // their own earlier use of the key, never whether the project exists.
+    const reused = await create({ projectId: p, title: 'Another body' }, { 'Idempotency-Key': key });
+    expect(reused.status).toBe(422);
+    expect(reused.body.error.code).toBe('idempotency_conflict');
+    const fresh = await create({ projectId: p, title: 'Another body' }, { 'Idempotency-Key': `case-${randomUUID()}` });
+    expect(fresh.status).toBe(404);
+    const unkeyed = await create({ projectId: p, title: 'Another body' });
+    expect(unkeyed.status).toBe(404);
+    expect(await investigationsIn(p)).toBe(1);
     expect(await createdAudits()).toBe(audits);
   });
 
