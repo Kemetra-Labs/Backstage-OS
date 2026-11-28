@@ -23,7 +23,7 @@ Size: 195 commits since 2026-11-15; ~57k lines in `app/src` (incl. an i18n snaps
 | Reasoning (COG-04) | FIXTURE (not wired to any route) | `cognition.controller.ts:5` |
 | Outcome learning (COG-05) | FIXTURE, activation blocked | `server/src/learning`, migration 0006; no importer in `src` |
 | COG-06 uncertainty | UNBUILT (deferred) | `BACK-109/cog-06-verdict.md` |
-| Live memory read at real volume | measured to fail closed (3.3 s at 7 d, 98 s at 180 d vs 2 s budget) | PR #187 (open), per project memory note; treat as unverified until merged |
+| Live memory read at real volume | measured to fail closed (3.3 s at 7 d, 98 s at 180 d vs 2 s budget) | Open PR #187 (`docs/planning/BACK-154/2026-11-28-kawalys-volume-measurements.md` on its branch); not on main |
 | Mission Map, Source Observatory, Replay, Flight Deck | MOCK (synthetic `WORLD` fixture), heavily tested | `app/src/lenses/screens/*`; e2e: map 34, observatory 14, replay 19, flight deck 13 |
 | Unknown is never Healthy; stale/down/not-read states | SHIPPED+TESTED (UI and server) | `portfolio.model.ts:3`; `js/core.js`; app fix #14; 34 files assert it |
 | Recorded conflict (not reconciled) | FIXTURE | `app/src/fixture/world.ts:120` (BACK-83), pinned by `parity.test.ts` |

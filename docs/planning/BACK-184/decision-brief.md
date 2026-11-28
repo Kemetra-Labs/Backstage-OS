@@ -5,7 +5,7 @@ Evidence: [sources.md](sources.md) (official Anthropic pages, fetched today) · 
 
 ## 1. Short answer
 
-**Today there is no demonstrated reason for a Claude user to pay for Kawalys.** A connector dashboard that shows each figure's source and freshness is a first-party Claude feature (Claude Data). In our synthetic benchmark, one build pass of a Claude Data artifact produced correct deploy → error → ticket links, stale and conflict handling, and a persistent decision log. Kawalys has not built the correlation scenario, has no active real source, an empty pilot database and one user (the owner).
+**Today there is no demonstrated reason for a Claude user to pay for Kawalys.** A connector dashboard that shows each figure's source and freshness is a first-party Claude feature (Claude Data). In our synthetic benchmark, one build pass of a Claude Data artifact produced correct deploy → error → ticket links and stale/conflict handling (logic checked; page not seen rendered), and its store kept a seeded decision log with editor-only writes. Kawalys has not built the correlation scenario, has no active real source, an empty pilot database and one user (the owner).
 
 Kawalys does have something Claude Artifacts are not designed to be: a server that owns evidence, enforces row-level access, and audits writes. But the gap is **narrower than "artifacts have no backend"**: artifacts keep up to 100 MB of shared or personal data, Claude Data re-queries on an interval when opened, and a scheduled Claude routine can keep an artifact's data current. And the one place Kawalys is structurally stronger, scoping evidence between different people, cannot be shown yet: Kawalys has a single role.
 
@@ -24,8 +24,8 @@ Secondary, weaker: Arabic-first agencies reporting to non-technical clients (BAC
 ### 3.1 Platform facts (official, [sources.md](sources.md))
 - Installable apps: beta since 2026-11-24, Mac/Windows desktop, online and signed in. Template artifacts (Docs, Slides, Sheets; S2 also lists Data) can't be installed (S1, S2, S4).
 - Connectors read and write as **the viewer**, after per-viewer approval; Claude Data live sharing runs the editor's approved queries for the organization (S2, S3, S5, S6).
-- Storage per artifact: personal or shared, 100 MB / 25,000 documents; attached files and shared rows are readable by everyone who can open the artifact (S2; Data type guide).
-- No backend of its own, strict CSP, no viewer authentication (S3). Interval refresh on open (S6); scheduled routines can update data (Data type guide, untested).
+- Storage per artifact: personal or shared, 100 MB / 25,000 documents; attached files and shared rows are readable by everyone who can open the artifact (S2, S8).
+- No backend of its own, strict CSP, no viewer authentication (S3). Interval refresh on open (S6); scheduled routines can update data (S8, untested).
 - Publishing from Claude Code needs a claude.ai account and the Anthropic API path, and no CMEK/HIPAA/ZDR (S3). Installed apps: not for HIPAA-ready orgs; ZDR orgs can install but apps aren't covered by ZDR (S1).
 
 ### 3.2 Benchmark ([benchmark.md](benchmark.md))
@@ -55,7 +55,7 @@ On clean fixtures, correlation and conflict logic is a few dozen lines Claude wr
 | # | Hypothesis | Test | Pass line |
 |---|---|---|---|
 | H3 | **Scoped sharing is worth paying for.** | 6–8 interviews (BACK-3) with founders/teams/agencies who share project state with clients or contractors | ≥ 3 describe a current workaround **and** a budget |
-| H5 | **Claude-native is not enough for the owner either.** | Owner uses a Claude-native baseline for 2–3 weeks on real repos: decision log in repo or artifact store, a Claude Data dashboard, optionally a scheduled routine | Owner records ≥ 3 concrete failures that Kawalys' server would fix (lost history, wrong scope, no audit) |
+| H5 | **Claude-native is not enough for the owner either.** | Owner uses a Claude-native baseline for 2–3 weeks on real repos: decision log in repo or artifact store, a Claude Data dashboard, optionally a scheduled routine | Pre-registered failure categories: (a) history lost or not reconstructable, (b) data shown to someone who should not see it, (c) no record of who read or changed what. Pass if the owner logs ≥ 3 dated, concrete incidents across ≥ 2 categories. Self-graded, so H3 is the gate's external check |
 | H6 | **Nobody already sells the correlation.** | Desk scan of error-tracking/APM deploy tracking, developer portals, agent memory (1–2 days) | No mainstream tool covers deploy → error → ticket with citations for small teams at their price point; otherwise drop H2 and BACK-182 |
 | H4 | **Self-hosting / no Claude seat matters.** | Same interviews | ≥ 2 name it as a blocker |
 | H1 | **Kawalys context makes agents better** (usefulness, not payment). Only after the gate. | BACK-168 Stage A: 10 pre-registered questions on one real repo, same model, Kawalys MCP vs the Claude-native baseline from H5 | ≥ 8/10 correct with citations and ≥ 30% fewer tool calls or tokens than the baseline |

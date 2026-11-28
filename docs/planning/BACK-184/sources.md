@@ -15,6 +15,7 @@ Status key: **V** = stated in an official Anthropic source (verified as a claim,
 | S5 | [Share artifacts](https://support.claude.com/en/articles/9547008-share-artifacts) | Anthropic Help Center | current |
 | S6 | [Get started with Claude Data](https://support.claude.com/en/articles/17454700-get-started-with-claude-data) | Anthropic Help Center | current |
 | S7 | [Plans & pricing](https://claude.com/pricing) | Anthropic | current |
+| S8 | Claude **Data** artifact type guide (`SKILL.md`, `reference/features.md`, `design-defaults.md`), read through the Artifact tool from a private artifact made from the type | Anthropic first-party type documentation, not a help-center page | type release read 2026-11-28 |
 
 Secondary press (not relied on): datanorth.ai, testingcatalog.com, alphasignal.ai. They match S1 and add nothing official.
 
@@ -34,7 +35,7 @@ Secondary press (not relied on): datanorth.ai, testingcatalog.com, alphasignal.a
 - **V** Local MCP servers (e.g. `.mcp.json`) can feed a page at build time only; the published page cannot call them (S3).
 - **V** Responses cached in the viewer's browser; page can refresh on load, interval or control (S3).
 - **V** Org owners have an "Enable artifact connectors" toggle; per-tool "Needs approval" policies apply (S2, S3).
-- **V/U** Claude Data "doesn't refresh on a schedule", but **Refresh data** re-queries on a set interval when someone opens a dashboard that is due (S6). The Data type's own guide says a routine (scheduled task) can keep an attached file current. Installed apps with a tray icon keep running after their window closes (S1). None of these is documented as server-side ingestion into history, but a scheduled Claude routine writing into an artifact's store is a plausible Claude-native ledger (untested).
+- **V/U** Claude Data "doesn't refresh on a schedule", but **Refresh data** re-queries on a set interval when someone opens a dashboard that is due (S6). The Data type guide (S8) says a routine (scheduled task) can keep an attached file current. Installed apps with a tray icon keep running after their window closes (S1). None of these is documented as server-side ingestion into history, but a scheduled Claude routine writing into an artifact's store is a plausible Claude-native ledger (untested).
 
 ### Permissions (installed app, OS level)
 - **V** Per-permission prompts: notifications, keyboard shortcuts, float over windows, menu bar/tray, full computer access (S1).
@@ -44,6 +45,7 @@ Secondary press (not relied on): datanorth.ai, testingcatalog.com, alphasignal.a
 ### Persistence
 - **V** Store data (Pro+): personal or shared storage; default up to 100 MB and 25,000 documents per artifact; uploads up to 20 MB each, 1 GB total (S2).
 - **V** "Whoever builds an artifact decides which data uses personal storage and which uses shared." (S2)
+- **V** (S8) Attached files and shared rows are readable by everyone who can open the artifact; rows under `data/users/me/` are private to each reader; shared rows outside it are writable by editors only.
 - **U** No documented schema, transactions, row-level access policy, retention per record, or export API for artifact storage.
 
 ### Distribution and sharing

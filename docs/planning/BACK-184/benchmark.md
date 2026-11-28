@@ -1,6 +1,6 @@
 # BACK-184 — Synthetic side-by-side benchmark
 
-Part 1 (protocol) was written and committed in this file **before** either side was run. Part 2 holds the results.
+Part 1 (protocol) was written before either side ran (about 13:13 UTC). It was committed in `0794747` at 13:18 UTC, after the Artifact side had been built and its logic run, and before any result was recorded. Part 2 holds the results.
 
 ## Part 1 — Protocol (pre-registered)
 
@@ -35,7 +35,7 @@ B1 for the Artifact: in Claude Desktop ≥ 6.28899.0 open the benchmark artifact
 
 ## Part 2 — Results (2026-11-28)
 
-Part 1 was written before either side ran and committed in `0794747` before these results. The fixture sha256 is of the committed (LF) bytes; the uploaded copy in the artifact store reported the same hash.
+Part 1 was written before either side ran and committed in `0794747` before these results were written (see the note at the top). The fixture sha256 is of the committed (LF) bytes; the uploaded copy in the artifact store reported the same hash.
 
 ### Claude Artifact side
 - **Artifact:** private, made from Claude's first-party **Data** (dashboard) type, which the Artifact quickstart selects for a dashboard. URL kept out of this file; the owner can open it from their artifact gallery as "Demo Storefront Ops Bench". No `mcp` connector calls; data = the pinned fixture uploaded as a file; decisions in the artifact's shared store.
