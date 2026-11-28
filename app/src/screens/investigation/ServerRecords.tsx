@@ -8,7 +8,7 @@ import { StateBlock } from '../../components/StateBlock';
 import { Text } from '../../components/Text';
 import { TruthChip } from '../../components/TruthChip';
 import { hostCopy } from '../../i18n/host';
-import { investigationReadView, type RecordRow } from '../../view/investigationReadView';
+import { EVIDENCE_LIST_LIMIT, investigationReadView, projectObservationsView, type CitedRow, type ProjectObservationsView, type RecordRow } from '../../view/investigationReadView';
 import { investigationIdOf } from '../../live/decisions';
 import { investigationIdFrom, LIVE, readInvestigation } from '../../live/reads';
 import { hidesRecords } from '../../live/session';
@@ -25,7 +25,8 @@ export function ServerRecords() {
   // Live mode (BACK-51 P3): ticks after a decision is recorded, so the decision list is read again.
   const [refresh, setRefresh] = useState(0);
   // The case last read, kept while a re-read runs (or fails) so the decision form and its confirmation do not unmount.
-  const lastCase = useRef<{ id: string; records: readonly RecordRow[] } | null>(null);
+  // BACK-148: with the project observations, which the form may cite as well (so a submit never prunes them as gone).
+  const lastCase = useRef<{ id: string; records: readonly RecordRow[]; projectRecords: readonly RecordRow[] } | null>(null);
   // Whether the case was the newest one (no id in the address): said in a note, also after a re-read pinned to that case.
   const fromNewest = useRef(false);
   // The session generation for which the case was last read while unlocked (BACK-127): the form's draft returns only after that.
@@ -41,7 +42,13 @@ export function ServerRecords() {
   const live = useLiveRead(LIVE && shown ? (signal) => readInvestigation(named, signal) : null, `${shown}:${id ?? ''}:${refresh}`);
   const v = useMemo(() => {
     if (!LIVE) return investigationReadView(persona);
-    return live?.status === 'ok' ? investigationReadView(persona, live.body.investigation, live.body.decisions, new Date(), 'live') : null;
+    if (live?.status !== 'ok') return null;
+    return investigationReadView(persona, live.body.investigation, live.body.decisions, new Date(), 'live', { observations: live.body.observations, cited: live.body.cited });
+  }, [persona, live]);
+  // BACK-148 (decision L): the case project's observations that are not part of this case. Fixture mode reads the committed file.
+  const pv = useMemo(() => {
+    if (!LIVE) return projectObservationsView(persona);
+    return live?.status === 'ok' ? projectObservationsView(persona, live.body.investigation, live.body.observations, new Date(), 'live') : null;
   }, [persona, live]);
   if (!shown) return null;
   // The decision form (BACK-51 P3, live mode): once a case has been read it stays through re-reads, also a failed one, so a
@@ -51,16 +58,16 @@ export function ServerRecords() {
     // Locked (BACK-127) hides the records like signed out or ended does; the form shows its locked state.
     const out = hidesRecords(session);
     if (out) {
-      if (lastCase.current) lastCase.current = { id: lastCase.current.id, records: [] };
+      if (lastCase.current) lastCase.current = { id: lastCase.current.id, records: [], projectRecords: [] };
     } else if (live?.status === 'ok' && v && v.state !== 'unreadable') {
       const caseId = investigationIdOf(live.body.investigation);
-      lastCase.current = caseId === null ? null : { id: caseId, records: v.records };
+      lastCase.current = caseId === null ? null : { id: caseId, records: v.records, projectRecords: pv?.rows ?? [] };
       if (caseId !== null) readGeneration.current = session?.generation ?? null;
       if (live.body.chosen === 'newest' && refresh === 0) fromNewest.current = true;
     }
   }
   const form = LIVE && lastCase.current
-    ? <RecordDecision key={lastCase.current.id} investigationId={lastCase.current.id} records={lastCase.current.records} technical={persona === 'technical'} readGeneration={readGeneration.current} onSubmitted={() => setRefresh((n) => n + 1)} />
+    ? <RecordDecision key={lastCase.current.id} investigationId={lastCase.current.id} records={lastCase.current.records} projectRecords={lastCase.current.projectRecords} technical={persona === 'technical'} readGeneration={readGeneration.current} onSubmitted={() => setRefresh((n) => n + 1)} />
     : null;
   if (!v) {
     return (
@@ -132,6 +139,7 @@ export function ServerRecords() {
                         <dd><bdi dir="ltr" lang="en" className="srv-ref">{d.text}</bdi></dd>
                       </dl>
                     )}
+                    {d.cites.length > 0 && <Cites cites={d.cites} />}
                   </li>
                 ))}
               </ul>
@@ -139,8 +147,84 @@ export function ServerRecords() {
           </section>
         </>
       )}
+      {pv && v.state !== 'unreadable' && <ProjectObservations view={pv} />}
     </Panel>
     {form}
     </>
   );
 }
+
+/** One record's read badges: the display label, the read state (or why it was not read) and its age. Never a health word. */
+function RecordBadges({ r }: { readonly r: RecordRow }) {
+  const { lang, copy } = useApp();
+  const s = hostCopy('INVESTIGATION', lang).serverRecords;
+  return (
+    <span className="srv-state">
+      <TruthChip label={r.label} style="standard" copy={copy} />
+      <span className="srv-read" data-read={r.read}>{s.read[r.read]}</span>
+      {r.reason && <span className="srv-reason"> · {s.reason[r.reason]}</span>}
+      {r.ageMinutes !== null && <span className="srv-age"> · <Text s={s.age(r.ageMinutes)} /></span>}
+    </span>
+  );
+}
+
+/** What a decision cites (BACK-148): where each record is, with its read badges; one that could not be read is unknown. */
+function Cites({ cites }: { readonly cites: readonly CitedRow[] }) {
+  const { lang } = useApp();
+  const s = hostCopy('INVESTIGATION', lang).serverRecords;
+  return (
+    <div className="srv-cites">
+      <p className="note">{s.cites.title}</p>
+      <ul className="rows srv-rows">
+        {cites.map((c) => (
+          <li key={c.id} data-testid="server-decision-cite" data-where={c.where}>
+            <span className="srv-where" data-where={c.where}>{s.cites.where[c.where]}</span>
+            {c.row && <> · <RecordBadges r={c.row} /></>}
+            {c.row?.sourceRef && <> · <bdi dir="ltr" className="srv-ref">{c.row.sourceRef}</bdi></>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * BACK-148 (decision L): the case project's observations that are not part of this case, labelled as such, with the count and,
+ * for a full answer, the server's cap as a lower bound. A list that could not be read says so; it is never shown as none.
+ */
+export function ProjectObservations({ view }: { readonly view: ProjectObservationsView }) {
+  const { lang } = useApp();
+  const s = hostCopy('INVESTIGATION', lang).serverRecords;
+  const p = s.projectObs;
+  return (
+    <section aria-labelledby="srv-project-obs" className="srv-group" data-testid="project-observations" data-state={view.state}>
+      <h3 id="srv-project-obs">{p.title}</h3>
+      <p className="note"><Text s={p.lede} /></p>
+      {view.state === 'unreadable' ? <StateBlock kind="unknown" title={p.title} body={p.unreadable} /> : (
+        <>
+          <p className="note" data-testid="project-observations-count" data-at-least={view.atLeast ? 'true' : 'false'}>
+            <Text s={view.atLeast ? p.countAtLeast(view.rows.length, EVIDENCE_LIST_LIMIT) : p.count(view.rows.length)} />
+          </p>
+          {view.incomplete && <p className="srv-incomplete">{s.incomplete}</p>}
+          {view.rows.length === 0 ? <p className="note">{p.none}</p> : (
+            <ul className="rows srv-rows">
+              {view.rows.map((r) => (
+                <li key={r.id} data-testid="project-observation" data-read={r.read}>
+                  <RecordBadges r={r} />
+                  <span className="srv-where"> · {p.notPart}</span>
+                  {r.sourceRef && (
+                    <dl className="kv srv-kv">
+                      <dt>{s.source}</dt>
+                      <dd><bdi dir="ltr" className="srv-ref">{r.sourceRef}</bdi></dd>
+                    </dl>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+

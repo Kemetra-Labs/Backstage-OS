@@ -140,6 +140,30 @@ describe('RecordDecisionView', () => {
     expect(tech).toContain('github:example-org/demo-storefront#pull/42');
   });
 
+  it('BACK-148: project observations are a separate, labelled group of the same picker, numbered after the case records', () => {
+    const records = [REC(1)];
+    const projectRecords = [REC(7, { read: 'stale', sourceRef: 'github:example-org/demo-storefront#pulls' }), REC(8, { label: 'unknown', read: 'notRead', reason: 'unknown', ageMinutes: null })];
+    const html = render({ records, projectRecords, draft: { ...GOOD, evidenceIds: [projectRecords[0]!.id] } });
+    expect(html.match(/type="checkbox"/g)).toHaveLength(3);
+    expect(html.match(/data-testid="rd-project-pick"/g)).toHaveLength(2);
+    expect(html.match(/checked=""/g)).toHaveLength(1);
+    expect(text(html)).toContain('Project observations, not part of this case');
+    expect(text(html)).toContain('It does not move it into the case.');
+    expect(text(html)).toContain('Record 3');
+    expect(html).not.toContain('github:example-org');
+    expect(render({ records, projectRecords, technical: true })).toContain('github:example-org/demo-storefront#pulls');
+    // With only project observations, there is something to cite.
+    expect(text(render({ projectRecords }))).not.toContain('No record is listed to cite.');
+    const ar = text(render({ records, projectRecords }, 'ar'));
+    expect(ar).toContain('ملاحظات المشروع، ليست جزءًا من هذه الحالة');
+    expect(ar).not.toContain('Project observations');
+    // Locked hides them like every record.
+    const locked = render({ gate: 'locked', records, projectRecords, technical: true });
+    expect(locked).not.toContain('<input');
+    expect(locked).not.toContain('github:example-org');
+    expect(locked).not.toContain('Project observations');
+  });
+
   it('the picker checks the cited records, and says so when there is nothing to cite', () => {
     const records = [REC(1), REC(2)];
     const html = render({ records, draft: { ...GOOD, evidenceIds: [records[1]!.id] } });

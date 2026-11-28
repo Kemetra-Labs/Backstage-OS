@@ -79,6 +79,8 @@ export class EvidenceController {
       sourceId: optionalId(query['sourceId']),
       investigationId: optionalId(query['investigationId']),
       projectId: optionalId(query['projectId']),
+      // BACK-148 (decision L2): one evidence type, matched exactly by the database, so an unknown or malformed value matches nothing.
+      type: optionalId(query['type']),
     };
     // A repeated or non-string filter is treated like an unknown id: nothing matches.
     if (Object.values(filter).some((v) => v === null)) return { items: [] };

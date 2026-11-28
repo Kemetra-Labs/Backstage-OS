@@ -1,6 +1,6 @@
 // BACK-51 P1: the live-mode switch and the two live reads. The fetcher is injected: nothing here touches the network.
 import { describe, expect, it, vi } from 'vitest';
-import { investigationIdFrom, LIVE, liveMode, liveStateKind, projectIdFrom, readCognitionSearches, readInvestigation, readPortfolio, searchQueriesFrom } from './reads';
+import { CITED_RESOLVE_MAX, citationsToResolve, investigationIdFrom, LIVE, liveMode, liveStateKind, projectIdFrom, readCognitionSearches, readInvestigation, readPortfolio, searchQueriesFrom } from './reads';
 
 const ID = '00000000-0000-4000-8000-000000000004';
 
@@ -63,7 +63,7 @@ describe('readInvestigation', () => {
 
   it('reads the investigation and its decisions, filtered by the server', async () => {
     const f = routes({ [`/api/investigations/${ID}`]: [200, '{"id":"i"}'], [`/api/decisions?investigationId=${ID}`]: [200, '{"items":[]}'] });
-    expect(await readInvestigation(ID, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'i' }, decisions: { items: [] }, chosen: 'address' } });
+    expect(await readInvestigation(ID, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'i' }, decisions: { items: [] }, chosen: 'address', observations: null, cited: {} } });
     expect(f).toHaveBeenCalledTimes(2);
   });
 
@@ -74,7 +74,7 @@ describe('readInvestigation', () => {
 
   it('only the decisions read failed: the records stand, decisions are null (the view says incomplete, never "none")', async () => {
     const f = routes({ [`/api/investigations/${ID}`]: [200, '{"id":"i"}'], [`/api/decisions?investigationId=${ID}`]: [500, ''] });
-    expect(await readInvestigation(ID, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'i' }, decisions: null, chosen: 'address' } });
+    expect(await readInvestigation(ID, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'i' }, decisions: null, chosen: 'address', observations: null, cited: {} } });
   });
 
   it('an aborted read returns null', async () => {
@@ -82,6 +82,86 @@ describe('readInvestigation', () => {
       throw new DOMException('aborted', 'AbortError');
     });
     expect(await readInvestigation(ID, new AbortController().signal, f)).toBeNull();
+  });
+});
+
+describe('readInvestigation: project observations and cited records (BACK-148, decision L)', () => {
+  const PROJECT = '00000000-0000-4000-8000-000000000002';
+  const OBS = '00000000-0000-4000-8000-000000000006';
+  const FAR = '00000000-0000-4000-8000-0000000000f0';
+  const CASE_REC = '00000000-0000-4000-8000-000000000001';
+  const inv = JSON.stringify({ id: ID, projectId: PROJECT, evidence: [{ id: CASE_REC, type: 'Correlation' }] });
+  const dec = (citations: string[]) => JSON.stringify({ items: [{ id: 'd', citations }], nextCursor: null });
+  const projection = `/api/evidence?projectId=${PROJECT}&type=Observation`;
+
+  it('reads the projection of the case project after the case, and resolves only citations neither list holds', async () => {
+    const f = routes({
+      [`/api/investigations/${ID}`]: [200, inv],
+      [`/api/decisions?investigationId=${ID}`]: [200, dec([CASE_REC, OBS, FAR])],
+      [projection]: [200, JSON.stringify({ items: [{ id: OBS, type: 'Observation' }] })],
+      [`/api/evidence/${FAR}`]: [200, JSON.stringify({ id: FAR, type: 'Observation' })],
+    });
+    const r = await readInvestigation(ID, undefined, f);
+    expect(r).toMatchObject({ status: 'ok', body: { observations: { items: [{ id: OBS }] }, cited: { [FAR]: { id: FAR } } } });
+    expect(f.mock.calls.map((c) => c[0])).toEqual([`/api/investigations/${ID}`, `/api/decisions?investigationId=${ID}`, projection, `/api/evidence/${FAR}`]);
+  });
+
+  it('a failed projection is null, never an empty list, and never fails the room', async () => {
+    const f = routes({ [`/api/investigations/${ID}`]: [200, inv], [`/api/decisions?investigationId=${ID}`]: [200, dec([])], [projection]: [500, ''] });
+    expect(await readInvestigation(ID, undefined, f)).toMatchObject({ status: 'ok', body: { observations: null, cited: {} } });
+  });
+
+  it('a cited record the server does not return is null (unknown), and the room still opens', async () => {
+    const f = routes({
+      [`/api/investigations/${ID}`]: [200, inv],
+      [`/api/decisions?investigationId=${ID}`]: [200, dec([FAR])],
+      [projection]: [200, '{"items":[]}'],
+      [`/api/evidence/${FAR}`]: [404, ''],
+    });
+    expect(await readInvestigation(ID, undefined, f)).toMatchObject({ status: 'ok', body: { cited: { [FAR]: null } } });
+  });
+
+  it('builds no path from a case body without a UUID project id: no projection request', async () => {
+    for (const projectId of [undefined, '../auth/me', 7]) {
+      const f = routes({
+        [`/api/investigations/${ID}`]: [200, JSON.stringify({ id: ID, projectId, evidence: [] })],
+        [`/api/decisions?investigationId=${ID}`]: [200, dec([])],
+      });
+      expect(await readInvestigation(ID, undefined, f)).toMatchObject({ status: 'ok', body: { observations: null } });
+      expect(f).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  it('an abort during the projection returns null', async () => {
+    let n = 0;
+    const f = vi.fn(async (path: string) => {
+      n += 1;
+      if (path.startsWith('/api/evidence')) throw new DOMException('aborted', 'AbortError');
+      return new Response(path.includes('decisions') ? dec([]) : inv, { status: 200 });
+    });
+    expect(await readInvestigation(ID, new AbortController().signal, f)).toBeNull();
+    expect(n).toBe(3);
+  });
+});
+
+describe('citationsToResolve', () => {
+  const A = '00000000-0000-4000-8000-00000000000a';
+  const B = '00000000-0000-4000-8000-00000000000b';
+  const C = '00000000-0000-4000-8000-00000000000c';
+  it('keeps cited UUIDs that neither list holds, each once, in cited order, from decisions and case decisions', () => {
+    const inv = { evidence: [{ id: A }, { id: 'x', type: 'HumanDecision', citations: [C, B] }] };
+    const decisions = { items: [{ citations: [A, B, 'not-a-uuid', B] }] };
+    expect(citationsToResolve(inv, decisions, { items: [{ id: C }] })).toEqual([B]);
+    expect(citationsToResolve(inv, decisions, null)).toEqual([B, C]);
+  });
+
+  it('stops at the cap: at most CITED_RESOLVE_MAX reads per room read', () => {
+    const many = Array.from({ length: CITED_RESOLVE_MAX + 10 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`);
+    expect(citationsToResolve({ evidence: [] }, { items: [{ citations: many }] }, null)).toHaveLength(CITED_RESOLVE_MAX);
+  });
+
+  it('a malformed body resolves nothing rather than throwing', () => {
+    expect(citationsToResolve(null, 'x', 7)).toEqual([]);
   });
 });
 
@@ -107,7 +187,7 @@ describe('readInvestigation with no id: the newest visible investigation (BACK-5
       [`/api/investigations/${NEWER}`]: [200, '{"id":"n"}'],
       [`/api/decisions?investigationId=${NEWER}`]: [200, '{"items":[]}'],
     });
-    expect(await readInvestigation(null, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'n' }, decisions: { items: [] }, chosen: 'newest' } });
+    expect(await readInvestigation(null, undefined, f)).toEqual({ status: 'ok', body: { investigation: { id: 'n' }, decisions: { items: [] }, chosen: 'newest', observations: null, cited: {} } });
     expect(f.mock.calls.map((c) => c[0])).toEqual(['/api/investigations', `/api/investigations/${NEWER}`, `/api/decisions?investigationId=${NEWER}`]);
   });
 

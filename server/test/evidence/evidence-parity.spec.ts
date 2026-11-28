@@ -6,6 +6,7 @@
 //   GET /evidence                  -> app/src/fixture/evidence-response.json
 //   GET /investigations/:id        -> app/src/fixture/investigation-response.json
 //   GET /decisions                 -> app/src/fixture/decisions-response.json
+//   GET /evidence?projectId=&type=Observation -> app/src/fixture/project-observations-response.json (BACK-148, decision L2)
 // The app half (app/src/api/parity.test.ts) requires every record of those files to parse with nothing
 // dropped. Ids and database-set times are normalised (see normalise()). Regenerate the files after an
 // intended shape change with KAWALYS_WRITE_PARITY_FIXTURES=1.
@@ -103,11 +104,20 @@ async function bodies() {
   const investigation = await new InvestigationRepository(app).get(seed.workspaceId, seed.userId, seed.investigationId);
   const invEvidence = await evidence.list(seed.workspaceId, seed.userId, { investigationId: seed.investigationId });
   const decisions = await evidence.recentDecisions(seed.workspaceId, seed.userId, { limit: 20 }); // EvidenceController.decisions, default limit
+  // The room's projection of the case project (BACK-148): EvidenceController.list with projectId and type=Observation.
+  const projection = await evidence.list(seed.workspaceId, seed.userId, { projectId: investigation!.projectId, type: 'Observation' });
+  // `projection` is last: ids are numbered by first appearance, so the three older files keep their numbers.
   return normalise({
     evidence: { items: byRef(items) },
     investigation: { ...investigation, evidence: byRef(invEvidence) }, // InvestigationController.get
     decisions,
-  }) as { evidence: { items: { id: string; type: string; state: string }[] }; investigation: { status: string; evidence: unknown[] }; decisions: { items: { createdBy: string | null; citations: string[] }[]; nextCursor: string | null } };
+    projection: { items: byRef(projection) },
+  }) as {
+    evidence: { items: { id: string; type: string; state: string }[] };
+    investigation: { id: string; status: string; evidence: unknown[] };
+    decisions: { items: { createdBy: string | null; citations: string[] }[]; nextCursor: string | null };
+    projection: { items: { id: string; type: string; investigationId: string | null }[] };
+  };
 }
 
 describe('evidence, investigation and decision response parity with the app fixtures (BACK-98)', () => {
@@ -133,6 +143,15 @@ describe('evidence, investigation and decision response parity with the app fixt
     expect(decisions.items[0]!.createdBy).not.toBeNull();
     expect(decisions.items[0]!.citations).toHaveLength(2);
     matchesFixture('decisions-response.json', decisions);
+  });
+
+  it('GET /evidence?projectId=&type=Observation: the project observations, with and without a case (BACK-148)', async () => {
+    const { evidence, investigation, projection } = await bodies();
+    expect(projection.items.every((r) => r.type === 'Observation')).toBe(true);
+    expect(projection.items.map((r) => r.id).sort()).toEqual(evidence.items.filter((r) => r.type === 'Observation').map((r) => r.id).sort());
+    expect(projection.items.some((r) => r.investigationId === null)).toBe(true);
+    expect(projection.items.some((r) => r.investigationId === investigation.id)).toBe(true);
+    matchesFixture('project-observations-response.json', projection);
   });
 
   it('ids are consistent across the three files: a decision cites records of the evidence body', async () => {

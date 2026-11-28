@@ -13,6 +13,7 @@ import type { DisplayLabel, Persona, SourceAuthority } from '../contract/types';
 import type { ReadOrigin } from './githubReadView';
 import DECISIONS from '../fixture/decisions-response.json';
 import INVESTIGATION from '../fixture/investigation-response.json';
+import PROJECT_OBSERVATIONS from '../fixture/project-observations-response.json';
 
 /** The server's fixture clock (evidence-parity.spec.ts NOW): the investigation was opened at this time. */
 export const FIXTURE_NOW = new Date('2026-11-25T12:00:00.000Z');
@@ -35,6 +36,17 @@ export interface RecordRow {
   readonly sourceRef: string | null;
 }
 
+/**
+ * One record a decision cites (BACK-148). `case`: a record of this case. `outside`: a visible record of the case's project that
+ * is not part of this case (a project observation). `unresolved`: the record could not be read (not listed, not returned by
+ * GET /evidence/:id, or past the resolve cap); it is unknown, never fine, and `row` is null.
+ */
+export interface CitedRow {
+  readonly id: string;
+  readonly where: 'case' | 'outside' | 'unresolved';
+  readonly row: RecordRow | null;
+}
+
 export interface DecisionRow {
   readonly id: string;
   /** `approved` only with citations and a link to the owning record; the server stores no link, so `proposed`. */
@@ -44,6 +56,8 @@ export interface DecisionRow {
   readonly ageMinutes: number | null;
   /** The decision text as the server stored it (English, free text). Technical only: null for Owner. */
   readonly text: string | null;
+  /** What it cites, in the order the server lists the citations. */
+  readonly cites: readonly CitedRow[];
 }
 
 export type InvestigationReadState = 'ok' | 'empty' | 'unreadable';
@@ -92,6 +106,41 @@ function sourcesOf(records: readonly Rec[], now: Date, synthetic: boolean): Map<
 
 const REASONS: readonly string[] = ['error', 'denied', 'unknown'];
 
+/**
+ * One non-decision record as a row, through the same adapter and display contract for every list (the case, the project
+ * observations, a resolved citation), so a stale, unknown or failed read can never come out current. Null when it does not parse.
+ */
+function recordRow(r: Rec, sources: Map<string, SourceAuthority>, now: Date, technical: boolean): RecordRow | null {
+  const ref = toEvidenceReference(r, sources, now);
+  if (!ref) return null;
+  const state = r['state'] as string;
+  const read: RecordRead = ref.observation ? effectiveFreshness(ref) : 'notRead';
+  return {
+    id: ref.id,
+    label: resolveLabel(ref),
+    read,
+    reason: ref.observation ? null : REASONS.includes(state) ? (state as NotReadReason) : 'noSource',
+    ageMinutes: ref.observation ? ageOf(ref.observation.observedAt, now) : null,
+    sourceRef: technical ? str(r['sourceRef']) : null,
+  };
+}
+
+/** The records a citation can be resolved from beyond the case: the project observations and the GET /evidence/:id answers. */
+export interface CitationRefs {
+  /** The GET /evidence?projectId=&type=Observation body; null when it could not be read. */
+  readonly observations: unknown;
+  /** GET /evidence/:id answers by cited id; null for an id the server did not return. */
+  readonly cited: Readonly<Record<string, unknown>>;
+}
+
+/** Fixture mode: the committed projection, and nothing fetched by id. */
+export const FIXTURE_REFS: CitationRefs = { observations: PROJECT_OBSERVATIONS, cited: {} };
+
+/** The most rows GET /evidence returns (server/src/evidence/evidence.repository.ts LIST_LIMIT); a full answer is a lower bound. */
+export const EVIDENCE_LIST_LIMIT = 500;
+
+const itemsOf = (body: unknown): unknown[] | null => (isObject(body) && Array.isArray(body['items']) ? (body['items'] as unknown[]) : null);
+
 /** A GET /decisions item as a HumanDecision record, so decisionLabel() decides its label. Null when it is not a decision record. */
 function decisionRecord(d: unknown): Rec | null {
   if (!isObject(d) || !str(d['id']) || !str(d['decision']) || !Array.isArray(d['citations'])) return null;
@@ -109,6 +158,7 @@ export function investigationReadView(
   decisions: unknown = DECISIONS,
   now: Date = FIXTURE_NOW,
   origin: ReadOrigin = 'fixture',
+  refs: CitationRefs = FIXTURE_REFS,
 ): InvestigationReadView | null {
   if (persona === 'nontechnical') return null;
   const technical = persona === 'technical';
@@ -129,21 +179,9 @@ export function investigationReadView(
       else decisionById.set(r['id'] as string, r);
       continue;
     }
-    const ref = toEvidenceReference(r, sources, now);
-    if (!ref) {
-      dropped += 1;
-      continue;
-    }
-    const read: RecordRead = ref.observation ? effectiveFreshness(ref) : 'notRead';
-    const state = r['state'] as string;
-    records.push({
-      id: ref.id,
-      label: resolveLabel(ref),
-      read,
-      reason: ref.observation ? null : REASONS.includes(state) ? (state as NotReadReason) : 'noSource',
-      ageMinutes: ref.observation ? ageOf(ref.observation.observedAt, now) : null,
-      sourceRef: technical ? str(r['sourceRef']) : null,
-    });
+    const row = recordRow(r, sources, now, technical);
+    if (row) records.push(row);
+    else dropped += 1;
   }
 
   // GET /decisions: the items of this investigation. A malformed body or item is left out and said, never shown as none.
@@ -164,6 +202,7 @@ export function investigationReadView(
     if (!decisionById.has(rec['id'] as string)) decisionById.set(rec['id'] as string, rec);
   }
 
+  const citeOf = citationResolver(invId, records, refs, now, synthetic, technical);
   const decisionRows: DecisionRow[] = [...decisionById.values()].map((r) => {
     const id = r['id'] as string;
     const item = created.get(id);
@@ -174,6 +213,7 @@ export function investigationReadView(
       creator: item && str(item['createdBy']) ? 'recorded' : 'notRecorded',
       ageMinutes: ageOf(item?.['createdAt'] ?? r['observedAt'], now),
       text: technical ? str(payload['decision']) : null,
+      cites: (Array.isArray(r['citations']) ? (r['citations'] as unknown[]) : []).filter((c): c is string => typeof c === 'string').map(citeOf),
     };
   });
 
@@ -185,4 +225,67 @@ export function investigationReadView(
     incomplete: dropped > 0 || morePages,
     demo: synthetic,
   };
+}
+
+/**
+ * Resolves a cited id: first the case's own rows, then the project observations, then the GET /evidence/:id answers. A record
+ * resolved outside the case list is `case` only when the server says it belongs to this case. Anything else is unresolved.
+ */
+function citationResolver(caseId: string, caseRows: readonly RecordRow[], refs: CitationRefs, now: Date, synthetic: boolean, technical: boolean): (id: string) => CitedRow {
+  const inCase = new Map(caseRows.map((r) => [r.id, r]));
+  const extra = new Map<string, Rec>();
+  for (const item of itemsOf(refs.observations) ?? []) if (isObject(item) && str(item['id'])) extra.set(item['id'] as string, item);
+  for (const [id, body] of Object.entries(refs.cited)) if (isObject(body) && body['id'] === id && !extra.has(id)) extra.set(id, body);
+  const sources = sourcesOf([...extra.values()], now, synthetic);
+  return (id) => {
+    const own = inCase.get(id);
+    if (own) return { id, where: 'case', row: own };
+    const rec = extra.get(id);
+    const row = rec && rec['type'] !== 'HumanDecision' ? recordRow(rec, sources, now, technical) : null;
+    if (!rec || !row) return { id, where: 'unresolved', row: null };
+    return { id, where: rec['investigationId'] === caseId ? 'case' : 'outside', row };
+  };
+}
+
+export interface ProjectObservationsView {
+  /** `unreadable`: the list could not be read or parsed. It is never shown as none. */
+  readonly state: 'ok' | 'unreadable';
+  /** The project's Observations that are not part of this case, newest first (the server's order). */
+  readonly rows: readonly RecordRow[];
+  /** The server returned a full page (EVIDENCE_LIST_LIMIT rows): the count is a lower bound and older ones may be missing. */
+  readonly atLeast: boolean;
+  /** A record did not parse and was left out. */
+  readonly incomplete: boolean;
+  readonly demo: boolean;
+}
+
+/**
+ * BACK-148 (decision L): the case project's Observations from GET /evidence?projectId=&type=Observation, minus the ones that are
+ * part of this case (`caseBody`'s id; those are in the case list already). Read states only; same persona rules as the case list: Nontechnical
+ * gets null (no panel, no request), Owner gets no source reference. A body that is null (the read failed) or malformed is
+ * `unreadable`, never an empty list. `atLeast` follows the raw answer, before the case's own rows are taken out.
+ */
+export function projectObservationsView(
+  persona: Persona,
+  caseBody: unknown = INVESTIGATION,
+  body: unknown = PROJECT_OBSERVATIONS,
+  now: Date = FIXTURE_NOW,
+  origin: ReadOrigin = 'fixture',
+): ProjectObservationsView | null {
+  if (persona === 'nontechnical') return null;
+  const synthetic = origin === 'fixture';
+  const caseId = isObject(caseBody) ? str(caseBody['id']) : null;
+  const items = itemsOf(body);
+  if (items === null || caseId === null) return { state: 'unreadable', rows: [], atLeast: false, incomplete: true, demo: synthetic };
+  const records = items.filter(isObject);
+  let dropped = items.length - records.length;
+  const sources = sourcesOf(records, now, synthetic);
+  const rows: RecordRow[] = [];
+  for (const r of records) {
+    if (r['investigationId'] === caseId) continue;
+    const row = r['type'] === 'Observation' ? recordRow(r, sources, now, persona === 'technical') : null;
+    if (row) rows.push(row);
+    else dropped += 1;
+  }
+  return { state: 'ok', rows, atLeast: items.length >= EVIDENCE_LIST_LIMIT, incomplete: dropped > 0, demo: synthetic };
 }

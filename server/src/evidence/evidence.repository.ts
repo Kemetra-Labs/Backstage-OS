@@ -403,7 +403,12 @@ export class EvidenceRepository {
     });
   }
 
-  async list(workspaceId: string, user: string, filter: EvidenceFilter): Promise<EvidenceRecord[]> {
+  /**
+   * The caller's visible evidence, newest first, at most LIST_LIMIT rows. `type` (BACK-148, decision L2) is compared as text, case
+   * and all, with the stored type (one of EVIDENCE_TYPES), so an unknown, misspelt or empty value matches nothing, like a malformed
+   * id; it narrows the same VISIBLE rows and the same cap, so newer notes and decisions no longer crowd observations out.
+   */
+  async list(workspaceId: string, user: string, filter: EvidenceFilter & { readonly type?: string }): Promise<EvidenceRecord[]> {
     const ids = [filter.sourceId, filter.investigationId, filter.projectId];
     if (ids.some((v) => v !== undefined && !UUID.test(v))) return [];
     return this.inWorkspace(workspaceId, async (c) => {
@@ -413,9 +418,10 @@ export class EvidenceRepository {
             AND ($2::uuid IS NULL OR e.source_id = $2)
             AND ($3::uuid IS NULL OR e.investigation_id = $3)
             AND ($4::uuid IS NULL OR e.project_id = $4)
+            AND ($5::text IS NULL OR e.type = $5)
           ORDER BY e.observed_at DESC, e.id
           LIMIT ${LIST_LIMIT}`,
-        [user, filter.sourceId ?? null, filter.investigationId ?? null, filter.projectId ?? null],
+        [user, filter.sourceId ?? null, filter.investigationId ?? null, filter.projectId ?? null, filter.type ?? null],
       );
       return rows.map(toRecord);
     });
