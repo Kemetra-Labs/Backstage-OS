@@ -54,7 +54,7 @@ async function seedForeign(db: KawalysDb, ownerUserId: string): Promise<{ invest
 
 // TEST-ONLY hook (BACK-127): the live suite revokes and restores the owner's grants on the seeded project's sources, to prove a
 // revoked record does not come back after a new sign-in. Loopback only, started with this test entry, never under src/.
-function startGrantHook(db: KawalysDb, projectId: string): Server {
+function startGrantHook(db: KawalysDb, projectId: string): Promise<Server> {
   const inProject = 'source_id IN (SELECT id FROM kawalys.sources WHERE project_id = $1)';
   const server = createServer((req, res) => {
     const done = (code: number) => { res.statusCode = code; res.end(); };
@@ -73,8 +73,14 @@ function startGrantHook(db: KawalysDb, projectId: string): Server {
     };
     run().catch(() => done(500));
   });
-  server.listen(HOOK_PORT, HOST);
-  return server;
+  // Resolves once bound; a binding failure (port in use) rejects, so main's startup catch cleans up the database.
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(HOOK_PORT, HOST, () => {
+      server.off('error', reject);
+      resolve(server);
+    });
+  });
 }
 
 async function main(): Promise<void> {
@@ -115,7 +121,7 @@ async function main(): Promise<void> {
     writeFileSync(seedFile, JSON.stringify({ investigationId: seeded.investigationId, projectId: seeded.projectId, projectName: SEED.projectName, foreign }));
     app = await createApp([], { verifier: new FakeIdentityVerifier() }, { database: { appPool: pools.app, authPool: pools.auth } });
     await app.listen(PORT, HOST);
-    startGrantHook(pools, seeded.projectId);
+    await startGrantHook(pools, seeded.projectId);
     process.stderr.write(`e2e server ready on http://${HOST}:${PORT}\n`);
   } catch (err) {
     await stopKawalysDb(pools).catch(() => undefined);
