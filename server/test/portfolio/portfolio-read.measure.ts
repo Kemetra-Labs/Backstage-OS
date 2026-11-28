@@ -147,7 +147,7 @@ describe('BACK-49 portfolio read measurement at the cap (not a CI gate)', () => 
     const { rows: size } = await h.db.admin.query<{ n: string; t: string; i: string }>(
       `SELECT (SELECT count(*) FROM kawalys.evidence)::text AS n, pg_table_size('kawalys.evidence')::text AS t, pg_indexes_size('kawalys.evidence')::text AS i`,
     );
-    const { rows: ver } = await h.db.admin.query<{ v: string }>('SHOW server_version');
+    const { rows: ver } = await h.db.admin.query<{ v: string }>("SELECT current_setting('server_version') AS v");
 
     const counting = new CountingPool(h.db.app);
     const repo = new PortfolioRepository(counting.asPool());
