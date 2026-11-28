@@ -83,6 +83,18 @@ describe('apiRequest', () => {
     expect(init.body).toBe('{"decision":"a"}');
   });
 
+  it('a caller header never overrides the fixed Accept and Content-Type, whatever its letter case; other headers pass', async () => {
+    const f = fake(201, '{"id":"d1"}');
+    await apiRequest('/api/investigations/x/decisions', {
+      method: 'POST',
+      body: { decision: 'a' },
+      headers: { 'content-type': 'text/plain', ACCEPT: 'text/html', 'Idempotency-Key': 'k-12345678' },
+      fetcher: f,
+    });
+    const init = f.mock.calls[0]![1] as Init;
+    expect(init.headers).toEqual({ 'Idempotency-Key': 'k-12345678', Accept: 'application/json', 'Content-Type': 'application/json' });
+  });
+
   it('passes the abort signal through', async () => {
     const f = fake(200, '{}');
     const c = new AbortController();

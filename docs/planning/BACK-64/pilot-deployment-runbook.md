@@ -52,6 +52,7 @@ chmod 600 deploy/pilot/.env.pilot
 - `KAWALYS_SITE_ADDRESS`: the DNS name. Not `localhost` (that is Caddy's internal CA, smoke only).
 - `POSTGRES_PASSWORD` and the three role passwords (`KAWALYS_ROLE_PASSWORD_MIGRATOR`, `_APP`, `_AUTH`): four different values, URL-safe characters only (they go into `postgres://` URLs), for example 48 hex characters each.
 - `KAWALYS_DESCOPE_PROJECT_ID` and `KAWALYS_OWNER_SUBJECT`: both or neither. Leave `KAWALYS_NODE_ENV` empty.
+- `KAWALYS_ALLOWED_HOSTS` (BACK-172, required: the BFF refuses to start in production without it, and Compose stops with a message naming it): `<site host>,localhost,127.0.0.1`, for example `kawalys.kemetralabs.com,localhost,127.0.0.1`. The BFF answers 404 `not_found` to any other `Host` header. Caddy forwards the original Host (the site host), and the bff container healthcheck calls `127.0.0.1:8787`, so both must be on the list; an entry without a port allows any port, and nothing after the last colon may be anything but a port. `bash deploy/pilot/preflight-deploy.sh <.env.pilot>` fails when it is missing, empty, holds a wildcard or lacks `127.0.0.1`.
 - `KAWALYS_NETWORK_SUBNET`: only if it collides. `KAWALYS_TRUST_PROXY` is derived from it in `compose.yml`; do not set it separately. The BFF then trusts `X-Forwarded-For` only from that range, so the sign-in limit counts per client. On Docker Desktop the limiter may see one gateway address for every client (an environment limit; a Linux host is expected to be fine, not proven).
 
 The owner stores the passwords in their own secret manager. Never put them in chat, tickets or the repo.
@@ -279,6 +280,17 @@ Put the certificate's expiry date (the `enddate` printed above) in a calendar re
 
 **Rotation (never overwrite the live pair):** create a new directory (for example `/opt/kawalys/tls-2`) and generate the new key and CSR there (steps 2 to 4 with that path). Check that the certificate and key match and the certificate is valid for `<site>` (`openssl x509 -noout -pubkey -in origin.pem | sha256sum` equals `openssl pkey -pubout -in origin.key | sha256sum`). Then change `KAWALYS_ORIGIN_CERT_DIR` in `.env.pilot` to the new directory, run step 6, and run the readiness gate. Keep the old directory until the new pair has served traffic; to roll back, point the variable at the old directory and run step 6 again.
 
+### Gate B checklist (BACK-172, run at the next deploy, with the owner's deploy approval) `[NOT RUN]`
+
+Proves from outside, through Cloudflare and Caddy, what `smoke.sh` and the unit tests prove locally. Record the result (no secret) in the BACK-172 ticket. Use `<name>` for the site host.
+
+1. Forged client address is ignored: send `curl -sS -H 'CF-Connecting-IP: 203.0.113.9' -H 'X-Forwarded-For: 203.0.113.9' https://<name>/api/process` from a known address; the BFF audit and limiter must key on the real client, never on the forged value (Caddy takes the client address only from Cloudflare's ranges).
+2. Sign-in limit counts per real client: more than the configured sign-in attempts per minute from one client return 429, while a second client (another network) is still answered; forged `X-Forwarded-For` values from the first client do not reset its count.
+3. Unknown Host is refused, measured on a completed HTTP exchange (a TLS failure proves nothing about the Host guard): (a) through Cloudflare, keep TLS on the site name and change only the header, `curl -sS -o /dev/null -w '%{http_code}\n' -H 'Host: evil.example' https://<name>/api/process`, and record the status (Cloudflare or Caddy refuses it; it must not be 200); (b) at the BFF itself, on the host, `dc exec bff wget -S -qO- --header 'Host: evil.example' http://127.0.0.1:8787/process` must answer 404 with the uniform `not_found` envelope and `cache-control: no-store`, while the same command without the header answers 200.
+4. Origin guard holds: `curl -sS -X POST -H 'Origin: https://evil.example' -H 'Content-Type: application/json' --data '{}' https://<name>/api/auth/session` answers 404, and the site's own Origin does not.
+5. The bff container is `healthy` (`dc ps bff`) with the allowlist on, and `/api/health` answers 200.
+6. A client `x-request-id` is never echoed: `curl -sSI -H 'x-request-id: forged-id-12345' https://<name>/api/process` returns a different `x-request-id`.
+
 ## 12. Teardown
 
 ```bash
@@ -290,6 +302,6 @@ Then the owner removes the DNS record and the VM, and revokes the Descope setup.
 
 ## 13. Local proof (operator, any machine with Docker) `[local, verified]`
 
-`bash deploy/pilot/smoke.sh` builds both images and runs pki, postgres, provision, migrate and the stack in development mode. It checks health, deny-all, container hardening, no password or `.env` inside images, the per-client sign-in limit behind Caddy, the `/sign-in` edge headers (no-store, enforcing CSP), the build-time Descope project id, `KAWALYS_TRUSTED_PROXIES` reaching Caddy, and a database outage. It uses a generated env file and `localhost`, and ends with `SMOKE RESULT: ALL PASS`.
+`bash deploy/pilot/smoke.sh` builds both images and runs pki, postgres, provision, migrate and the stack in development mode. It checks health, deny-all, container hardening, no password or `.env` inside images, the per-client sign-in limit behind Caddy, the `/sign-in` edge headers (no-store, enforcing CSP), the Host allowlist (an unknown Host gets 404, a listed one 200, the container healthcheck stays healthy; BACK-172), the build-time Descope project id, `KAWALYS_TRUSTED_PROXIES` reaching Caddy, and a database outage. It uses a generated env file and `localhost`, and ends with `SMOKE RESULT: ALL PASS`.
 
 It is safe to run on a host that already runs the pilot: each run uses its own unique Compose project (`kawalys-pilot-smoke-<random>`), image tags, volumes, network subnet (`KAWALYS_SMOKE_SUBNET`, default `172.31.77.0/24`) and non-default ports (18080/18443), refuses to run under the name `kawalys-pilot`, and its cleanup removes only that project. The deployment's containers, volumes and images are not touched.

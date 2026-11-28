@@ -1,4 +1,5 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from "@nestjs/common";
+import { IdempotencyConflictException } from "../errors/idempotency-conflict";
 import { requestIdFrom, safeErrorEnvelope, STATUS_FOR, type SafeErrorCode } from "../errors/safe-error";
 import type { RequestWithId, ResponseLike } from "./request-id";
 
@@ -13,6 +14,7 @@ function bodyParserClientError(e: unknown): boolean {
 
 function codeFor(exception: unknown): SafeErrorCode {
   if (!(exception instanceof HttpException)) return bodyParserClientError(exception) ? "validation_error" : "internal_error";
+  if (exception instanceof IdempotencyConflictException) return "idempotency_conflict";
   switch (exception.getStatus()) {
     case 404:
     case 401:

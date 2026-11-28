@@ -5,7 +5,7 @@ import pg from 'pg';
 import request from 'supertest';
 import { WorkspaceResolver } from '../../src/auth/workspace-resolver';
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
-import { createApp } from '../../src/create-app';
+import { createApp, type CreateAppOptions } from '../../src/create-app';
 import { EvidenceRepository } from '../../src/evidence/evidence.repository';
 import { FakeIdentityVerifier, OWNER, TOKENS } from '../auth/_helpers';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from './kawalys-db';
@@ -25,7 +25,7 @@ export interface OwnerApp {
 }
 
 /** Starts the database and the app, signs the owner in, and resolves their workspace. */
-export async function startOwnerApp(): Promise<OwnerApp> {
+export async function startOwnerApp(extra: Omit<CreateAppOptions, 'database'> = {}): Promise<OwnerApp> {
   const saved: Record<string, string | undefined> = {};
   for (const [k, v] of Object.entries(ENV)) {
     saved[k] = process.env[k];
@@ -34,7 +34,7 @@ export async function startOwnerApp(): Promise<OwnerApp> {
   const db = await startKawalysDb();
   const appPool = new pg.Pool({ connectionString: db.appUrl, max: 4 });
   const authPool = new pg.Pool({ connectionString: db.authUrl, max: 4 });
-  const app = await createApp([], { verifier: new FakeIdentityVerifier() }, { database: { appPool, authPool } });
+  const app = await createApp([], { verifier: new FakeIdentityVerifier() }, { ...extra, database: { appPool, authPool } });
   const res = await request(app.getHttpServer()).post('/auth/session').set('Authorization', `Bearer ${TOKENS.owner}`);
   expect(res.status).toBe(200);
   const cookie = ([] as string[]).concat(res.headers['set-cookie'] ?? [])[0]!.split(';')[0]!;

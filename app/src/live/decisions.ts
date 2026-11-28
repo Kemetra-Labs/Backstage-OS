@@ -16,7 +16,22 @@ export interface DecisionDraft {
   readonly rationale: string;
   /** Ids of the records this decision cites (0 to 50). */
   readonly evidenceIds: readonly string[];
+  /**
+   * BACK-172 G4: the Idempotency-Key of the current submit attempt, kept in memory with the draft (the session store, never storage).
+   * Made when a submit starts and sent again on a retry after an unknown outcome; dropped when the draft changes or is recorded.
+   */
+  readonly idempotencyKey?: string;
 }
+
+/** The draft with its submit key: the one it already has (a retry), else a new one. */
+export const withSubmitKey = (d: DecisionDraft, makeKey: () => string = () => crypto.randomUUID()): DecisionDraft =>
+  d.idempotencyKey !== undefined ? d : { ...d, idempotencyKey: makeKey() };
+
+/** The draft without a submit key: any edit is a different request, and a recorded decision ends the attempt. */
+export const withoutSubmitKey = (d: DecisionDraft): DecisionDraft => {
+  const { idempotencyKey: _dropped, ...rest } = d;
+  return rest;
+};
 
 export const EMPTY_DRAFT: DecisionDraft = { decision: '', rationale: '', evidenceIds: [] };
 
@@ -40,7 +55,7 @@ export function draftProblems(d: DecisionDraft): readonly DraftProblem[] {
   return out;
 }
 
-export type SubmitResult = 'recorded' | 'invalid' | 'not_found' | 'rate_limited' | 'unavailable' | 'error';
+export type SubmitResult = 'recorded' | 'idempotency_conflict' | 'invalid' | 'not_found' | 'rate_limited' | 'unavailable' | 'error';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -59,10 +74,13 @@ export async function submitDecision(investigationId: string, d: DecisionDraft, 
   const r = await apiRequest(`/api/investigations/${investigationId}/decisions`, {
     method: 'POST',
     body: { decision: d.decision, rationale: d.rationale, evidenceIds: d.evidenceIds },
+    ...(d.idempotencyKey !== undefined ? { headers: { 'Idempotency-Key': d.idempotencyKey } } : {}),
     signal,
     fetcher,
   });
   if (r.ok) return r.status === 201 ? 'recorded' : 'error';
+  // 422 is the server's idempotency_conflict (the only 422 on this route): the key was used for a different request.
+  if (r.status === 422) return 'idempotency_conflict';
   return r.failure === 'invalid' || r.failure === 'not_found' || r.failure === 'rate_limited' || r.failure === 'unavailable' ? r.failure : 'error';
 }
 
@@ -92,9 +110,12 @@ export type SubmitPlan =
  * anything is recorded with fewer citations than they chose. A draft the server would refuse sends nothing either.
  */
 export function planSubmit(draft: DecisionDraft, citable: readonly string[]): SubmitPlan {
-  const sendable: DecisionDraft = { ...draft, evidenceIds: draft.evidenceIds.filter((id) => citable.includes(id)) };
+  const kept = draft.evidenceIds.filter((id) => citable.includes(id));
+  const pruned = kept.length !== draft.evidenceIds.length;
+  // Fewer citations is a different request: the old submit key must not carry over.
+  const sendable: DecisionDraft = pruned ? withoutSubmitKey({ ...draft, evidenceIds: kept }) : draft;
   if (draftProblems(sendable).length > 0) return { kind: 'problems' };
-  return sendable.evidenceIds.length !== draft.evidenceIds.length ? { kind: 'citationsChanged', sendable } : { kind: 'send', sendable };
+  return pruned ? { kind: 'citationsChanged', sendable } : { kind: 'send', sendable };
 }
 
 /**
@@ -148,5 +169,5 @@ export function settleAnswer(r: SubmitResult, current: boolean): SettledAnswer {
 export function pruneForReshow(draft: DecisionDraft | undefined, citable: readonly string[]): { readonly draft: DecisionDraft | undefined; readonly changed: boolean } {
   if (draft === undefined) return { draft, changed: false };
   const evidenceIds = draft.evidenceIds.filter((id) => citable.includes(id));
-  return evidenceIds.length === draft.evidenceIds.length ? { draft, changed: false } : { draft: { ...draft, evidenceIds }, changed: true };
+  return evidenceIds.length === draft.evidenceIds.length ? { draft, changed: false } : { draft: withoutSubmitKey({ ...draft, evidenceIds }), changed: true };
 }

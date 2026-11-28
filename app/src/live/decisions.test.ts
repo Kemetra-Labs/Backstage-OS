@@ -1,7 +1,7 @@
 // BACK-51 P3: the decision form's rules and its one POST. The fetcher is injected: nothing here touches the network.
 import { describe, expect, it, vi } from 'vitest';
 import {
-  answerStillCurrent, createSubmitGuard, DECISION_MAX, draftProblems, EMPTY_DRAFT, EVIDENCE_MAX, investigationIdOf, planSubmit, pruneForReshow, RATIONALE_MAX, refreshesList, settleAnswer, submitDecision, type DecisionDraft, type SubmitResult,
+  answerStillCurrent, createSubmitGuard, DECISION_MAX, draftProblems, EMPTY_DRAFT, EVIDENCE_MAX, investigationIdOf, planSubmit, pruneForReshow, RATIONALE_MAX, refreshesList, settleAnswer, submitDecision, withSubmitKey, withoutSubmitKey, type DecisionDraft, type SubmitResult,
 } from './decisions';
 
 const INV = '00000000-0000-4000-8000-000000000004';
@@ -208,5 +208,55 @@ describe('pruneForReshow (BACK-127: revoked citations never come back)', () => {
     const d: DecisionDraft = { decision: 'x', rationale: 'y', evidenceIds: [A, B] };
     pruneForReshow(d, [B]);
     expect(d.evidenceIds).toEqual([A, B]);
+  });
+});
+
+describe('retry key (BACK-172 G4): one Idempotency-Key per submit attempt, reused on a retry', () => {
+  const KEY = '11111111-2222-4333-8444-555555555555';
+  const keyOf = (f: ReturnType<typeof reply>, call = 0) => (f.mock.calls[call]![1]?.headers as Record<string, string>)['Idempotency-Key'];
+
+  it('sends the draft key as the Idempotency-Key header, and no header without one', async () => {
+    const f = reply(201, '{}');
+    await submitDecision(INV, { ...GOOD, idempotencyKey: KEY }, undefined, f);
+    expect(keyOf(f)).toBe(KEY);
+    const g = reply(201, '{}');
+    await submitDecision(INV, GOOD, undefined, g);
+    expect((g.mock.calls[0]![1]?.headers as Record<string, string>)['Idempotency-Key']).toBeUndefined();
+    expect(JSON.parse(f.mock.calls[0]![1]?.body as string)).not.toHaveProperty('idempotencyKey');
+  });
+
+  it('the same key goes out again on a retry after an unknown outcome', async () => {
+    const down = vi.fn(async () => { throw new TypeError('network'); });
+    const draft = withSubmitKey(GOOD, () => KEY);
+    expect(await submitDecision(INV, draft, undefined, down)).toBe('unavailable');
+    const f = reply(201, '{}');
+    const retry = withSubmitKey(draft, () => 'a-different-key-0000');
+    expect(await submitDecision(INV, retry, undefined, f)).toBe('recorded');
+    expect(keyOf(f)).toBe(KEY);
+  });
+
+  it('withSubmitKey makes a key once; withoutSubmitKey (an edit, a 201) drops it so the next attempt gets a new one', () => {
+    const made = withSubmitKey(GOOD, () => KEY);
+    expect(made.idempotencyKey).toBe(KEY);
+    expect(withSubmitKey(made, () => 'never-used-1234').idempotencyKey).toBe(KEY);
+    const edited = withoutSubmitKey({ ...made, decision: 'changed' });
+    expect(edited.idempotencyKey).toBeUndefined();
+    expect(withSubmitKey(edited, () => 'second-key-0000').idempotencyKey).toBe('second-key-0000');
+  });
+
+  it('a pruned citation list is a different request: the key is dropped', () => {
+    const d: DecisionDraft = { ...GOOD, evidenceIds: [EV], idempotencyKey: KEY };
+    expect(pruneForReshow(d, []).draft?.idempotencyKey).toBeUndefined();
+    expect(pruneForReshow(d, [EV]).draft?.idempotencyKey).toBe(KEY);
+    const plan = planSubmit(d, []);
+    expect(plan.kind).toBe('citationsChanged');
+    expect(plan.kind === 'citationsChanged' && plan.sendable.idempotencyKey).toBeUndefined();
+    const ok = planSubmit(d, [EV]);
+    expect(ok.kind === 'send' && ok.sendable.idempotencyKey).toBe(KEY);
+  });
+
+  it('a 422 is idempotency_conflict: nothing recorded, the draft stays, the key is not reused, the list is not re-read', async () => {
+    expect(await submitDecision(INV, { ...GOOD, idempotencyKey: KEY }, undefined, reply(422, '{"error":{"code":"idempotency_conflict"}}'))).toBe('idempotency_conflict');
+    expect(settleAnswer('idempotency_conflict', true)).toEqual({ show: 'idempotency_conflict', clearDraft: false, reportNotFound: false, refreshList: false });
   });
 });

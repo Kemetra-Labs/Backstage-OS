@@ -82,6 +82,9 @@ services:
       # State-changing requests are accepted only from this exact origin (audit M1). Caddy serves https on 443 by default;
       # for another host port set KAWALYS_ALLOWED_ORIGINS explicitly (the smoke does).
       KAWALYS_ALLOWED_ORIGINS: ${KAWALYS_ALLOWED_ORIGINS:-https://${KAWALYS_SITE_ADDRESS:?set KAWALYS_SITE_ADDRESS in .env.pilot}}
+      # Host allowlist (BACK-172, required in production): the BFF answers 404 to any other Host header. It must list the site host
+      # (Caddy forwards the original Host) and 127.0.0.1 (this container's healthcheck): <site host>,localhost,127.0.0.1.
+      KAWALYS_ALLOWED_HOSTS: ${KAWALYS_ALLOWED_HOSTS:?set KAWALYS_ALLOWED_HOSTS in .env.pilot (<site host>,localhost,127.0.0.1)}
       # Production (the image default) refuses to start without Descope settings: fail closed. Local smoke only sets development.
       NODE_ENV: ${KAWALYS_NODE_ENV:-production}
       NODE_EXTRA_CA_CERTS: /pki/ca.crt

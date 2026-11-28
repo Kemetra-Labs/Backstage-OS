@@ -8,6 +8,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpException,
   Inject,
   NotFoundException,
   Param,
@@ -18,11 +19,23 @@ import {
 } from '@nestjs/common';
 import { RequireCapability, WorkspaceGuard, type WorkspaceRequest } from '../auth/workspace.guard';
 import type { WorkspacePrincipal } from '../auth/workspace-resolver';
+import { IdempotencyConflictException } from '../errors/idempotency-conflict';
+import { writeLimitKey, type WriteAction, type WriteRateLimiter } from '../http/write-rate-limiter';
 import { decisionBody, noteBody } from './evidence.body';
-import { EvidenceRepository } from './evidence.repository';
-import { DECISION_LIMIT_DEFAULT, DECISION_LIMIT_MAX, NotVisibleError, RefusedError, UUID, type DecisionPage } from './evidence.types';
+import { EvidenceRepository, type WriteExtras } from './evidence.repository';
+import {
+  DECISION_LIMIT_DEFAULT,
+  DECISION_LIMIT_MAX,
+  IdempotencyConflictError,
+  NotVisibleError,
+  RefusedError,
+  UUID,
+  type DecisionPage,
+} from './evidence.types';
+import { idempotencyClaim, parseIdempotencyKey } from './idempotency';
 
 export const EVIDENCE_REPOSITORY = Symbol('KAWALYS_EVIDENCE_REPOSITORY');
+export const EVIDENCE_WRITE_LIMITER = Symbol('KAWALYS_EVIDENCE_WRITE_LIMITER');
 
 type Req = WorkspaceRequest;
 
@@ -54,7 +67,10 @@ export function decisionCursor(value: unknown): string | undefined {
 @Controller()
 @UseGuards(WorkspaceGuard)
 export class EvidenceController {
-  constructor(@Inject(EVIDENCE_REPOSITORY) private readonly repo: EvidenceRepository) {}
+  constructor(
+    @Inject(EVIDENCE_REPOSITORY) private readonly repo: EvidenceRepository,
+    @Inject(EVIDENCE_WRITE_LIMITER) private readonly writeLimiter: WriteRateLimiter,
+  ) {}
 
   @Get('evidence')
   @RequireCapability('evidence.read')
@@ -112,8 +128,14 @@ export class EvidenceController {
   async decide(@Req() req: Req, @Param('id') investigationId: string, @Body() body: unknown) {
     if (!UUID.test(investigationId)) throw new NotFoundException();
     const input = decisionBody(body, investigationId);
+    const key = parseIdempotencyKey(req.headers['idempotency-key']);
     const principal = workspaceOf(req);
-    return written(() => this.repo.recordDecision(principal.workspaceId, principal.userId, input, req.requestId ?? null));
+    this.limit(principal, 'decision.create');
+    const extras: WriteExtras = {
+      clientRequestId: req.clientRequestId ?? null,
+      idempotency: key === undefined ? undefined : idempotencyClaim('decision.recorded', key, input),
+    };
+    return written(() => this.repo.recordDecision(principal.workspaceId, principal.userId, input, req.requestId ?? null, extras));
   }
 
   /** A user-written Correlation or Hypothesis citing one source's visible evidence (BACK-50). */
@@ -123,8 +145,19 @@ export class EvidenceController {
   async note(@Req() req: Req, @Param('id') investigationId: string, @Body() body: unknown) {
     if (!UUID.test(investigationId)) throw new NotFoundException();
     const input = noteBody(body, investigationId);
+    const key = parseIdempotencyKey(req.headers['idempotency-key']);
     const principal = workspaceOf(req);
-    return written(() => this.repo.recordNote(principal.workspaceId, principal.userId, input, req.requestId ?? null));
+    this.limit(principal, 'note.create');
+    const extras: WriteExtras = {
+      clientRequestId: req.clientRequestId ?? null,
+      idempotency: key === undefined ? undefined : idempotencyClaim('note.recorded', key, input),
+    };
+    return written(() => this.repo.recordNote(principal.workspaceId, principal.userId, input, req.requestId ?? null, extras));
+  }
+
+  /** 30 writes per minute per workspace, principal and action (BACK-172 G2), checked before the repository call. */
+  private limit(principal: WorkspacePrincipal, action: WriteAction): void {
+    if (!this.writeLimiter.tryAcquire(writeLimitKey(principal.workspaceId, principal.userId, action))) throw new HttpException('', 429);
   }
 }
 
@@ -135,6 +168,7 @@ async function written(write: () => Promise<string>): Promise<{ id: string }> {
   } catch (err) {
     if (err instanceof NotVisibleError) throw new NotFoundException();
     if (err instanceof RefusedError) throw new BadRequestException();
+    if (err instanceof IdempotencyConflictError) throw new IdempotencyConflictException();
     throw err;
   }
 }
