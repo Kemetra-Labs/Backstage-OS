@@ -27,6 +27,8 @@ export class SourceRevokedError extends Error {
 export interface GitHubTarget {
   readonly repo: string;
   readonly repositoryId: number;
+  /** Approval and grant check the transport awaits right before it dispatches a request (after the token). */
+  readonly beforeSend: () => Promise<void>;
 }
 
 export type RefreshResult =
@@ -59,14 +61,19 @@ export async function refreshSource(deps: RefreshDeps): Promise<RefreshResult> {
   if (!(await repo.hasActiveGrant(workspaceId, actor, sourceId))) return { status: 'refused' };
 
   let revoked = false;
-  const inner = deps.makeTransport({ repo: approved.externalRef, repositoryId: approved.repositoryId });
+  // A revoke already seen stops everything after it, without another read.
+  const check = async (): Promise<void> => {
+    if (revoked || pinnedIdentity(policy, source.projectKey, source.identity) === undefined || !(await repo.hasActiveGrant(workspaceId, actor, sourceId))) {
+      revoked = true;
+      throw new SourceRevokedError();
+    }
+  };
+  const inner = deps.makeTransport({ repo: approved.externalRef, repositoryId: approved.repositoryId, beforeSend: check });
   const guarded: GitHubReadTransport = {
     async get(path: string): Promise<GitHubResponse> {
-      // A revoke already seen stops everything after it, without another read.
-      if (revoked || pinnedIdentity(policy, source.projectKey, source.identity) === undefined || !(await repo.hasActiveGrant(workspaceId, actor, sourceId))) {
-        revoked = true;
-        throw new SourceRevokedError();
-      }
+      // Before the token is even requested (a slow mint must not start for a revoked source)...
+      await check();
+      // ...and again inside the transport, after the token resolves and just before the request is sent.
       return inner.get(path);
     },
   };

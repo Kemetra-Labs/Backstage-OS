@@ -108,6 +108,11 @@ describe('createAppTokenProvider', () => {
     await expect(t.provider.current()).rejects.toMatchObject({ name: 'GitHubTokenError', kind: 'denied' });
   });
 
+  it.each([[{ 'x-ratelimit-remaining': '0' }], [{ 'retry-after': '60' }]])('maps a rate-limited 403 (%j) to unavailable, not denied', async (headers) => {
+    const t = setup(() => json(403, { message: 'rate limit' }, headers));
+    await expect(t.provider.current()).rejects.toMatchObject({ kind: 'unavailable' });
+  });
+
   it.each([429, 500, 502, 503])('maps a mint answer of %s to unavailable', async (status) => {
     const t = setup(() => json(status, {}));
     await expect(t.provider.current()).rejects.toMatchObject({ kind: 'unavailable' });

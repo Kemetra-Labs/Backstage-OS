@@ -86,7 +86,9 @@ export function createAppTokenProvider(deps: AppTokenDeps): InstallationTokenSou
       throw new GitHubTokenError('unavailable');
     }
     try {
-      if (res.status === 401 || res.status === 403 || res.status === 404 || res.status === 422) {
+      // A 403 that is a rate limit is not a refusal: it is unavailable for now.
+      const limited = res.status === 403 && (res.headers.get('x-ratelimit-remaining') === '0' || res.headers.has('retry-after'));
+      if (!limited && (res.status === 401 || res.status === 403 || res.status === 404 || res.status === 422)) {
         await res.body?.cancel().catch(() => undefined);
         throw new GitHubTokenError('denied');
       }

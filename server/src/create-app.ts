@@ -48,7 +48,7 @@ export interface CreateAppOptions {
    * KAWALYS_GITHUB_REFRESH_MINUTES interval are used. A test injects a fake fetch (nothing ever reaches GitHub)
    * and a short interval.
    */
-  readonly github?: { readonly fetch?: FetchFn; readonly intervalMs?: number; readonly now?: () => Date };
+  readonly github?: { readonly fetch?: FetchFn; readonly intervalMs?: number; readonly now?: () => Date; readonly onScheduler?: (scheduler: GithubRefreshScheduler) => void };
 }
 
 export async function createApp(
@@ -62,6 +62,10 @@ export async function createApp(
   const githubApp = loadGithubAppConfig(process.env);
   const refreshMinutes = loadRefreshMinutes(process.env);
   const db = options.database;
+  // An interval without a database or complete App settings does nothing: say so once, with no values.
+  if (refreshMinutes !== null && (!db || githubApp === null)) {
+    console.error("kawalys-bff: KAWALYS_GITHUB_REFRESH_MINUTES is set but the GitHub scheduler is off (database or GitHub App configuration is missing)");
+  }
   const workspaces = db ? new WorkspaceResolver(db.appPool, db.authPool) : undefined;
   const persistence: AuthPersistence | undefined =
     db && workspaces
@@ -91,6 +95,7 @@ export async function createApp(
         ...(options.github?.now ? { now: options.github.now } : {}),
       });
       imports.push(GithubSchedulerModule.register(githubScheduler));
+      options.github?.onScheduler?.(githubScheduler);
     }
   } else {
     // The fixture demo route (it reads the display persona header) exists only without a database (audit L3).

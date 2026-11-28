@@ -29,7 +29,14 @@ function stubRepo(over: { sources?: string[]; listFails?: boolean; ingestFails?:
   return { repo, log };
 }
 
-const build = (repo: EvidenceRepository, extra: { owner?: () => Promise<RefreshActor | null>; makeTransport?: () => GitHubReadTransport; intervalMs?: number; lines?: string[] } = {}) =>
+interface FakeTimers {
+  fn: (() => void) | undefined;
+  ms: number;
+  sets: number;
+  cleared: number;
+}
+
+const build = (repo: EvidenceRepository, extra: { timers?: FakeTimers; owner?: () => Promise<RefreshActor | null>; makeTransport?: () => GitHubReadTransport; intervalMs?: number; lines?: string[] } = {}) =>
   new GithubRefreshScheduler({
     repo,
     policy,
@@ -38,9 +45,24 @@ const build = (repo: EvidenceRepository, extra: { owner?: () => Promise<RefreshA
     intervalMs: extra.intervalMs ?? 1_000_000,
     now: () => new Date('2026-11-28T12:00:00Z'),
     log: (line) => extra.lines?.push(line),
+    ...(extra.timers
+      ? {
+          timers: {
+            set: (fn: () => void, ms: number) => {
+              extra.timers!.fn = fn;
+              extra.timers!.ms = ms;
+              extra.timers!.sets += 1;
+              return extra.timers!.sets;
+            },
+            clear: () => {
+              extra.timers!.cleared += 1;
+              extra.timers!.fn = undefined;
+            },
+          },
+        }
+      : {}),
   });
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe('GithubRefreshScheduler', () => {
   it('runOnce refreshes every GitHub source of the owner through the guarded runner', async () => {
@@ -77,20 +99,25 @@ describe('GithubRefreshScheduler', () => {
     expect(log.ingests).toBe(2);
   });
 
-  it('ticks on its interval after start, and stops ticking after stop', async () => {
+  it('ticks on its interval after start (injected timer, no real waiting), and stops ticking after stop', async () => {
     const { repo, log } = stubRepo();
-    const s = build(repo, { intervalMs: 15 });
+    const timers: FakeTimers = { fn: undefined, ms: 0, sets: 0, cleared: 0 };
+    const s = build(repo, { timers, intervalMs: 900_000 });
     expect(s.started).toBe(false);
     s.start();
     s.start(); // a second start does not add a second timer
     expect(s.started).toBe(true);
-    await sleep(120);
+    expect(timers).toMatchObject({ sets: 1, ms: 900_000 });
+    timers.fn!();
+    await s.whenIdle();
+    timers.fn!();
+    await s.whenIdle();
+    expect(log.ingests).toBe(2);
     s.stop();
     expect(s.started).toBe(false);
-    const seen = log.ingests;
-    expect(seen).toBeGreaterThanOrEqual(2);
-    await sleep(80);
-    expect(log.ingests).toBe(seen);
+    expect(timers).toMatchObject({ cleared: 1, fn: undefined });
+    expect(await s.runOnce()).toBe('ran'); // a stopped scheduler starts no source
+    expect(log.ingests).toBe(2);
   });
 
   it('stops on the Nest lifecycle hooks', () => {

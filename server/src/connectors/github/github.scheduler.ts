@@ -21,6 +21,8 @@ export interface SchedulerDeps {
   readonly owner: () => Promise<RefreshActor | null>;
   readonly makeTransport: (target: GitHubTarget) => GitHubReadTransport;
   readonly intervalMs: number;
+  /** Timer seam so a test can drive ticks without waiting. Default: setInterval (unref'd) and clearInterval. */
+  readonly timers?: { set(fn: () => void, ms: number): unknown; clear(handle: unknown): void };
   readonly now?: () => Date;
   /** One line per call. Default: console.error. */
   readonly log?: (line: string) => void;
@@ -30,7 +32,8 @@ export const GITHUB_SCHEDULER = Symbol('GITHUB_SCHEDULER');
 const MAX_TIMER_MS = 2_147_483_647;
 
 export class GithubRefreshScheduler implements OnModuleDestroy, OnApplicationShutdown {
-  private timer: NodeJS.Timeout | undefined;
+  private timer: unknown;
+  private current: Promise<unknown> = Promise.resolve();
   private running = false;
   private stopped = false;
 
@@ -46,14 +49,30 @@ export class GithubRefreshScheduler implements OnModuleDestroy, OnApplicationShu
   start(): void {
     if (this.timer !== undefined) return;
     this.stopped = false;
-    this.timer = setInterval(() => void this.runOnce(), this.deps.intervalMs);
-    this.timer.unref();
+    const tick = () => {
+      this.current = this.runOnce();
+    };
+    const timers = this.deps.timers;
+    if (timers) this.timer = timers.set(tick, this.deps.intervalMs);
+    else {
+      const handle = setInterval(tick, this.deps.intervalMs);
+      handle.unref();
+      this.timer = handle;
+    }
   }
 
   stop(): void {
     this.stopped = true;
-    if (this.timer !== undefined) clearInterval(this.timer);
+    if (this.timer !== undefined) {
+      if (this.deps.timers) this.deps.timers.clear(this.timer);
+      else clearInterval(this.timer as NodeJS.Timeout);
+    }
     this.timer = undefined;
+  }
+
+  /** Resolves when the run started by the latest tick has finished (tests await it instead of sleeping). */
+  whenIdle(): Promise<unknown> {
+    return this.current;
   }
 
   onModuleDestroy(): void {

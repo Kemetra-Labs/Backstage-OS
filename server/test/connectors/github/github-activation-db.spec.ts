@@ -5,6 +5,7 @@ import pg from 'pg';
 import { WorkspaceResolver } from '../../../src/auth/workspace-resolver';
 import { DatabaseOwnerDirectory } from '../../../src/auth/identity/database-owner-directory';
 import { ConfigError } from '../../../src/config/database-config';
+import { type GithubRefreshScheduler } from '../../../src/connectors/github/github.scheduler';
 import { createApp } from '../../../src/create-app';
 import type { FetchFn } from '../../../src/connectors/github/github.fetch-transport';
 import { EvidenceRepository } from '../../../src/evidence/evidence.repository';
@@ -19,16 +20,6 @@ import { happyScript, OWNER_REPO, REPO_ID } from './github.fixture';
 import { makeTestKey } from './test-key';
 
 const APPROVED = `backstage-os=github:${OWNER_REPO}#${REPO_ID}`;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-async function waitFor(condition: () => boolean, ms = 8_000): Promise<void> {
-  const until = Date.now() + ms;
-  while (!condition()) {
-    if (Date.now() > until) throw new Error('condition not met in time');
-    await sleep(20);
-  }
-}
-
 let db: KawalysDb;
 let appPool: pg.Pool;
 let authPool: pg.Pool;
@@ -87,45 +78,67 @@ afterAll(async () => {
 
 describe('the scheduler inside createApp', () => {
   const open: INestApplication[] = [];
+  const errors: string[] = [];
+  let restoreError: () => void = () => undefined;
+  beforeEach(() => {
+    errors.length = 0;
+    const original = console.error;
+    console.error = (...args: unknown[]) => void errors.push(args.map(String).join(' '));
+    restoreError = () => {
+      console.error = original;
+    };
+  });
   afterEach(async () => {
+    restoreError();
     while (open.length > 0) await open.pop()!.close().catch(() => undefined);
   });
 
+  // A one-hour interval: the real timer never fires inside a test; runs are driven explicitly with runOnce().
+  let created: GithubRefreshScheduler | undefined;
   const boot = async (fetch: FetchFn, withDatabase = true) => {
-    const app = await createApp([], {}, { ...(withDatabase ? { database: { appPool, authPool } } : {}), github: { fetch, intervalMs: 20 } });
+    created = undefined;
+    const github = { fetch, intervalMs: 3_600_000, onScheduler: (s: GithubRefreshScheduler) => (created = s) };
+    const app = await createApp([], {}, { ...(withDatabase ? { database: { appPool, authPool } } : {}), github });
     open.push(app);
     return app;
   };
+  const OFF_LINE = 'kawalys-bff: KAWALYS_GITHUB_REFRESH_MINUTES is set but the GitHub scheduler is off (database or GitHub App configuration is missing)';
 
-  it('is not started without GitHub App configuration, even with a refresh interval and a ready source', async () => {
+  it('is not created without GitHub App configuration, even with a refresh interval: one fixed line says it is off', async () => {
     setEnv({ KAWALYS_APPROVED_SOURCES: APPROVED, KAWALYS_GITHUB_REFRESH_MINUTES: '15' });
     const f = fakeGithub();
     await boot(f.fetch);
-    await sleep(200);
+    expect(created).toBeUndefined();
+    expect(errors).toEqual([OFF_LINE]);
     expect(f.calls).toHaveLength(0);
   });
 
-  it('is not started without an interval (App configured, no KAWALYS_GITHUB_REFRESH_MINUTES)', async () => {
-    setEnv(githubEnv({ KAWALYS_GITHUB_REFRESH_MINUTES: '' }));
-    const f = fakeGithub();
-    await boot(f.fetch);
-    await sleep(200);
-    expect(f.calls).toHaveLength(0);
-  });
-
-  it('is not started without a database (config complete)', async () => {
+  it('is not created without a database (config complete): the same fixed line, no values', async () => {
     setEnv(githubEnv());
     const f = fakeGithub();
     await boot(f.fetch, false);
-    await sleep(200);
+    expect(created).toBeUndefined();
+    expect(errors).toEqual([OFF_LINE]);
+    expect(errors.join('\n')).not.toContain('BEGIN');
     expect(f.calls).toHaveLength(0);
   });
 
-  it('is started with the database, the App settings and an interval: it refreshes the approved source, and stops when the app closes', async () => {
+  it('is not created without an interval (App configured, no KAWALYS_GITHUB_REFRESH_MINUTES) and says nothing', async () => {
+    setEnv(githubEnv({ KAWALYS_GITHUB_REFRESH_MINUTES: '' }));
+    await boot(fakeGithub().fetch);
+    expect(created).toBeUndefined();
+    expect(errors).toEqual([]);
+  });
+
+  it('is started with the database, the App settings and an interval: a run refreshes the approved source, and close stops it', async () => {
     setEnv(githubEnv());
     const f = fakeGithub();
     const app = await boot(f.fetch);
-    await waitFor(() => f.calls.filter((c) => c.init.method === 'GET').length >= 3);
+    const scheduler = created!;
+    expect(scheduler.started).toBe(true);
+    expect(errors).toEqual([]);
+    expect(await scheduler.runOnce()).toBe('ran');
+    expect(f.calls.filter((c) => c.init.method === 'GET')).toHaveLength(3);
     const mint = f.calls.find((c) => c.init.method === 'POST')!;
     expect(mint.url).toBe('https://api.github.com/app/installations/456/access_tokens');
     expect(mint.init.body).toBe(`{"repository_ids":[${REPO_ID}],"permissions":{"metadata":"read","pull_requests":"read","issues":"read"}}`);
@@ -133,20 +146,17 @@ describe('the scheduler inside createApp', () => {
     const stored = await repo.list(target.workspaceId, target.actor, {});
     expect(stored.map((e) => e.sourceRef)).toEqual(expect.arrayContaining([`github:${OWNER_REPO}`, `github:${OWNER_REPO}#pull/12`]));
     await app.close();
-    await sleep(60); // let a run that was in flight finish
-    const afterClose = f.calls.length;
-    await sleep(200);
-    expect(f.calls).toHaveLength(afterClose);
+    expect(scheduler.started).toBe(false);
   });
 
-  it('stops asking GitHub once the owner revokes the source grant', async () => {
+  it('asks GitHub for nothing once the owner has revoked the source grant', async () => {
     setEnv(githubEnv());
     const repo = new EvidenceRepository(appPool, approveAll());
     const sourceId = (await repo.githubSourcesForRefresh(target.workspaceId))[0]!.sourceId;
     await repo.disconnectSource(target.workspaceId, target.actor, sourceId);
     const f = fakeGithub();
     await boot(f.fetch);
-    await sleep(250);
+    expect(await created!.runOnce()).toBe('ran');
     expect(f.calls).toHaveLength(0);
   });
 
@@ -166,6 +176,16 @@ describe('the scheduler inside createApp', () => {
 
 describe('source:connect', () => {
   const entries = (value: string) => approvedSourceEntries({ KAWALYS_APPROVED_SOURCES: value });
+
+  it('merges duplicate identities like the policy: an unpinned duplicate plus a pinned one is fine, conflicting pins are a ConfigError', () => {
+    expect(githubEntriesToConnect(entries(`p=github:${OWNER_REPO},p=github:${OWNER_REPO}#5`))).toEqual([
+      { projectKey: 'p', identity: { provider: 'github', externalRef: OWNER_REPO, repositoryId: 5 } },
+    ]);
+    expect(githubEntriesToConnect(entries(`p=github:${OWNER_REPO}#5,p=github:${OWNER_REPO}`))).toHaveLength(1);
+    expect(() => entries(`p=github:${OWNER_REPO}#5,p=github:${OWNER_REPO}#6`)).toThrow(ConfigError);
+    // The same name under two project keys stays two entries.
+    expect(entries(`p=github:${OWNER_REPO}#5,q=github:${OWNER_REPO}#5`)).toHaveLength(2);
+  });
 
   it('refuses when there is no github entry, or an entry without a repository id', () => {
     expect(() => githubEntriesToConnect(entries(''))).toThrow(ConnectRefusedError);

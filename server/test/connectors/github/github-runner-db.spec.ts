@@ -84,7 +84,7 @@ describe('refreshSource', () => {
     const f = await fresh();
     const { spy, targets, result } = run(f);
     expect(await result).toEqual({ status: 'ingested', count: 5 });
-    expect(targets).toEqual([{ repo: OWNER_REPO, repositoryId: REPO_ID }]);
+    expect(targets).toEqual([{ repo: OWNER_REPO, repositoryId: REPO_ID, beforeSend: expect.any(Function) }]);
     expect(spy.calls).toHaveLength(3);
     const listed = await repo.list(f.ws, owner, { sourceId: f.sourceId });
     expect(listed.map((e) => e.sourceRef)).toEqual(expect.arrayContaining([`github:${OWNER_REPO}`, `github:${OWNER_REPO}#pull/12`, `github:${OWNER_REPO}#issue/7`]));
@@ -268,5 +268,32 @@ describe('no secret leaks anywhere (real fetch transport and token provider over
     expect(listed[0]).toMatchObject({ state: 'denied', payload: { kind: 'source_status', reason: 'denied' } });
     expect(f.calls.every((c) => c.init.method === 'POST')).toBe(true);
     expect((await everythingStored()) + captured.join('\n')).not.toContain(FAKE_TOKEN);
+  });
+});
+
+describe('a revoke while the installation token is being minted', () => {
+  it('never sends the GET: the grant is re-checked after the token resolves and just before dispatch', async () => {
+    const key = await makeTestKey();
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((r) => (release = r));
+    let mintStarted: () => void = () => undefined;
+    const started = new Promise<void>((r) => (mintStarted = r));
+    const f = fakeFetch(async (c) => {
+      if (c.url.includes('/access_tokens')) {
+        mintStarted();
+        await gate;
+        return json(201, { token: FAKE_TOKEN, expires_at: new Date(now().getTime() + 3_600_000).toISOString() });
+      }
+      return json(200, {});
+    });
+    const makeTransport = githubTransportFactory({ appId: 1, installationId: 2, privateKeyPem: key.pem }, f.fetch, now);
+    const fr = await fresh();
+    const result = refreshSource({ repo, policy: approved(), workspaceId: fr.ws, actor: owner, sourceId: fr.sourceId, makeTransport, now });
+    await started; // the pre-call check has passed; the mint is held
+    await repo.disconnectSource(fr.ws, owner, fr.sourceId);
+    release();
+    expect(await result).toEqual({ status: 'revoked_mid_run' });
+    expect(f.calls.filter((c) => c.init.method === 'GET')).toHaveLength(0);
+    expect(await evidenceCount(fr.ws)).toBe(0);
   });
 });

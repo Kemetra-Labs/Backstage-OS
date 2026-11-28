@@ -3,7 +3,8 @@
 //
 // Rules (docs/planning/BACK-52/real-transport-plan.md section 3):
 // - GET only, to one fixed base. The base is a constant, never configuration.
-// - Only `/repos/<approved owner/repo>` or `/repos/<approved owner/repo>/...` is allowed. The path is normalised the
+// - Only the three paths the observer reads are allowed: `/repos/<approved owner/repo>` and its `/pulls` and `/issues`
+//   list paths (a query is fine on the lists, not on the root). The path is normalised the
 //   way fetch would normalise it BEFORE it is checked, so `..`, `%2e%2e`, `//host` and absolute URLs cannot escape.
 //   A path that fails is a programming error and throws before any request.
 // - Redirects are never followed (`redirect: 'manual'`): a 3xx is returned as the answer, so the observer records
@@ -59,7 +60,7 @@ function allowedUrl(path: unknown, repo: string): string {
     throw new GitHubPathError();
   }
   const root = `/repos/${repo}`;
-  const inside = url.pathname === root || url.pathname.startsWith(`${root}/`);
+  const inside = url.pathname === root || url.pathname === `${root}/pulls` || url.pathname === `${root}/issues`;
   // `?x=1` directly on the repository root is not one of the paths the observer uses.
   const rootWithQuery = url.pathname === root && path.slice(root.length) !== '';
   if (url.origin !== GITHUB_API_BASE || url.hash !== '' || !inside || rootWithQuery) throw new GitHubPathError();
@@ -76,7 +77,9 @@ function lowerCaseHeaders(h: Headers): Record<string, string> {
 
 async function parsedBody(res: Response): Promise<unknown> {
   const type = res.headers.get('content-type') ?? '';
-  if (!/json/i.test(type)) {
+  // A non-2xx answer is classified by status and headers alone: its body is never decoded, so a broken body on a
+  // 401 cannot turn into a network failure.
+  if (res.status < 200 || res.status >= 300 || !/json/i.test(type)) {
     await res.body?.cancel().catch(() => undefined);
     return undefined;
   }
@@ -89,14 +92,22 @@ async function parsedBody(res: Response): Promise<unknown> {
   }
 }
 
-export function createFetchTransport(deps: { fetch: FetchFn; tokens: InstallationTokenSource; repo: string }): GitHubReadTransport {
-  const { fetch, tokens, repo } = deps;
+export function createFetchTransport(deps: {
+  fetch: FetchFn;
+  tokens: InstallationTokenSource;
+  repo: string;
+  /** Awaited after the token resolves and immediately before the request is dispatched; a throw sends nothing. */
+  beforeSend?: () => Promise<void>;
+}): GitHubReadTransport {
+  const { fetch, tokens, repo, beforeSend } = deps;
   if (!REPO_REF.test(repo)) throw new TypeError('github transport: repo must be an approved lower-case owner/repo');
   return {
     async get(path: string): Promise<GitHubResponse> {
       const url = allowedUrl(path, repo);
       // A token failure (GitHubTokenError) propagates unchanged: the observer maps it, and no request is made.
       const token = await tokens.current();
+      // Outside the try: its error (a revoke) must not be mistaken for a network failure.
+      await beforeSend?.();
       try {
         const res = await fetch(url, {
           method: 'GET',

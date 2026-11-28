@@ -19,7 +19,7 @@ export const globalFetch: FetchFn = (url, init) => fetch(url, init);
  */
 export function githubTransportFactory(config: GithubAppConfig, doFetch: FetchFn, now: () => Date = () => new Date()): (target: GitHubTarget) => GitHubReadTransport {
   const providers = new Map<number, InstallationTokenSource>();
-  return ({ repo, repositoryId }) => {
+  return ({ repo, repositoryId, beforeSend }) => {
     let tokens = providers.get(repositoryId);
     if (tokens === undefined) {
       tokens = createAppTokenProvider({
@@ -32,7 +32,7 @@ export function githubTransportFactory(config: GithubAppConfig, doFetch: FetchFn
       });
       providers.set(repositoryId, tokens);
     }
-    return createFetchTransport({ fetch: doFetch, tokens, repo });
+    return createFetchTransport({ fetch: doFetch, tokens, repo, beforeSend });
   };
 }
 

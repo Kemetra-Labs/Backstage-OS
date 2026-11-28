@@ -96,7 +96,8 @@ function parseEntry(entry: string): [string, SourceIdentity] {
   return [key, { provider: provider as SourceProvider, externalRef, ...(repositoryId === undefined ? {} : { repositoryId }) }];
 }
 
-function fromEntries(entries: readonly [string, SourceIdentity][]): SourceApprovalPolicy {
+/** One set of identities per project key. The same identity listed twice merges: two different ids contradict (ConfigError), an id fills a missing one. */
+function mergeByKey(entries: readonly [string, SourceIdentity][]): Map<string, SourceIdentity[]> {
   const byKey = new Map<string, SourceIdentity[]>();
   for (const [key, id] of entries) {
     const set = byKey.get(key) ?? [];
@@ -110,6 +111,11 @@ function fromEntries(entries: readonly [string, SourceIdentity][]): SourceApprov
     }
     byKey.set(key, set);
   }
+  return byKey;
+}
+
+function fromEntries(entries: readonly [string, SourceIdentity][]): SourceApprovalPolicy {
+  const byKey = mergeByKey(entries);
   return { approvedIdentities: (projectKey) => byKey.get(projectKey) ?? [] };
 }
 
@@ -126,7 +132,8 @@ function parsedEntries(env: Readonly<Record<string, string | undefined>>): [stri
 
 /** Every configured entry in order (the operator connect command walks them); malformed throws as in the policy. */
 export function approvedSourceEntries(env: Readonly<Record<string, string | undefined>>): ApprovedEntry[] {
-  return parsedEntries(env).map(([projectKey, identity]) => ({ projectKey, identity }));
+  // Merged exactly as the policy merges them, so a duplicate can never hide a pin or contradict one.
+  return [...mergeByKey(parsedEntries(env))].flatMap(([projectKey, ids]) => ids.map((identity) => ({ projectKey, identity })));
 }
 
 /** Fail-closed: unset or blank approves nothing; any malformed entry throws. */
