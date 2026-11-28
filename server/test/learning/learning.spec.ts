@@ -106,7 +106,7 @@ describe('rollback (O3)', () => {
   const eps = failures(MIN_EPISODES);
   const cand = cands(eps)[0]!;
   const rows1 = rowsOrThrow(approve([], cand, grant('2027-01-01T00:00:00Z', '2026-11-27T12:00:00Z'), basisOf(eps)));
-  const rows2 = rowsOrThrow(approve(rows1, cand, grant('2027-06-01T00:00:00Z', '2026-11-28T12:00:00Z'), basisOf(eps)));
+  const rows2 = rowsOrThrow(approve(rows1, cand, grant('2027-05-01T00:00:00Z', '2026-11-28T12:00:00Z'), basisOf(eps)));
 
   it('restores the earlier version byte for byte, as a new appended row', () => {
     const rows3 = rowsOrThrow(rollback(rows2, { reviewer: OWNER, owner: OWNER, toVersion: 1 }));

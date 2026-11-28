@@ -195,13 +195,14 @@ describe('a stored lesson chain re-verifies in src', () => {
         );
       }
     });
+  const scope = () => ({ workspaceId: wsA, projectId: seeded[wsA]!.project });
   const readBack = (key: string) =>
     inWs(wsA, async (c) =>
       (
         await c.query(
-          `SELECT version, previous_hash, kind, reviewer_user_id, applicability_key, content, hash
-           FROM learning_lessons WHERE applicability_key = $1 ORDER BY version DESC`,
-          [key],
+          `SELECT workspace_id, project_id, version, previous_hash, kind, reviewer_user_id, applicability_key, content, hash
+           FROM learning_lessons WHERE applicability_key = $1 AND project_id = $2 ORDER BY version DESC`,
+          [key, seeded[wsA]!.project],
         )
       ).rows as StoredLesson[],
     );
@@ -213,7 +214,7 @@ describe('a stored lesson chain re-verifies in src', () => {
     const v2 = rowsOrThrow(approve(v1, cand, { ...owner, at: '2026-11-28T12:00:00Z', expiresAt: '2027-02-01T00:00:00Z' }, basisOf(eps)));
     const v3 = rowsOrThrow(rollback(v2, { ...owner, toVersion: 1 }));
     await write(v3);
-    const rows = fromStored(await readBack('stored|reasoning-v3'));
+    const rows = fromStored(await readBack('stored|reasoning-v3'), scope());
     expect(rows).toEqual(v3);
     expect(readLesson(rows!, visible, '2026-12-01T00:00:00Z')).toMatchObject({ state: 'approved', version: 3, outcome: 'failure' });
   });
@@ -223,7 +224,7 @@ describe('a stored lesson chain re-verifies in src', () => {
     const tampered = eps.map((e) => ({ ...e, applicabilityKey: key }));
     const v1 = rowsOrThrow(approve([], cands(tampered)[0]!, { reviewer: userA, owner: userA, at: '2026-11-27T12:00:00Z', expiresAt: '2027-01-01T00:00:00Z' }, basisOf(tampered)));
     await write(v1, (r) => JSON.stringify({ ...r.content, outcome: 'success' }));
-    const rows = fromStored(await readBack(key));
+    const rows = fromStored(await readBack(key), scope());
     expect(readLesson(rows!, visible, '2026-12-01T00:00:00Z')).toEqual({ state: 'invalid-chain' });
   });
 });

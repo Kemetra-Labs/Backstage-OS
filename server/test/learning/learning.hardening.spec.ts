@@ -3,7 +3,7 @@
 // decision citations are HumanDecisions; approve accepts only the candidate the episodes still yield;
 // a lesson with no citation is never shown; the chain is verified in src over exactly the stored
 // columns, so a chain read back from the database can be re-verified.
-import { approve, candidatesOf, fromStored, MIN_EPISODES, readLesson, type LessonRow, type StoredLesson } from '../../src/learning/learning.core';
+import { approve, candidatesOf, fromStored, MAX_LESSON_DAYS, MIN_EPISODES, readLesson, rollback, type LessonRow, type StoredLesson } from '../../src/learning/learning.core';
 import { basisOf, cands, decisionsOf, ep, failures, grant, KEY, OWNER, rowsOrThrow, seal, visibleAll } from './learning.fixture';
 
 const NOW = '2026-12-01T00:00:00Z';
@@ -11,7 +11,10 @@ const eps = failures(MIN_EPISODES);
 const cand = cands(eps)[0]!;
 const approveAt = (rows: readonly LessonRow[], at: string) => rowsOrThrow(approve(rows, cand, grant('2027-01-01T00:00:00Z', at), basisOf(eps)));
 const chain = approveAt(approveAt([], '2026-11-27T12:00:00Z'), '2026-11-28T12:00:00Z');
+const SCOPE = { workspaceId: 'ws-1', projectId: 'p-1' };
 const stored = (r: LessonRow): StoredLesson => ({
+  workspace_id: SCOPE.workspaceId,
+  project_id: SCOPE.projectId,
   version: r.version,
   previous_hash: r.previous,
   kind: r.kind,
@@ -57,10 +60,39 @@ describe('approve accepts only the candidate the episodes still yield', () => {
     expect(approve([], cand, at, basisOf(eps, visible))).toEqual({ ok: false, reason: 'not-a-candidate' });
   });
 
+  it.each([
+    ['a non-ISO approval time', grant('2027-01-01T00:00:00Z', 'Nov 27 2026')],
+    ['a non-UTC expiry', grant('2027-01-01T00:00:00+02:00', '2026-11-27T12:00:00Z')],
+    ['an impossible date', grant('2027-02-30T00:00:00Z', '2026-11-27T12:00:00Z')],
+    [`an expiry more than ${MAX_LESSON_DAYS} days after approval`, grant('2099-01-01T00:00:00Z', '2026-11-27T12:00:00Z')],
+  ])('refuses %s', (_name, g) => {
+    expect(approve([], cand, g, basisOf(eps))).toEqual({ ok: false, reason: 'bad-expiry' });
+  });
+
   it('refuses to append to another lesson chain', () => {
     const other = failures(MIN_EPISODES).map((e) => ({ ...e, applicabilityKey: 'other|reasoning-v3' }));
     const otherRows = rowsOrThrow(approve([], cands(other)[0]!, at, basisOf(other)));
     expect(approve(otherRows, cand, at, basisOf(eps))).toEqual({ ok: false, reason: 'other-lesson' });
+  });
+});
+
+describe('malformed or conflicting inputs refuse instead of throwing or depending on order', () => {
+  it('two episodes with one id and different content are both dropped, in either order', () => {
+    const clash = [...failures(MIN_EPISODES), ep(0, 'success')];
+    expect(cands(clash)).toEqual([]);
+    expect(cands([...clash].reverse())).toEqual([]);
+  });
+
+  it('an exact duplicate still counts once', () => {
+    expect(cands([...eps, ep(0, 'failure')])).toEqual(cands(eps));
+  });
+
+  it('a malformed episode is ignored, and a malformed row reads as an invalid chain', () => {
+    const bad = { ...eps[0]!, decisionEvidence: 'd0' as unknown as string[] };
+    expect(() => cands([bad, ...eps.slice(1)])).not.toThrow();
+    const broken = [{ ...chain[0]!, content: null as unknown as LessonRow['content'] }];
+    expect(readLesson(broken, visibleAll(eps), NOW)).toEqual({ state: 'invalid-chain' });
+    expect(rollback(broken, { reviewer: OWNER, owner: OWNER, toVersion: 1 })).toEqual({ ok: false, reason: 'invalid-chain' });
   });
 });
 
@@ -108,19 +140,34 @@ describe('the chain is verified in src', () => {
 
 describe('fromStored maps database rows and keeps them verifiable', () => {
   it('a stored chain in any order reads back as the same verified lesson', () => {
-    const rows = fromStored([...chain].reverse().map(stored));
+    const rows = fromStored([...chain].reverse().map(stored), SCOPE);
     expect(rows).toEqual(chain);
     expect(readLesson(rows!, visibleAll(eps), NOW)).toMatchObject({ state: 'approved', version: 2, applicabilityKey: KEY });
   });
 
   it.each([
     ['an unknown content key', (s: StoredLesson) => ({ ...s, content: { ...(s.content as object), extra: 1 } })],
-    ['a missing content key', (s: StoredLesson) => ({ ...s, content: { ...(s.content as object), approvedAt: undefined } })],
+    ['a missing content key', (s: StoredLesson) => {
+      const { approvedAt: _dropped, ...content } = s.content as Record<string, unknown>;
+      return { ...s, content };
+    }],
+    ['a __proto__ content key', (s: StoredLesson) => ({ ...s, content: JSON.parse(`{"__proto__":{},${JSON.stringify(s.content).slice(1)}`) as unknown })],
+    ['content with another prototype', (s: StoredLesson) => ({ ...s, content: Object.assign(Object.create({ inherited: 1 }) as object, s.content) })],
+    ['another project', (s: StoredLesson) => ({ ...s, project_id: 'p-2' })],
+    ['another workspace', (s: StoredLesson) => ({ ...s, workspace_id: 'ws-2' })],
+    ['a float version', (s: StoredLesson) => ({ ...s, version: 1.5 })],
+    ['a previous hash that is not a sha-256 hex digest', (s: StoredLesson) => ({ ...s, previous_hash: 'x' })],
+    ['a reviewer that is not a string', (s: StoredLesson) => ({ ...s, reviewer_user_id: 7 })],
     ['a key column that differs from the content', (s: StoredLesson) => ({ ...s, applicability_key: 'other|reasoning-v3' })],
     ['a non-integer version', (s: StoredLesson) => ({ ...s, version: '1' })],
     ['an unknown kind', (s: StoredLesson) => ({ ...s, kind: 'edited' })],
     ['a non-string evidence id', (s: StoredLesson) => ({ ...s, content: { ...(s.content as object), evidenceIds: [1] } })],
   ])('refuses a stored row with %s', (_name, change) => {
-    expect(fromStored([stored(chain[0]!), change(stored(chain[1]!))])).toBeNull();
+    expect(fromStored([stored(chain[0]!), change(stored(chain[1]!))], SCOPE)).toBeNull();
+  });
+
+  it('duplicate versions map, then fail chain verification', () => {
+    const rows = fromStored([stored(chain[0]!), stored(chain[0]!)], SCOPE);
+    expect(readLesson(rows!, visibleAll(eps), NOW)).toEqual({ state: 'invalid-chain' });
   });
 });
