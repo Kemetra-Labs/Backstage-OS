@@ -8,7 +8,7 @@ import { project } from '../../../src/memory/memory.projector';
 import type { MemoryRow } from '../../../src/memory/memory.types';
 import { evaluate } from '../../../src/reasoning/reasoning.evaluator';
 import { at, GH, JIRA, jiraIssue, request } from '../../memory/memory.fixture';
-import { happyScript, OWNER_REPO, ok, ScriptedTransport } from './github.fixture';
+import { happyScript, OWNER_REPO, REPO_ID, ok, ScriptedTransport } from './github.fixture';
 
 const now = new Date('2026-11-25T11:55:00Z');
 const pullsWith = (draft: unknown) => {
@@ -20,7 +20,7 @@ const pullsWith = (draft: unknown) => {
 };
 
 async function observedPr(draft: unknown): Promise<MemoryRow> {
-  const items = await observeRepository(new ScriptedTransport(pullsWith(draft)), { sourceId: randomUUID(), externalRef: OWNER_REPO }, now);
+  const items = await observeRepository(new ScriptedTransport(pullsWith(draft)), { sourceId: randomUUID(), externalRef: OWNER_REPO, repositoryId: REPO_ID }, now);
   const pr = items.find((i) => i.payload['kind'] === 'pull_request')!;
   return { id: 'p12', sourceId: GH, type: 'Observation', state: pr.state, sourceRef: pr.sourceRef, observedAt: now.toISOString(), receivedAt: now.toISOString(), payload: pr.payload };
 }

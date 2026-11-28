@@ -9,7 +9,7 @@ import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { EvidenceRepository } from '../../src/evidence/evidence.repository';
 import { PortfolioRepository } from '../../src/portfolio/portfolio.repository';
 import { happyScript as confluenceScript, ScriptedTransport as ConfluenceTransport } from '../connectors/confluence/confluence.fixture';
-import { happyScript as githubScript, OWNER_REPO, ScriptedTransport as GitHubTransport } from '../connectors/github/github.fixture';
+import { happyScript as githubScript, OWNER_REPO, REPO_ID, ScriptedTransport as GitHubTransport } from '../connectors/github/github.fixture';
 import { happyScript as jiraScript, NOW, ScriptedTransport as JiraTransport, SITE } from '../connectors/jira/jira.fixture';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
 import { approveAll } from '../evidence/approve-all-policy';
@@ -37,7 +37,7 @@ beforeAll(async () => {
   mixed = await evidence.createProject(ws, owner, { key: 'a-mixed', name: 'GitHub and Jira' });
   githubSource = await evidence.connectSource(ws, owner, { projectId: mixed, provider: 'github', externalRef: OWNER_REPO });
   jiraSource = await evidence.connectSource(ws, owner, { projectId: mixed, provider: 'jira', externalRef: 'kemetra-synthetic.atlassian.net' });
-  await evidence.ingest(ws, await observeRepository(new GitHubTransport(githubScript()), { sourceId: githubSource, externalRef: OWNER_REPO }, NOW));
+  await evidence.ingest(ws, await observeRepository(new GitHubTransport(githubScript()), { sourceId: githubSource, externalRef: OWNER_REPO, repositoryId: REPO_ID }, NOW));
   await evidence.ingest(ws, await observeJiraProjects(new JiraTransport(jiraScript()), { sourceId: jiraSource, site: SITE, projectKeys: ['BACK', 'OPS'] }, NOW));
 
   atlassianOnly = await evidence.createProject(ws, owner, { key: 'b-docs', name: 'Docs only' });

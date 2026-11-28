@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { observeRepository } from '../../src/connectors/github/github.observer';
 import { COGNITION_READ_BUDGET_MS, COGNITION_READS_PER_MINUTE } from '../../src/cognition/cognition.controller';
-import { happyScript, OWNER_REPO, ScriptedTransport } from '../connectors/github/github.fixture';
+import { happyScript, OWNER_REPO, REPO_ID, ScriptedTransport } from '../connectors/github/github.fixture';
 import { expectNotFound, expectSessionRequired, startOwnerApp, type OwnerApp } from '../db/owner-app';
 
 let t: OwnerApp | undefined;
@@ -26,7 +26,7 @@ beforeAll(async () => {
   const { evidence, ws, owner, db } = t;
   projectId = await evidence.createProject(ws, owner, { key: 'backstage-os', name: 'Backstage OS' });
   sourceId = await evidence.connectSource(ws, owner, { projectId, provider: 'github', externalRef: OWNER_REPO });
-  await evidence.ingest(ws, await observeRepository(new ScriptedTransport(happyScript()), { sourceId, externalRef: OWNER_REPO }, new Date('2026-11-25T10:00:00Z')));
+  await evidence.ingest(ws, await observeRepository(new ScriptedTransport(happyScript()), { sourceId, externalRef: OWNER_REPO, repositoryId: REPO_ID }, new Date('2026-11-25T10:00:00Z')));
   unreadProject = await evidence.createProject(ws, owner, { key: 'no-sources', name: 'No sources' });
   // A project in another workspace, created by the admin: the caller can never see it.
   const otherUser = randomUUID();

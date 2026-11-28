@@ -6,7 +6,7 @@ import { GitHubTransportFailure } from '../../../src/connectors/github/github.tr
 import { EvidenceRepository } from '../../../src/evidence/evidence.repository';
 import { runWithWorkspaceContext } from '../../../src/db/workspace-context';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../../db/kawalys-db';
-import { happyScript, OWNER_REPO, ok, ScriptedTransport } from './github.fixture';
+import { happyScript, OWNER_REPO, REPO_ID, ok, ScriptedTransport } from './github.fixture';
 import { approveAll } from '../../evidence/approve-all-policy';
 
 let db: KawalysDb | undefined;
@@ -33,7 +33,7 @@ afterAll(async () => {
 }, 60_000);
 
 const observe = (script: ReturnType<typeof happyScript>, externalRef = OWNER_REPO) =>
-  observeRepository(new ScriptedTransport(script), { sourceId, externalRef }, now);
+  observeRepository(new ScriptedTransport(script), { sourceId, externalRef, repositoryId: REPO_ID }, now);
 
 describe('GitHub observations in the evidence store', () => {
   it('stores a reachable repository and reads it back with its source reference', async () => {

@@ -16,6 +16,7 @@
     "start": "node dist/main.js",
     "e2e:serve": "tsc -p tsconfig.e2e.json && node dist-e2e/test/e2e/serve-e2e.js",
     "local:up": "npm run build && node dist/ops/local-up.js",
+    "source:connect": "npm run build && node dist/ops/source-connect.js",
     "local:down": "docker compose -f docker-compose.local.yml down -v"
   },
   "dependencies": {

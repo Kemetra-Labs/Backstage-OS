@@ -3,6 +3,9 @@
 // KAWALYS_APPROVED_SOURCES (server configuration, public repository names only, no secret) is a comma-separated
 // list of `<project-key>=<provider>:<owner>/<repo>`, for example
 //   retail-tower=github:kemetra-labs/backstage-os
+// A GitHub entry may pin the immutable numeric repository id: `retail-tower=github:kemetra-labs/backstage-os#123456`
+// (BACK-52 Q; optional so a name-only entry keeps working, but the refresh runner needs it). The id is never part of
+// identity matching: connect and reconnect compare provider and reference only.
 // A project key may appear several times: the policy returns a SET of approved identities per project key.
 // `connectSource` creates a source only for an identity in that set; with the variable unset or empty nothing is
 // approved and every connect is refused (fail-closed). A malformed entry throws a ConfigError at startup and is
@@ -13,12 +16,16 @@ import { SOURCE_PROVIDERS, type SourceProvider } from './evidence.types';
 
 const NAME = 'KAWALYS_APPROVED_SOURCES';
 const PROJECT_KEY = /^[a-z0-9][a-z0-9-]{0,62}$/; // the CHECK on projects.key (migrations/0003)
+/** A positive integer without leading zeros that fits a safe integer. */
+const REPOSITORY_ID = /^[1-9]\d{0,15}$/;
 const OTHER_REF = /^[a-z0-9][a-z0-9._/-]{0,298}$/;
 
 /** One external source. `externalRef` is already trimmed and lower-case, as stored in sources.external_ref. */
 export interface SourceIdentity {
   readonly provider: SourceProvider;
   readonly externalRef: string;
+  /** Pinned GitHub repository id, when the entry carries one (`#<id>`). Absent otherwise. */
+  readonly repositoryId?: number;
 }
 
 export interface SourceApprovalPolicy {
@@ -63,7 +70,7 @@ export class Reauthorization {
 }
 
 function invalid(): ConfigError {
-  return new ConfigError(`${NAME} must be a comma-separated list of <project-key>=<provider>:<owner>/<repo>`);
+  return new ConfigError(`${NAME} must be a comma-separated list of <project-key>=<provider>:<owner>/<repo>[#<repository id>]`);
 }
 
 function parseEntry(entry: string): [string, SourceIdentity] {
@@ -74,25 +81,62 @@ function parseEntry(entry: string): [string, SourceIdentity] {
   const colon = target.indexOf(':');
   if (!PROJECT_KEY.test(key) || colon < 0) throw invalid();
   const provider = target.slice(0, colon).trim();
-  const externalRef = target.slice(colon + 1).trim().toLowerCase();
+  let externalRef = target.slice(colon + 1).trim().toLowerCase();
   if (!(SOURCE_PROVIDERS as readonly string[]).includes(provider)) throw invalid();
+  let repositoryId: number | undefined;
+  if (externalRef.includes('#')) {
+    // Only a GitHub entry carries an id, and only as one `#<positive integer>` suffix.
+    const hash = externalRef.indexOf('#');
+    const idText = externalRef.slice(hash + 1);
+    if (provider !== 'github' || !REPOSITORY_ID.test(idText) || !Number.isSafeInteger(Number(idText))) throw invalid();
+    repositoryId = Number(idText);
+    externalRef = externalRef.slice(0, hash);
+  }
   if (!(provider === 'github' ? REPO_REF : OTHER_REF).test(externalRef)) throw invalid();
-  return [key, { provider: provider as SourceProvider, externalRef }];
+  return [key, { provider: provider as SourceProvider, externalRef, ...(repositoryId === undefined ? {} : { repositoryId }) }];
 }
 
-function fromEntries(entries: readonly [string, SourceIdentity][]): SourceApprovalPolicy {
+/** One set of identities per project key. The same identity listed twice merges: two different ids contradict (ConfigError), an id fills a missing one. */
+function mergeByKey(entries: readonly [string, SourceIdentity][]): Map<string, SourceIdentity[]> {
   const byKey = new Map<string, SourceIdentity[]>();
   for (const [key, id] of entries) {
     const set = byKey.get(key) ?? [];
-    if (!set.some((s) => s.provider === id.provider && s.externalRef === id.externalRef)) set.push(id);
+    const at = set.findIndex((s) => s.provider === id.provider && s.externalRef === id.externalRef);
+    if (at < 0) set.push(id);
+    else {
+      const known = set[at]!;
+      // The same identity listed twice: two different ids contradict each other; an id fills in a missing one.
+      if (known.repositoryId !== undefined && id.repositoryId !== undefined && known.repositoryId !== id.repositoryId) throw invalid();
+      if (known.repositoryId === undefined && id.repositoryId !== undefined) set[at] = id;
+    }
     byKey.set(key, set);
   }
+  return byKey;
+}
+
+function fromEntries(entries: readonly [string, SourceIdentity][]): SourceApprovalPolicy {
+  const byKey = mergeByKey(entries);
   return { approvedIdentities: (projectKey) => byKey.get(projectKey) ?? [] };
 }
 
-/** Fail-closed: unset or blank approves nothing; any malformed entry throws. */
-export function configuredApprovalPolicy(env: NodeJS.ProcessEnv): SourceApprovalPolicy {
+/** One configured entry: the project key it is approved for and the identity. */
+export interface ApprovedEntry {
+  readonly projectKey: string;
+  readonly identity: SourceIdentity;
+}
+
+function parsedEntries(env: Readonly<Record<string, string | undefined>>): [string, SourceIdentity][] {
   const raw = (env[NAME] ?? '').trim();
-  if (raw === '') return fromEntries([]);
-  return fromEntries(raw.split(',').map((e) => parseEntry(e.trim())));
+  return raw === '' ? [] : raw.split(',').map((e) => parseEntry(e.trim()));
+}
+
+/** Every configured entry in order (the operator connect command walks them); malformed throws as in the policy. */
+export function approvedSourceEntries(env: Readonly<Record<string, string | undefined>>): ApprovedEntry[] {
+  // Merged exactly as the policy merges them, so a duplicate can never hide a pin or contradict one.
+  return [...mergeByKey(parsedEntries(env))].flatMap(([projectKey, ids]) => ids.map((identity) => ({ projectKey, identity })));
+}
+
+/** Fail-closed: unset or blank approves nothing; any malformed entry throws. */
+export function configuredApprovalPolicy(env: Readonly<Record<string, string | undefined>>): SourceApprovalPolicy {
+  return fromEntries(parsedEntries(env));
 }

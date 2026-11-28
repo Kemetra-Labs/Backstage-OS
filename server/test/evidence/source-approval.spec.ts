@@ -53,6 +53,38 @@ describe('configuredApprovalPolicy', () => {
     expect(() => policy(value)).toThrow(ConfigError);
   });
 
+  it('parses a pinned repository id (github:owner/repo#id) and keeps it on the identity', () => {
+    expect(policy('retail-tower=github:Kemetra-Labs/Backstage-OS#1234567').approvedIdentities('retail-tower')).toEqual([
+      { provider: 'github', externalRef: 'kemetra-labs/backstage-os', repositoryId: 1234567 },
+    ]);
+  });
+
+  it('leaves repositoryId absent when no id is given (backwards compatible)', () => {
+    const [id] = policy('p=github:a/b').approvedIdentities('p');
+    expect(id).toEqual({ provider: 'github', externalRef: 'a/b' });
+    expect('repositoryId' in id!).toBe(false);
+  });
+
+  it('merges one identity listed with and without an id, and refuses two different ids', () => {
+    expect(policy('p=github:a/b,p=github:A/B#9').approvedIdentities('p')).toEqual([{ provider: 'github', externalRef: 'a/b', repositoryId: 9 }]);
+    expect(policy('p=github:a/b#9,p=github:a/b').approvedIdentities('p')).toEqual([{ provider: 'github', externalRef: 'a/b', repositoryId: 9 }]);
+    expect(() => policy('p=github:a/b#9,p=github:a/b#10')).toThrow(ConfigError);
+  });
+
+  it.each([
+    ['an empty id', 'p=github:a/b#'],
+    ['a zero id', 'p=github:a/b#0'],
+    ['a negative id', 'p=github:a/b#-5'],
+    ['a decimal id', 'p=github:a/b#1.5'],
+    ['a non-numeric id', 'p=github:a/b#abc'],
+    ['a leading-zero id', 'p=github:a/b#007'],
+    ['an unsafe integer id', 'p=github:a/b#99999999999999999999'],
+    ['two ids', 'p=github:a/b#1#2'],
+    ['an id on a jira entry', 'p=jira:BACK#5'],
+  ])('throws for %s', (_label, value) => {
+    expect(() => policy(value)).toThrow(ConfigError);
+  });
+
   it('names the variable in the error and never echoes the value', () => {
     let message = '';
     try {

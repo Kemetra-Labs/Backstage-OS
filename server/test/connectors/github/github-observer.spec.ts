@@ -1,17 +1,17 @@
 // GitHub observation mapper (BACK-52 mock slice): canned responses only, no network.
 import { randomUUID } from 'node:crypto';
 import { clip, observeRepository, REPO_REF } from '../../../src/connectors/github/github.observer';
-import { GitHubTransportFailure, type GitHubResponse } from '../../../src/connectors/github/github.transport';
+import { GitHubTokenError, GitHubTransportFailure, type GitHubResponse } from '../../../src/connectors/github/github.transport';
 import type { ObservationInput } from '../../../src/evidence/evidence.repository';
-import { happyScript, OWNER_REPO, ok, repoBody, ScriptedTransport, type Script } from './github.fixture';
+import { happyScript, OWNER_REPO, REPO_ID, ok, repoBody, ScriptedTransport, type Script } from './github.fixture';
 
 const sourceId = randomUUID();
 const now = new Date('2026-11-25T12:00:00Z');
-const source = { sourceId, externalRef: OWNER_REPO };
+const source = { sourceId, externalRef: OWNER_REPO, repositoryId: REPO_ID };
 
 const run = (script: Script, externalRef = OWNER_REPO) => {
   const transport = new ScriptedTransport(script);
-  return { transport, result: observeRepository(transport, { sourceId, externalRef }, now) };
+  return { transport, result: observeRepository(transport, { sourceId, externalRef, repositoryId: REPO_ID }, now) };
 };
 
 const statuses = (items: readonly ObservationInput[]) => items.filter((i) => i.payload['kind'] === 'source_status');
@@ -167,6 +167,41 @@ describe('failures are recorded, never reported as ok', () => {
     const { transport, result } = run(script);
     const items = await result;
     expect(items).toEqual([expect.objectContaining({ state: 'error', payload: { kind: 'source_status', endpoint: 'repository', reason: 'ref_mismatch' } })]);
+    expect(transport.calls).toHaveLength(1);
+  });
+
+  it.each([
+    ['a different id (the name now belongs to another repository)', { ...repoBody, id: REPO_ID + 1 }],
+    ['no id', { ...repoBody, id: undefined }],
+    ['a string id', { ...repoBody, id: String(REPO_ID) }],
+  ])('refuses %s: error id_mismatch, nothing ok, no further calls', async (_label, body) => {
+    const script = happyScript();
+    script[`/repos/${OWNER_REPO}`] = ok(body);
+    const { transport, result } = run(script);
+    const items = await result;
+    expect(items).toEqual([expect.objectContaining({ state: 'error', payload: { kind: 'source_status', endpoint: 'repository', reason: 'id_mismatch' } })]);
+    expect(items.some((i) => i.state === 'ok')).toBe(false);
+    expect(transport.calls).toHaveLength(1);
+  });
+
+  it('a renamed repository with the same id is still ref_mismatch, checked before the id', async () => {
+    const script = happyScript();
+    script[`/repos/${OWNER_REPO}`] = ok({ ...repoBody, full_name: 'Kemetra-Labs/Renamed', id: REPO_ID + 1 });
+    const items = await run(script).result;
+    expect(items[0]!.payload).toMatchObject({ reason: 'ref_mismatch' });
+  });
+
+  it('stores the pinned repository id in the repository payload', async () => {
+    const items = await run(happyScript()).result;
+    expect(items[0]!.payload).toMatchObject({ kind: 'repository', repositoryId: REPO_ID });
+  });
+
+  it.each([
+    [new GitHubTokenError('denied'), 'denied', 'denied'],
+    [new GitHubTokenError('unavailable'), 'unknown', 'unavailable'],
+  ])('a token failure (%s) becomes %s (%s), never ok', async (err, state, reason) => {
+    const { items, transport } = await failRepo(err);
+    expect(items).toEqual([expect.objectContaining({ state, payload: { kind: 'source_status', endpoint: 'repository', reason } })]);
     expect(transport.calls).toHaveLength(1);
   });
 

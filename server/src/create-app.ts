@@ -15,6 +15,10 @@ import { configuredApprovalPolicy } from "./evidence/source-approval";
 import { DemoModule } from "./demo/demo.module";
 import { allowedHosts } from "./config/allowed-hosts";
 import { allowedOrigins } from "./config/allowed-origins";
+import { loadGithubAppConfig, loadRefreshMinutes } from "./config/github-app";
+import type { FetchFn } from "./connectors/github/github.fetch-transport";
+import { GithubRefreshScheduler, GithubSchedulerModule } from "./connectors/github/github.scheduler";
+import { githubTransportFactory, globalFetch, ownerRefreshActor } from "./connectors/github/github.wiring";
 import { hostCheck } from "./http/host-check";
 import { trustProxy } from "./config/trust-proxy";
 import { ReadinessModule } from "./health/readiness.module";
@@ -39,6 +43,12 @@ export interface CreateAppOptions {
   readonly database?: KawalysDatabase;
   /** Clock of the evidence write limiter (BACK-172 G2). Tests inject one; the default is Date.now. */
   readonly writeClock?: () => number;
+  /**
+   * Test seams for the GitHub refresh scheduler (BACK-52). Production passes nothing: the global fetch and the
+   * KAWALYS_GITHUB_REFRESH_MINUTES interval are used. A test injects a fake fetch (nothing ever reaches GitHub)
+   * and a short interval.
+   */
+  readonly github?: { readonly fetch?: FetchFn; readonly intervalMs?: number; readonly now?: () => Date; readonly onScheduler?: (scheduler: GithubRefreshScheduler) => void };
 }
 
 export async function createApp(
@@ -48,7 +58,14 @@ export async function createApp(
 ): Promise<INestApplication> {
   // Fail-closed and checked first, with or without a database: a malformed KAWALYS_APPROVED_SOURCES stops startup (BACK-131).
   const approval = configuredApprovalPolicy(process.env);
+  // Same rule for the GitHub App settings and the refresh interval (BACK-52): malformed stops startup, absent means off.
+  const githubApp = loadGithubAppConfig(process.env);
+  const refreshMinutes = loadRefreshMinutes(process.env);
   const db = options.database;
+  // An interval without a database or complete App settings does nothing: say so once, with no values.
+  if (refreshMinutes !== null && (!db || githubApp === null)) {
+    console.error("kawalys-bff: KAWALYS_GITHUB_REFRESH_MINUTES is set but the GitHub scheduler is off (database or GitHub App configuration is missing)");
+  }
   const workspaces = db ? new WorkspaceResolver(db.appPool, db.authPool) : undefined;
   const persistence: AuthPersistence | undefined =
     db && workspaces
@@ -57,6 +74,7 @@ export async function createApp(
   // Throws (AuthConfigError) before anything listens if the auth configuration is malformed, or incomplete in production.
   const auth = buildAuth(process.env, authOverrides, persistence);
 
+  let githubScheduler: GithubRefreshScheduler | undefined;
   const imports: (Type<unknown> | DynamicModule)[] = [AppModule, AuthModule.register(auth), ReadinessModule.register(db)];
   // Evidence routes exist only with the database; the global AuthGuard protects them like every route.
   if (db && workspaces) {
@@ -66,6 +84,19 @@ export async function createApp(
     imports.push(PortfolioModule.register(new PortfolioRepository(db.appPool), workspaces));
     // COG-07 live search (owner decision 2026-11-27): read-only, rate limited per user, time-bounded per read.
     imports.push(CognitionModule.register(new MemoryRepository(db.appPool, { budgetMs: COGNITION_READ_BUDGET_MS }), workspaces));
+    // The refresh scheduler exists only with the database, the App settings AND an interval (BACK-52 S); no route.
+    if (githubApp !== null && refreshMinutes !== null) {
+      githubScheduler = new GithubRefreshScheduler({
+        repo: evidence,
+        policy: approval,
+        owner: () => ownerRefreshActor(db.authPool, workspaces),
+        makeTransport: githubTransportFactory(githubApp, options.github?.fetch ?? globalFetch, options.github?.now),
+        intervalMs: options.github?.intervalMs ?? refreshMinutes * 60_000,
+        ...(options.github?.now ? { now: options.github.now } : {}),
+      });
+      imports.push(GithubSchedulerModule.register(githubScheduler));
+      options.github?.onScheduler?.(githubScheduler);
+    }
   } else {
     // The fixture demo route (it reads the display persona header) exists only without a database (audit L3).
     imports.push(DemoModule);
@@ -98,5 +129,7 @@ export async function createApp(
   app.useBodyParser("json", { limit: "32kb" });
   app.useGlobalFilters(new SafeErrorFilter());
   await app.init();
+  // Started last, after the app is fully initialised; stopped by its lifecycle hooks on app.close().
+  githubScheduler?.start();
   return app;
 }
