@@ -297,4 +297,4 @@ Independence note: this reviewer was a Claude agent without the author's conclus
 | COG-07 shadow view | Delivered: fixture view (#155) and, by the owner's choice, a live search read (#158, security review GO; #159). Live reasoning waits for a real task-plan source. |
 | COG-08 acceptance | This matrix; closed by this sign-off. |
 
-**Still tracked:** memory read work budget, second-project DB test, SQL timing, validator top-level key enumeration, and the COG-05 read/write-path requirements in `cog-05-decisions.md`.
+**Still tracked:** memory read work budget, second-project DB test, SQL timing, validator top-level key enumeration, and, for activation only, the COG-05 write path itself (owner read from the workspace row, lesson citation rows); the other COG-05 read/write-path requirements are enforced in the pure core since 2026-11-28 (`cog-05-decisions.md`).

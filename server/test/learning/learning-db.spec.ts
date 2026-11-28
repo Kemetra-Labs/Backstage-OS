@@ -6,6 +6,8 @@ import type pg from 'pg';
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { sqlState } from '../db/pg-container';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
+import { approve, fromStored, MIN_EPISODES, readLesson, rollback, type LessonRow, type StoredLesson } from '../../src/learning/learning.core';
+import { basisOf, cands, failures, rowsOrThrow, visibleAll } from './learning.fixture';
 
 let db: KawalysDb | undefined;
 const userA = randomUUID();
@@ -174,5 +176,64 @@ describe('lesson version chain shape', () => {
   it('content must be a JSON object and the hash a sha-256 hex digest', async () => {
     expect(await errOf(insert(1, null, key(4), { content: '[]' }))).toBe('23514');
     expect(await errOf(insert(1, null, key(5), { hash: 'not-a-hash' }))).toBe('23514');
+  });
+});
+
+// Read and write path requirements (cog-05-decisions.md): the chain is verified in src, so a chain the
+// pure core wrote must read back from the database and verify, and a tampered stored row must not.
+describe('a stored lesson chain re-verifies in src', () => {
+  const eps = failures(MIN_EPISODES).map((e) => ({ ...e, applicabilityKey: 'stored|reasoning-v3' }));
+  const visible = visibleAll(eps);
+
+  const write = (rows: readonly LessonRow[], content = (r: LessonRow) => JSON.stringify(r.content)) =>
+    inWs(wsA, async (c) => {
+      for (const r of rows) {
+        await c.query(
+          `INSERT INTO learning_lessons (workspace_id, project_id, applicability_key, version, previous_hash, kind, reviewer_user_id, content, hash)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)`,
+          [wsA, seeded[wsA]!.project, r.content.applicabilityKey, r.version, r.previous, r.kind, r.reviewer, content(r), r.hash],
+        );
+      }
+    });
+  const readBack = (key: string) =>
+    inWs(wsA, async (c) =>
+      (
+        await c.query(
+          `SELECT version, previous_hash, kind, reviewer_user_id, applicability_key, content, hash
+           FROM learning_lessons WHERE applicability_key = $1 ORDER BY version DESC`,
+          [key],
+        )
+      ).rows as StoredLesson[],
+    );
+
+  it('approve, approve and rollback, written as kawalys_app, read back as the same verified lesson', async () => {
+    const owner = { reviewer: userA, owner: userA };
+    const cand = cands(eps)[0]!;
+    const v1 = rowsOrThrow(approve([], cand, { ...owner, at: '2026-11-27T12:00:00Z', expiresAt: '2027-01-01T00:00:00Z' }, basisOf(eps)));
+    const v2 = rowsOrThrow(approve(v1, cand, { ...owner, at: '2026-11-28T12:00:00Z', expiresAt: '2027-02-01T00:00:00Z' }, basisOf(eps)));
+    const v3 = rowsOrThrow(rollback(v2, { ...owner, toVersion: 1 }));
+    await write(v3);
+    const rows = fromStored(await readBack('stored|reasoning-v3'));
+    expect(rows).toEqual(v3);
+    expect(readLesson(rows!, visible, '2026-12-01T00:00:00Z')).toMatchObject({ state: 'approved', version: 3, outcome: 'failure' });
+  });
+
+  it('a stored row whose content no longer matches its hash reads as an invalid chain', async () => {
+    const key = 'tampered|reasoning-v3';
+    const tampered = eps.map((e) => ({ ...e, applicabilityKey: key }));
+    const v1 = rowsOrThrow(approve([], cands(tampered)[0]!, { reviewer: userA, owner: userA, at: '2026-11-27T12:00:00Z', expiresAt: '2027-01-01T00:00:00Z' }, basisOf(tampered)));
+    await write(v1, (r) => JSON.stringify({ ...r.content, outcome: 'success' }));
+    const rows = fromStored(await readBack(key));
+    expect(readLesson(rows!, visible, '2026-12-01T00:00:00Z')).toEqual({ state: 'invalid-chain' });
+  });
+});
+
+describe('owner-only review (O5) rests on the owner-only membership role', () => {
+  // A lesson reviewer must be a member (foreign key), and today every member is the owner. If the
+  // membership role is ever widened, this fails, and the write path must then check the reviewer
+  // against workspaces.owner_user_id itself before COG-05 can be activated.
+  it('a membership other than owner is refused', async () => {
+    const attempt = inWs(wsA, (c) => c.query(`INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, 'member')`, [wsA, userB]));
+    expect(await errOf(attempt)).toBe('23514');
   });
 });
