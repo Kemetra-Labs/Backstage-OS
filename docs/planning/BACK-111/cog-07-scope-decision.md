@@ -33,7 +33,7 @@ The owner chose to build a live read for the shadow view. The design was checked
 - **Route:** `GET /cognition/projects/:projectId/search?q=`. Database mode only (registered like Portfolio), behind the global session guard and `WorkspaceGuard` with the existing `evidence.read` capability (no new capability or auth change). The persona header is never read.
 - **Nondisclosure:** a malformed id, a project that does not exist, one in another workspace, and one whose grants are revoked or never existed all answer the same 404 body (no visible granted source = not found).
 - **Response:** a trimmed DTO: query, outcome, total, truncated, and per hit title, kind, source reference, evidence status and match tier. No fingerprint, evidence ids or projection internals.
-- **Bounded:** the query is bounded by retrieval (500 characters, 32 tokens; invalid gives 400). Reads are rate-limited per user (fixed window, reusing the sign-in limiter design), so the memory read is no longer an unbounded per-request cost; the memory read work budget stays tracked.
+- **Bounded:** the query is bounded by retrieval (500 characters, 32 tokens; invalid gives 400). Reads are rate-limited per user (fixed window, reusing the sign-in limiter design), so the memory read is no longer an unbounded per-request cost. Since 2026-11-28 each read also has a 2 s work budget (`COGNITION_READ_BUDGET_MS`); past it the route answers the generic error body (COG-08 matrix section 21).
 - **Guards:** `src/cognition` becomes the one allowed consumer of the memory and retrieval modules; its own guard pins its imports and forbids writes. Reasoning stays unwired.
 - **Process:** two PRs (server route, then app wiring). The server PR gets an independent read-only security review before it merges.
 

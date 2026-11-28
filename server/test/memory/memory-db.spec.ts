@@ -2,12 +2,13 @@
 // statement equals the S1 reference (collapse + projector), one statement per read, grants and
 // revocation, workspace isolation, hidden-record noninterference, knownAt, the documented late-commit
 // limit and idempotent ingest. Synthetic data only. Needs Docker (testcontainers), like every *-db spec.
-import type pg from 'pg';
+import pg from 'pg';
 import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import type { ObservationInput } from '../../src/evidence/evidence.repository';
 import { canonicalCollapsed, collapse } from '../../src/memory/memory.collapse';
 import { project } from '../../src/memory/memory.projector';
-import { MemoryRepository, type MemoryReadInput } from '../../src/memory/memory.repository';
+import { MemoryReadBudgetExceeded, MemoryRepository, type MemoryReadInput } from '../../src/memory/memory.repository';
+import { ITEM_KIND_LIST, MEMORY_READ_SQL } from '../../src/memory/memory.sql';
 import type { MemoryRequest, MemoryRow } from '../../src/memory/memory.types';
 import { freshIds, reconnect, startStore, stopStore, type StoreHarness } from '../db/store-harness';
 import { at, CONF, confPage, GH, ghIssue, JIRA, jiraIssue, listPage, pr, repo, REPO, status } from './memory.fixture';
@@ -152,7 +153,9 @@ describe('S2 statement equals the S1 reference (differential)', () => {
 });
 
 describe('one statement, one snapshot (D3)', () => {
-  it('a read runs exactly one statement inside its workspace transaction', async () => {
+  // The second SELECT is set_config('statement_timeout', ..., true) for the work budget: it reads no table,
+  // so the data still comes from one statement and one snapshot.
+  it('a read runs exactly one data statement inside its workspace transaction', async () => {
     const seen: string[] = [];
     const counting = {
       connect: async () => {
@@ -173,8 +176,8 @@ describe('one statement, one snapshot (D3)', () => {
         return client;
       },
     } as unknown as pg.Pool;
-    await new MemoryRepository(counting).read(query());
-    expect(seen).toEqual(['BEGIN', 'SELECT', 'WITH', 'COMMIT', 'RESET']);
+    await new MemoryRepository(counting, { budgetMs: 30_000 }).read(query());
+    expect(seen).toEqual(['BEGIN', 'SELECT', 'SELECT', 'WITH', 'COMMIT', 'RESET']);
   });
 });
 
@@ -251,5 +254,114 @@ describe('ingest (D2)', () => {
     const after = await memory.read(q);
     const strip = (p: typeof before) => p.items.map((i) => [i.sourceRef, i.kind, i.status, i.reason, i.current?.contentKey ?? null, i.history.length]);
     expect(strip(after)).toEqual(strip(before));
+  });
+});
+
+// Work budget (DEC-1, tracked since the COG-08 review): the S2 statement processes all eligible history
+// before the history cap applies, so a read on a request path is bounded in time instead. Over budget,
+// the read is refused and rolled back: never a partial projection.
+describe('work budget', () => {
+  it('a read that cannot finish within its budget is refused, never cut short', async () => {
+    const budgeted = new MemoryRepository(h.db.app, { budgetMs: 200 });
+    const locker = await h.db.admin.connect();
+    try {
+      await locker.query('BEGIN');
+      // The lock makes the read wait past its budget deterministically: statement_timeout counts lock waits.
+      await locker.query('LOCK TABLE kawalys.evidence IN ACCESS EXCLUSIVE MODE');
+      await expect(budgeted.read(query())).rejects.toBeInstanceOf(MemoryReadBudgetExceeded);
+      await expect(budgeted.readVisible(query({ userId: ids.stranger }))).rejects.toBeInstanceOf(MemoryReadBudgetExceeded);
+    } finally {
+      await locker.query('ROLLBACK');
+      locker.release();
+    }
+  }, 15_000);
+
+  it('a read without a budget that is cancelled keeps its own error, not a budget one', async () => {
+    const locker = await h.db.admin.connect();
+    try {
+      await locker.query('BEGIN');
+      await locker.query('LOCK TABLE kawalys.evidence IN ACCESS EXCLUSIVE MODE');
+      const pending = memory.read(query()).then(() => null, (e: unknown) => e);
+      let cancelled = false;
+      for (let i = 0; i < 100 && !cancelled; i++) {
+        const { rows } = await h.db.admin.query(`SELECT pid FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE '%clock AS (SELECT now()%'`);
+        if (rows.length) cancelled = (await h.db.admin.query('SELECT pg_cancel_backend($1) AS ok', [rows[0].pid])).rows[0].ok === true;
+        else await new Promise((r) => setTimeout(r, 50));
+      }
+      expect(cancelled).toBe(true);
+      const err = await pending;
+      expect(err).not.toBeInstanceOf(MemoryReadBudgetExceeded);
+      expect((err as { code?: string }).code).toBe('57014');
+    } finally {
+      await locker.query('ROLLBACK');
+      locker.release();
+    }
+  }, 15_000);
+
+  it('the budget ends with the read: the pooled connection keeps no timeout', async () => {
+    // One connection, so the check runs on the very connection the read used. A generous budget: a leak
+    // would still show as '10s' instead of '0', and a slow runner cannot time the read out.
+    const single = new pg.Pool({ ...h.db.app.options, max: 1 });
+    try {
+      await new MemoryRepository(single, { budgetMs: 10_000 }).read(query());
+      const { rows } = await single.query("SELECT current_setting('statement_timeout') AS t");
+      expect(rows[0].t).toBe('0');
+    } finally {
+      await single.end();
+    }
+  });
+
+  it('within budget the read is the same as an unbudgeted one', async () => {
+    const q = query({ knownAt: new Date(at('12:00')) });
+    expect(await new MemoryRepository(h.db.app, { budgetMs: 30_000 }).read(q)).toEqual(await memory.read(q));
+  });
+
+  // Independent review: a hidden project with a long history must not reach the budget while a missing
+  // one answers at once, or the budget becomes an existence oracle. Without a grant, the statement never
+  // executes a scan of evidence, whatever the project holds (the evidence of this project is not visible
+  // to the stranger).
+  it('a reader with no grant on the project never scans evidence', async () => {
+    const plan = await runWithWorkspaceContext(h.db.app, ids.ws, async (c) => {
+      const res = await c.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${MEMORY_READ_SQL}`, [ids.stranger, h.projectId, null, ITEM_KIND_LIST, [], []]);
+      return (res.rows[0] as Record<string, unknown>)['QUERY PLAN'] as [{ Plan: PlanNode }];
+    });
+    const scans: PlanNode[] = [];
+    const walk = (n: PlanNode) => {
+      if (n['Relation Name'] === 'evidence') scans.push(n);
+      for (const child of n.Plans ?? []) walk(child);
+    };
+    walk(plan[0].Plan);
+    expect(scans.length).toBeGreaterThan(0);
+    expect(scans.map((n) => n['Actual Loops'])).toEqual(scans.map(() => 0));
+  });
+
+  it('refuses a budget that is not a positive whole number of milliseconds', () => {
+    for (const budgetMs of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => new MemoryRepository(h.db.app, { budgetMs })).toThrow(RangeError);
+    }
+  });
+});
+
+interface PlanNode {
+  readonly 'Relation Name'?: string;
+  readonly 'Actual Loops'?: number;
+  readonly Plans?: readonly PlanNode[];
+}
+
+// A second project the reader can also read (tracked since the COG-08 review): evidence added there
+// changes nothing in this project's projection, and the control read shows the new evidence did land.
+describe('a second project the reader also sees (D4)', () => {
+  it('evidence added to another project the reader can read changes nothing here', async () => {
+    const q = query({ knownAt: new Date(Date.now() + 86_400_000) });
+    const projectB = await h.repo.createProject(ids.ws, ids.owner, { key: 'second', name: 'Second' });
+    const sourceB = await h.repo.connectSource(ids.ws, ids.owner, { projectId: projectB, provider: 'github', externalRef: 'kemetra-labs/second-repo' });
+    const before = await memory.read(q);
+    const rows = [repo({ archived: false }, { id: 's1', observedAt: at('11:59') }), status(GH, REPO, 'error', 'timeout', { id: 's2', observedAt: at('11:59') })];
+    await h.repo.ingest(ids.ws, rows.map((r) => ({ ...toInput(r), sourceId: sourceB, sourceRef: 'github:kemetra-labs/second-repo' })));
+    const after = await memory.read(q);
+    expect(after.items).toEqual(before.items);
+    expect(after.fingerprint).toBe(before.fingerprint);
+    const other = await memory.read({ ...q, projectId: projectB });
+    expect(other.items.some((i) => i.sourceId === sourceB)).toBe(true);
   });
 });

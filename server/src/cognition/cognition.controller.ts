@@ -14,6 +14,12 @@ import { search } from '../retrieval/retrieval.search';
 export const COGNITION_MEMORY = Symbol('KAWALYS_COGNITION_MEMORY');
 export const COGNITION_LIMITER = Symbol('KAWALYS_COGNITION_LIMITER');
 export const COGNITION_READS_PER_MINUTE = 30;
+/**
+ * Work budget of one live memory read (DEC-1). Past it the read is cancelled and rolled back, and the route
+ * answers the generic error body, never a partial result. 2 s is a conservative, reversible default: DEC-1's
+ * 500 ms interactive bar needs the prepared cache (DEC-2 option A); the measured S2 read is 1.4 s at 7 days.
+ */
+export const COGNITION_READ_BUDGET_MS = 2_000;
 const TOO_MANY_REQUESTS = 429;
 
 export interface CognitionHit {

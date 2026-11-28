@@ -5,7 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { observeRepository } from '../../src/connectors/github/github.observer';
-import { COGNITION_READS_PER_MINUTE } from '../../src/cognition/cognition.controller';
+import { COGNITION_READ_BUDGET_MS, COGNITION_READS_PER_MINUTE } from '../../src/cognition/cognition.controller';
 import { happyScript, OWNER_REPO, ScriptedTransport } from '../connectors/github/github.fixture';
 import { expectNotFound, expectSessionRequired, startOwnerApp, type OwnerApp } from '../db/owner-app';
 
@@ -55,6 +55,32 @@ describe('access', () => {
     }
     expect(new Set(bodies).size).toBe(1);
   });
+});
+
+describe('work budget (DEC-1)', () => {
+  it(`a read past its ${COGNITION_READ_BUDGET_MS} ms budget answers the generic error, the same for a visible and a hidden project`, async () => {
+    const locker = await t!.db.admin.connect();
+    try {
+      await locker.query('BEGIN');
+      // Holds the read past its budget deterministically: statement_timeout counts lock waits.
+      await locker.query('LOCK TABLE kawalys.evidence IN ACCESS EXCLUSIVE MODE');
+      const started = Date.now();
+      const visible = await search(projectId, 'portfolio');
+      // The failure is the budget firing, not some other error: the read waited the whole budget.
+      expect(Date.now() - started).toBeGreaterThanOrEqual(COGNITION_READ_BUDGET_MS);
+      const hidden = await search(otherWorkspaceProject, 'portfolio');
+      for (const res of [visible, hidden]) {
+        expect(res.status).toBe(500);
+        expect(res.body.error.code).toBe('internal_error');
+      }
+      // No existence oracle: a hidden project waits and fails the same way.
+      expect(stable(hidden.body)).toBe(stable(visible.body));
+    } finally {
+      await locker.query('ROLLBACK');
+      locker.release();
+    }
+    expect((await search(projectId, 'portfolio route')).status).toBe(200);
+  }, 30_000);
 });
 
 describe('search', () => {
