@@ -43,6 +43,24 @@ The requirements above are now enforced in `server/src/learning/learning.core.ts
   - Malformed inputs refuse instead of throwing.
   - More stored-row negatives.
 - **Before activation (tracked):**
-  - The chain hash is unkeyed, so it gives tamper-evidence, not authentication. Anyone who can insert a whole self-consistent chain can forge one. Activation needs either a keyed MAC for the chain or a `readLesson` that re-derives the content from the current basis. The hash also does not cover workspace and project; the scope check in `fromStored` covers that today.
+  - The chain hash is unkeyed, so it gives tamper-evidence, not authentication. Anyone who can insert a whole self-consistent chain can forge one. **Closed 2026-11-28** by re-derivation at read (below), with no keyed MAC needed. The hash also does not cover workspace and project; the scope check in `fromStored` covers that.
   - The write path must supply `at` from the server clock and the owner from `workspaces.owner_user_id`, write the lesson citation rows, and handle the table limits (content up to 64 KiB, key 1 to 200 characters, reviewer a member uuid) as refusals.
 - Tests: `test/learning/learning.hardening.spec.ts` (pure) and the new cases in `learning-db.spec.ts`. No schema change.
+
+## Built: re-derivation at read (2026-11-28)
+
+`readLesson(rows, basis, now)` now reads a lesson against the current basis: the episodes, the visible evidence and the HumanDecisions. A lesson is shown as an advisory note only while the current episodes still support exactly what it says. That means:
+
+- every cited episode still counts (visible, observation, HumanDecision), and there are at least N of them;
+- the evidence is exactly the cited episodes' citations;
+- the key's current candidate has the same outcome and is not contested.
+
+Otherwise the lesson reads as `unsupported`. A cited subset of the currently agreeing episodes is accepted, so more agreeing episodes since the approval do not demote a lesson. The content must be true of the current episodes, but it need not be exactly what `approve()` would produce today.
+
+`readLesson` also takes the workspace owner, and refuses (`invalid-chain`) a chain that `approve()` and `rollback()` could not have written:
+- a row reviewed by anyone other than the owner;
+- an approval window that is not canonical UTC ISO, that starts after the read time or before the previous approval, or that ends at or before its start or more than 180 days after it;
+- a first row that is not an approval;
+- a rollback row whose content matches no earlier version.
+
+The candidate is derived over the whole basis, as `approve()` does, so an episode id that conflicts under another key does not count. The reviewer check is about shape only: the hash is unkeyed, so it refuses a chain that names another reviewer but cannot prove the owner wrote it. What makes the read safe is that the content must be true of the current episodes and their HumanDecisions. The owner must come from `workspaces.owner_user_id`. Episodes are only as trustworthy as their citations: an episode must cite a visible HumanDecision, and HumanDecisions are written only through the decision route. Tests: `test/learning/learning.hardening.spec.ts`.

@@ -74,31 +74,31 @@ describe('reading a lesson (O4, O6)', () => {
   const rows = rowsOrThrow(approve([], cands(eps)[0]!, grant('2027-01-01T00:00:00Z', '2026-11-27T12:00:00Z'), basisOf(eps)));
 
   it('an approved, unexpired lesson with all evidence visible is an advisory note', () => {
-    expect(readLesson(rows, visibleAll(eps), '2026-12-01T00:00:00Z')).toMatchObject({ state: 'approved', version: 1, effect: 'advisory-note' });
+    expect(readLesson(rows, basisOf(eps), '2026-12-01T00:00:00Z', OWNER)).toMatchObject({ state: 'approved', version: 1, effect: 'advisory-note' });
   });
 
   it('is suspended when any cited evidence is hidden or revoked', () => {
     const v = visibleAll(eps);
     v.delete('d3');
-    expect(readLesson(rows, v, '2026-12-01T00:00:00Z')).toEqual({ state: 'suspended' });
+    expect(readLesson(rows, basisOf(eps, v), '2026-12-01T00:00:00Z', OWNER)).toEqual({ state: 'suspended' });
   });
 
   it('is expired at and after its expiry', () => {
-    expect(readLesson(rows, visibleAll(eps), '2027-01-01T00:00:00Z')).toEqual({ state: 'expired' });
+    expect(readLesson(rows, basisOf(eps), '2027-01-01T00:00:00Z', OWNER)).toEqual({ state: 'expired' });
   });
 
   it('carries no state, gate, recommendation or rule change', () => {
-    const read = readLesson(rows, visibleAll(eps), '2026-12-01T00:00:00Z');
+    const read = readLesson(rows, basisOf(eps), '2026-12-01T00:00:00Z', OWNER);
     expect(Object.keys(read).sort()).toEqual(['applicabilityKey', 'effect', 'episodeIds', 'outcome', 'state', 'version']);
   });
 
   it('with no rows there is no lesson', () => {
-    expect(readLesson([], new Set(), '2026-12-01T00:00:00Z')).toEqual({ state: 'none' });
+    expect(readLesson([], basisOf([]), '2026-12-01T00:00:00Z', OWNER)).toEqual({ state: 'none' });
   });
 
   it('a tampered chain is refused', () => {
     const forged = rows.map((r) => ({ ...r, content: { ...r.content, outcome: 'success' as const } }));
-    expect(readLesson(forged, visibleAll(eps), '2026-12-01T00:00:00Z')).toEqual({ state: 'invalid-chain' });
+    expect(readLesson(forged, basisOf(eps), '2026-12-01T00:00:00Z', OWNER)).toEqual({ state: 'invalid-chain' });
   });
 });
 
@@ -114,7 +114,7 @@ describe('rollback (O3)', () => {
     expect(rows3.slice(0, 2)).toEqual(rows2);
     expect(rows3[2]!.kind).toBe('rolled-back');
     expect(JSON.stringify(rows3[2]!.content)).toBe(JSON.stringify(rows2[0]!.content));
-    expect(readLesson(rows3, visibleAll(eps), '2026-12-01T00:00:00Z')).toMatchObject({ state: 'approved', version: 3 });
+    expect(readLesson(rows3, basisOf(eps), '2026-12-01T00:00:00Z', OWNER)).toMatchObject({ state: 'approved', version: 3 });
   });
 
   it('only the owner can roll back, and only to an existing version', () => {

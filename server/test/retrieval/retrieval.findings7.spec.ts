@@ -20,24 +20,70 @@ describe('work past the edge budget is linear in mentions plus targets', () => {
     const rows = [...many.map((s, i) => ({ ...jira('AA-1', 'target', `t${i}`), sourceId: s.sourceId })), ...Array.from({ length: n }, (_, i) => titled(i + 1, 'see AA-1 here'))];
     return project(rows, request({ sources: [...sources(), ...many] }));
   };
-  const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
-  const timed = (n: number) => {
+  // Counted, not timed: wall-clock ratios failed CI under parallel load (2026-11-28). The counter sees every
+  // array element a built-in method or a for-of loop visits, and every Set insertion and lookup and Map
+  // lookup and write, during relationships(); the edge budget's cut loop inserts into a Set. The bucket
+  // rescan this replaced (f005f59) filtered and mapped the whole target bucket once per mention, so its count
+  // grew with mentions times targets. Blind spot: plain indexed loops that touch no Set or Map are not seen.
+  const METHODS = ['filter', 'map', 'flatMap', 'forEach', 'some', 'every', 'find', 'findIndex', 'includes', 'indexOf', 'reduce'] as const;
+  const counted = (run: () => void): number => {
+    let visits = 0;
+    const proto = Array.prototype as unknown as Record<string | symbol, (...a: unknown[]) => unknown>;
+    const saved = new Map<string | symbol, (...a: unknown[]) => unknown>([...METHODS, Symbol.iterator].map((m) => [m, proto[m]!]));
+    const add = Set.prototype.add;
+    const has = Set.prototype.has;
+    const get = Map.prototype.get;
+    const set = Map.prototype.set;
+    try {
+      for (const m of METHODS) {
+        const original = saved.get(m)!;
+        proto[m] = function (this: unknown[], ...a: unknown[]) {
+          visits += this.length;
+          return original.apply(this, a);
+        };
+      }
+      const iterate = saved.get(Symbol.iterator)!;
+      proto[Symbol.iterator] = function (this: unknown[]) {
+        const it = iterate.call(this) as Iterator<unknown>;
+        return { next: () => (visits++, it.next()), [Symbol.iterator]() { return this; } };
+      };
+      Set.prototype.add = function (this: Set<unknown>, v: unknown) {
+        visits++;
+        return add.call(this, v);
+      };
+      Set.prototype.has = function (this: Set<unknown>, v: unknown) {
+        visits++;
+        return has.call(this, v);
+      };
+      Map.prototype.get = function (this: Map<unknown, unknown>, k: unknown) {
+        visits++;
+        return get.call(this, k);
+      };
+      Map.prototype.set = function (this: Map<unknown, unknown>, k: unknown, v: unknown) {
+        visits++;
+        return set.call(this, k, v);
+      };
+      run();
+    } finally {
+      for (const [m, f] of saved) proto[m] = f;
+      Set.prototype.add = add;
+      Set.prototype.has = has;
+      Map.prototype.get = get;
+      Map.prototype.set = set;
+    }
+    return visits;
+  };
+  const work = (n: number) => {
     const p = world(n);
-    return median(
-      [0, 1, 2].map(() => {
-        const start = performance.now();
-        relationships(p);
-        return performance.now() - start;
-      }),
-    );
+    return counted(() => relationships(p));
   };
 
-  it('four times the mentions and targets costs well under sixteen times as much', () => {
-    timed(200); // warm-up
-    const small = timed(1000);
-    const large = timed(4000);
-    // Measured on the fix: about 3x. The per-mention bucket scan it replaced: about 7x (mentions x targets).
-    expect(large / Math.max(small, 1)).toBeLessThan(5);
+  it('four times the mentions and targets costs well under sixteen times as much work', () => {
+    const small = work(1000);
+    const large = work(4000);
+    // Linear work gives about 4x; the per-mention bucket rescan gave about 16x.
+    expect(small).toBeGreaterThan(0);
+    expect(large / small).toBeLessThan(8);
   });
 });
 
