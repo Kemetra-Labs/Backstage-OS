@@ -91,8 +91,50 @@ describe('malformed or conflicting inputs refuse instead of throwing or dependin
     const bad = { ...eps[0]!, decisionEvidence: 'd0' as unknown as string[] };
     expect(() => cands([bad, ...eps.slice(1)])).not.toThrow();
     const broken = [{ ...chain[0]!, content: null as unknown as LessonRow['content'] }];
-    expect(readLesson(broken, visibleAll(eps), NOW)).toEqual({ state: 'invalid-chain' });
+    expect(readLesson(broken, basisOf(eps), NOW)).toEqual({ state: 'invalid-chain' });
     expect(rollback(broken, { reviewer: OWNER, owner: OWNER, toVersion: 1 })).toEqual({ ok: false, reason: 'invalid-chain' });
+  });
+});
+
+// The chain hash is unkeyed: anyone able to insert a whole self-consistent chain could seal any content.
+// So a lesson is shown only while the current episodes still support exactly what it says.
+describe('a lesson is shown only while the current episodes still support it', () => {
+  const v1 = chain[0]!;
+  const sealedWith = (content: Partial<LessonRow['content']>) => [seal({ version: 1, previous: null, kind: 'approved', reviewer: OWNER, content: { ...v1.content, ...content } })];
+  const state = (rows: readonly LessonRow[], basis = basisOf(eps)) => readLesson(rows, basis, NOW).state;
+
+  it('the approved chain is supported (control)', () => {
+    expect(state(chain)).toBe('approved');
+  });
+
+  it.each([
+    ['invented episodes', { episodeIds: ['x1', 'x2', 'x3', 'x4', 'x5'] }],
+    ['an invented citation added', { evidenceIds: [...v1.content.evidenceIds, 'forged'].sort() }],
+    ['a citation dropped', { evidenceIds: v1.content.evidenceIds.slice(1) }],
+    ['a flipped outcome', { outcome: 'success' as const }],
+    ['fewer than N episodes', { episodeIds: v1.content.episodeIds.slice(1), evidenceIds: v1.content.evidenceIds.filter((id) => !id.endsWith('0')) }],
+    ['a repeated episode', { episodeIds: [v1.content.episodeIds[0]!, ...v1.content.episodeIds] }],
+  ])('a self-consistent chain with %s reads as unsupported', (_name, content) => {
+    // The forged id is made visible, so the support check is what refuses it, not visibility.
+    const basis = basisOf(eps, new Set([...visibleAll(eps), 'forged']));
+    expect(state(sealedWith(content), basis)).toBe('unsupported');
+  });
+
+  it('a cited episode whose decision is no longer a HumanDecision drops the lesson below N', () => {
+    const basis = basisOf(eps);
+    const decisions = new Set(basis.decisions);
+    decisions.delete('d0');
+    expect(state(chain, { ...basis, decisions })).toBe('unsupported');
+  });
+
+  it('contrary episodes that make the key contested make the lesson unsupported', () => {
+    const contrary = [...eps, ep(90, 'success'), ep(91, 'success')];
+    expect(state(chain, basisOf(contrary))).toBe('unsupported');
+  });
+
+  it('more agreeing episodes after approval keep it supported', () => {
+    const more = [...eps, ep(90, 'failure'), ep(91, 'failure')];
+    expect(state(chain, basisOf(more))).toBe('approved');
   });
 });
 
@@ -103,13 +145,12 @@ describe('a lesson with no citation is never shown', () => {
     ['no episodes', { ...base.content, episodeIds: [] }],
   ])('a validly sealed lesson with %s reads as uncited', (_name, content) => {
     const rows = [seal({ version: 1, previous: null, kind: 'approved', reviewer: OWNER, content })];
-    expect(readLesson(rows, visibleAll(eps), NOW)).toEqual({ state: 'uncited' });
+    expect(readLesson(rows, basisOf(eps), NOW)).toEqual({ state: 'uncited' });
   });
 });
 
 describe('the chain is verified in src', () => {
-  const visible = visibleAll(eps);
-  const read = (rows: readonly LessonRow[]) => readLesson(rows, visible, NOW).state;
+  const read = (rows: readonly LessonRow[]) => readLesson(rows, basisOf(eps), NOW).state;
 
   it('the hash covers exactly the stored columns', () => {
     expect(chain.map((r) => seal({ version: r.version, previous: r.previous, kind: r.kind, reviewer: r.reviewer, content: r.content }).hash)).toEqual(chain.map((r) => r.hash));
@@ -142,7 +183,7 @@ describe('fromStored maps database rows and keeps them verifiable', () => {
   it('a stored chain in any order reads back as the same verified lesson', () => {
     const rows = fromStored([...chain].reverse().map(stored), SCOPE);
     expect(rows).toEqual(chain);
-    expect(readLesson(rows!, visibleAll(eps), NOW)).toMatchObject({ state: 'approved', version: 2, applicabilityKey: KEY });
+    expect(readLesson(rows!, basisOf(eps), NOW)).toMatchObject({ state: 'approved', version: 2, applicabilityKey: KEY });
   });
 
   it.each([
@@ -168,6 +209,6 @@ describe('fromStored maps database rows and keeps them verifiable', () => {
 
   it('duplicate versions map, then fail chain verification', () => {
     const rows = fromStored([stored(chain[0]!), stored(chain[0]!)], SCOPE);
-    expect(readLesson(rows!, visibleAll(eps), NOW)).toEqual({ state: 'invalid-chain' });
+    expect(readLesson(rows!, basisOf(eps), NOW)).toEqual({ state: 'invalid-chain' });
   });
 });

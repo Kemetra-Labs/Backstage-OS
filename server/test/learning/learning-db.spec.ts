@@ -7,7 +7,7 @@ import { runWithWorkspaceContext } from '../../src/db/workspace-context';
 import { sqlState } from '../db/pg-container';
 import { startKawalysDb, stopKawalysDb, type KawalysDb } from '../db/kawalys-db';
 import { approve, fromStored, MIN_EPISODES, readLesson, rollback, type LessonRow, type StoredLesson } from '../../src/learning/learning.core';
-import { basisOf, cands, failures, rowsOrThrow, visibleAll } from './learning.fixture';
+import { basisOf, cands, failures, rowsOrThrow } from './learning.fixture';
 
 let db: KawalysDb | undefined;
 const userA = randomUUID();
@@ -183,7 +183,6 @@ describe('lesson version chain shape', () => {
 // pure core wrote must read back from the database and verify, and a tampered stored row must not.
 describe('a stored lesson chain re-verifies in src', () => {
   const eps = failures(MIN_EPISODES).map((e) => ({ ...e, applicabilityKey: 'stored|reasoning-v3' }));
-  const visible = visibleAll(eps);
 
   const write = (rows: readonly LessonRow[], content = (r: LessonRow) => JSON.stringify(r.content)) =>
     inWs(wsA, async (c) => {
@@ -216,7 +215,7 @@ describe('a stored lesson chain re-verifies in src', () => {
     await write(v3);
     const rows = fromStored(await readBack('stored|reasoning-v3'), scope());
     expect(rows).toEqual(v3);
-    expect(readLesson(rows!, visible, '2026-12-01T00:00:00Z')).toMatchObject({ state: 'approved', version: 3, outcome: 'failure' });
+    expect(readLesson(rows!, basisOf(eps), '2026-12-01T00:00:00Z')).toMatchObject({ state: 'approved', version: 3, outcome: 'failure' });
   });
 
   it('a stored row whose content no longer matches its hash reads as an invalid chain', async () => {
@@ -225,7 +224,7 @@ describe('a stored lesson chain re-verifies in src', () => {
     const v1 = rowsOrThrow(approve([], cands(tampered)[0]!, { reviewer: userA, owner: userA, at: '2026-11-27T12:00:00Z', expiresAt: '2027-01-01T00:00:00Z' }, basisOf(tampered)));
     await write(v1, (r) => JSON.stringify({ ...r.content, outcome: 'success' }));
     const rows = fromStored(await readBack(key), scope());
-    expect(readLesson(rows!, visible, '2026-12-01T00:00:00Z')).toEqual({ state: 'invalid-chain' });
+    expect(readLesson(rows!, basisOf(tampered), '2026-12-01T00:00:00Z')).toEqual({ state: 'invalid-chain' });
   });
 });
 
