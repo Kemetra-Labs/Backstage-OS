@@ -30,8 +30,11 @@ export function parseIdempotencyKey(header: string | string[] | undefined): stri
   return header;
 }
 
+/** Code-unit order, never locale order: the hash must be the same on every machine and in every locale. */
+const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
 /** Lower-cased, de-duplicated, sorted: the same citations in another order are the same request. */
-const citations = (ids: readonly string[]): string[] => [...new Set(ids.map((id) => id.toLowerCase()))].sort();
+const citations = (ids: readonly string[]): string[] => [...new Set(ids.map((id) => id.toLowerCase()))].sort(byCodeUnit);
 
 /** Fixed key order, so equal inputs always serialise to the same text. */
 function canonical(action: IdempotentAction, input: DecisionInput | NoteInput): string {
